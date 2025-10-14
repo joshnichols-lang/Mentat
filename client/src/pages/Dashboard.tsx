@@ -5,6 +5,8 @@ import PositionsGrid from "@/components/PositionsGrid";
 import PerformanceMetrics from "@/components/PerformanceMetrics";
 import TradeHistory from "@/components/TradeHistory";
 import QuickTrade from "@/components/QuickTrade";
+import PortfolioPerformanceChart from "@/components/PortfolioPerformanceChart";
+import SharpeRatioChart from "@/components/SharpeRatioChart";
 
 export default function Dashboard() {
   return (
@@ -18,6 +20,12 @@ export default function Dashboard() {
 
           {/* Market Overview */}
           <MarketOverview />
+
+          {/* Charts Row */}
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            <PortfolioPerformanceChart />
+            <SharpeRatioChart />
+          </div>
 
           {/* Main Grid */}
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">

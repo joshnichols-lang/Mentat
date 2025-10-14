@@ -1,6 +1,14 @@
+import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import TradePriceChart from "./TradePriceChart";
 
 interface Trade {
   id: string;
@@ -15,6 +23,8 @@ interface Trade {
 }
 
 export default function TradeHistory() {
+  const [selectedTrade, setSelectedTrade] = useState<Trade | null>(null);
+
   // todo: remove mock functionality
   const trades: Trade[] = [
     {
@@ -52,6 +62,11 @@ export default function TradeHistory() {
     },
   ];
 
+  const handleTradeClick = (trade: Trade) => {
+    console.log("Trade clicked:", trade.id);
+    setSelectedTrade(trade);
+  };
+
   return (
     <div>
       <h2 className="mb-4 text-lg font-semibold">Recent Trades</h2>
@@ -61,7 +76,8 @@ export default function TradeHistory() {
             {trades.map((trade) => (
               <div
                 key={trade.id}
-                className="p-4 hover-elevate"
+                className="cursor-pointer p-4 hover-elevate active-elevate-2"
+                onClick={() => handleTradeClick(trade)}
                 data-testid={`row-trade-${trade.id}`}
               >
                 <div className="flex items-center justify-between gap-4">
@@ -95,6 +111,24 @@ export default function TradeHistory() {
           </div>
         </ScrollArea>
       </Card>
+
+      <Dialog open={!!selectedTrade} onOpenChange={() => setSelectedTrade(null)}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>
+              {selectedTrade?.symbol}/USD {selectedTrade?.side.toUpperCase()} Trade
+            </DialogTitle>
+          </DialogHeader>
+          {selectedTrade && (
+            <TradePriceChart
+              symbol={selectedTrade.symbol}
+              entryPrice={selectedTrade.price}
+              entryTime={selectedTrade.timestamp}
+              side={selectedTrade.side}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
