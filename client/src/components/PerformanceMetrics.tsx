@@ -37,21 +37,21 @@ export default function PerformanceMetrics() {
 
   return (
     <div>
-      <h2 className="mb-4 text-lg font-semibold">Performance</h2>
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <h2 className="mb-3 text-sm font-semibold">Performance</h2>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         {metrics.map((metric, i) => (
-          <Card key={i} className="p-4" data-testid={`card-metric-${i}`}>
-            <div className="flex items-start gap-3">
-              <div className="rounded-md bg-primary/10 p-2">
-                <metric.icon className="h-5 w-5 text-primary" />
+          <Card key={i} className="p-3" data-testid={`card-metric-${i}`}>
+            <div className="flex items-start gap-2">
+              <div className="rounded-md bg-primary/10 p-1.5">
+                <metric.icon className="h-4 w-4 text-primary" />
               </div>
               <div className="flex-1">
                 <div className="text-xs text-muted-foreground">{metric.label}</div>
-                <div className="mt-1 text-2xl font-mono font-bold" data-testid={`text-metric-${i}`}>
+                <div className="mt-0.5 font-mono text-xl font-bold" data-testid={`text-metric-${i}`}>
                   {metric.value}
                 </div>
                 {metric.change && (
-                  <div className={`mt-1 text-xs ${
+                  <div className={`mt-0.5 text-xs ${
                     metric.positive ? "text-chart-2" : "text-muted-foreground"
                   }`}>
                     {metric.change}

@@ -69,14 +69,14 @@ export default function TradeHistory() {
 
   return (
     <div>
-      <h2 className="mb-4 text-lg font-semibold">Recent Trades</h2>
+      <h2 className="mb-3 text-sm font-semibold">Trades</h2>
       <Card className="p-0">
-        <ScrollArea className="h-[300px]">
+        <ScrollArea className="h-[250px]">
           <div className="divide-y">
             {trades.map((trade) => (
               <div
                 key={trade.id}
-                className="cursor-pointer p-4 hover-elevate active-elevate-2"
+                className="cursor-pointer p-3 hover-elevate active-elevate-2"
                 onClick={() => handleTradeClick(trade)}
                 data-testid={`row-trade-${trade.id}`}
               >

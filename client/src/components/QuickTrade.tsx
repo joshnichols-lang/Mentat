@@ -25,10 +25,10 @@ export default function QuickTrade() {
   };
 
   return (
-    <Card className="p-6">
-      <h2 className="mb-4 text-lg font-semibold">Quick Trade</h2>
+    <Card className="p-3">
+      <h2 className="mb-3 text-sm font-semibold">Quick Trade</h2>
       
-      <div className="space-y-4">
+      <div className="space-y-3">
         <div className="space-y-2">
           <Label htmlFor="symbol">Market</Label>
           <Select value={symbol} onValueChange={setSymbol}>

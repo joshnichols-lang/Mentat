@@ -15,13 +15,13 @@ export default function SharpeRatioChart() {
   ];
 
   return (
-    <Card className="p-6">
-      <div className="mb-4">
-        <h2 className="text-lg font-semibold">Sharpe Ratio Over Time</h2>
-        <p className="text-sm text-muted-foreground">Risk-adjusted return metric</p>
+    <Card className="p-3">
+      <div className="mb-3">
+        <h2 className="text-sm font-semibold">Sharpe Ratio</h2>
+        <p className="text-xs text-muted-foreground">Risk-adjusted returns</p>
       </div>
       
-      <ResponsiveContainer width="100%" height={250}>
+      <ResponsiveContainer width="100%" height={200}>
         <LineChart data={data} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
           <XAxis 
@@ -65,12 +65,12 @@ export default function SharpeRatioChart() {
         </LineChart>
       </ResponsiveContainer>
       
-      <div className="mt-4 flex items-center justify-between border-t pt-4">
+      <div className="mt-3 flex items-center justify-between border-t pt-3">
         <div>
-          <div className="text-xs text-muted-foreground">Current Sharpe Ratio</div>
-          <div className="text-2xl font-mono font-bold text-primary">1.85</div>
+          <div className="text-xs text-muted-foreground">Current</div>
+          <div className="font-mono text-xl font-bold text-primary">1.85</div>
         </div>
-        <div className="text-sm text-chart-2">Excellent Performance</div>
+        <div className="text-xs text-chart-2">Excellent</div>
       </div>
     </Card>
   );

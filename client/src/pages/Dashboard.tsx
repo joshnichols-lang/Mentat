@@ -13,8 +13,8 @@ export default function Dashboard() {
     <div className="min-h-screen bg-background">
       <Header />
       
-      <main className="mx-auto max-w-[1920px] p-6">
-        <div className="space-y-6">
+      <main className="mx-auto max-w-[1920px] p-4">
+        <div className="space-y-4">
           {/* AI Prompt Section */}
           <AIPromptPanel />
 
@@ -22,14 +22,14 @@ export default function Dashboard() {
           <MarketOverview />
 
           {/* Charts Row */}
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <PortfolioPerformanceChart />
             <SharpeRatioChart />
           </div>
 
           {/* Main Grid */}
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-            <div className="space-y-6 lg:col-span-2">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+            <div className="space-y-4 lg:col-span-2">
               {/* Positions */}
               <PositionsGrid />
 
@@ -41,7 +41,7 @@ export default function Dashboard() {
             </div>
 
             {/* Sidebar */}
-            <div className="space-y-6">
+            <div className="space-y-4">
               {/* Quick Trade */}
               <QuickTrade />
             </div>

@@ -15,13 +15,13 @@ export default function PortfolioPerformanceChart() {
   ];
 
   return (
-    <Card className="p-6">
-      <div className="mb-4">
-        <h2 className="text-lg font-semibold">Portfolio Performance</h2>
-        <p className="text-sm text-muted-foreground">AI Strategy vs Buy & Hold BTC</p>
+    <Card className="p-3">
+      <div className="mb-3">
+        <h2 className="text-sm font-semibold">Portfolio Performance</h2>
+        <p className="text-xs text-muted-foreground">AI vs Buy & Hold BTC</p>
       </div>
       
-      <ResponsiveContainer width="100%" height={300}>
+      <ResponsiveContainer width="100%" height={250}>
         <LineChart data={data} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
           <XAxis 
@@ -69,14 +69,14 @@ export default function PortfolioPerformanceChart() {
         </LineChart>
       </ResponsiveContainer>
       
-      <div className="mt-4 grid grid-cols-2 gap-4 border-t pt-4">
+      <div className="mt-3 grid grid-cols-2 gap-3 border-t pt-3">
         <div>
-          <div className="text-xs text-muted-foreground">AI Strategy Return</div>
-          <div className="text-lg font-mono font-semibold text-chart-2">+19.0%</div>
+          <div className="text-xs text-muted-foreground">AI Return</div>
+          <div className="font-mono text-sm font-semibold text-chart-2">+19.0%</div>
         </div>
         <div>
-          <div className="text-xs text-muted-foreground">BTC Hold Return</div>
-          <div className="text-lg font-mono font-semibold text-chart-4">+10.5%</div>
+          <div className="text-xs text-muted-foreground">BTC Return</div>
+          <div className="font-mono text-sm font-semibold text-chart-4">+10.5%</div>
         </div>
       </div>
     </Card>

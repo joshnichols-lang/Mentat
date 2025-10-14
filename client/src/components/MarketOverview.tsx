@@ -18,35 +18,29 @@ export default function MarketOverview() {
   ];
 
   return (
-    <div>
-      <h2 className="mb-4 text-lg font-semibold">Market Overview</h2>
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {markets.map((market) => (
-          <Card key={market.symbol} className="p-4" data-testid={`card-market-${market.symbol}`}>
-            <div className="flex items-start justify-between">
-              <div>
-                <div className="text-sm text-muted-foreground">{market.symbol}/USD</div>
-                <div className="mt-1 text-2xl font-mono font-bold" data-testid={`text-price-${market.symbol}`}>
-                  ${market.price.toLocaleString()}
-                </div>
-              </div>
-              <div className={`flex items-center gap-1 text-sm font-medium ${
-                market.change24h >= 0 ? "text-chart-2" : "text-destructive"
-              }`}>
-                {market.change24h >= 0 ? (
-                  <TrendingUp className="h-4 w-4" />
-                ) : (
-                  <TrendingDown className="h-4 w-4" />
-                )}
-                {Math.abs(market.change24h)}%
+    <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+      {markets.map((market) => (
+        <Card key={market.symbol} className="p-3" data-testid={`card-market-${market.symbol}`}>
+          <div className="flex items-start justify-between">
+            <div>
+              <div className="text-xs text-muted-foreground">{market.symbol}/USD</div>
+              <div className="mt-0.5 font-mono text-xl font-bold" data-testid={`text-price-${market.symbol}`}>
+                ${market.price.toLocaleString()}
               </div>
             </div>
-            <div className="mt-3 text-xs text-muted-foreground">
-              24h Vol: <span className="font-mono">{market.volume24h}</span>
+            <div className={`flex items-center gap-0.5 text-xs font-medium ${
+              market.change24h >= 0 ? "text-chart-2" : "text-destructive"
+            }`}>
+              {market.change24h >= 0 ? (
+                <TrendingUp className="h-3 w-3" />
+              ) : (
+                <TrendingDown className="h-3 w-3" />
+              )}
+              {Math.abs(market.change24h)}%
             </div>
-          </Card>
-        ))}
-      </div>
+          </div>
+        </Card>
+      ))}
     </div>
   );
 }

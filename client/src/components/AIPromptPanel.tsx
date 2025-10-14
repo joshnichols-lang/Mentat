@@ -25,55 +25,52 @@ export default function AIPromptPanel() {
   };
 
   return (
-    <div className="rounded-lg border bg-card p-6">
-      <div className="mb-4 flex items-center gap-2">
-        <Sparkles className="h-5 w-5 text-primary" />
-        <h2 className="text-lg font-semibold">AI Trading Agent</h2>
+    <div className="rounded-lg border bg-card p-4">
+      <div className="mb-3 flex items-center gap-2">
+        <Sparkles className="h-4 w-4 text-primary" />
+        <h2 className="text-sm font-semibold">AI Trading Agent</h2>
         {isProcessing && (
-          <Badge variant="secondary" className="gap-1.5">
-            <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
-            Processing...
+          <Badge variant="secondary" className="gap-1.5 text-xs">
+            <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
+            Processing
           </Badge>
         )}
       </div>
       
-      <div className="space-y-4">
+      <div className="space-y-2.5">
         <div className="relative">
           <Textarea
-            placeholder="Describe your trading strategy... e.g., 'Maximize risk-adjusted return, each AI must produce alpha, size trades, time trades and manage risk'"
+            placeholder="E.g., 'Maximize Sharpe ratio by trading BTC and ETH perpetuals'"
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
-            className="min-h-[120px] resize-none pr-12 text-base"
+            className="min-h-[70px] resize-none pr-12 text-sm"
             data-testid="input-ai-prompt"
           />
           <Button
             size="icon"
-            className="absolute bottom-3 right-3"
+            className="absolute bottom-2 right-2"
             onClick={handleSubmit}
             disabled={!prompt.trim() || isProcessing}
             data-testid="button-submit-prompt"
           >
-            <Send className="h-4 w-4" />
+            <Send className="h-3.5 w-3.5" />
           </Button>
         </div>
 
-        <div className="space-y-2">
-          <div className="text-xs font-medium text-muted-foreground">Example Prompts</div>
-          <div className="flex flex-wrap gap-2">
-            {examplePrompts.map((example, i) => (
-              <Button
-                key={i}
-                variant="outline"
-                size="sm"
-                className="justify-start gap-2 text-xs"
-                onClick={() => setPrompt(example.text)}
-                data-testid={`button-example-${i}`}
-              >
-                <example.icon className="h-3 w-3" />
-                {example.text}
-              </Button>
-            ))}
-          </div>
+        <div className="flex flex-wrap gap-1.5">
+          {examplePrompts.map((example, i) => (
+            <Button
+              key={i}
+              variant="outline"
+              size="sm"
+              className="justify-start gap-1.5 text-xs"
+              onClick={() => setPrompt(example.text)}
+              data-testid={`button-example-${i}`}
+            >
+              <example.icon className="h-3 w-3" />
+              {example.text}
+            </Button>
+          ))}
         </div>
       </div>
     </div>
