@@ -49,18 +49,30 @@ Preferred communication style: Simple, everyday language.
 
 **Database Strategy:**
 - **Drizzle ORM** for type-safe database operations
-- PostgreSQL-compatible schema (configured for Neon serverless)
-- Current implementation uses in-memory storage (`MemStorage`) for development
-- Schema defines user authentication structure with UUID primary keys
+- PostgreSQL database using node-postgres driver
+- Production implementation uses `DbStorage` class with Drizzle ORM
+- Schema defines tables for trades, positions, and portfolio snapshots with DECIMAL(18,8) precision for crypto prices
 
 **API Design:**
 - RESTful endpoints prefixed with `/api`
-- Storage interface abstraction allows swapping between in-memory and PostgreSQL implementations
+- Storage interface abstraction (`IStorage`) implemented by `DbStorage` class
 - Centralized error handling middleware
+- Available endpoints:
+  - `POST /api/trading/prompt` - Process natural language trading prompts using AI
+  - `GET /api/trades` - Fetch all trades
+  - `POST /api/trades` - Create a new trade
+  - `POST /api/trades/:id/close` - Close an existing trade
+  - `GET /api/positions` - Fetch all positions
+  - `POST /api/positions` - Create a new position
+  - `PATCH /api/positions/:id` - Update a position
+  - `GET /api/portfolio/snapshots` - Fetch portfolio snapshots
+  - `POST /api/portfolio/snapshots` - Create a portfolio snapshot
 
 **Data Models:**
-- User management with username/password authentication
-- Extensible schema structure in `shared/schema.ts` for type safety across client and server
+- **Trades**: Store individual trade executions with entry/exit prices, leverage, P&L
+- **Positions**: Track active positions with real-time P&L and price updates
+- **Portfolio Snapshots**: Historical records of total portfolio value, P&L, Sharpe ratio
+- All numeric fields use DECIMAL(18,8) precision for accurate crypto price handling
 
 ### Authentication & Security
 
@@ -76,11 +88,30 @@ Preferred communication style: Simple, everyday language.
 - Protected route middleware
 - User registration/login endpoints
 
+### AI Integration
+
+**OpenAI Integration:**
+- Uses Replit AI Integrations for OpenAI-compatible API access (billed to Replit credits)
+- No API key management required - uses `AI_INTEGRATIONS_OPENAI_BASE_URL` and `AI_INTEGRATIONS_OPENAI_API_KEY` environment variables
+- Implements GPT-5 model for natural language prompt processing
+- Trading agent (`server/tradingAgent.ts`) processes user prompts and generates trading strategies
+- Focuses on maximizing Sharpe ratio through:
+  - Market analysis and opportunity identification
+  - Appropriate trade sizing and leverage selection
+  - Entry/exit timing optimization
+  - Risk management via stop losses and position sizing
+
+**Prompt Processing:**
+- Users can submit natural language prompts like "maximize sharpe ratio" or "go long on BTC"
+- AI interprets prompts and returns structured trading strategies
+- Response includes: interpretation, trading actions, risk management plan, expected outcomes
+- Trading actions specify: action type, symbol, side, size, leverage, reasoning, and optional price targets
+
 ### External Dependencies
 
 **Trading Infrastructure:**
 - Designed for integration with **Lighter.xyz** perpetual futures exchange
-- No active exchange connection implemented yet (mock data currently used)
+- Currently using simulated trading (real exchange integration pending)
 
 **UI Component Libraries:**
 - Radix UI primitives for accessible, unstyled components
@@ -95,9 +126,15 @@ Preferred communication style: Simple, everyday language.
 - Path aliases configured for clean imports (@, @shared, @assets)
 
 **Database & ORM:**
-- @neondatabase/serverless for PostgreSQL connection
+- `pg` (node-postgres) for PostgreSQL connection pooling
 - Drizzle ORM with Zod integration for schema validation
-- Database migrations output to `/migrations` directory
+- Database schema synchronization via `npm run db:push`
+- Timestamp handling uses SQL `now()` for proper timezone support
+
+**AI/LLM:**
+- OpenAI SDK for GPT-5 model access
+- Replit AI Integrations gateway for API access without API keys
+- Structured JSON responses for reliable trading strategy generation
 
 ### Build & Deployment
 
