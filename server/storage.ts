@@ -1,38 +1,130 @@
-import { type User, type InsertUser } from "@shared/schema";
-import { randomUUID } from "crypto";
-
-// modify the interface with any CRUD methods
-// you might need
+import { type User, type InsertUser, type Trade, type InsertTrade, type Position, type InsertPosition, type PortfolioSnapshot, type InsertPortfolioSnapshot, users, trades, positions, portfolioSnapshots } from "@shared/schema";
+import { db } from "./db";
+import { eq, desc, sql } from "drizzle-orm";
 
 export interface IStorage {
+  // User methods
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  
+  // Trade methods
+  getTrades(limit?: number): Promise<Trade[]>;
+  getTrade(id: string): Promise<Trade | undefined>;
+  createTrade(trade: InsertTrade): Promise<Trade>;
+  updateTrade(id: string, updates: Partial<Trade>): Promise<Trade | undefined>;
+  closeTrade(id: string, exitPrice: string, pnl: string): Promise<Trade | undefined>;
+  
+  // Position methods
+  getPositions(): Promise<Position[]>;
+  getPosition(id: string): Promise<Position | undefined>;
+  getPositionBySymbol(symbol: string): Promise<Position | undefined>;
+  createPosition(position: InsertPosition): Promise<Position>;
+  updatePosition(id: string, updates: Partial<Position>): Promise<Position | undefined>;
+  deletePosition(id: string): Promise<void>;
+  
+  // Portfolio snapshot methods
+  getPortfolioSnapshots(limit?: number): Promise<PortfolioSnapshot[]>;
+  getLatestPortfolioSnapshot(): Promise<PortfolioSnapshot | undefined>;
+  createPortfolioSnapshot(snapshot: InsertPortfolioSnapshot): Promise<PortfolioSnapshot>;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<string, User>;
-
-  constructor() {
-    this.users = new Map();
-  }
-
+export class DbStorage implements IStorage {
+  // User methods
   async getUser(id: string): Promise<User | undefined> {
-    return this.users.get(id);
+    const result = await db.select().from(users).where(eq(users.id, id)).limit(1);
+    return result[0];
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
+    const result = await db.select().from(users).where(eq(users.username, username)).limit(1);
+    return result[0];
   }
 
-  async createUser(insertUser: InsertUser): Promise<User> {
-    const id = randomUUID();
-    const user: User = { ...insertUser, id };
-    this.users.set(id, user);
-    return user;
+  async createUser(user: InsertUser): Promise<User> {
+    const result = await db.insert(users).values(user).returning();
+    return result[0];
+  }
+
+  // Trade methods
+  async getTrades(limit: number = 100): Promise<Trade[]> {
+    return await db.select().from(trades).orderBy(desc(trades.entryTimestamp)).limit(limit);
+  }
+
+  async getTrade(id: string): Promise<Trade | undefined> {
+    const result = await db.select().from(trades).where(eq(trades.id, id)).limit(1);
+    return result[0];
+  }
+
+  async createTrade(trade: InsertTrade): Promise<Trade> {
+    const result = await db.insert(trades).values(trade).returning();
+    return result[0];
+  }
+
+  async updateTrade(id: string, updates: Partial<Trade>): Promise<Trade | undefined> {
+    const result = await db.update(trades).set(updates).where(eq(trades.id, id)).returning();
+    return result[0];
+  }
+
+  async closeTrade(id: string, exitPrice: string, pnl: string): Promise<Trade | undefined> {
+    const result = await db.update(trades)
+      .set({
+        exitPrice,
+        pnl,
+        status: "closed",
+        exitTimestamp: sql`now()`,
+      })
+      .where(eq(trades.id, id))
+      .returning();
+    return result[0];
+  }
+
+  // Position methods
+  async getPositions(): Promise<Position[]> {
+    return await db.select().from(positions).orderBy(desc(positions.lastUpdated));
+  }
+
+  async getPosition(id: string): Promise<Position | undefined> {
+    const result = await db.select().from(positions).where(eq(positions.id, id)).limit(1);
+    return result[0];
+  }
+
+  async getPositionBySymbol(symbol: string): Promise<Position | undefined> {
+    const result = await db.select().from(positions).where(eq(positions.symbol, symbol)).limit(1);
+    return result[0];
+  }
+
+  async createPosition(position: InsertPosition): Promise<Position> {
+    const result = await db.insert(positions).values(position).returning();
+    return result[0];
+  }
+
+  async updatePosition(id: string, updates: Partial<Position>): Promise<Position | undefined> {
+    const result = await db.update(positions)
+      .set({ ...updates, lastUpdated: sql`now()` })
+      .where(eq(positions.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async deletePosition(id: string): Promise<void> {
+    await db.delete(positions).where(eq(positions.id, id));
+  }
+
+  // Portfolio snapshot methods
+  async getPortfolioSnapshots(limit: number = 100): Promise<PortfolioSnapshot[]> {
+    return await db.select().from(portfolioSnapshots).orderBy(desc(portfolioSnapshots.timestamp)).limit(limit);
+  }
+
+  async getLatestPortfolioSnapshot(): Promise<PortfolioSnapshot | undefined> {
+    const result = await db.select().from(portfolioSnapshots).orderBy(desc(portfolioSnapshots.timestamp)).limit(1);
+    return result[0];
+  }
+
+  async createPortfolioSnapshot(snapshot: InsertPortfolioSnapshot): Promise<PortfolioSnapshot> {
+    const result = await db.insert(portfolioSnapshots).values(snapshot).returning();
+    return result[0];
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DbStorage();
