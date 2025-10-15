@@ -79,27 +79,36 @@ function SortableWatchlistRow({
   const displaySymbol = market.symbol.replace("-PERP", "");
 
   return (
-    <HoverCard openDelay={200} closeDelay={100}>
-      <HoverCardTrigger asChild>
-        <tr
-          ref={setNodeRef}
-          style={style}
-          className="border-b last:border-0 hover-elevate"
-          data-testid={`row-watchlist-${displaySymbol}`}
-        >
-          <td className="py-2.5">
-            <div className="flex items-center gap-2">
-              <button
-                className="cursor-grab active:cursor-grabbing touch-none"
-                {...attributes}
-                {...listeners}
-                data-testid={`drag-handle-${displaySymbol}`}
-              >
-                <GripVertical className="h-4 w-4 text-muted-foreground" />
-              </button>
-              <div className="font-semibold">{displaySymbol}/USD</div>
-            </div>
-          </td>
+    <tr
+      ref={setNodeRef}
+      style={style}
+      className="border-b last:border-0 hover-elevate"
+      data-testid={`row-watchlist-${displaySymbol}`}
+    >
+      <td className="py-2.5">
+        <div className="flex items-center gap-2">
+          <button
+            className="cursor-grab active:cursor-grabbing touch-none"
+            {...attributes}
+            {...listeners}
+            data-testid={`drag-handle-${displaySymbol}`}
+          >
+            <GripVertical className="h-4 w-4 text-muted-foreground" />
+          </button>
+          <HoverCard openDelay={200} closeDelay={100}>
+            <HoverCardTrigger asChild>
+              <div className="font-semibold cursor-default">{displaySymbol}/USD</div>
+            </HoverCardTrigger>
+            <HoverCardContent side="right" className="w-auto p-3">
+              <MiniPriceChart
+                symbol={displaySymbol}
+                currentPrice={price}
+                change24h={change24h}
+              />
+            </HoverCardContent>
+          </HoverCard>
+        </div>
+      </td>
       <td className="py-2.5 text-right">
         <div className="font-mono font-semibold" data-testid={`text-price-${displaySymbol}`}>
           ${price.toLocaleString()}
@@ -137,16 +146,7 @@ function SortableWatchlistRow({
           <X className="h-3 w-3" />
         </Button>
       </td>
-        </tr>
-      </HoverCardTrigger>
-      <HoverCardContent side="right" className="w-auto p-3">
-        <MiniPriceChart
-          symbol={displaySymbol}
-          currentPrice={price}
-          change24h={change24h}
-        />
-      </HoverCardContent>
-    </HoverCard>
+    </tr>
   );
 }
 
@@ -451,12 +451,12 @@ export default function MarketOverview() {
                 <th className="pb-2 font-medium text-right"></th>
               </tr>
             </thead>
-            <tbody>
-              <SortableContext
-                items={watchlistMarkets.map(m => m.symbol)}
-                strategy={verticalListSortingStrategy}
-                disabled={sortColumn !== null}
-              >
+            <SortableContext
+              items={watchlistMarkets.map(m => m.symbol)}
+              strategy={verticalListSortingStrategy}
+              disabled={sortColumn !== null}
+            >
+              <tbody>
                 {watchlistMarkets.map((market) => (
                   <SortableWatchlistRow
                     key={market.symbol}
@@ -464,8 +464,8 @@ export default function MarketOverview() {
                     onRemove={removeFromWatchlist}
                   />
                 ))}
-              </SortableContext>
-            </tbody>
+              </tbody>
+            </SortableContext>
           </table>
         </DndContext>
         

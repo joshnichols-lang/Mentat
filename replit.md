@@ -10,6 +10,15 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+### October 15, 2025 - Hover Price Charts on Watchlist and Positions
+- Added hover tooltips with mini price charts on watchlist items and position cards
+- MiniPriceChart component displays symbol, current price (large bold monospace), 24h change%, and line chart
+- Charts use deterministic data generation (symbol hash + sine wave) for consistent visualization
+- Hover cards appear when hovering over symbol names with 200ms open delay, 100ms close delay
+- Graceful fallback: "Market data unavailable" message shown when data cannot be fetched
+- Fixed DOM nesting error: moved SortableContext outside tbody for valid HTML structure
+- Improved price display: shows formatted price with 2 decimal places and proper thousand separators
+
 ### October 15, 2025 - AI Context-Aware Trading Agent
 - Enhanced AI trading agent to use historical prompt context for personalized suggestions
 - AI now analyzes recent user prompts (last 10) to understand trading preferences and patterns
