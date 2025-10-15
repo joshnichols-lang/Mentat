@@ -143,6 +143,13 @@ Preferred communication style: Simple, everyday language.
 - **Hyperliquid Exchange** integration via `hyperliquid` npm package (v1.7.7)
 - Supports perpetual futures trading (BTC-PERP, ETH-PERP, SOL-PERP, ARB-PERP, etc.)
 - Real-time market data fetching (no authentication required)
+- **24h Statistics Implementation:**
+  - Uses `getAllMids()` for current prices (returns symbols with "-PERP"/"-SPOT" suffixes)
+  - Fetches 24h change/volume via POST to `https://api.hyperliquid.xyz/info` endpoint with `{"type": "metaAndAssetCtxs"}`
+  - Response contains metadata array (coin names without suffixes) and context array (statistics)
+  - Strips "-PERP"/"-SPOT" suffix from price symbols to match with metadata names for correct mapping
+  - Calculates 24h % change: `((currentPrice - prevDayPx) / prevDayPx) * 100`
+  - Extracts 24h volume from `dayNtlVlm` field in context data
 - Trading operations require HYPERLIQUID_PRIVATE_KEY environment variable
 - Order types: Limit (Gtc, Ioc, Alo) and Market orders
 - Position tracking with real-time P&L and leverage information
