@@ -45,10 +45,12 @@ export default function MarketOverview() {
   const allMarkets = data?.marketData || [];
   const watchlistMarkets = allMarkets.filter(m => watchlist.includes(m.symbol));
   
-  const availableMarkets = allMarkets.filter(m => 
-    !watchlist.includes(m.symbol) && 
-    m.symbol.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const availableMarkets = allMarkets
+    .filter(m => 
+      !watchlist.includes(m.symbol) && 
+      m.symbol.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+    .sort((a, b) => parseFloat(b.volume24h) - parseFloat(a.volume24h));
 
   const addToWatchlist = (symbol: string) => {
     if (watchlist.length < MAX_WATCHLIST_SIZE && !watchlist.includes(symbol)) {
