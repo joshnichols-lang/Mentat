@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { processTradingPrompt } from "./tradingAgent";
 import { initHyperliquidClient } from "./hyperliquid/client";
+import { executeTradeStrategy } from "./tradeExecutor";
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -18,13 +19,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
           volume24h: z.string(),
         })),
         currentPositions: z.array(z.any()).optional(),
+        autoExecute: z.boolean().optional().default(true),
       });
 
-      const { prompt, marketData, currentPositions = [] } = schema.parse(req.body);
+      const { prompt, marketData, currentPositions = [], autoExecute = true } = schema.parse(req.body);
 
       const strategy = await processTradingPrompt(prompt, marketData, currentPositions);
       
-      res.json({ success: true, strategy });
+      let executionSummary = null;
+      
+      // Automatically execute trades if enabled
+      if (autoExecute && strategy.actions && strategy.actions.length > 0) {
+        try {
+          executionSummary = await executeTradeStrategy(strategy.actions);
+          console.log(`Executed ${executionSummary.successfulExecutions}/${executionSummary.totalActions} trades successfully`);
+        } catch (execError: any) {
+          console.error("Failed to execute trades:", execError);
+          // Continue even if execution fails - return strategy with error
+          executionSummary = {
+            totalActions: strategy.actions.length,
+            successfulExecutions: 0,
+            failedExecutions: strategy.actions.length,
+            skippedActions: 0,
+            results: [],
+            error: execError.message || "Trade execution failed"
+          };
+        }
+      }
+      
+      res.json({ 
+        success: true, 
+        strategy,
+        execution: executionSummary 
+      });
     } catch (error: any) {
       console.error("Error processing trading prompt:", error);
       
