@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { processTradingPrompt } from "./tradingAgent";
+import { initLighterClient } from "./lighter/client";
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -190,6 +191,109 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching AI cost:", error);
       res.status(500).json({ success: false, error: "Failed to fetch AI cost" });
+    }
+  });
+
+  // Initialize Lighter.xyz client
+  const lighter = initLighterClient();
+
+  // Get Lighter.xyz market data
+  app.get("/api/lighter/markets", async (_req, res) => {
+    try {
+      const markets = await lighter.getMarkets();
+      res.json({ success: true, markets });
+    } catch (error) {
+      console.error("Error fetching Lighter markets:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch markets" });
+    }
+  });
+
+  // Get Lighter.xyz market data (prices, volume, etc.)
+  app.get("/api/lighter/market-data", async (_req, res) => {
+    try {
+      const marketData = await lighter.getMarketData();
+      res.json({ success: true, marketData });
+    } catch (error) {
+      console.error("Error fetching Lighter market data:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch market data" });
+    }
+  });
+
+  // Get Lighter.xyz account info
+  app.get("/api/lighter/account", async (_req, res) => {
+    try {
+      const accountInfo = await lighter.getAccountInfo();
+      res.json({ success: true, account: accountInfo });
+    } catch (error) {
+      console.error("Error fetching Lighter account:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch account info" });
+    }
+  });
+
+  // Get Lighter.xyz positions
+  app.get("/api/lighter/positions", async (_req, res) => {
+    try {
+      const positions = await lighter.getPositions();
+      res.json({ success: true, positions });
+    } catch (error) {
+      console.error("Error fetching Lighter positions:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch positions" });
+    }
+  });
+
+  // Create order on Lighter.xyz
+  app.post("/api/lighter/order", async (req, res) => {
+    try {
+      const schema = z.object({
+        marketIndex: z.number(),
+        side: z.enum(["buy", "sell"]),
+        orderType: z.enum(["limit", "market"]),
+        amount: z.string(),
+        price: z.string().optional(),
+        leverage: z.number().optional(),
+      });
+
+      const params = schema.parse(req.body);
+      const result = await lighter.createOrder(params);
+
+      if (result.success) {
+        res.json({ success: true, orderId: result.orderId });
+      } else {
+        res.status(400).json({ success: false, error: result.error });
+      }
+    } catch (error: any) {
+      console.error("Error creating Lighter order:", error);
+      
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({
+          success: false,
+          error: "Invalid request data",
+          details: error.errors
+        });
+      }
+
+      res.status(500).json({ success: false, error: "Failed to create order" });
+    }
+  });
+
+  // Cancel order on Lighter.xyz
+  app.post("/api/lighter/cancel-order", async (req, res) => {
+    try {
+      const schema = z.object({
+        clientOrderIndex: z.number(),
+      });
+
+      const { clientOrderIndex } = schema.parse(req.body);
+      const result = await lighter.cancelOrder(clientOrderIndex);
+
+      if (result.success) {
+        res.json({ success: true });
+      } else {
+        res.status(400).json({ success: false, error: result.error });
+      }
+    } catch (error: any) {
+      console.error("Error cancelling Lighter order:", error);
+      res.status(500).json({ success: false, error: "Failed to cancel order" });
     }
   });
 
