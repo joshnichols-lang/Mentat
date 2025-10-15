@@ -101,7 +101,12 @@ Preferred communication style: Simple, everyday language.
 **Perplexity AI Integration:**
 - Uses Perplexity API for natural language prompt processing with pay-as-you-go pricing
 - API key stored securely in `PERPLEXITY_API_KEY` environment variable
-- Implements Sonar model ($0.20 per million tokens for both input/output)
+- **Selectable AI Models** with different capabilities and pricing:
+  - Sonar ($0.20/M tokens) - Fast & Cost-Effective (default)
+  - Sonar Pro ($3-$15/M tokens) - Enhanced Analysis
+  - Sonar Reasoning ($1-$5/M tokens) - Advanced Logic
+  - Sonar Reasoning Pro ($5-$15/M tokens) - Maximum Intelligence
+- Model selection persisted in localStorage for user preference
 - Trading agent (`server/tradingAgent.ts`) processes user prompts and generates trading strategies
 - Automatic usage tracking and cost calculation for every API request
 
