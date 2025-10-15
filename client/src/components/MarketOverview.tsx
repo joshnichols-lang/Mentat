@@ -31,6 +31,12 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "@/components/ui/hover-card";
+import MiniPriceChart from "@/components/MiniPriceChart";
 
 interface HyperliquidMarketData {
   symbol: string;
@@ -73,25 +79,27 @@ function SortableWatchlistRow({
   const displaySymbol = market.symbol.replace("-PERP", "");
 
   return (
-    <tr
-      ref={setNodeRef}
-      style={style}
-      className="border-b last:border-0 hover-elevate"
-      data-testid={`row-watchlist-${displaySymbol}`}
-    >
-      <td className="py-2.5">
-        <div className="flex items-center gap-2">
-          <button
-            className="cursor-grab active:cursor-grabbing touch-none"
-            {...attributes}
-            {...listeners}
-            data-testid={`drag-handle-${displaySymbol}`}
-          >
-            <GripVertical className="h-4 w-4 text-muted-foreground" />
-          </button>
-          <div className="font-semibold">{displaySymbol}/USD</div>
-        </div>
-      </td>
+    <HoverCard openDelay={200} closeDelay={100}>
+      <HoverCardTrigger asChild>
+        <tr
+          ref={setNodeRef}
+          style={style}
+          className="border-b last:border-0 hover-elevate"
+          data-testid={`row-watchlist-${displaySymbol}`}
+        >
+          <td className="py-2.5">
+            <div className="flex items-center gap-2">
+              <button
+                className="cursor-grab active:cursor-grabbing touch-none"
+                {...attributes}
+                {...listeners}
+                data-testid={`drag-handle-${displaySymbol}`}
+              >
+                <GripVertical className="h-4 w-4 text-muted-foreground" />
+              </button>
+              <div className="font-semibold">{displaySymbol}/USD</div>
+            </div>
+          </td>
       <td className="py-2.5 text-right">
         <div className="font-mono font-semibold" data-testid={`text-price-${displaySymbol}`}>
           ${price.toLocaleString()}
@@ -129,7 +137,16 @@ function SortableWatchlistRow({
           <X className="h-3 w-3" />
         </Button>
       </td>
-    </tr>
+        </tr>
+      </HoverCardTrigger>
+      <HoverCardContent side="right" className="w-auto p-3">
+        <MiniPriceChart
+          symbol={displaySymbol}
+          currentPrice={price}
+          change24h={change24h}
+        />
+      </HoverCardContent>
+    </HoverCard>
   );
 }
 
