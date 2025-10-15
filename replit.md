@@ -23,7 +23,7 @@ Preferred communication style: Simple, everyday language.
 - Complete design transformation to pure grayscale color scheme
 - Light mode: Clean white newsprint (0 0% 98%) with black ink (0 0% 10%)
 - Dark mode: Dark newspaper (0 0% 12%) with white ink (0 0% 95%)
-- Updated typography: Helvetica/Arial sans-serif for body, Georgia/Times for headers, Courier for data
+- **Uniform Typewriter Typography**: Courier New monospace for ALL text (headers, body, buttons, badges, data)
 - Subtle newsprint texture overlay (2% opacity) for authentic newspaper feel
 - All colors are pure grayscale (0% saturation) - no colored accents
 - Sharp corners (0 border radius) for clean newspaper aesthetic
@@ -44,7 +44,7 @@ Preferred communication style: Simple, everyday language.
 - Fantastic Mr. Fox newspaper aesthetic with pure grayscale color scheme
 - Light mode: Clean white newsprint (0 0% 98%) with black ink (0 0% 10%)
 - Dark mode: Dark newspaper (0 0% 12%) with white ink (0 0% 95%)
-- Typography: Helvetica/Arial sans-serif for body, Georgia/Times serif for headers, Courier monospace for data
+- **Uniform Typography**: Courier New monospace typewriter font for ALL text elements (headers, body, buttons, badges, numbers, data) - no font mixing
 - Pure grayscale palette: All colors have 0% saturation - no color accents
 - Newsprint texture overlay with SVG noise filter at 2% opacity for subtle texture
 - Sharp corners (0 border radius) with clean solid borders for newspaper aesthetic

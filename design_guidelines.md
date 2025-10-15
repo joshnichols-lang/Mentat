@@ -47,23 +47,22 @@ All colors use 0% saturation for true grayscale
 ### B. Typography
 
 **Font Stack**
-- Primary: 'Helvetica Neue', 'Arial', sans-serif (clean newspaper sans-serif)
-- Headers: 'Georgia', 'Times New Roman', serif (classic newspaper headlines)
-- Monospace: 'Courier New', Courier, monospace (data and numbers)
+- Universal: 'Courier New', Courier, monospace (typewriter/newspaper print aesthetic)
+- All text uses the same monospace typewriter font for consistent newspaper aesthetic
 
 **Type Scale**
 - Display/Hero: text-4xl font-bold uppercase tracking-tight (Newspaper headlines)
 - Section Headers: text-2xl font-bold uppercase tracking-normal (Article headers)
 - Subsection: text-xl font-semibold (Component titles)
 - Body/UI: text-base font-normal (16px base, all UI)
-- Data/Numbers: text-lg font-mono font-semibold (Prices, quantities)
+- Data/Numbers: text-lg font-semibold (Prices, quantities)
 - Small/Labels: text-sm uppercase tracking-wide (Input labels)
 - Captions: text-xs uppercase tracking-wider (Timestamps, metadata)
 
 **Number Formatting**
-- Large metrics: text-4xl font-mono font-black
-- Price data: text-xl font-mono font-bold
-- Percentages: text-base font-mono
+- Large metrics: text-4xl font-black
+- Price data: text-xl font-bold
+- Percentages: text-base
 
 ### C. Layout System
 
@@ -136,6 +135,11 @@ Use tailwind units of **4, 6, 8, 12** for clean newspaper rhythm
 - Transitions: duration-200 ease-out for snappy feel
 - Page loads: Instant - no fancy effects
 
+**Typography Style**
+- All text uses Courier New monospace font
+- Creates authentic typewriter/newspaper print aesthetic
+- Consistent across headers, body text, buttons, badges, and data
+
 ## Dashboard Layout Structure
 
 **Main Trading Terminal View**
@@ -151,7 +155,7 @@ Use tailwind units of **4, 6, 8, 12** for clean newspaper rhythm
 
 1. **Bold Headlines**: Uppercase headers for major sections
 2. **Grayscale Contrast**: Use different shades to create depth
-3. **Clean Typography**: Newspaper-style font mixing (serif headlines, sans body, mono data)
+3. **Typewriter Typography**: Courier New monospace for all text (headers, body, data)
 4. **Grid Lines**: Solid borders define sections cleanly
 5. **Minimal Decoration**: Focus on content, not ornamentation
 6. **High Contrast**: Ensure readability with clear black/white/gray separation
