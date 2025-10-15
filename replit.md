@@ -8,6 +8,16 @@ This is an AI-powered cryptocurrency trading terminal designed for the Hyperliqu
 
 Preferred communication style: Simple, everyday language.
 
+## Recent Changes
+
+### October 15, 2025 - Vintage Typewriter Theme
+- Complete design transformation to vintage typewriter aesthetic
+- Updated all fonts to Courier New monospace throughout the entire application
+- Implemented aged paper color palette: cream/sepia tones for light mode (45 35% 92%), dark aged paper for dark mode (30 20% 12%)
+- Added paper texture overlay with SVG noise filter (5% opacity) for authentic vintage feel
+- Uppercase headers with enhanced letter spacing for typewriter effect
+- Muted vintage accent colors for all trading states and UI elements
+
 ## System Architecture
 
 ### Frontend Architecture
@@ -21,10 +31,13 @@ Preferred communication style: Simple, everyday language.
 - **shadcn/ui** components built on Radix UI primitives
 
 **Design System:**
-- Dark-first design inspired by modern trading platforms (Robinhood, TradingView, Binance)
-- Custom color palette with semantic tokens for trading states (success/long, danger/short, warning)
-- Typography: Inter for UI elements, JetBrains Mono for numerical data
-- Component library following the "New York" shadcn style variant
+- Vintage typewriter aesthetic with aged paper backgrounds and authentic typewriter fonts
+- Light mode: Cream/sepia tones (45 35% 92%) with dark ink text (0 0% 15%)
+- Dark mode: Dark aged paper (30 20% 12%) with light cream ink (45 35% 92%)
+- Typography: Courier New monospace typewriter font throughout - all UI elements, data, and headings
+- Vintage accent colors: Muted blues, greens, and reds for trading states
+- Paper texture overlay with SVG noise filter at 5% opacity for authentic aged paper feel
+- Component library following vintage typewriter principles with uppercase headers and enhanced letter spacing
 
 **State Management:**
 - React Query for async state and API caching
