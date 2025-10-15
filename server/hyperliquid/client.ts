@@ -1,4 +1,5 @@
 import { Hyperliquid } from "hyperliquid";
+import { ethers } from "ethers";
 
 export interface HyperliquidConfig {
   privateKey: string;
@@ -40,6 +41,13 @@ export class HyperliquidClient {
 
   constructor(config: HyperliquidConfig) {
     this.config = config;
+    
+    // Derive wallet address from private key if not provided
+    if (!config.walletAddress) {
+      const wallet = new ethers.Wallet(config.privateKey);
+      this.config.walletAddress = wallet.address;
+      console.log(`Hyperliquid wallet address derived: ${this.config.walletAddress}`);
+    }
     
     this.sdk = new Hyperliquid({
       privateKey: config.privateKey,
