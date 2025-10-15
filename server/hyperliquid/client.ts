@@ -118,7 +118,7 @@ export class HyperliquidClient {
 
   async placeOrder(params: OrderParams): Promise<{ success: boolean; response?: any; error?: string }> {
     try {
-      const response = await this.sdk.exchange.placeOrder(params);
+      const response = await this.sdk.exchange.placeOrder(params as any);
       
       return {
         success: true,
@@ -169,7 +169,7 @@ export class HyperliquidClient {
   async getOrderbook(coin: string): Promise<any> {
     try {
       // Use the correct method name from SDK
-      const orderbook = await this.sdk.info.perpetuals.getL2Snapshot(coin);
+      const orderbook = await (this.sdk.info.perpetuals as any).getL2Snapshot(coin);
       return orderbook;
     } catch (error) {
       console.error("Failed to fetch orderbook:", error);
@@ -182,7 +182,7 @@ export class HyperliquidClient {
       await this.sdk.exchange.updateLeverage(
         params.leverage.toString(),
         params.coin,
-        params.is_cross
+        params.is_cross ? 1 : 0
       );
       return { success: true };
     } catch (error: any) {
