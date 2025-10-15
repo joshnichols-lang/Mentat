@@ -18,7 +18,7 @@ export default function Header() {
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
             <Activity className="h-5 w-5 text-primary" />
-            <h1 className="text-lg font-semibold">AI Terminal</h1>
+            <h1 className="text-lg font-bold">1fox</h1>
           </div>
           <Badge variant="outline" className="gap-1.5 text-xs" data-testid="status-connection">
             <div className="h-1.5 w-1.5 rounded-full bg-chart-2 animate-pulse" />

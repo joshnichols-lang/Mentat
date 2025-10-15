@@ -1,8 +1,8 @@
-# AI Crypto Trading Terminal
+# 1fox
 
 ## Overview
 
-This is an AI-powered cryptocurrency trading terminal designed for the Hyperliquid perpetual futures exchange. The application allows users to interact with an AI trading agent through natural language prompts to execute automated trading strategies. The interface is built as a modern trading dashboard with real-time market data, portfolio performance tracking, and comprehensive trading controls.
+1fox is an AI-powered cryptocurrency trading terminal designed for the Hyperliquid perpetual futures exchange. The application allows users to interact with an AI trading agent through natural language prompts to execute automated trading strategies. The interface is built with a Fantastic Mr. Fox newspaper aesthetic - clean grayscale design with modern trading dashboard functionality, real-time market data, portfolio performance tracking, and comprehensive trading controls.
 
 ## User Preferences
 
@@ -18,13 +18,15 @@ Preferred communication style: Simple, everyday language.
 - Fixed Perplexity API compatibility by adding markdown code block stripping (removes ```json``` wrappers)
 - AI suggestions now combine user's trading history with real-time market data for smarter recommendations
 
-### October 15, 2025 - Vintage Typewriter Theme
-- Complete design transformation to vintage typewriter aesthetic
-- Updated all fonts to Courier New monospace throughout the entire application
-- Implemented aged paper color palette: cream/sepia tones for light mode (45 35% 92%), dark aged paper for dark mode (30 20% 12%)
-- Added paper texture overlay with SVG noise filter (5% opacity) for authentic vintage feel
-- Uppercase headers with enhanced letter spacing for typewriter effect
-- Muted vintage accent colors for all trading states and UI elements
+### October 15, 2025 - Fantastic Mr. Fox Newspaper Theme
+- Rebranded application to "1fox" with Wes Anderson newspaper aesthetic
+- Complete design transformation to pure grayscale color scheme
+- Light mode: Clean white newsprint (0 0% 98%) with black ink (0 0% 10%)
+- Dark mode: Dark newspaper (0 0% 12%) with white ink (0 0% 95%)
+- Updated typography: Helvetica/Arial sans-serif for body, Georgia/Times for headers, Courier for data
+- Subtle newsprint texture overlay (2% opacity) for authentic newspaper feel
+- All colors are pure grayscale (0% saturation) - no colored accents
+- Sharp corners (0 border radius) for clean newspaper aesthetic
 
 ## System Architecture
 
@@ -39,13 +41,14 @@ Preferred communication style: Simple, everyday language.
 - **shadcn/ui** components built on Radix UI primitives
 
 **Design System:**
-- Vintage typewriter aesthetic with aged paper backgrounds and authentic typewriter fonts
-- Light mode: Cream/sepia tones (45 35% 92%) with dark ink text (0 0% 15%)
-- Dark mode: Dark aged paper (30 20% 12%) with light cream ink (45 35% 92%)
-- Typography: Courier New monospace typewriter font throughout - all UI elements, data, and headings
-- Vintage accent colors: Muted blues, greens, and reds for trading states
-- Paper texture overlay with SVG noise filter at 5% opacity for authentic aged paper feel
-- Component library following vintage typewriter principles with uppercase headers and enhanced letter spacing
+- Fantastic Mr. Fox newspaper aesthetic with pure grayscale color scheme
+- Light mode: Clean white newsprint (0 0% 98%) with black ink (0 0% 10%)
+- Dark mode: Dark newspaper (0 0% 12%) with white ink (0 0% 95%)
+- Typography: Helvetica/Arial sans-serif for body, Georgia/Times serif for headers, Courier monospace for data
+- Pure grayscale palette: All colors have 0% saturation - no color accents
+- Newsprint texture overlay with SVG noise filter at 2% opacity for subtle texture
+- Sharp corners (0 border radius) with clean solid borders for newspaper aesthetic
+- Component library following minimalist newspaper design principles
 
 **State Management:**
 - React Query for async state and API caching
