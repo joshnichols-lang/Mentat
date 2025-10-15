@@ -82,7 +82,7 @@ export default function AIPromptPanel() {
       } else {
         toast({
           title: "Strategy Generated",
-          description: data.strategy?.interpretation || "AI generated a trading strategy",
+          description: data.strategy?.interpretation || "Mr. Fox generated a trading strategy",
         });
       }
     },
@@ -107,7 +107,7 @@ export default function AIPromptPanel() {
       <Card className="p-4">
         <div className="mb-3 flex items-center gap-2">
           <Sparkles className="h-4 w-4 text-primary" />
-          <h2 className="text-sm font-semibold">AI Trading Agent</h2>
+          <h2 className="text-sm font-semibold">Mr. Fox</h2>
           {executeTradeMutation.isPending && (
             <Badge variant="secondary" className="gap-1.5 text-xs">
               <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
