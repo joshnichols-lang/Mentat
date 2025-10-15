@@ -33,9 +33,9 @@ export async function processTradingPrompt(
   currentPositions: any[]
 ): Promise<TradingStrategy> {
   const model: PerplexityModel = "sonar";
-  const startTime = Date.now();
   
-  const completion = await perplexity.chat.completions.create({
+  try {
+    const completion = await perplexity.chat.completions.create({
     model,
     messages: [
       {
@@ -93,31 +93,51 @@ Generate a trading strategy that addresses the user's prompt while maximizing ri
     response_format: { type: "json_object" }
   });
 
-  const content = completion.choices[0].message.content;
-  if (!content) {
-    throw new Error("No response from AI");
-  }
+    const content = completion.choices[0].message.content;
+    if (!content) {
+      throw new Error("No response from AI");
+    }
 
-  // Log usage and cost
-  const usage = completion.usage;
-  if (usage) {
-    const cost = calculateCost(model, usage.prompt_tokens, usage.completion_tokens);
-    
+    // Log usage and cost
+    const usage = completion.usage;
+    if (usage) {
+      const cost = calculateCost(model, usage.prompt_tokens, usage.completion_tokens);
+      
+      try {
+        await storage.logAiUsage({
+          provider: "perplexity",
+          model,
+          promptTokens: usage.prompt_tokens,
+          completionTokens: usage.completion_tokens,
+          totalTokens: usage.total_tokens,
+          estimatedCost: cost.toFixed(6),
+          userPrompt: prompt,
+          success: 1
+        });
+      } catch (error) {
+        console.error("Failed to log AI usage:", error);
+      }
+    }
+
+    return JSON.parse(content) as TradingStrategy;
+  } catch (error) {
+    // Log failed attempt
     try {
       await storage.logAiUsage({
         provider: "perplexity",
         model,
-        promptTokens: usage.prompt_tokens,
-        completionTokens: usage.completion_tokens,
-        totalTokens: usage.total_tokens,
-        estimatedCost: cost.toFixed(6),
+        promptTokens: 0,
+        completionTokens: 0,
+        totalTokens: 0,
+        estimatedCost: "0",
         userPrompt: prompt,
-        success: 1
+        success: 0
       });
-    } catch (error) {
-      console.error("Failed to log AI usage:", error);
+    } catch (logError) {
+      console.error("Failed to log AI usage error:", logError);
     }
+    
+    // Re-throw the original error
+    throw error;
   }
-
-  return JSON.parse(content) as TradingStrategy;
 }

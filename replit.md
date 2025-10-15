@@ -90,22 +90,34 @@ Preferred communication style: Simple, everyday language.
 
 ### AI Integration
 
-**OpenAI Integration:**
-- Uses Replit AI Integrations for OpenAI-compatible API access (billed to Replit credits)
-- No API key management required - uses `AI_INTEGRATIONS_OPENAI_BASE_URL` and `AI_INTEGRATIONS_OPENAI_API_KEY` environment variables
-- Implements GPT-5 model for natural language prompt processing
+**Perplexity AI Integration:**
+- Uses Perplexity API for natural language prompt processing with pay-as-you-go pricing
+- API key stored securely in `PERPLEXITY_API_KEY` environment variable
+- Implements Sonar model ($0.20 per million tokens for both input/output)
 - Trading agent (`server/tradingAgent.ts`) processes user prompts and generates trading strategies
-- Focuses on maximizing Sharpe ratio through:
-  - Market analysis and opportunity identification
-  - Appropriate trade sizing and leverage selection
-  - Entry/exit timing optimization
-  - Risk management via stop losses and position sizing
+- Automatic usage tracking and cost calculation for every API request
+
+**Usage Tracking:**
+- Database table `ai_usage_log` stores all API requests with token counts and costs
+- Real-time cost calculation based on model pricing ($0.20/M tokens for Sonar)
+- API endpoints for retrieving usage logs and total costs
+- UI component displays:
+  - Total spent in dollars
+  - Number of requests made
+  - Total tokens consumed
+  - Auto-refreshes every 30 seconds
 
 **Prompt Processing:**
-- Users can submit natural language prompts like "maximize sharpe ratio" or "go long on BTC"
+- Users can submit natural language prompts like "maximize sharpe ratio" or "analyze market trends"
 - AI interprets prompts and returns structured trading strategies
 - Response includes: interpretation, trading actions, risk management plan, expected outcomes
 - Trading actions specify: action type, symbol, side, size, leverage, reasoning, and optional price targets
+- All suggestions are educational and for simulation purposes
+
+**API Endpoints:**
+- `POST /api/trading/prompt` - Process natural language trading prompts
+- `GET /api/ai/usage` - Retrieve AI usage logs
+- `GET /api/ai/cost` - Get total AI spending
 
 ### External Dependencies
 
@@ -132,9 +144,10 @@ Preferred communication style: Simple, everyday language.
 - Timestamp handling uses SQL `now()` for proper timezone support
 
 **AI/LLM:**
-- OpenAI SDK for GPT-5 model access
-- Replit AI Integrations gateway for API access without API keys
-- Structured JSON responses for reliable trading strategy generation
+- OpenAI SDK for Perplexity API access (OpenAI-compatible)
+- Perplexity Sonar model for educational trading strategy generation
+- Structured JSON responses for reliable strategy output
+- Automatic token usage tracking and cost calculation
 
 ### Build & Deployment
 
