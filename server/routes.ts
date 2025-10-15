@@ -14,9 +14,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         prompt: z.string().min(1),
         marketData: z.array(z.object({
           symbol: z.string(),
-          price: z.string(),
-          change24h: z.string(),
-          volume24h: z.string(),
+          price: z.union([z.string(), z.number()]).transform(val => String(val)),
+          change24h: z.union([z.string(), z.number()]).transform(val => String(val)),
+          volume24h: z.union([z.string(), z.number()]).transform(val => String(val)),
         })),
         currentPositions: z.array(z.any()).optional(),
         autoExecute: z.boolean().optional().default(true),
