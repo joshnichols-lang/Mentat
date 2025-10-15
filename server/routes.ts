@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { processTradingPrompt } from "./tradingAgent";
-import { initLighterClient } from "./lighter/client";
+import { initHyperliquidClient } from "./hyperliquid/client";
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -194,75 +194,79 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Initialize Lighter.xyz client
-  const lighter = initLighterClient();
+  // Initialize Hyperliquid client
+  const hyperliquid = initHyperliquidClient();
 
-  // Get Lighter.xyz market data
-  app.get("/api/lighter/markets", async (_req, res) => {
+  // Get Hyperliquid market data
+  app.get("/api/hyperliquid/market-data", async (_req, res) => {
     try {
-      const markets = await lighter.getMarkets();
-      res.json({ success: true, markets });
-    } catch (error) {
-      console.error("Error fetching Lighter markets:", error);
-      res.status(500).json({ success: false, error: "Failed to fetch markets" });
-    }
-  });
-
-  // Get Lighter.xyz market data (prices, volume, etc.)
-  app.get("/api/lighter/market-data", async (_req, res) => {
-    try {
-      const marketData = await lighter.getMarketData();
+      const marketData = await hyperliquid.getMarketData();
       res.json({ success: true, marketData });
     } catch (error) {
-      console.error("Error fetching Lighter market data:", error);
+      console.error("Error fetching Hyperliquid market data:", error);
       res.status(500).json({ success: false, error: "Failed to fetch market data" });
     }
   });
 
-  // Get Lighter.xyz account info
-  app.get("/api/lighter/account", async (_req, res) => {
+  // Get Hyperliquid user state
+  app.get("/api/hyperliquid/user-state", async (req, res) => {
     try {
-      const accountInfo = await lighter.getAccountInfo();
-      res.json({ success: true, account: accountInfo });
+      const address = req.query.address as string | undefined;
+      const userState = await hyperliquid.getUserState(address);
+      res.json({ success: true, userState });
     } catch (error) {
-      console.error("Error fetching Lighter account:", error);
-      res.status(500).json({ success: false, error: "Failed to fetch account info" });
+      console.error("Error fetching Hyperliquid user state:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch user state" });
     }
   });
 
-  // Get Lighter.xyz positions
-  app.get("/api/lighter/positions", async (_req, res) => {
+  // Get Hyperliquid positions
+  app.get("/api/hyperliquid/positions", async (req, res) => {
     try {
-      const positions = await lighter.getPositions();
+      const address = req.query.address as string | undefined;
+      const positions = await hyperliquid.getPositions(address);
       res.json({ success: true, positions });
     } catch (error) {
-      console.error("Error fetching Lighter positions:", error);
+      console.error("Error fetching Hyperliquid positions:", error);
       res.status(500).json({ success: false, error: "Failed to fetch positions" });
     }
   });
 
-  // Create order on Lighter.xyz
-  app.post("/api/lighter/order", async (req, res) => {
+  // Place order on Hyperliquid
+  app.post("/api/hyperliquid/order", async (req, res) => {
     try {
       const schema = z.object({
-        marketIndex: z.number(),
-        side: z.enum(["buy", "sell"]),
-        orderType: z.enum(["limit", "market"]),
-        amount: z.string(),
-        price: z.string().optional(),
-        leverage: z.number().optional(),
+        coin: z.string(),
+        is_buy: z.boolean(),
+        sz: z.number(),
+        limit_px: z.number().optional(),
+        order_type: z.enum(["limit", "market"]),
+        reduce_only: z.boolean().optional(),
       });
 
       const params = schema.parse(req.body);
-      const result = await lighter.createOrder(params);
+      
+      // Convert to Hyperliquid format
+      const orderParams = {
+        coin: params.coin,
+        is_buy: params.is_buy,
+        sz: params.sz,
+        limit_px: params.limit_px || 0,
+        order_type: params.order_type === "market" 
+          ? { market: {} }
+          : { limit: { tif: "Gtc" } },
+        reduce_only: params.reduce_only,
+      };
+
+      const result = await hyperliquid.placeOrder(orderParams);
 
       if (result.success) {
-        res.json({ success: true, orderId: result.orderId });
+        res.json({ success: true, response: result.response });
       } else {
         res.status(400).json({ success: false, error: result.error });
       }
     } catch (error: any) {
-      console.error("Error creating Lighter order:", error);
+      console.error("Error placing Hyperliquid order:", error);
       
       if (error instanceof z.ZodError) {
         return res.status(400).json({
@@ -272,19 +276,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      res.status(500).json({ success: false, error: "Failed to create order" });
+      res.status(500).json({ success: false, error: "Failed to place order" });
     }
   });
 
-  // Cancel order on Lighter.xyz
-  app.post("/api/lighter/cancel-order", async (req, res) => {
+  // Cancel order on Hyperliquid
+  app.post("/api/hyperliquid/cancel-order", async (req, res) => {
     try {
       const schema = z.object({
-        clientOrderIndex: z.number(),
+        coin: z.string(),
+        oid: z.number(),
       });
 
-      const { clientOrderIndex } = schema.parse(req.body);
-      const result = await lighter.cancelOrder(clientOrderIndex);
+      const params = schema.parse(req.body);
+      const result = await hyperliquid.cancelOrder(params);
 
       if (result.success) {
         res.json({ success: true });
@@ -292,8 +297,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res.status(400).json({ success: false, error: result.error });
       }
     } catch (error: any) {
-      console.error("Error cancelling Lighter order:", error);
+      console.error("Error cancelling Hyperliquid order:", error);
       res.status(500).json({ success: false, error: "Failed to cancel order" });
+    }
+  });
+
+  // Update leverage on Hyperliquid
+  app.post("/api/hyperliquid/leverage", async (req, res) => {
+    try {
+      const schema = z.object({
+        coin: z.string(),
+        is_cross: z.boolean(),
+        leverage: z.number(),
+      });
+
+      const params = schema.parse(req.body);
+      const result = await hyperliquid.updateLeverage(params);
+
+      if (result.success) {
+        res.json({ success: true });
+      } else {
+        res.status(400).json({ success: false, error: result.error });
+      }
+    } catch (error: any) {
+      console.error("Error updating Hyperliquid leverage:", error);
+      res.status(500).json({ success: false, error: "Failed to update leverage" });
     }
   });
 
