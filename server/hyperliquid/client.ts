@@ -62,14 +62,70 @@ export class HyperliquidClient {
       // Get all market mid prices
       const mids = await this.sdk.info.getAllMids();
       
+      // Get meta and asset contexts for 24h stats via direct API call
+      let metaAndCtxMap = new Map<string, any>();
+      try {
+        const apiUrl = this.config.testnet 
+          ? "https://api.hyperliquid-testnet.xyz/info"
+          : "https://api.hyperliquid.xyz/info";
+          
+        const response = await fetch(apiUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ type: "metaAndAssetCtxs" })
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          if (Array.isArray(data) && data.length > 1) {
+            const meta = data[0];
+            const ctxs = data[1];
+            
+            // Match metadata to contexts by index
+            if (meta?.universe && Array.isArray(meta.universe) && Array.isArray(ctxs)) {
+              meta.universe.forEach((assetMeta: any, index: number) => {
+                if (assetMeta.name && ctxs[index]) {
+                  // Map the coin name to its context data
+                  metaAndCtxMap.set(assetMeta.name, ctxs[index]);
+                }
+              });
+            }
+          }
+        }
+      } catch (ctxError) {
+        console.warn("[Hyperliquid] Failed to fetch asset contexts:", ctxError);
+      }
+      
       const marketData: MarketData[] = [];
       
       for (const [asset, price] of Object.entries(mids)) {
+        // Strip -PERP or -SPOT suffix to match with metadata names
+        const baseName = asset.replace(/-PERP$|-SPOT$/, '');
+        
+        // Get the context for this asset
+        const ctx = metaAndCtxMap.get(baseName);
+        
+        // Calculate 24h change if we have previous price data
+        let change24h = "0";
+        if (ctx && ctx.prevDayPx) {
+          const currentPrice = parseFloat(price as string);
+          const prevPrice = parseFloat(ctx.prevDayPx);
+          if (prevPrice > 0) {
+            change24h = (((currentPrice - prevPrice) / prevPrice) * 100).toFixed(2);
+          }
+        }
+        
+        // Get 24h volume if available
+        let volume24h = "0";
+        if (ctx && ctx.dayNtlVlm) {
+          volume24h = ctx.dayNtlVlm;
+        }
+        
         marketData.push({
           symbol: asset,
           price: price as string,
-          change24h: "0", // Would need historical data
-          volume24h: "0", // Would need to aggregate trades
+          change24h,
+          volume24h,
         });
       }
       
