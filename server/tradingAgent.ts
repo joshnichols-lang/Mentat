@@ -71,16 +71,30 @@ export async function processTradingPrompt(
   
   try {
     // Fetch recent user prompt history (last 5 successful prompts)
-    const recentPrompts = await storage.getAiUsageLogs(5);
-    const promptHistory = recentPrompts
-      .filter(log => log.success === 1 && log.userPrompt)
-      .map(log => ({
-        timestamp: log.timestamp,
-        prompt: log.userPrompt
-      }));
+    let promptHistory: {timestamp: Date, prompt: string}[] = [];
+    try {
+      const recentPrompts = await storage.getAiUsageLogs(5);
+      promptHistory = recentPrompts
+        .filter(log => log.success === 1 && log.userPrompt)
+        .map(log => ({
+          timestamp: log.timestamp,
+          prompt: log.userPrompt!  // Already filtered for non-null
+        }));
+    } catch (historyError) {
+      console.error("Failed to fetch prompt history:", historyError);
+      // Continue without history
+    }
 
     // Analyze market trends from current data
-    const marketTrends = analyzeMarketTrends(marketData);
+    let marketTrends = "Market data not available";
+    try {
+      if (marketData && marketData.length > 0) {
+        marketTrends = analyzeMarketTrends(marketData);
+      }
+    } catch (trendError) {
+      console.error("Failed to analyze market trends:", trendError);
+      // Continue with fallback message
+    }
 
     const completion = await perplexity.chat.completions.create({
     model,
@@ -105,7 +119,9 @@ Guidelines for educational strategy suggestions:
 - Build upon user's previous prompts to refine strategy
 - Provide educational reasoning for each suggestion
 
-Respond with valid JSON in this format:
+IMPORTANT: You must respond ONLY with valid JSON. No other text before or after the JSON object.
+
+JSON format:
 {
   "interpretation": "Brief explanation of the analysis request and how it relates to user's trading history",
   "actions": [
@@ -145,15 +161,22 @@ ${promptHistory.map(p => `- ${new Date(p.timestamp).toLocaleString()}: "${p.prom
 
 Consider the user's historical prompts to understand their trading style, risk tolerance, and strategic preferences. Build upon previous strategies and refine suggestions based on learned patterns.` : ''}
 
-Generate a trading strategy that addresses the user's current prompt while considering their historical preferences and maximizing risk-adjusted returns based on current market conditions.`
+Generate a trading strategy that addresses the user's current prompt while considering their historical preferences and maximizing risk-adjusted returns based on current market conditions. Remember to respond with ONLY the JSON object, no other text.`
       }
-    ],
-    response_format: { type: "json_object" }
+    ]
   });
 
     const content = completion.choices[0].message.content;
     if (!content) {
       throw new Error("No response from AI");
+    }
+
+    // Clean the response - remove markdown code blocks if present
+    let cleanedContent = content.trim();
+    if (cleanedContent.startsWith('```json')) {
+      cleanedContent = cleanedContent.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+    } else if (cleanedContent.startsWith('```')) {
+      cleanedContent = cleanedContent.replace(/^```\s*/, '').replace(/\s*```$/, '');
     }
 
     // Log usage and cost
@@ -177,7 +200,7 @@ Generate a trading strategy that addresses the user's current prompt while consi
       }
     }
 
-    return JSON.parse(content) as TradingStrategy;
+    return JSON.parse(cleanedContent) as TradingStrategy;
   } catch (error) {
     // Log failed attempt
     try {
