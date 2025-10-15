@@ -64,17 +64,17 @@
 
   --accent-foreground: 0 0% 15%;
 
-  --destructive: 0 40% 45%;
+  --destructive: 0 25% 45%;
 
   --destructive-foreground: 45 35% 95%;
 
   --input: 30 15% 75%;
   --ring: 210 25% 45%;
   --chart-1: 25 25% 35%;
-  --chart-2: 140 30% 40%;
+  --chart-2: 140 20% 40%;
   --chart-3: 210 20% 50%;
   --chart-4: 35 45% 50%;
-  --chart-5: 0 40% 45%;
+  --chart-5: 0 25% 45%;
 
   --font-sans: 'Courier New', Courier, monospace;
   --font-serif: 'Courier New', Courier, monospace;
@@ -182,17 +182,17 @@
 
   --accent-foreground: 45 35% 92%;
 
-  --destructive: 0 50% 60%;
+  --destructive: 0 30% 60%;
 
   --destructive-foreground: 30 20% 10%;
 
   --input: 30 15% 40%;
   --ring: 210 35% 60%;
   --chart-1: 25 30% 50%;
-  --chart-2: 140 35% 55%;
+  --chart-2: 140 22% 55%;
   --chart-3: 210 25% 65%;
   --chart-4: 35 50% 60%;
-  --chart-5: 0 45% 60%;
+  --chart-5: 0 30% 60%;
 
   --shadow-2xs: 0px 1px 2px 0px hsl(0 0% 0% / 0.3);
   --shadow-xs: 0px 1px 3px 0px hsl(0 0% 0% / 0.4);
