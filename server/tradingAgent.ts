@@ -30,9 +30,9 @@ interface TradingStrategy {
 export async function processTradingPrompt(
   prompt: string,
   marketData: MarketData[],
-  currentPositions: any[]
+  currentPositions: any[],
+  model: PerplexityModel = "sonar"
 ): Promise<TradingStrategy> {
-  const model: PerplexityModel = "sonar";
   
   try {
     const completion = await perplexity.chat.completions.create({

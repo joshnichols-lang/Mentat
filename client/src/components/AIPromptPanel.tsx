@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Send, Sparkles, TrendingUp, Shield, Target, CheckCircle2, AlertCircle, Info } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Send, Sparkles, TrendingUp, Shield, Target, CheckCircle2, AlertCircle, Info, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
@@ -8,6 +8,13 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface ExecutionResult {
   success: boolean;
@@ -30,9 +37,46 @@ interface ExecutionSummary {
   results: ExecutionResult[];
 }
 
+type AIModel = "sonar" | "sonar-pro" | "sonar-reasoning" | "sonar-reasoning-pro";
+
+const AI_MODELS = [
+  {
+    id: "sonar" as AIModel,
+    name: "Sonar",
+    description: "Fast & Cost-Effective",
+    price: "$0.20/M tokens",
+    icon: Zap,
+  },
+  {
+    id: "sonar-pro" as AIModel,
+    name: "Sonar Pro",
+    description: "Enhanced Analysis",
+    price: "$3-$15/M tokens",
+    icon: TrendingUp,
+  },
+  {
+    id: "sonar-reasoning" as AIModel,
+    name: "Sonar Reasoning",
+    description: "Advanced Logic",
+    price: "$1-$5/M tokens",
+    icon: Shield,
+  },
+  {
+    id: "sonar-reasoning-pro" as AIModel,
+    name: "Sonar Reasoning Pro",
+    description: "Maximum Intelligence",
+    price: "$5-$15/M tokens",
+    icon: Target,
+  },
+];
+
 export default function AIPromptPanel() {
   const [prompt, setPrompt] = useState("");
   const [lastExecution, setLastExecution] = useState<ExecutionSummary | null>(null);
+  const [selectedModel, setSelectedModel] = useState<AIModel>(() => {
+    const saved = localStorage.getItem("ai-model");
+    return (saved as AIModel) || "sonar";
+  });
   const { toast } = useToast();
 
   const { data: marketData } = useQuery<any>({
@@ -42,6 +86,10 @@ export default function AIPromptPanel() {
   const { data: positions } = useQuery<any>({
     queryKey: ["/api/hyperliquid/positions"],
   });
+
+  useEffect(() => {
+    localStorage.setItem("ai-model", selectedModel);
+  }, [selectedModel]);
 
   const examplePrompts = [
     { icon: TrendingUp, text: "Maximize risk-adjusted returns (Sharpe ratio)" },
@@ -56,6 +104,7 @@ export default function AIPromptPanel() {
         marketData: marketData?.marketData || [],
         currentPositions: positions?.positions || [],
         autoExecute: true,
+        model: selectedModel,
       });
       return await res.json();
     },
@@ -82,6 +131,8 @@ export default function AIPromptPanel() {
         queryClient.invalidateQueries({ queryKey: ["/api/trades"] });
         queryClient.invalidateQueries({ queryKey: ["/api/hyperliquid/positions"] });
         queryClient.invalidateQueries({ queryKey: ["/api/hyperliquid/user-state"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/ai/usage"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/ai/cost"] });
       } else {
         toast({
           title: "Strategy Generated",
@@ -105,18 +156,41 @@ export default function AIPromptPanel() {
     setPrompt("");
   };
 
+  const selectedModelInfo = AI_MODELS.find(m => m.id === selectedModel);
+
   return (
     <div className="space-y-3">
       <Card className="p-4">
-        <div className="mb-3 flex items-center gap-2">
-          <Sparkles className="h-4 w-4 text-primary" />
-          <h2 className="text-sm font-semibold">AI Trading Agent</h2>
-          {executeTradeMutation.isPending && (
-            <Badge variant="secondary" className="gap-1.5 text-xs">
-              <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
-              Processing
-            </Badge>
-          )}
+        <div className="mb-3 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-primary" />
+            <h2 className="text-sm font-semibold">AI Trading Agent</h2>
+            {executeTradeMutation.isPending && (
+              <Badge variant="secondary" className="gap-1.5 text-xs">
+                <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
+                Processing
+              </Badge>
+            )}
+          </div>
+          
+          <Select value={selectedModel} onValueChange={(value) => setSelectedModel(value as AIModel)}>
+            <SelectTrigger className="w-[180px] h-8" data-testid="select-ai-model">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {AI_MODELS.map((model) => (
+                <SelectItem key={model.id} value={model.id} data-testid={`model-${model.id}`}>
+                  <div className="flex items-center gap-2">
+                    <model.icon className="h-3.5 w-3.5" />
+                    <div className="flex flex-col">
+                      <span className="text-sm font-medium">{model.name}</span>
+                      <span className="text-xs text-muted-foreground">{model.price}</span>
+                    </div>
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         
         <div className="space-y-2.5">
@@ -145,22 +219,30 @@ export default function AIPromptPanel() {
             </Button>
           </div>
 
-          <div className="flex flex-wrap gap-1.5">
-            {examplePrompts.map((example, i) => (
-              <Button
-                key={i}
-                variant="outline"
-                size="sm"
-                className="justify-start gap-1.5 text-xs"
-                onClick={() => setPrompt(example.text)}
-                disabled={executeTradeMutation.isPending}
-                data-testid={`button-example-${i}`}
-              >
-                <example.icon className="h-3 w-3" />
-                {example.text}
-              </Button>
-            ))}
+          <div className="flex items-center justify-between">
+            <div className="flex flex-wrap gap-1.5">
+              {examplePrompts.map((example, i) => (
+                <Button
+                  key={i}
+                  variant="outline"
+                  size="sm"
+                  className="justify-start gap-1.5 text-xs"
+                  onClick={() => setPrompt(example.text)}
+                  disabled={executeTradeMutation.isPending}
+                  data-testid={`button-example-${i}`}
+                >
+                  <example.icon className="h-3 w-3" />
+                  {example.text}
+                </Button>
+              ))}
+            </div>
           </div>
+
+          {selectedModelInfo && (
+            <div className="text-xs text-muted-foreground">
+              Using {selectedModelInfo.name} - {selectedModelInfo.description}
+            </div>
+          )}
         </div>
       </Card>
 
