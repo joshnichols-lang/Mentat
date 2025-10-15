@@ -10,6 +10,20 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+### October 15, 2025 - Mr. Fox Professional Trading Agent
+- Rebranded AI trading agent to "Mr. Fox" - professional AI trader managing Hyperliquid perpetual contracts
+- Updated system prompt with professional trading methodology:
+  - Goal: Maximize Sharpe ratio through optimal sizing, entries, exits, and compounding
+  - Multi-timeframe analysis (1m to Daily) using technical indicators, price action, and order flow strategies
+  - Market regime identification: Bullish, Neutral, or Bearish
+  - Risk-adjusted position sizing based on fixed risk percentage and volatility
+  - Strict risk management with stop loss, take profit, and trailing stops
+  - Continuous monitoring of Sharpe ratio, drawdown, and risk metrics
+  - Respects portfolio size, funding costs, liquidity, and margin requirements
+- UI updated: All references changed from "AI Trading Agent" to "Mr. Fox"
+- Toast notifications and user-facing text updated to use Mr. Fox branding
+- Maintains focus on real-time executed trades with professional precision
+
 ### October 15, 2025 - Hover Price Charts on Watchlist and Positions
 - Added hover tooltips with mini price charts on watchlist items and position cards
 - MiniPriceChart component displays symbol, current price (large bold monospace), 24h change%, and line chart
