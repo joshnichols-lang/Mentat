@@ -2,84 +2,84 @@
 @tailwind components;
 @tailwind utilities;
 
-/* LIGHT MODE */
+/* VINTAGE TYPEWRITER THEME */
 :root {
-  --button-outline: rgba(0,0,0, .10);
-  --badge-outline: rgba(0,0,0, .05);
+  --button-outline: rgba(0,0,0, .15);
+  --badge-outline: rgba(0,0,0, .10);
 
   /* Automatic computation of border around primary / danger buttons */
-  --opaque-button-border-intensity: -8; /* In terms of percentages */
+  --opaque-button-border-intensity: -10; /* In terms of percentages */
 
   /* Backgrounds applied on top of other backgrounds when hovered/active */
-  --elevate-1: rgba(0,0,0, .03);
-  --elevate-2: rgba(0,0,0, .08);
+  --elevate-1: rgba(0,0,0, .04);
+  --elevate-2: rgba(0,0,0, .10);
 
-  --background: 0 0% 98%;
+  --background: 45 35% 92%;
 
-  --foreground: 222 15% 12%;
+  --foreground: 0 0% 15%;
 
-  --border: 220 10% 88%;
+  --border: 30 15% 65%;
 
-  --card: 0 0% 96%;
+  --card: 40 25% 88%;
 
-  --card-foreground: 222 15% 12%;
+  --card-foreground: 0 0% 15%;
 
-  --card-border: 220 8% 90%;
+  --card-border: 30 15% 70%;
 
-  --sidebar: 220 6% 94%;
+  --sidebar: 38 20% 84%;
 
-  --sidebar-foreground: 222 15% 12%;
+  --sidebar-foreground: 0 0% 15%;
 
-  --sidebar-border: 220 8% 87%;
+  --sidebar-border: 30 15% 68%;
 
-  --sidebar-primary: 220 85% 55%;
+  --sidebar-primary: 210 25% 45%;
 
-  --sidebar-primary-foreground: 220 85% 98%;
+  --sidebar-primary-foreground: 45 35% 95%;
 
-  --sidebar-accent: 220 12% 88%;
+  --sidebar-accent: 40 20% 80%;
 
-  --sidebar-accent-foreground: 222 15% 15%;
+  --sidebar-accent-foreground: 0 0% 15%;
 
-  --sidebar-ring: 220 85% 55%;
+  --sidebar-ring: 210 25% 45%;
 
-  --popover: 220 6% 92%;
+  --popover: 40 25% 88%;
 
-  --popover-foreground: 222 15% 12%;
+  --popover-foreground: 0 0% 15%;
 
-  --popover-border: 220 8% 85%;
+  --popover-border: 30 15% 70%;
 
-  --primary: 220 85% 55%;
+  --primary: 210 25% 45%;
 
-  --primary-foreground: 220 85% 98%;
+  --primary-foreground: 45 35% 95%;
 
-  --secondary: 220 10% 86%;
+  --secondary: 38 20% 80%;
 
-  --secondary-foreground: 222 15% 15%;
+  --secondary-foreground: 0 0% 15%;
 
-  --muted: 220 12% 90%;
+  --muted: 35 18% 85%;
 
-  --muted-foreground: 222 12% 35%;
+  --muted-foreground: 0 0% 35%;
 
-  --accent: 220 15% 88%;
+  --accent: 40 22% 82%;
 
-  --accent-foreground: 222 15% 15%;
+  --accent-foreground: 0 0% 15%;
 
-  --destructive: 0 72% 55%;
+  --destructive: 0 40% 45%;
 
-  --destructive-foreground: 0 72% 98%;
+  --destructive-foreground: 45 35% 95%;
 
-  --input: 220 15% 75%;
-  --ring: 220 85% 55%;
-  --chart-1: 220 85% 45%;
-  --chart-2: 142 76% 38%;
-  --chart-3: 280 65% 48%;
-  --chart-4: 38 92% 42%;
-  --chart-5: 0 72% 48%;
+  --input: 30 15% 75%;
+  --ring: 210 25% 45%;
+  --chart-1: 25 25% 35%;
+  --chart-2: 140 30% 40%;
+  --chart-3: 210 20% 50%;
+  --chart-4: 35 45% 50%;
+  --chart-5: 0 40% 45%;
 
-  --font-sans: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --font-serif: Georgia, serif;
-  --font-mono: "JetBrains Mono", Menlo, monospace;
-  --radius: .5rem; /* 8px */
+  --font-sans: 'Courier New', Courier, monospace;
+  --font-serif: 'Courier New', Courier, monospace;
+  --font-mono: 'Courier New', Courier, monospace;
+  --radius: .25rem; /* 4px - sharper corners for typewriter feel */
   --shadow-2xs: 0px 1px 2px 0px hsl(222 15% 8% / 0.05);
   --shadow-xs: 0px 1px 3px 0px hsl(222 15% 8% / 0.08);
   --shadow-sm: 0px 2px 4px -1px hsl(222 15% 8% / 0.06), 0px 1px 2px -1px hsl(222 15% 8% / 0.04);
@@ -123,76 +123,76 @@
 }
 
 .dark {
-  --button-outline: rgba(255,255,255, .10);
-  --badge-outline: rgba(255,255,255, .05);
+  --button-outline: rgba(255,255,255, .15);
+  --badge-outline: rgba(255,255,255, .10);
 
-  --opaque-button-border-intensity: 9;  /* In terms of percentages */
+  --opaque-button-border-intensity: 10;  /* In terms of percentages */
 
   /* Backgrounds applied on top of other backgrounds when hovered/active */
-  --elevate-1: rgba(255,255,255, .04);
-  --elevate-2: rgba(255,255,255, .09);
+  --elevate-1: rgba(255,255,255, .05);
+  --elevate-2: rgba(255,255,255, .12);
 
-  --background: 222 15% 8%;
+  --background: 30 20% 12%;
 
-  --foreground: 0 0% 95%;
+  --foreground: 45 35% 92%;
 
-  --border: 222 10% 20%;
+  --border: 30 15% 35%;
 
-  --card: 222 15% 12%;
+  --card: 35 18% 18%;
 
-  --card-foreground: 0 0% 95%;
+  --card-foreground: 45 35% 92%;
 
-  --card-border: 222 10% 18%;
+  --card-border: 30 15% 30%;
 
-  --sidebar: 222 15% 16%;
+  --sidebar: 32 18% 16%;
 
-  --sidebar-foreground: 0 0% 95%;
+  --sidebar-foreground: 45 35% 92%;
 
-  --sidebar-border: 222 10% 22%;
+  --sidebar-border: 30 15% 32%;
 
-  --sidebar-primary: 220 85% 55%;
+  --sidebar-primary: 210 35% 60%;
 
-  --sidebar-primary-foreground: 220 85% 98%;
+  --sidebar-primary-foreground: 30 20% 10%;
 
-  --sidebar-accent: 222 12% 20%;
+  --sidebar-accent: 35 15% 22%;
 
-  --sidebar-accent-foreground: 0 0% 95%;
+  --sidebar-accent-foreground: 45 35% 92%;
 
-  --sidebar-ring: 220 85% 55%;
+  --sidebar-ring: 210 35% 60%;
 
-  --popover: 222 15% 18%;
+  --popover: 35 18% 18%;
 
-  --popover-foreground: 0 0% 95%;
+  --popover-foreground: 45 35% 92%;
 
-  --popover-border: 222 10% 24%;
+  --popover-border: 30 15% 30%;
 
-  --primary: 220 85% 55%;
+  --primary: 210 35% 60%;
 
-  --primary-foreground: 220 85% 98%;
+  --primary-foreground: 30 20% 10%;
 
-  --secondary: 222 12% 22%;
+  --secondary: 35 15% 25%;
 
-  --secondary-foreground: 0 0% 95%;
+  --secondary-foreground: 45 35% 92%;
 
-  --muted: 222 10% 24%;
+  --muted: 30 12% 28%;
 
-  --muted-foreground: 0 0% 70%;
+  --muted-foreground: 45 20% 65%;
 
-  --accent: 222 15% 20%;
+  --accent: 35 15% 24%;
 
-  --accent-foreground: 0 0% 95%;
+  --accent-foreground: 45 35% 92%;
 
-  --destructive: 0 72% 55%;
+  --destructive: 0 50% 60%;
 
-  --destructive-foreground: 0 72% 98%;
+  --destructive-foreground: 30 20% 10%;
 
-  --input: 222 15% 35%;
-  --ring: 220 85% 55%;
-  --chart-1: 220 85% 65%;
-  --chart-2: 142 76% 55%;
-  --chart-3: 280 65% 70%;
-  --chart-4: 38 92% 60%;
-  --chart-5: 0 72% 65%;
+  --input: 30 15% 40%;
+  --ring: 210 35% 60%;
+  --chart-1: 25 30% 50%;
+  --chart-2: 140 35% 55%;
+  --chart-3: 210 25% 65%;
+  --chart-4: 35 50% 60%;
+  --chart-5: 0 45% 60%;
 
   --shadow-2xs: 0px 1px 2px 0px hsl(0 0% 0% / 0.3);
   --shadow-xs: 0px 1px 3px 0px hsl(0 0% 0% / 0.4);
@@ -239,6 +239,37 @@
 
   body {
     @apply font-sans antialiased bg-background text-foreground;
+    position: relative;
+    letter-spacing: 0.02em;
+  }
+
+  /* Vintage paper texture overlay */
+  body::before {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 9999;
+    opacity: 0.05;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' /%3E%3C/filter%3E%3Crect width='100' height='100' filter='url(%23noise)' opacity='0.5'/%3E%3C/svg%3E");
+  }
+
+  /* Typewriter font styling */
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-mono font-bold uppercase tracking-wide;
+  }
+
+  /* Make all buttons and cards have dotted/dashed borders for vintage feel */
+  .card, [class*="card"] {
+    border-style: solid;
+  }
+
+  /* Enhance monospace appearance for data */
+  .font-mono, [class*="font-mono"] {
+    letter-spacing: 0.05em;
   }
 }
 
