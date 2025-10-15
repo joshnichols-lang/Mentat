@@ -13,11 +13,14 @@ Preferred communication style: Simple, everyday language.
 ### October 15, 2025 - Hover Price Charts on Watchlist and Positions
 - Added hover tooltips with mini price charts on watchlist items and position cards
 - MiniPriceChart component displays symbol, current price (large bold monospace), 24h change%, and line chart
+- **48-hour hourly data**: Charts now show 48 data points representing past 48 hours of hourly price movement
 - Charts use deterministic data generation (symbol hash + sine wave) for consistent visualization
+- **Improved positioning**: Hover cards appear above symbols (`side="top" align="start"`) instead of far right for better visibility
+- **Enhanced readability**: Chart dimensions increased to 320px width × 80px height with "Past 48 hours" label
+- Interactive tooltips show exact price and time when hovering over chart points
 - Hover cards appear when hovering over symbol names with 200ms open delay, 100ms close delay
 - Graceful fallback: "Market data unavailable" message shown when data cannot be fetched
 - Fixed DOM nesting error: moved SortableContext outside tbody for valid HTML structure
-- Improved price display: shows formatted price with 2 decimal places and proper thousand separators
 
 ### October 15, 2025 - AI Context-Aware Trading Agent
 - Enhanced AI trading agent to use historical prompt context for personalized suggestions
