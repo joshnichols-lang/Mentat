@@ -170,6 +170,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get AI usage logs
+  app.get("/api/ai/usage", async (req, res) => {
+    try {
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 100;
+      const logs = await storage.getAiUsageLogs(limit);
+      res.json({ success: true, logs });
+    } catch (error) {
+      console.error("Error fetching AI usage logs:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch AI usage logs" });
+    }
+  });
+
+  // Get total AI cost
+  app.get("/api/ai/cost", async (_req, res) => {
+    try {
+      const totalCost = await storage.getTotalAiCost();
+      res.json({ success: true, totalCost });
+    } catch (error) {
+      console.error("Error fetching AI cost:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch AI cost" });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;

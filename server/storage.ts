@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type Trade, type InsertTrade, type Position, type InsertPosition, type PortfolioSnapshot, type InsertPortfolioSnapshot, users, trades, positions, portfolioSnapshots } from "@shared/schema";
+import { type User, type InsertUser, type Trade, type InsertTrade, type Position, type InsertPosition, type PortfolioSnapshot, type InsertPortfolioSnapshot, type AiUsageLog, type InsertAiUsageLog, users, trades, positions, portfolioSnapshots, aiUsageLog } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql } from "drizzle-orm";
 
@@ -27,6 +27,11 @@ export interface IStorage {
   getPortfolioSnapshots(limit?: number): Promise<PortfolioSnapshot[]>;
   getLatestPortfolioSnapshot(): Promise<PortfolioSnapshot | undefined>;
   createPortfolioSnapshot(snapshot: InsertPortfolioSnapshot): Promise<PortfolioSnapshot>;
+  
+  // AI Usage Log methods
+  logAiUsage(log: InsertAiUsageLog): Promise<AiUsageLog>;
+  getAiUsageLogs(limit?: number): Promise<AiUsageLog[]>;
+  getTotalAiCost(): Promise<string>;
 }
 
 export class DbStorage implements IStorage {
@@ -124,6 +129,23 @@ export class DbStorage implements IStorage {
   async createPortfolioSnapshot(snapshot: InsertPortfolioSnapshot): Promise<PortfolioSnapshot> {
     const result = await db.insert(portfolioSnapshots).values(snapshot).returning();
     return result[0];
+  }
+
+  // AI Usage Log methods
+  async logAiUsage(log: InsertAiUsageLog): Promise<AiUsageLog> {
+    const result = await db.insert(aiUsageLog).values(log).returning();
+    return result[0];
+  }
+
+  async getAiUsageLogs(limit: number = 100): Promise<AiUsageLog[]> {
+    return await db.select().from(aiUsageLog).orderBy(desc(aiUsageLog.timestamp)).limit(limit);
+  }
+
+  async getTotalAiCost(): Promise<string> {
+    const result = await db.select({
+      total: sql<string>`COALESCE(SUM(${aiUsageLog.estimatedCost}), 0)`
+    }).from(aiUsageLog);
+    return result[0]?.total || "0";
   }
 }
 

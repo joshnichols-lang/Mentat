@@ -48,10 +48,24 @@ export const portfolioSnapshots = pgTable("portfolio_snapshots", {
   numWins: integer("num_wins").notNull().default(0),
 });
 
+export const aiUsageLog = pgTable("ai_usage_log", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  timestamp: timestamp("timestamp").notNull().defaultNow(),
+  provider: text("provider").notNull(), // "openai", "perplexity"
+  model: text("model").notNull(), // e.g., "gpt-5", "sonar-pro"
+  promptTokens: integer("prompt_tokens").notNull(),
+  completionTokens: integer("completion_tokens").notNull(),
+  totalTokens: integer("total_tokens").notNull(),
+  estimatedCost: decimal("estimated_cost", { precision: 10, scale: 6 }).notNull(),
+  userPrompt: text("user_prompt"),
+  success: integer("success").notNull().default(1), // 1 = success, 0 = error
+});
+
 export const insertUserSchema = createInsertSchema(users).omit({ id: true });
 export const insertTradeSchema = createInsertSchema(trades).omit({ id: true, entryTimestamp: true });
 export const insertPositionSchema = createInsertSchema(positions).omit({ id: true, lastUpdated: true });
 export const insertPortfolioSnapshotSchema = createInsertSchema(portfolioSnapshots).omit({ id: true, timestamp: true });
+export const insertAiUsageLogSchema = createInsertSchema(aiUsageLog).omit({ id: true, timestamp: true });
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -61,3 +75,5 @@ export type InsertPosition = z.infer<typeof insertPositionSchema>;
 export type Position = typeof positions.$inferSelect;
 export type InsertPortfolioSnapshot = z.infer<typeof insertPortfolioSnapshotSchema>;
 export type PortfolioSnapshot = typeof portfolioSnapshots.$inferSelect;
+export type InsertAiUsageLog = z.infer<typeof insertAiUsageLogSchema>;
+export type AiUsageLog = typeof aiUsageLog.$inferSelect;

@@ -1,4 +1,5 @@
-import { openai } from "./openai";
+import { perplexity, calculateCost, type PerplexityModel } from "./perplexity";
+import { storage } from "./storage";
 
 interface MarketData {
   symbol: string;
@@ -31,9 +32,11 @@ export async function processTradingPrompt(
   marketData: MarketData[],
   currentPositions: any[]
 ): Promise<TradingStrategy> {
-  // the newest OpenAI model is "gpt-5" which was released August 7, 2025. do not change this unless explicitly requested by the user
-  const completion = await openai.chat.completions.create({
-    model: "gpt-5",
+  const model: PerplexityModel = "sonar";
+  const startTime = Date.now();
+  
+  const completion = await perplexity.chat.completions.create({
+    model,
     messages: [
       {
         role: "system",
@@ -87,13 +90,33 @@ ${currentPositions.length > 0 ? JSON.stringify(currentPositions, null, 2) : "No 
 Generate a trading strategy that addresses the user's prompt while maximizing risk-adjusted returns.`
       }
     ],
-    response_format: { type: "json_object" },
-    max_completion_tokens: 8192
+    response_format: { type: "json_object" }
   });
 
   const content = completion.choices[0].message.content;
   if (!content) {
     throw new Error("No response from AI");
+  }
+
+  // Log usage and cost
+  const usage = completion.usage;
+  if (usage) {
+    const cost = calculateCost(model, usage.prompt_tokens, usage.completion_tokens);
+    
+    try {
+      await storage.logAiUsage({
+        provider: "perplexity",
+        model,
+        promptTokens: usage.prompt_tokens,
+        completionTokens: usage.completion_tokens,
+        totalTokens: usage.total_tokens,
+        estimatedCost: cost.toFixed(6),
+        userPrompt: prompt,
+        success: 1
+      });
+    } catch (error) {
+      console.error("Failed to log AI usage:", error);
+    }
   }
 
   return JSON.parse(content) as TradingStrategy;
