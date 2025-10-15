@@ -99,7 +99,7 @@ function SortableWatchlistRow({
             <HoverCardTrigger asChild>
               <div className="font-semibold cursor-default">{displaySymbol}/USD</div>
             </HoverCardTrigger>
-            <HoverCardContent side="right" className="w-auto p-3">
+            <HoverCardContent side="top" align="start" className="w-auto p-3">
               <MiniPriceChart
                 symbol={displaySymbol}
                 currentPrice={price}

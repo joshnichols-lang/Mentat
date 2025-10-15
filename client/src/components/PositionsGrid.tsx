@@ -95,7 +95,7 @@ export default function PositionsGrid() {
                       <HoverCardTrigger asChild>
                         <div className="text-sm font-semibold cursor-default">{displaySymbol}/USD</div>
                       </HoverCardTrigger>
-                      <HoverCardContent side="right" className="w-auto p-3">
+                      <HoverCardContent side="top" align="start" className="w-auto p-3">
                         {hasMarketData ? (
                           <MiniPriceChart
                             symbol={displaySymbol}
@@ -103,7 +103,7 @@ export default function PositionsGrid() {
                             change24h={change24h}
                           />
                         ) : (
-                          <div className="w-[240px] text-center text-sm text-muted-foreground py-4">
+                          <div className="w-[280px] text-center text-sm text-muted-foreground py-4">
                             Market data unavailable
                           </div>
                         )}
