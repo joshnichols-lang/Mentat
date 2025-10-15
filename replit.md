@@ -2,7 +2,7 @@
 
 ## Overview
 
-This is an AI-powered cryptocurrency trading terminal designed for the Lighter.xyz perpetual futures exchange. The application allows users to interact with an AI trading agent through natural language prompts to execute automated trading strategies. The interface is built as a modern trading dashboard with real-time market data, portfolio performance tracking, and comprehensive trading controls.
+This is an AI-powered cryptocurrency trading terminal designed for the Hyperliquid perpetual futures exchange. The application allows users to interact with an AI trading agent through natural language prompts to execute automated trading strategies. The interface is built as a modern trading dashboard with real-time market data, portfolio performance tracking, and comprehensive trading controls.
 
 ## User Preferences
 
@@ -33,10 +33,10 @@ Preferred communication style: Simple, everyday language.
 
 **Key UI Components:**
 - AI Prompt Panel for natural language trading instructions
-- Market Overview with real-time price cards
+- Market Overview with real-time price cards (fetches from Hyperliquid every 5 seconds)
 - Portfolio Performance Chart with AI vs Buy-and-Hold comparison
 - Sharpe Ratio visualization for risk-adjusted returns
-- Positions Grid for active trades management
+- Positions Grid for active trades management (fetches from Hyperliquid every 3 seconds)
 - Quick Trade panel for manual order entry
 - Trade History with detailed execution logs
 
@@ -58,15 +58,23 @@ Preferred communication style: Simple, everyday language.
 - Storage interface abstraction (`IStorage`) implemented by `DbStorage` class
 - Centralized error handling middleware
 - Available endpoints:
-  - `POST /api/trading/prompt` - Process natural language trading prompts using AI
-  - `GET /api/trades` - Fetch all trades
-  - `POST /api/trades` - Create a new trade
-  - `POST /api/trades/:id/close` - Close an existing trade
-  - `GET /api/positions` - Fetch all positions
-  - `POST /api/positions` - Create a new position
-  - `PATCH /api/positions/:id` - Update a position
-  - `GET /api/portfolio/snapshots` - Fetch portfolio snapshots
-  - `POST /api/portfolio/snapshots` - Create a portfolio snapshot
+  - **Trading Prompts:**
+    - `POST /api/trading/prompt` - Process natural language trading prompts using AI
+  - **Database Operations:**
+    - `GET /api/trades` - Fetch all trades
+    - `POST /api/trades` - Create a new trade
+    - `POST /api/trades/:id/close` - Close an existing trade
+    - `GET /api/positions` - Fetch all positions
+    - `POST /api/positions` - Create a new position
+    - `PATCH /api/positions/:id` - Update a position
+    - `GET /api/portfolio/snapshots` - Fetch portfolio snapshots
+    - `POST /api/portfolio/snapshots` - Create a portfolio snapshot
+  - **Hyperliquid Exchange:**
+    - `GET /api/hyperliquid/market-data` - Get real-time market data for all assets
+    - `GET /api/hyperliquid/positions` - Get user's open positions
+    - `POST /api/hyperliquid/order` - Place a new order (limit or market)
+    - `POST /api/hyperliquid/cancel-order` - Cancel an existing order
+    - `POST /api/hyperliquid/leverage` - Update leverage for a symbol
 
 **Data Models:**
 - **Trades**: Store individual trade executions with entry/exit prices, leverage, P&L
@@ -122,8 +130,12 @@ Preferred communication style: Simple, everyday language.
 ### External Dependencies
 
 **Trading Infrastructure:**
-- Designed for integration with **Lighter.xyz** perpetual futures exchange
-- Currently using simulated trading (real exchange integration pending)
+- **Hyperliquid Exchange** integration via `hyperliquid` npm package (v1.7.7)
+- Supports perpetual futures trading (BTC-PERP, ETH-PERP, SOL-PERP, ARB-PERP, etc.)
+- Real-time market data fetching (no authentication required)
+- Trading operations require HYPERLIQUID_PRIVATE_KEY environment variable
+- Order types: Limit (Gtc, Ioc, Alo) and Market orders
+- Position tracking with real-time P&L and leverage information
 
 **UI Component Libraries:**
 - Radix UI primitives for accessible, unstyled components
