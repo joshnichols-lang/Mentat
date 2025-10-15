@@ -91,12 +91,6 @@ export default function AIPromptPanel() {
     localStorage.setItem("ai-model", selectedModel);
   }, [selectedModel]);
 
-  const examplePrompts = [
-    { icon: TrendingUp, text: "Maximize risk-adjusted returns (Sharpe ratio)" },
-    { icon: Shield, text: "Conservative strategy with 2% max position size" },
-    { icon: Target, text: "Trade BTC breakout above $45k with 3:1 R:R" },
-  ];
-
   const executeTradeMutation = useMutation({
     mutationFn: async (promptText: string) => {
       const res = await apiRequest("POST", "/api/trading/prompt", {
@@ -217,25 +211,6 @@ export default function AIPromptPanel() {
             >
               <Send className="h-3.5 w-3.5" />
             </Button>
-          </div>
-
-          <div className="flex items-center justify-between">
-            <div className="flex flex-wrap gap-1.5">
-              {examplePrompts.map((example, i) => (
-                <Button
-                  key={i}
-                  variant="outline"
-                  size="sm"
-                  className="justify-start gap-1.5 text-xs"
-                  onClick={() => setPrompt(example.text)}
-                  disabled={executeTradeMutation.isPending}
-                  data-testid={`button-example-${i}`}
-                >
-                  <example.icon className="h-3 w-3" />
-                  {example.text}
-                </Button>
-              ))}
-            </div>
           </div>
 
           {selectedModelInfo && (
