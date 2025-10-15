@@ -74,14 +74,14 @@ export default function TradeHistory() {
                         </Badge>
                       </div>
                       <div className="text-xs text-muted-foreground">
-                        {trade.timestamp} · {trade.size} @ ${trade.price.toLocaleString()}
+                        {trade.timestamp} · {trade.size} @ ${trade.price ? trade.price.toLocaleString() : 'Market'}
                       </div>
                     </div>
-                    {trade.pnl !== undefined && (
+                    {trade.pnl !== undefined && trade.pnl !== null && (
                       <div className={`text-right font-mono text-sm font-semibold ${
-                        trade.pnl >= 0 ? "text-long" : "text-short"
+                        Number(trade.pnl) >= 0 ? "text-long" : "text-short"
                       }`} data-testid={`text-trade-pnl-${trade.id}`}>
-                        {trade.pnl >= 0 ? "+" : ""}${trade.pnl.toFixed(2)}
+                        {Number(trade.pnl) >= 0 ? "+" : ""}${Number(trade.pnl).toFixed(2)}
                       </div>
                     )}
                   </div>
@@ -99,7 +99,7 @@ export default function TradeHistory() {
               {selectedTrade?.symbol}/USD {selectedTrade?.side.toUpperCase()} Trade
             </DialogTitle>
           </DialogHeader>
-          {selectedTrade && (
+          {selectedTrade && selectedTrade.price && (
             <TradePriceChart
               symbol={selectedTrade.symbol}
               entryPrice={selectedTrade.price}

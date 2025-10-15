@@ -61,11 +61,15 @@ export async function executeTradeStrategy(
 
   for (const action of actions) {
     try {
-      // Validate inputs
-      validateNumericInput(action.size, "size");
-      validateLeverage(action.leverage);
+      // Normalize symbol to ensure it has -PERP suffix
+      console.log(`[Trade Executor] Processing action: ${action.action} ${action.symbol} ${action.side}`);
+      if (!action.symbol.endsWith("-PERP") && !action.symbol.endsWith("-SPOT")) {
+        console.log(`[Trade Executor] Normalizing symbol from "${action.symbol}" to "${action.symbol}-PERP"`);
+        action.symbol = `${action.symbol}-PERP`;
+      }
+      console.log(`[Trade Executor] Final symbol: ${action.symbol}`);
       
-      // Skip "hold" actions - they don't require execution
+      // Skip "hold" actions - they don't require execution or validation
       if (action.action === "hold") {
         skipCount++;
         results.push({
@@ -74,6 +78,10 @@ export async function executeTradeStrategy(
         });
         continue;
       }
+      
+      // Validate inputs for actions that will be executed
+      validateNumericInput(action.size, "size");
+      validateLeverage(action.leverage);
 
       // Handle "close" actions
       if (action.action === "close") {
@@ -145,7 +153,7 @@ async function executeOpenPosition(
     // Use market order if no expected entry price is specified
     if (!action.expectedEntry) {
       orderParams = {
-        coin: action.symbol.replace("-PERP", ""),
+        coin: action.symbol,  // Use full symbol with -PERP suffix
         is_buy: isBuy,
         sz: size,
         limit_px: 0, // Required but ignored for market orders
@@ -157,7 +165,7 @@ async function executeOpenPosition(
       const limitPrice = validateNumericInput(action.expectedEntry, "expectedEntry");
       
       orderParams = {
-        coin: action.symbol.replace("-PERP", ""),
+        coin: action.symbol,  // Use full symbol with -PERP suffix
         is_buy: isBuy,
         sz: size,
         limit_px: limitPrice,
@@ -202,14 +210,15 @@ async function executeClosePosition(
   try {
     // Get current position to determine size and direction
     const positions = await hyperliquid.getPositions();
-    const coin = action.symbol.replace("-PERP", "");
-    const position = positions.find((p: any) => p.coin === coin);
+    // Positions are returned with coin name only (no -PERP suffix)
+    const coinName = action.symbol.replace("-PERP", "").replace("-SPOT", "");
+    const position = positions.find((p: any) => p.coin === coinName);
 
     if (!position) {
       return {
         success: false,
         action,
-        error: `No open position found for ${coin}`,
+        error: `No open position found for ${coinName}`,
       };
     }
 
@@ -220,7 +229,7 @@ async function executeClosePosition(
       return {
         success: false,
         action,
-        error: `Position for ${coin} has zero size`,
+        error: `Position for ${coinName} has zero size`,
       };
     }
 
@@ -238,7 +247,7 @@ async function executeClosePosition(
 
     // Close by placing opposite order with reduce_only flag and market order type
     const orderParams = {
-      coin,
+      coin: action.symbol,  // Use full symbol with -PERP suffix
       is_buy: !isLong, // Opposite direction to close
       sz: absSize,
       limit_px: 0, // Required but ignored for market orders

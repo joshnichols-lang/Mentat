@@ -38,6 +38,7 @@ export interface OrderParams {
 export class HyperliquidClient {
   private sdk: Hyperliquid;
   private config: HyperliquidConfig;
+  private isInitialized: boolean = false;
 
   constructor(config: HyperliquidConfig) {
     this.config = config;
@@ -55,6 +56,22 @@ export class HyperliquidClient {
       walletAddress: config.walletAddress,
       enableWs: false, // Disable WebSocket for now
     });
+  }
+
+  private async ensureInitialized(): Promise<void> {
+    if (!this.isInitialized) {
+      try {
+        // Initialize asset maps by fetching metadata
+        // This forces the SDK to load available assets
+        await this.sdk.info.perpetuals.getMeta();
+        this.isInitialized = true;
+        console.log("[Hyperliquid] Asset maps initialized via metadata fetch");
+      } catch (error) {
+        console.error("[Hyperliquid] Failed to initialize asset maps:", error);
+        // Continue anyway - the SDK might initialize on first use
+        this.isInitialized = true;
+      }
+    }
   }
 
   async getMarketData(): Promise<MarketData[]> {
@@ -174,6 +191,9 @@ export class HyperliquidClient {
 
   async placeOrder(params: OrderParams): Promise<{ success: boolean; response?: any; error?: string }> {
     try {
+      // Ensure asset maps are initialized before trading
+      await this.ensureInitialized();
+      
       const response = await this.sdk.exchange.placeOrder(params as any);
       
       return {
