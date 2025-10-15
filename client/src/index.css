@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* VINTAGE TYPEWRITER THEME */
+/* 1FOX NEWSPAPER THEME - GRAYSCALE ONLY */
 :root {
   --button-outline: rgba(0,0,0, .15);
   --badge-outline: rgba(0,0,0, .10);
@@ -14,80 +14,80 @@
   --elevate-1: rgba(0,0,0, .04);
   --elevate-2: rgba(0,0,0, .10);
 
-  --background: 45 35% 92%;
+  --background: 0 0% 98%;
 
-  --foreground: 0 0% 15%;
+  --foreground: 0 0% 10%;
 
-  --border: 30 15% 65%;
+  --border: 0 0% 80%;
 
-  --card: 40 25% 88%;
+  --card: 0 0% 95%;
 
-  --card-foreground: 0 0% 15%;
+  --card-foreground: 0 0% 10%;
 
-  --card-border: 30 15% 70%;
+  --card-border: 0 0% 75%;
 
-  --sidebar: 38 20% 84%;
+  --sidebar: 0 0% 92%;
 
-  --sidebar-foreground: 0 0% 15%;
+  --sidebar-foreground: 0 0% 10%;
 
-  --sidebar-border: 30 15% 68%;
+  --sidebar-border: 0 0% 78%;
 
-  --sidebar-primary: 210 25% 45%;
+  --sidebar-primary: 0 0% 20%;
 
-  --sidebar-primary-foreground: 45 35% 95%;
+  --sidebar-primary-foreground: 0 0% 98%;
 
-  --sidebar-accent: 40 20% 80%;
+  --sidebar-accent: 0 0% 88%;
 
-  --sidebar-accent-foreground: 0 0% 15%;
+  --sidebar-accent-foreground: 0 0% 10%;
 
-  --sidebar-ring: 210 25% 45%;
+  --sidebar-ring: 0 0% 20%;
 
-  --popover: 40 25% 88%;
+  --popover: 0 0% 95%;
 
-  --popover-foreground: 0 0% 15%;
+  --popover-foreground: 0 0% 10%;
 
-  --popover-border: 30 15% 70%;
+  --popover-border: 0 0% 75%;
 
-  --primary: 210 25% 45%;
+  --primary: 0 0% 20%;
 
-  --primary-foreground: 45 35% 95%;
+  --primary-foreground: 0 0% 98%;
 
-  --secondary: 38 20% 80%;
+  --secondary: 0 0% 88%;
 
-  --secondary-foreground: 0 0% 15%;
+  --secondary-foreground: 0 0% 10%;
 
-  --muted: 35 18% 85%;
+  --muted: 0 0% 90%;
 
-  --muted-foreground: 0 0% 35%;
+  --muted-foreground: 0 0% 40%;
 
-  --accent: 40 22% 82%;
+  --accent: 0 0% 90%;
 
-  --accent-foreground: 0 0% 15%;
+  --accent-foreground: 0 0% 10%;
 
-  --destructive: 0 25% 45%;
+  --destructive: 0 0% 15%;
 
-  --destructive-foreground: 45 35% 95%;
+  --destructive-foreground: 0 0% 98%;
 
-  --input: 30 15% 75%;
-  --ring: 210 25% 45%;
-  --chart-1: 25 25% 35%;
-  --chart-2: 140 20% 40%;
-  --chart-3: 210 20% 50%;
-  --chart-4: 35 45% 50%;
-  --chart-5: 0 25% 45%;
+  --input: 0 0% 85%;
+  --ring: 0 0% 20%;
+  --chart-1: 0 0% 20%;
+  --chart-2: 0 0% 40%;
+  --chart-3: 0 0% 60%;
+  --chart-4: 0 0% 35%;
+  --chart-5: 0 0% 25%;
 
-  --font-sans: 'Courier New', Courier, monospace;
-  --font-serif: 'Courier New', Courier, monospace;
+  --font-sans: 'Helvetica Neue', Arial, sans-serif;
+  --font-serif: Georgia, 'Times New Roman', serif;
   --font-mono: 'Courier New', Courier, monospace;
-  --radius: .25rem; /* 4px - sharper corners for typewriter feel */
-  --shadow-2xs: 0px 1px 2px 0px hsl(222 15% 8% / 0.05);
-  --shadow-xs: 0px 1px 3px 0px hsl(222 15% 8% / 0.08);
-  --shadow-sm: 0px 2px 4px -1px hsl(222 15% 8% / 0.06), 0px 1px 2px -1px hsl(222 15% 8% / 0.04);
-  --shadow: 0px 4px 6px -1px hsl(222 15% 8% / 0.08), 0px 2px 4px -2px hsl(222 15% 8% / 0.04);
-  --shadow-md: 0px 6px 8px -2px hsl(222 15% 8% / 0.10), 0px 4px 6px -2px hsl(222 15% 8% / 0.06);
-  --shadow-lg: 0px 10px 15px -3px hsl(222 15% 8% / 0.10), 0px 4px 6px -4px hsl(222 15% 8% / 0.05);
-  --shadow-xl: 0px 20px 25px -5px hsl(222 15% 8% / 0.12), 0px 8px 10px -6px hsl(222 15% 8% / 0.06);
-  --shadow-2xl: 0px 25px 50px -12px hsl(222 15% 8% / 0.25);
+  --radius: 0rem; /* Sharp corners for newspaper feel */
+  --shadow-2xs: 0px 1px 2px 0px hsl(0 0% 0% / 0.05);
+  --shadow-xs: 0px 1px 3px 0px hsl(0 0% 0% / 0.08);
+  --shadow-sm: 0px 2px 4px -1px hsl(0 0% 0% / 0.06), 0px 1px 2px -1px hsl(0 0% 0% / 0.04);
+  --shadow: 0px 4px 6px -1px hsl(0 0% 0% / 0.08), 0px 2px 4px -2px hsl(0 0% 0% / 0.04);
+  --shadow-md: 0px 6px 8px -2px hsl(0 0% 0% / 0.10), 0px 4px 6px -2px hsl(0 0% 0% / 0.06);
+  --shadow-lg: 0px 10px 15px -3px hsl(0 0% 0% / 0.10), 0px 4px 6px -4px hsl(0 0% 0% / 0.05);
+  --shadow-xl: 0px 20px 25px -5px hsl(0 0% 0% / 0.12), 0px 8px 10px -6px hsl(0 0% 0% / 0.06);
+  --shadow-2xl: 0px 25px 50px -12px hsl(0 0% 0% / 0.25);
   --tracking-normal: 0em;
   --spacing: 0.25rem;
 
@@ -132,67 +132,67 @@
   --elevate-1: rgba(255,255,255, .05);
   --elevate-2: rgba(255,255,255, .12);
 
-  --background: 30 20% 12%;
+  --background: 0 0% 12%;
 
-  --foreground: 45 35% 92%;
+  --foreground: 0 0% 95%;
 
-  --border: 30 15% 35%;
+  --border: 0 0% 30%;
 
-  --card: 35 18% 18%;
+  --card: 0 0% 16%;
 
-  --card-foreground: 45 35% 92%;
+  --card-foreground: 0 0% 95%;
 
-  --card-border: 30 15% 30%;
+  --card-border: 0 0% 25%;
 
-  --sidebar: 32 18% 16%;
+  --sidebar: 0 0% 14%;
 
-  --sidebar-foreground: 45 35% 92%;
+  --sidebar-foreground: 0 0% 95%;
 
-  --sidebar-border: 30 15% 32%;
+  --sidebar-border: 0 0% 28%;
 
-  --sidebar-primary: 210 35% 60%;
+  --sidebar-primary: 0 0% 80%;
 
-  --sidebar-primary-foreground: 30 20% 10%;
+  --sidebar-primary-foreground: 0 0% 12%;
 
-  --sidebar-accent: 35 15% 22%;
+  --sidebar-accent: 0 0% 20%;
 
-  --sidebar-accent-foreground: 45 35% 92%;
+  --sidebar-accent-foreground: 0 0% 95%;
 
-  --sidebar-ring: 210 35% 60%;
+  --sidebar-ring: 0 0% 80%;
 
-  --popover: 35 18% 18%;
+  --popover: 0 0% 16%;
 
-  --popover-foreground: 45 35% 92%;
+  --popover-foreground: 0 0% 95%;
 
-  --popover-border: 30 15% 30%;
+  --popover-border: 0 0% 25%;
 
-  --primary: 210 35% 60%;
+  --primary: 0 0% 80%;
 
-  --primary-foreground: 30 20% 10%;
+  --primary-foreground: 0 0% 12%;
 
-  --secondary: 35 15% 25%;
+  --secondary: 0 0% 22%;
 
-  --secondary-foreground: 45 35% 92%;
+  --secondary-foreground: 0 0% 95%;
 
-  --muted: 30 12% 28%;
+  --muted: 0 0% 24%;
 
-  --muted-foreground: 45 20% 65%;
+  --muted-foreground: 0 0% 60%;
 
-  --accent: 35 15% 24%;
+  --accent: 0 0% 22%;
 
-  --accent-foreground: 45 35% 92%;
+  --accent-foreground: 0 0% 95%;
 
-  --destructive: 0 30% 60%;
+  --destructive: 0 0% 85%;
 
-  --destructive-foreground: 30 20% 10%;
+  --destructive-foreground: 0 0% 12%;
 
-  --input: 30 15% 40%;
-  --ring: 210 35% 60%;
-  --chart-1: 25 30% 50%;
-  --chart-2: 140 22% 55%;
-  --chart-3: 210 25% 65%;
-  --chart-4: 35 50% 60%;
-  --chart-5: 0 30% 60%;
+  --input: 0 0% 35%;
+  --ring: 0 0% 80%;
+  --chart-1: 0 0% 70%;
+  --chart-2: 0 0% 50%;
+  --chart-3: 0 0% 30%;
+  --chart-4: 0 0% 60%;
+  --chart-5: 0 0% 75%;
 
   --shadow-2xs: 0px 1px 2px 0px hsl(0 0% 0% / 0.3);
   --shadow-xs: 0px 1px 3px 0px hsl(0 0% 0% / 0.4);
@@ -240,10 +240,10 @@
   body {
     @apply font-sans antialiased bg-background text-foreground;
     position: relative;
-    letter-spacing: 0.02em;
+    letter-spacing: 0.01em;
   }
 
-  /* Vintage paper texture overlay */
+  /* Subtle newsprint texture overlay */
   body::before {
     content: "";
     position: fixed;
@@ -253,23 +253,23 @@
     height: 100%;
     pointer-events: none;
     z-index: 9999;
-    opacity: 0.05;
+    opacity: 0.02;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' /%3E%3C/filter%3E%3Crect width='100' height='100' filter='url(%23noise)' opacity='0.5'/%3E%3C/svg%3E");
   }
 
-  /* Typewriter font styling */
+  /* Newspaper-style headers */
   h1, h2, h3, h4, h5, h6 {
-    @apply font-mono font-bold uppercase tracking-wide;
+    @apply font-serif font-bold uppercase tracking-tight;
   }
 
-  /* Make all buttons and cards have dotted/dashed borders for vintage feel */
+  /* Clean card styling */
   .card, [class*="card"] {
     border-style: solid;
   }
 
-  /* Enhance monospace appearance for data */
+  /* Monospace for data */
   .font-mono, [class*="font-mono"] {
-    letter-spacing: 0.05em;
+    letter-spacing: 0.03em;
   }
 }
 
