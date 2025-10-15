@@ -33,7 +33,12 @@ Preferred communication style: Simple, everyday language.
 
 **Key UI Components:**
 - AI Prompt Panel for natural language trading instructions
-- Market Overview with real-time price cards (fetches from Hyperliquid every 5 seconds)
+- Market Overview watchlist with advanced features:
+  - Real-time price data (fetches from Hyperliquid every 5 seconds)
+  - Drag-and-drop manual reordering using @dnd-kit
+  - Column sorting (Price, 24h Change, 24h Volume) with 3-state cycle: desc → asc → cleared
+  - Add/remove pairs (max 10 pairs)
+  - All preferences persist in localStorage
 - Portfolio Performance Chart with AI vs Buy-and-Hold comparison
 - Sharpe Ratio visualization for risk-adjusted returns
 - Positions Grid for active trades management (fetches from Hyperliquid every 3 seconds)
