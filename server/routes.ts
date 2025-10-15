@@ -235,27 +235,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Place order on Hyperliquid
   app.post("/api/hyperliquid/order", async (req, res) => {
     try {
-      const schema = z.object({
+      const baseSchema = z.object({
         coin: z.string(),
         is_buy: z.boolean(),
-        sz: z.number(),
-        limit_px: z.number().optional(),
+        sz: z.number().positive(),
         order_type: z.enum(["limit", "market"]),
         reduce_only: z.boolean().optional(),
       });
 
-      const params = schema.parse(req.body);
+      const baseParams = baseSchema.parse(req.body);
+      
+      // Validate limit_px based on order_type
+      if (baseParams.order_type === "limit") {
+        const limitPx = req.body.limit_px;
+        if (typeof limitPx !== "number" || limitPx <= 0) {
+          return res.status(400).json({
+            success: false,
+            error: "Limit orders must include a positive limit_px (price)",
+          });
+        }
+      }
       
       // Convert to Hyperliquid format
       const orderParams = {
-        coin: params.coin,
-        is_buy: params.is_buy,
-        sz: params.sz,
-        limit_px: params.limit_px || 0,
-        order_type: params.order_type === "market" 
+        coin: baseParams.coin,
+        is_buy: baseParams.is_buy,
+        sz: baseParams.sz,
+        limit_px: baseParams.order_type === "limit" ? req.body.limit_px : 0,
+        order_type: baseParams.order_type === "market" 
           ? { market: {} }
-          : { limit: { tif: "Gtc" } },
-        reduce_only: params.reduce_only,
+          : { limit: { tif: "Gtc" as const } },
+        reduce_only: baseParams.reduce_only,
       };
 
       const result = await hyperliquid.placeOrder(orderParams);
