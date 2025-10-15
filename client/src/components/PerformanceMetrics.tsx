@@ -1,5 +1,6 @@
-import { TrendingUp, Target, Award } from "lucide-react";
+import { TrendingUp, Wallet, DollarSign } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { useQuery } from "@tanstack/react-query";
 
 interface Metric {
   icon: typeof TrendingUp;
@@ -10,34 +11,42 @@ interface Metric {
 }
 
 export default function PerformanceMetrics() {
-  // todo: remove mock functionality
+  const { data: userState } = useQuery<any>({
+    queryKey: ['/api/hyperliquid/user-state'],
+    refetchInterval: 5000,
+  });
+
+  const accountValue = (userState?.userState?.marginSummary?.accountValue as number) || 0;
+  const withdrawable = (userState?.userState?.withdrawable as number) || 0;
+  const marginUsed = (userState?.userState?.marginSummary?.totalMarginUsed as number) || 0;
+
   const metrics: Metric[] = [
     {
+      icon: DollarSign,
+      label: "Account Value",
+      value: `$${accountValue.toFixed(2)}`,
+      change: undefined,
+      positive: true,
+    },
+    {
+      icon: Wallet,
+      label: "Available",
+      value: `$${withdrawable.toFixed(2)}`,
+      change: undefined,
+      positive: true,
+    },
+    {
       icon: TrendingUp,
-      label: "Total P&L",
-      value: "+$1,900.00",
-      change: "+8.2%",
-      positive: true,
-    },
-    {
-      icon: Target,
-      label: "Sharpe Ratio",
-      value: "1.85",
-      change: "Good",
-      positive: true,
-    },
-    {
-      icon: Award,
-      label: "Win Rate",
-      value: "68%",
-      change: "34/50 trades",
-      positive: true,
+      label: "Margin Used",
+      value: `$${marginUsed.toFixed(2)}`,
+      change: marginUsed > 0 ? `${((marginUsed / accountValue) * 100).toFixed(1)}%` : undefined,
+      positive: marginUsed === 0,
     },
   ];
 
   return (
     <div>
-      <h2 className="mb-3 text-sm font-semibold">Performance</h2>
+      <h2 className="mb-3 text-sm font-semibold">Account Overview</h2>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         {metrics.map((metric, i) => (
           <Card key={i} className="p-3" data-testid={`card-metric-${i}`}>
