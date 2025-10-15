@@ -65,7 +65,7 @@ export default function TradeHistory() {
                         <span className="font-semibold">{trade.symbol}/USD</span>
                         <Badge
                           variant={trade.side === "long" ? "default" : "destructive"}
-                          className={`text-xs ${trade.side === "long" ? "bg-chart-2 hover:bg-chart-2/90" : ""}`}
+                          className={`text-xs ${trade.side === "long" ? "bg-long text-long-foreground hover:bg-long/90" : "bg-short text-short-foreground hover:bg-short/90"}`}
                         >
                           {trade.side.toUpperCase()}
                         </Badge>
@@ -79,7 +79,7 @@ export default function TradeHistory() {
                     </div>
                     {trade.pnl !== undefined && (
                       <div className={`text-right font-mono text-sm font-semibold ${
-                        trade.pnl >= 0 ? "text-chart-2" : "text-destructive"
+                        trade.pnl >= 0 ? "text-long" : "text-short"
                       }`} data-testid={`text-trade-pnl-${trade.id}`}>
                         {trade.pnl >= 0 ? "+" : ""}${trade.pnl.toFixed(2)}
                       </div>

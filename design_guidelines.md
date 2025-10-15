@@ -7,8 +7,8 @@
 
 ### A. Color Palette
 
-**Pure Grayscale Foundation**
-All colors use 0% saturation for true grayscale
+**Grayscale Foundation**
+Most colors use 0% saturation for true grayscale
 
 **Light Mode (Newsprint)**
 - Background Primary: 0 0% 98% (Clean white paper)
@@ -32,10 +32,14 @@ All colors use 0% saturation for true grayscale
 - Secondary Text: 0 0% 70% (Light gray text)
 - Tertiary/Labels: 0 0% 50% (Medium gray labels)
 
+**Trading Colors (Dull/Muted)**
+- Long/Positive (Light): 120 25% 35% (dull dark green)
+- Long/Positive (Dark): 120 25% 60% (dull light green)
+- Short/Negative (Light): 0 30% 40% (dull dark red)
+- Short/Negative (Dark): 0 30% 55% (dull light red)
+
 **Accent Grayscales (All modes)**
 - Primary Action: 0 0% 20% (dark gray for light mode) / 0 0% 80% (light gray for dark mode)
-- Success/Long: 0 0% 25% / 0 0% 75%
-- Danger/Short: 0 0% 15% / 0 0% 85%
 - Neutral/Info: 0 0% 40% / 0 0% 60%
 
 **Data Visualization**

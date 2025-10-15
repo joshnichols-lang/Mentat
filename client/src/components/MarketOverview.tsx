@@ -99,7 +99,7 @@ function SortableWatchlistRow({
       </td>
       <td className="py-2.5 text-right">
         <div className={`flex items-center justify-end gap-1 font-mono text-sm font-medium ${
-          change24h >= 0 ? "text-chart-2" : "text-destructive"
+          change24h >= 0 ? "text-long" : "text-short"
         }`}>
           {change24h >= 0 ? (
             <TrendingUp className="h-3 w-3" />

@@ -45,7 +45,7 @@ export default function TradePriceChart({ symbol, entryPrice, entryTime, side }:
         <div>
           <div className="text-xs text-muted-foreground">Change</div>
           <div className={`font-mono text-sm font-semibold ${
-            currentPrice >= entryPrice ? "text-chart-2" : "text-destructive"
+            currentPrice >= entryPrice ? "text-long" : "text-short"
           }`}>
             {currentPrice >= entryPrice ? "+" : ""}
             {((currentPrice - entryPrice) / entryPrice * 100).toFixed(2)}%
@@ -79,12 +79,12 @@ export default function TradePriceChart({ symbol, entryPrice, entryTime, side }:
           />
           <ReferenceLine 
             y={entryPrice} 
-            stroke={side === "long" ? "hsl(var(--chart-2))" : "hsl(var(--destructive))"} 
+            stroke={side === "long" ? "hsl(var(--long))" : "hsl(var(--short))"} 
             strokeDasharray="5 5"
             label={{ 
               value: `Entry: $${entryPrice.toLocaleString()}`, 
               position: "right", 
-              fill: side === "long" ? "hsl(var(--chart-2))" : "hsl(var(--destructive))",
+              fill: side === "long" ? "hsl(var(--long))" : "hsl(var(--short))",
               fontSize: 12 
             }}
           />

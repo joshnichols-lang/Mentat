@@ -78,7 +78,7 @@ export default function PositionsGrid() {
                     <div className="text-sm font-semibold">{displaySymbol}/USD</div>
                     <Badge 
                       variant={side === "long" ? "default" : "destructive"}
-                      className={`text-xs ${side === "long" ? "bg-chart-2 hover:bg-chart-2/90" : ""}`}
+                      className={`text-xs ${side === "long" ? "bg-long text-long-foreground hover:bg-long/90" : "bg-short text-short-foreground hover:bg-short/90"}`}
                     >
                       {side.toUpperCase()} {position.leverage.value}x
                     </Badge>
@@ -100,7 +100,7 @@ export default function PositionsGrid() {
                     <div>
                       <div className="text-xs text-muted-foreground">P&L</div>
                       <div className={`font-mono text-xs font-semibold ${
-                        pnl >= 0 ? "text-chart-2" : "text-destructive"
+                        pnl >= 0 ? "text-long" : "text-short"
                       }`} data-testid={`text-pnl-${position.coin}`}>
                         ${pnl >= 0 ? "+" : ""}{pnl.toFixed(2)} ({pnl >= 0 ? "+" : ""}{(roe * 100).toFixed(2)}%)
                       </div>

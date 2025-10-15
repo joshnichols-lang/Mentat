@@ -20,12 +20,12 @@ Preferred communication style: Simple, everyday language.
 
 ### October 15, 2025 - Fantastic Mr. Fox Newspaper Theme
 - Rebranded application to "1fox" with Wes Anderson newspaper aesthetic
-- Complete design transformation to pure grayscale color scheme
+- Complete design transformation to grayscale color scheme with subtle trading colors
 - Light mode: Clean white newsprint (0 0% 98%) with black ink (0 0% 10%)
 - Dark mode: Dark newspaper (0 0% 12%) with white ink (0 0% 95%)
 - **Uniform Typewriter Typography**: Courier New monospace for ALL text (headers, body, buttons, badges, data)
 - Subtle newsprint texture overlay (2% opacity) for authentic newspaper feel
-- All colors are pure grayscale (0% saturation) - no colored accents
+- Dull green/red colors for long/short buttons and +/- price changes (25-30% saturation)
 - Sharp corners (0 border radius) for clean newspaper aesthetic
 
 ## System Architecture
@@ -41,11 +41,11 @@ Preferred communication style: Simple, everyday language.
 - **shadcn/ui** components built on Radix UI primitives
 
 **Design System:**
-- Fantastic Mr. Fox newspaper aesthetic with pure grayscale color scheme
+- Fantastic Mr. Fox newspaper aesthetic with grayscale color scheme
 - Light mode: Clean white newsprint (0 0% 98%) with black ink (0 0% 10%)
 - Dark mode: Dark newspaper (0 0% 12%) with white ink (0 0% 95%)
 - **Uniform Typography**: Courier New monospace typewriter font for ALL text elements (headers, body, buttons, badges, numbers, data) - no font mixing
-- Pure grayscale palette: All colors have 0% saturation - no color accents
+- Grayscale palette with dull green/red accents for trading (25-30% saturation)
 - Newsprint texture overlay with SVG noise filter at 2% opacity for subtle texture
 - Sharp corners (0 border radius) with clean solid borders for newspaper aesthetic
 - Component library following minimalist newspaper design principles

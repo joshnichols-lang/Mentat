@@ -68,10 +68,18 @@
 
   --destructive-foreground: 0 0% 98%;
 
+  --long: 120 25% 35%;
+  
+  --long-foreground: 0 0% 98%;
+  
+  --short: 0 30% 40%;
+  
+  --short-foreground: 0 0% 98%;
+
   --input: 0 0% 85%;
   --ring: 0 0% 20%;
   --chart-1: 0 0% 20%;
-  --chart-2: 0 0% 40%;
+  --chart-2: 120 25% 35%;
   --chart-3: 0 0% 60%;
   --chart-4: 0 0% 35%;
   --chart-5: 0 0% 25%;
@@ -186,10 +194,18 @@
 
   --destructive-foreground: 0 0% 12%;
 
+  --long: 120 25% 60%;
+  
+  --long-foreground: 0 0% 12%;
+  
+  --short: 0 30% 55%;
+  
+  --short-foreground: 0 0% 12%;
+
   --input: 0 0% 35%;
   --ring: 0 0% 80%;
   --chart-1: 0 0% 70%;
-  --chart-2: 0 0% 50%;
+  --chart-2: 120 25% 60%;
   --chart-3: 0 0% 30%;
   --chart-4: 0 0% 60%;
   --chart-5: 0 0% 75%;

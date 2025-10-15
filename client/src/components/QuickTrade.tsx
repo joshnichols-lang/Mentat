@@ -111,7 +111,7 @@ export default function QuickTrade() {
 
         <div className="grid grid-cols-2 gap-3">
           <Button
-            className="bg-chart-2 hover:bg-chart-2/90"
+            className="bg-long text-long-foreground hover:bg-long/90"
             onClick={() => handleTrade("long")}
             data-testid="button-long"
           >
@@ -119,7 +119,7 @@ export default function QuickTrade() {
             Long
           </Button>
           <Button
-            variant="destructive"
+            className="bg-short text-short-foreground hover:bg-short/90"
             onClick={() => handleTrade("short")}
             data-testid="button-short"
           >
