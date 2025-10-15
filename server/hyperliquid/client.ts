@@ -207,7 +207,8 @@ export function initHyperliquidClient(): HyperliquidClient {
     const config: HyperliquidConfig = {
       privateKey: process.env.HYPERLIQUID_PRIVATE_KEY,
       testnet: process.env.HYPERLIQUID_TESTNET === "true",
-      walletAddress: process.env.HYPERLIQUID_WALLET_ADDRESS,
+      // Monitor specific wallet address
+      walletAddress: process.env.HYPERLIQUID_WALLET_ADDRESS || "0x60e5f5ec558a1e7E5399765f58a0a245bab0142e",
     };
 
     hyperliquidClient = new HyperliquidClient(config);
