@@ -2,8 +2,16 @@ import { Activity, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import ThemeToggle from "./ThemeToggle";
+import { useQuery } from "@tanstack/react-query";
 
 export default function Header() {
+  const { data: userState } = useQuery<any>({
+    queryKey: ['/api/hyperliquid/user-state'],
+    refetchInterval: 5000,
+  });
+
+  const accountValue = (userState?.userState?.marginSummary?.accountValue as number) || 0;
+
   return (
     <header className="border-b px-6 py-3">
       <div className="flex items-center justify-between gap-4">
@@ -22,7 +30,7 @@ export default function Header() {
           <div className="text-right">
             <div className="text-xs text-muted-foreground">Balance</div>
             <div className="font-mono text-sm font-semibold" data-testid="text-balance">
-              $12,450
+              ${accountValue.toFixed(2)}
             </div>
           </div>
           <Button variant="ghost" size="icon" data-testid="button-wallet">
