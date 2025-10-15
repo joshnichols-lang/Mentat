@@ -10,6 +10,14 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+### October 15, 2025 - AI Context-Aware Trading Agent
+- Enhanced AI trading agent to use historical prompt context for personalized suggestions
+- AI now analyzes recent user prompts (last 10) to understand trading preferences and patterns
+- Added market trend analysis that evaluates current market conditions (bullish/bearish/volatile)
+- Market analysis includes trend detection from 24h price changes and volatility assessment
+- Fixed Perplexity API compatibility by adding markdown code block stripping (removes ```json``` wrappers)
+- AI suggestions now combine user's trading history with real-time market data for smarter recommendations
+
 ### October 15, 2025 - Vintage Typewriter Theme
 - Complete design transformation to vintage typewriter aesthetic
 - Updated all fonts to Courier New monospace throughout the entire application
@@ -141,8 +149,13 @@ Preferred communication style: Simple, everyday language.
 **Prompt Processing:**
 - Users can submit natural language prompts like "maximize sharpe ratio" or "analyze market trends"
 - AI interprets prompts and returns structured trading strategies
+- **Context-Aware Analysis:**
+  - Fetches user's recent prompts (last 10) from database to understand trading patterns
+  - Analyzes current market conditions (bullish/bearish/volatile) from 24h price changes
+  - Combines historical user preferences with real-time market trends for personalized suggestions
 - Response includes: interpretation, trading actions, risk management plan, expected outcomes
 - Trading actions specify: action type, symbol, side, size, leverage, reasoning, and optional price targets
+- Markdown code block stripping ensures reliable JSON parsing from Perplexity responses
 - All suggestions are educational and for simulation purposes
 
 **API Endpoints:**
