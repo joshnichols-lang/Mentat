@@ -4,6 +4,12 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useQuery } from "@tanstack/react-query";
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "@/components/ui/hover-card";
+import MiniPriceChart from "@/components/MiniPriceChart";
 
 interface HyperliquidPosition {
   coin: string;
@@ -22,6 +28,10 @@ export default function PositionsGrid() {
   const { data, isLoading } = useQuery<{ positions: HyperliquidPosition[] }>({
     queryKey: ["/api/hyperliquid/positions"],
     refetchInterval: 3000, // Refresh every 3 seconds
+  });
+
+  const { data: marketData } = useQuery<{ marketData: Array<{ symbol: string; price: string; change24h: string; }> }>({
+    queryKey: ["/api/hyperliquid/market-data"],
   });
 
   const positions = data?.positions || [];
@@ -70,8 +80,15 @@ export default function PositionsGrid() {
           const roe = parseFloat(position.returnOnEquity || "0");
           const displaySymbol = position.coin.replace("-PERP", "");
           
+          // Find matching market data for this position
+          const market = marketData?.marketData.find(m => m.symbol === position.coin);
+          const currentPrice = market ? parseFloat(market.price) : 0;
+          const change24h = market ? parseFloat(market.change24h) : 0;
+          
           return (
-            <Card key={position.coin} className="p-3" data-testid={`card-position-${position.coin}`}>
+            <HoverCard key={position.coin} openDelay={200} closeDelay={100}>
+              <HoverCardTrigger asChild>
+                <Card className="p-3 cursor-default" data-testid={`card-position-${position.coin}`}>
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1 space-y-2">
                   <div className="flex items-center gap-2">
@@ -117,7 +134,16 @@ export default function PositionsGrid() {
                   <X className="h-3.5 w-3.5" />
                 </Button>
               </div>
-            </Card>
+                </Card>
+              </HoverCardTrigger>
+              <HoverCardContent side="right" className="w-auto p-3">
+                <MiniPriceChart
+                  symbol={displaySymbol}
+                  currentPrice={currentPrice}
+                  change24h={change24h}
+                />
+              </HoverCardContent>
+            </HoverCard>
           );
         })}
       </div>
