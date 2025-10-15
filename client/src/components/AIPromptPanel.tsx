@@ -16,7 +16,11 @@ interface ExecutionResult {
     symbol: string;
     side: string;
     size: string;
+    leverage?: number;
     reasoning: string;
+    expectedEntry?: string;
+    stopLoss?: string;
+    takeProfit?: string;
   };
   orderId?: string;
   error?: string;
@@ -154,12 +158,12 @@ export default function AIPromptPanel() {
             ) : (
               <Info className="h-4 w-4 text-muted-foreground" />
             )}
-            <div className="flex-1 space-y-2">
+            <div className="flex-1 space-y-3">
               <AlertDescription className="font-semibold">
                 Execution Summary
               </AlertDescription>
               <AlertDescription className="text-xs">
-                <div className="space-y-1">
+                <div className="space-y-1 mb-3">
                   <div className="flex items-center gap-2">
                     <span className="text-chart-2">✓ {lastExecution.successfulExecutions} Successful</span>
                     {lastExecution.failedExecutions > 0 && (
@@ -169,10 +173,48 @@ export default function AIPromptPanel() {
                       <span className="text-muted-foreground">○ {lastExecution.skippedActions} Skipped</span>
                     )}
                   </div>
-                  {lastExecution.results.slice(0, 3).map((result, i) => (
-                    <div key={i} className="text-muted-foreground">
-                      {result.success ? "✓" : "✗"} {result.action.action.toUpperCase()} {result.action.symbol.replace("-PERP", "")} {result.action.side}
-                      {result.error && `: ${result.error}`}
+                </div>
+                <div className="space-y-3">
+                  {lastExecution.results.map((result, i) => (
+                    <div key={i} className="border-l-2 pl-3 py-1 space-y-1.5" style={{
+                      borderColor: result.success ? 'hsl(var(--chart-2))' : result.error ? 'hsl(var(--destructive))' : 'hsl(var(--muted-foreground))'
+                    }}>
+                      <div className="font-semibold flex items-center gap-2">
+                        <span className={result.success ? "text-chart-2" : result.error ? "text-destructive" : "text-muted-foreground"}>
+                          {result.success ? "✓" : result.error ? "✗" : "○"}
+                        </span>
+                        <span className="font-mono">
+                          {result.action.action.toUpperCase()} {result.action.symbol.replace("-PERP", "")} {result.action.side.toUpperCase()}
+                        </span>
+                        <Badge variant={result.action.side === "long" ? "default" : "destructive"} className="text-xs h-4 px-1.5">
+                          {result.action.leverage ? `${result.action.leverage}x` : '1x'}
+                        </Badge>
+                      </div>
+                      <div className="text-muted-foreground space-y-0.5">
+                        <div>Size: <span className="font-mono">{result.action.size}</span></div>
+                        {result.action.expectedEntry && (
+                          <div>Entry: <span className="font-mono">${parseFloat(result.action.expectedEntry).toLocaleString()}</span></div>
+                        )}
+                        {result.action.stopLoss && (
+                          <div>Stop Loss: <span className="font-mono text-destructive">${parseFloat(result.action.stopLoss).toLocaleString()}</span></div>
+                        )}
+                        {result.action.takeProfit && (
+                          <div>Take Profit: <span className="font-mono text-chart-2">${parseFloat(result.action.takeProfit).toLocaleString()}</span></div>
+                        )}
+                        {result.orderId && (
+                          <div>Order ID: <span className="font-mono text-xs">{result.orderId}</span></div>
+                        )}
+                      </div>
+                      {result.action.reasoning && (
+                        <div className="text-muted-foreground italic text-xs mt-1">
+                          {result.action.reasoning}
+                        </div>
+                      )}
+                      {result.error && (
+                        <div className="text-destructive font-semibold">
+                          Error: {result.error}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
