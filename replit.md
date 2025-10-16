@@ -10,6 +10,20 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+### October 16, 2025 - Automated Position Monitoring
+- Implemented automated monitoring system that analyzes positions every 5 minutes
+- Mr. Fox AI analyzes position health, market conditions, and risk factors using Perplexity API
+- Created monitoring_log database table to store analysis results with alert levels (info/warning/critical)
+- Added MonitoringAlerts frontend component that displays active alerts with newspaper styling
+- Alert system features:
+  - Color-coded borders based on severity (dull red for critical, orange for warning, gray for info)
+  - AI-generated summary of portfolio health and position-specific assessments
+  - Actionable suggestions for risk management and trading opportunities
+  - Dismiss functionality to remove alerts from view
+- Monitoring service automatically starts when server launches
+- API endpoints: GET /api/monitoring/active, POST /api/monitoring/:id/dismiss
+- System only runs analysis when positions exist, skips when portfolio is empty
+
 ### October 16, 2025 - Risk Management Levels in Positions
 - Added risk management section to positions display with three key levels:
   - **Liquidation Price:** Extracted from Hyperliquid API's clearinghouse state (`liquidationPx` field)
