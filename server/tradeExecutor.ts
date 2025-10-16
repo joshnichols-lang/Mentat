@@ -235,14 +235,19 @@ async function executeTriggerOrder(
 
     // Get current position to determine size and direction
     const positions = await hyperliquid.getPositions();
-    const coinName = action.symbol.replace("-PERP", "").replace("-SPOT", "");
-    const position = positions.find((p: any) => p.coin === coinName);
+    
+    console.log(`[Trade Executor] Looking for position with symbol: ${action.symbol}`);
+    console.log(`[Trade Executor] Available positions:`, positions.map((p: any) => ({ coin: p.coin, size: p.szi })));
+    
+    // Match directly by symbol (positions already include -PERP suffix)
+    const position = positions.find((p: any) => p.coin === action.symbol);
 
     if (!position) {
+      console.error(`[Trade Executor] No position found for ${action.symbol}. Available positions:`, positions.map((p: any) => p.coin));
       return {
         success: false,
         action,
-        error: `No open position found for ${coinName}`,
+        error: `No open position found for ${action.symbol}`,
       };
     }
 
