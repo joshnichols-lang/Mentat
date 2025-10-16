@@ -10,6 +10,14 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+### October 16, 2025 - Fixed Sortino and Calmar Ratio Display
+- **Fixed zero-value display bug** - Sortino and Calmar ratios now correctly display non-zero values in Risk-Adjusted Performance Ratios chart
+- **Root cause**: Current values were derived from time-filtered data instead of all data, causing zeros when filter excluded valid snapshots
+- **Solution**: Changed SharpeRatioChart component to use `allData` (unfiltered snapshots) for current value calculations
+- **Chart behavior**: Time-range filtering still applies to chart data points, but current values always show most recent snapshot
+- **Database cleanup**: Deleted 237 old portfolio snapshots with calmar_ratio=0 from before the feature was added
+- **Implementation detail**: Latest snapshot now selected from `allData[allData.length - 1]` instead of filtered `data[data.length - 1]`
+
 ### October 16, 2025 - Position Close Controls
 - **Individual close buttons** - Each position now has a close button (X icon) to instantly market close that position
 - **Close All button** - Added "Close All" button at top of Positions panel to close all positions and cancel all orders at once
@@ -59,6 +67,11 @@ Preferred communication style: Simple, everyday language.
   - Frontend chart displays all three ratios with legend, color-coded lines, and current values in 3-column grid
 - **Database schema updated**: Pushed changes with `npm run db:push --force`
 - **Testing**: End-to-end tests verify chart rendering with all three metrics and accessible test IDs
+- **Calmar ratio bug fix**: Fixed issue where Calmar showed 0.000000 after server restarts
+  - Root cause: `getPortfolioSnapshots(30)` only retrieved last 30 snapshots (~19 minutes after restart), insufficient for 1-hour minimum requirement
+  - Solution: Added `getPortfolioSnapshotsSince(hours)` method to storage layer for time-based queries
+  - Now uses 6-hour time window to ensure sufficient data even after restarts
+  - Calmar ratio now correctly displays negative values during poor performance periods (e.g., -1.67 for large drawdown scenarios)
 
 ### October 16, 2025 - Fixed Open Orders Display
 - **Created /api/hyperliquid/open-orders endpoint** - Positions grid now correctly displays stop loss and take profit orders

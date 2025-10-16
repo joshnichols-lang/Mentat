@@ -25,6 +25,7 @@ export interface IStorage {
   
   // Portfolio snapshot methods
   getPortfolioSnapshots(limit?: number): Promise<PortfolioSnapshot[]>;
+  getPortfolioSnapshotsSince(hours: number): Promise<PortfolioSnapshot[]>;
   getLatestPortfolioSnapshot(): Promise<PortfolioSnapshot | undefined>;
   createPortfolioSnapshot(snapshot: InsertPortfolioSnapshot): Promise<PortfolioSnapshot>;
   
@@ -133,6 +134,13 @@ export class DbStorage implements IStorage {
   // Portfolio snapshot methods
   async getPortfolioSnapshots(limit: number = 100): Promise<PortfolioSnapshot[]> {
     return await db.select().from(portfolioSnapshots).orderBy(desc(portfolioSnapshots.timestamp)).limit(limit);
+  }
+
+  async getPortfolioSnapshotsSince(hours: number): Promise<PortfolioSnapshot[]> {
+    return await db.select()
+      .from(portfolioSnapshots)
+      .where(sql`${portfolioSnapshots.timestamp} >= now() - ${hours} * interval '1 hour'`)
+      .orderBy(portfolioSnapshots.timestamp);
   }
 
   async getLatestPortfolioSnapshot(): Promise<PortfolioSnapshot | undefined> {

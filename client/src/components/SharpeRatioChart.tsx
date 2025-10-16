@@ -1,14 +1,11 @@
 import { Card } from "@/components/ui/card";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from "recharts";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, Legend } from "recharts";
 import { useQuery } from "@tanstack/react-query";
 import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { TimeRange, timeRanges, formatChartDate, filterDataByTimeRange } from "@/lib/chartUtils";
 
-type RatioType = "sharpe" | "sortino" | "calmar";
-
 export default function SharpeRatioChart() {
-  const [selectedRatio, setSelectedRatio] = useState<RatioType>("sharpe");
   const [timeRange, setTimeRange] = useState<TimeRange>("1d");
   
   const { data: snapshots } = useQuery<any>({
@@ -28,7 +25,8 @@ export default function SharpeRatioChart() {
   }, [allData, timeRange]);
   
   const hasData = data.length > 0;
-  const latestSnapshot = hasData ? data[data.length - 1] : null;
+  // Get latest values from allData, not filtered data - current values should always show most recent
+  const latestSnapshot = allData.length > 0 ? allData[allData.length - 1] : null;
   const currentSharpe = latestSnapshot ? Number(latestSnapshot.sharpeRatio || 0) : 0;
   const currentSortino = latestSnapshot ? Number(latestSnapshot.sortinoRatio || 0) : 0;
   const currentCalmar = latestSnapshot ? Number(latestSnapshot.calmarRatio || 0) : 0;
@@ -57,22 +55,24 @@ export default function SharpeRatioChart() {
     },
   };
 
-  const config = ratioConfig[selectedRatio];
-
-  // Calculate Y-axis domain to keep x-axis at bottom
+  // Calculate Y-axis domain for all three ratios
   const yDomain = useMemo(() => {
     if (data.length === 0) return [0, 1];
     
-    const values = data.map((item: any) => Number(item[config.dataKey] || 0));
-    const min = Math.min(...values);
-    const max = Math.max(...values);
+    const allValues = data.flatMap((item: any) => [
+      Number(item.sharpeRatio || 0),
+      Number(item.sortinoRatio || 0),
+      Number(item.calmarRatio || 0),
+    ]);
+    const min = Math.min(...allValues);
+    const max = Math.max(...allValues);
     
     // Add 5% padding
     const yMin = min <= 0 ? min * 1.05 : 0;
     const yMax = max >= 0 ? max * 1.05 : 0;
     
     return [yMin, yMax];
-  }, [data, config.dataKey]);
+  }, [data]);
 
   // Format tick for display
   const formatXAxis = (timestamp: number) => {
@@ -81,40 +81,9 @@ export default function SharpeRatioChart() {
 
   return (
     <Card className="p-3" data-testid="card-risk-ratios">
-      <div className="mb-3 flex items-center justify-between gap-3">
-        <div>
-          <h2 className="text-sm font-semibold" data-testid="text-chart-title">{config.title}</h2>
-          <p className="text-xs text-muted-foreground" data-testid="text-chart-subtitle">{config.description}</p>
-        </div>
-        <div className="flex gap-1">
-          <Button
-            variant={selectedRatio === "sharpe" ? "default" : "ghost"}
-            size="sm"
-            onClick={() => setSelectedRatio("sharpe")}
-            className="h-7 px-2 text-xs"
-            data-testid="button-sharpe"
-          >
-            Sharpe
-          </Button>
-          <Button
-            variant={selectedRatio === "sortino" ? "default" : "ghost"}
-            size="sm"
-            onClick={() => setSelectedRatio("sortino")}
-            className="h-7 px-2 text-xs"
-            data-testid="button-sortino"
-          >
-            Sortino
-          </Button>
-          <Button
-            variant={selectedRatio === "calmar" ? "default" : "ghost"}
-            size="sm"
-            onClick={() => setSelectedRatio("calmar")}
-            className="h-7 px-2 text-xs"
-            data-testid="button-calmar"
-          >
-            Calmar
-          </Button>
-        </div>
+      <div className="mb-3">
+        <h2 className="text-sm font-semibold" data-testid="text-chart-title">Risk-Adjusted Performance Ratios</h2>
+        <p className="text-xs text-muted-foreground" data-testid="text-chart-subtitle">Three comprehensive risk metrics for portfolio evaluation</p>
       </div>
 
       <div className="mb-3 flex gap-1">
@@ -161,6 +130,10 @@ export default function SharpeRatioChart() {
                   padding={{ top: 8, bottom: 8 }}
                   tickFormatter={(value) => Number(value).toFixed(4)}
                 />
+                <Legend 
+                  wrapperStyle={{ fontSize: '11px' }}
+                  iconType="line"
+                />
                 <Tooltip
                   contentStyle={{
                     backgroundColor: "hsl(var(--popover))",
@@ -168,7 +141,7 @@ export default function SharpeRatioChart() {
                     borderRadius: "6px",
                     color: "hsl(var(--foreground))",
                   }}
-                  formatter={(value: any) => [Number(value || 0).toFixed(2), config.title]}
+                  formatter={(value: any, name: string) => [Number(value || 0).toFixed(4), name]}
                   labelFormatter={(label) => formatChartDate(label, timeRange)}
                 />
                 <ReferenceLine 
@@ -191,23 +164,63 @@ export default function SharpeRatioChart() {
                 />
                 <Line 
                   type="monotone" 
-                  dataKey={config.dataKey}
-                  stroke={config.color}
+                  name="Sharpe Ratio"
+                  dataKey="sharpeRatio"
+                  stroke={ratioConfig.sharpe.color}
                   strokeWidth={2}
-                  dot={{ fill: config.color, r: 3 }}
+                  dot={{ fill: ratioConfig.sharpe.color, r: 2 }}
+                />
+                <Line 
+                  type="monotone" 
+                  name="Sortino Ratio"
+                  dataKey="sortinoRatio"
+                  stroke={ratioConfig.sortino.color}
+                  strokeWidth={2}
+                  dot={{ fill: ratioConfig.sortino.color, r: 2 }}
+                />
+                <Line 
+                  type="monotone" 
+                  name="Calmar Ratio"
+                  dataKey="calmarRatio"
+                  stroke={ratioConfig.calmar.color}
+                  strokeWidth={2}
+                  dot={{ fill: ratioConfig.calmar.color, r: 2 }}
                 />
               </LineChart>
             </ResponsiveContainer>
           </div>
           <div className="mt-3 border-t pt-3" data-testid="container-current-value">
-            <div className="flex items-center justify-between">
-              <div className="text-xs text-muted-foreground">Current Value</div>
-              <div className="font-mono text-xl font-bold" style={{ color: config.color }} data-testid="text-ratio-value">
-                {config.current.toFixed(2)}
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <div className="text-xs text-muted-foreground mb-1">Sharpe</div>
+                <div 
+                  className="font-mono text-sm font-bold" 
+                  style={{ color: ratioConfig.sharpe.color }} 
+                  data-testid="text-sharpe-value"
+                >
+                  {currentSharpe.toFixed(4)}
+                </div>
               </div>
-            </div>
-            <div className="text-xs text-muted-foreground mt-1">
-              {config.current >= 2 ? "Excellent performance" : config.current >= 1 ? "Good performance" : config.current >= 0 ? "Developing" : "Below breakeven"}
+              <div>
+                <div className="text-xs text-muted-foreground mb-1">Sortino</div>
+                <div 
+                  className="font-mono text-sm font-bold" 
+                  style={{ color: ratioConfig.sortino.color }} 
+                  data-testid="text-sortino-value"
+                >
+                  {currentSortino.toFixed(4)}
+                </div>
+              </div>
+              <div>
+                <div className="text-xs text-muted-foreground mb-1">Calmar</div>
+                <div 
+                  className="font-mono text-sm font-bold" 
+                  style={{ color: ratioConfig.calmar.color }} 
+                  data-testid="text-calmar-value"
+                >
+                  {currentCalmar.toFixed(4)}
+                </div>
+              </div>
             </div>
           </div>
         </>

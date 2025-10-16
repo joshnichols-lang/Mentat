@@ -115,7 +115,9 @@ function calculateCalmarRatio(snapshots: any[]): number {
   const elapsedDays = (endTime - startTime) / (1000 * 60 * 60 * 24);
   
   // Need at least 1 hour of data to calculate meaningful annualized returns
-  if (elapsedDays < 1/24) return 0;
+  if (elapsedDays < 1/24) {
+    return 0;
+  }
   
   // Calculate CAGR: (finalValue/initialValue)^(365.25/elapsedDays) - 1
   const yearFraction = 365.25 / elapsedDays;
@@ -184,14 +186,12 @@ export async function createPortfolioSnapshot(hyperliquid: HyperliquidClient): P
       return pnl > 0;
     }).length;
 
-    // Calculate Sharpe ratio from recent snapshots INCLUDING current value
-    const recentSnapshots = await storage.getPortfolioSnapshots(30); // Last 30 snapshots (newest-first)
+    // Calculate risk ratios from recent snapshots INCLUDING current value
+    // Use time-based query (6 hours) to ensure we have enough data for Calmar ratio (requires 1+ hour)
+    const recentSnapshots = await storage.getPortfolioSnapshotsSince(6); // Last 6 hours
     
-    // Reverse to get oldest-first ordering for correct return calculation
-    const oldestFirst = [...recentSnapshots].reverse();
-    
-    // Add current snapshot to the end (it's the newest) for accurate Sharpe calculation
-    const snapshotsWithCurrent = [...oldestFirst, {
+    // Add current snapshot to the end (it's the newest) for accurate ratio calculation
+    const snapshotsWithCurrent = [...recentSnapshots, {
       totalValue,
       totalPnl: totalPnl.toFixed(8),
       timestamp: new Date(),
