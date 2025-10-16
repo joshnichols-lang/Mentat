@@ -45,10 +45,10 @@ export function AIUsageTracker() {
 
   const updateFrequencyMutation = useMutation({
     mutationFn: async (frequency: string) => {
-      return await apiRequest('/api/monitoring/frequency', {
-        method: 'POST',
-        body: JSON.stringify({ minutes: parseInt(frequency) }),
+      const res = await apiRequest('POST', '/api/monitoring/frequency', { 
+        minutes: parseInt(frequency) 
       });
+      return await res.json();
     },
     onSuccess: () => {
       toast({

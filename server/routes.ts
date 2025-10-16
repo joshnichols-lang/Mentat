@@ -5,6 +5,7 @@ import { processTradingPrompt } from "./tradingAgent";
 import { initHyperliquidClient } from "./hyperliquid/client";
 import { executeTradeStrategy } from "./tradeExecutor";
 import { createPortfolioSnapshot } from "./portfolioSnapshotService";
+import { restartMonitoring } from "./monitoringService";
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -262,6 +263,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error dismissing monitoring alert:", error);
       res.status(500).json({ success: false, error: "Failed to dismiss alert" });
+    }
+  });
+
+  // Update monitoring frequency
+  app.post("/api/monitoring/frequency", async (req, res) => {
+    try {
+      const schema = z.object({
+        minutes: z.number().int().min(0).max(1440), // 0 to 24 hours
+      });
+
+      const { minutes } = schema.parse(req.body);
+      
+      // Restart monitoring with new interval
+      restartMonitoring(minutes);
+      
+      res.json({ 
+        success: true, 
+        message: minutes === 0 
+          ? "Monitoring disabled" 
+          : `Monitoring frequency updated to ${minutes} minutes` 
+      });
+    } catch (error) {
+      console.error("Error updating monitoring frequency:", error);
+      res.status(500).json({ success: false, error: "Failed to update monitoring frequency" });
     }
   });
 
