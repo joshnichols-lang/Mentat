@@ -38,7 +38,7 @@ Preferred communication style: Simple, everyday language.
   - AI interpretation, trading actions with symbol/side/leverage/size, and risk management details
   - Gracefully handles missing responses for older conversations
 - Component auto-refreshes every 5 seconds to show latest conversations
-- Integrated into Dashboard sidebar above AI Usage Tracker
+- **Layout Position:** Positioned directly below AI Prompt Panel as full-width component (moved from sidebar)
 - Each trading action displays detailed reasoning in italic text
 
 ## System Architecture

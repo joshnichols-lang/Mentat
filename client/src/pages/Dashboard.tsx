@@ -20,6 +20,9 @@ export default function Dashboard() {
           {/* AI Prompt Section */}
           <AIPromptPanel />
 
+          {/* Conversation History */}
+          <ConversationHistory />
+
           {/* Market Overview */}
           <MarketOverview />
 
@@ -44,9 +47,6 @@ export default function Dashboard() {
 
             {/* Sidebar */}
             <div className="space-y-4">
-              {/* Conversation History */}
-              <ConversationHistory />
-              
               {/* AI Usage Tracker */}
               <AIUsageTracker />
               
