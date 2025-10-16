@@ -5,7 +5,7 @@ import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { TimeRange, timeRanges, formatChartDate, filterDataByTimeRange } from "@/lib/chartUtils";
 
-type RatioType = "sharpe" | "sortino" | "calmar";
+type RatioType = "sharpe" | "sortino" | "calmar" | "sterling" | "omega";
 
 export default function SharpeRatioChart() {
   const [timeRange, setTimeRange] = useState<TimeRange>("1d");
@@ -33,6 +33,8 @@ export default function SharpeRatioChart() {
   const currentSharpe = latestSnapshot ? Number(latestSnapshot.sharpeRatio || 0) : 0;
   const currentSortino = latestSnapshot ? Number(latestSnapshot.sortinoRatio || 0) : 0;
   const currentCalmar = latestSnapshot ? Number(latestSnapshot.calmarRatio || 0) : 0;
+  const currentSterling = latestSnapshot ? Number(latestSnapshot.sterlingRatio || 0) : 0;
+  const currentOmega = latestSnapshot ? Number(latestSnapshot.omegaRatio || 0) : 0;
 
   const ratioConfig = {
     sharpe: {
@@ -55,6 +57,20 @@ export default function SharpeRatioChart() {
       dataKey: "calmarRatio",
       color: "hsl(var(--primary))",
       current: currentCalmar,
+    },
+    sterling: {
+      title: "Sterling Ratio",
+      description: "Annualized return per average drawdown",
+      dataKey: "sterlingRatio",
+      color: "hsl(var(--primary))",
+      current: currentSterling,
+    },
+    omega: {
+      title: "Omega Ratio",
+      description: "Probability-weighted gains over losses",
+      dataKey: "omegaRatio",
+      color: "hsl(var(--primary))",
+      current: currentOmega,
     },
   };
 
@@ -115,6 +131,24 @@ export default function SharpeRatioChart() {
             data-testid="button-ratio-calmar"
           >
             Calmar
+          </Button>
+          <Button
+            variant={selectedRatio === "sterling" ? "default" : "ghost"}
+            size="sm"
+            onClick={() => setSelectedRatio("sterling")}
+            className="h-6 px-2 text-xs"
+            data-testid="button-ratio-sterling"
+          >
+            Sterling
+          </Button>
+          <Button
+            variant={selectedRatio === "omega" ? "default" : "ghost"}
+            size="sm"
+            onClick={() => setSelectedRatio("omega")}
+            className="h-6 px-2 text-xs"
+            data-testid="button-ratio-omega"
+          >
+            Omega
           </Button>
         </div>
         <div className="flex gap-1">

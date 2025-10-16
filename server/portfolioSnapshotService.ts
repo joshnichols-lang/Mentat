@@ -8,6 +8,10 @@ interface SnapshotMetrics {
   sharpeRatio: string;
   calmarRatio: string;
   sortinoRatio: string;
+  sterlingRatio: string;
+  treynorRatio: string;
+  omegaRatio: string;
+  maxDrawdown: string;
   numTrades: number;
   numWins: number;
 }
@@ -151,6 +155,137 @@ function calculateCalmarRatio(snapshots: any[]): number {
 }
 
 /**
+ * Calculate maximum drawdown as a standalone metric
+ * Maximum Drawdown = largest peak-to-trough decline
+ */
+function calculateMaxDrawdown(snapshots: any[]): number {
+  if (snapshots.length < 2) return 0;
+
+  const values = snapshots.map(s => parseFloat(s.totalValue));
+  let maxDrawdown = 0;
+  let peak = values[0];
+
+  for (const value of values) {
+    if (value > peak) {
+      peak = value;
+    }
+    const drawdown = (peak - value) / peak;
+    if (drawdown > maxDrawdown) {
+      maxDrawdown = drawdown;
+    }
+  }
+
+  return maxDrawdown;
+}
+
+/**
+ * Calculate Sterling ratio from recent portfolio snapshots
+ * Sterling Ratio = Annualized Return / Average Drawdown
+ * Similar to Calmar but uses average drawdown instead of maximum
+ */
+function calculateSterlingRatio(snapshots: any[]): number {
+  if (snapshots.length < 2) return 0;
+
+  const values = snapshots.map(s => parseFloat(s.totalValue));
+  
+  // Calculate annualized return using CAGR
+  const initialValue = values[0];
+  const finalValue = values[values.length - 1];
+  
+  if (initialValue === 0 || initialValue === finalValue) return 0;
+  
+  // Get elapsed time from actual timestamps
+  const startTime = new Date(snapshots[0].timestamp).getTime();
+  const endTime = new Date(snapshots[snapshots.length - 1].timestamp).getTime();
+  const elapsedDays = (endTime - startTime) / (1000 * 60 * 60 * 24);
+  
+  // Need at least 1 hour of data
+  if (elapsedDays < 1/24) return 0;
+  
+  // Calculate CAGR
+  const yearFraction = 365.25 / elapsedDays;
+  const valueRatio = finalValue / initialValue;
+  const annualizedReturn = Math.pow(valueRatio, yearFraction) - 1;
+
+  // Calculate average drawdown
+  let totalDrawdown = 0;
+  let drawdownCount = 0;
+  let peak = values[0];
+
+  for (const value of values) {
+    if (value > peak) {
+      peak = value;
+    }
+    const drawdown = (peak - value) / peak;
+    if (drawdown > 0) {
+      totalDrawdown += drawdown;
+      drawdownCount++;
+    }
+  }
+
+  const avgDrawdown = drawdownCount > 0 ? totalDrawdown / drawdownCount : 0;
+
+  // Avoid division by zero
+  if (avgDrawdown === 0) {
+    return annualizedReturn > 0 ? 10 : 0;
+  }
+
+  const sterlingRatio = annualizedReturn / avgDrawdown;
+  return Math.max(-100, Math.min(100, sterlingRatio));
+}
+
+/**
+ * Calculate Treynor ratio from recent portfolio snapshots
+ * Treynor Ratio = (Portfolio Return - Risk-Free Rate) / Beta
+ * Beta is calculated against BTC as the market benchmark
+ * Note: This is a simplified version using correlation instead of regression beta
+ */
+function calculateTreynorRatio(snapshots: any[]): number {
+  // For now, return 0 - this would require BTC price history
+  // In a full implementation, we'd track BTC prices alongside portfolio values
+  // and calculate beta via covariance(portfolio, BTC) / variance(BTC)
+  return 0;
+}
+
+/**
+ * Calculate Omega ratio from recent portfolio snapshots
+ * Omega Ratio = Probability-weighted gains / Probability-weighted losses
+ * Uses threshold of 0% (no loss tolerance)
+ */
+function calculateOmegaRatio(snapshots: any[]): number {
+  if (snapshots.length < 2) return 0;
+
+  // Calculate returns between consecutive snapshots
+  const returns: number[] = [];
+  for (let i = 1; i < snapshots.length; i++) {
+    const prevValue = parseFloat(snapshots[i - 1].totalValue);
+    const currValue = parseFloat(snapshots[i].totalValue);
+    if (prevValue > 0) {
+      const returnPct = (currValue - prevValue) / prevValue;
+      returns.push(returnPct);
+    }
+  }
+
+  if (returns.length === 0) return 0;
+
+  const threshold = 0; // 0% threshold
+  
+  // Sum of gains above threshold
+  const gains = returns.filter(r => r > threshold).reduce((sum, r) => sum + (r - threshold), 0);
+  
+  // Sum of losses below threshold (absolute value)
+  const losses = returns.filter(r => r < threshold).reduce((sum, r) => sum + Math.abs(r - threshold), 0);
+
+  // Avoid division by zero
+  if (losses === 0) {
+    return gains > 0 ? 10 : 1; // Return high ratio if only gains
+  }
+
+  const omegaRatio = gains / losses;
+  return Math.max(-100, Math.min(100, omegaRatio));
+}
+
+/**
  * Create a portfolio snapshot by fetching current state and calculating metrics
  */
 export async function createPortfolioSnapshot(hyperliquid: HyperliquidClient): Promise<void> {
@@ -200,6 +335,10 @@ export async function createPortfolioSnapshot(hyperliquid: HyperliquidClient): P
     const sharpeRatio = calculateSharpeRatio(snapshotsWithCurrent);
     const sortinoRatio = calculateSortinoRatio(snapshotsWithCurrent);
     const calmarRatio = calculateCalmarRatio(snapshotsWithCurrent);
+    const sterlingRatio = calculateSterlingRatio(snapshotsWithCurrent);
+    const treynorRatio = calculateTreynorRatio(snapshotsWithCurrent);
+    const omegaRatio = calculateOmegaRatio(snapshotsWithCurrent);
+    const maxDrawdown = calculateMaxDrawdown(snapshotsWithCurrent);
 
     // Create snapshot
     const snapshot = {
@@ -209,6 +348,10 @@ export async function createPortfolioSnapshot(hyperliquid: HyperliquidClient): P
       sharpeRatio: sharpeRatio.toFixed(6),
       sortinoRatio: sortinoRatio.toFixed(6),
       calmarRatio: calmarRatio.toFixed(6),
+      sterlingRatio: sterlingRatio.toFixed(6),
+      treynorRatio: treynorRatio.toFixed(6),
+      omegaRatio: omegaRatio.toFixed(6),
+      maxDrawdown: maxDrawdown.toFixed(6),
       numTrades,
       numWins,
     };

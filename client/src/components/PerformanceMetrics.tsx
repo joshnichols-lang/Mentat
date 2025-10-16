@@ -1,4 +1,4 @@
-import { TrendingUp, Wallet, DollarSign } from "lucide-react";
+import { TrendingUp, Wallet, DollarSign, TrendingDown } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
 
@@ -16,9 +16,18 @@ export default function PerformanceMetrics() {
     refetchInterval: 5000,
   });
 
+  const { data: snapshots } = useQuery<any>({
+    queryKey: ['/api/portfolio/snapshots'],
+    refetchInterval: 30000,
+  });
+
   const accountValue = (userState?.userState?.marginSummary?.accountValue as number) || 0;
   const withdrawable = (userState?.userState?.withdrawable as number) || 0;
   const marginUsed = (userState?.userState?.marginSummary?.totalMarginUsed as number) || 0;
+  
+  const allSnapshots = snapshots?.snapshots || [];
+  const latestSnapshot = allSnapshots.length > 0 ? allSnapshots[allSnapshots.length - 1] : null;
+  const maxDrawdown = latestSnapshot ? Number(latestSnapshot.maxDrawdown || 0) : 0;
 
   const metrics: Metric[] = [
     {
@@ -42,12 +51,19 @@ export default function PerformanceMetrics() {
       change: marginUsed > 0 ? `${((marginUsed / accountValue) * 100).toFixed(1)}%` : undefined,
       positive: marginUsed === 0,
     },
+    {
+      icon: TrendingDown,
+      label: "Max Drawdown",
+      value: `${(maxDrawdown * 100).toFixed(2)}%`,
+      change: undefined,
+      positive: maxDrawdown === 0,
+    },
   ];
 
   return (
     <div>
       <h2 className="mb-3 text-sm font-semibold">Account Overview</h2>
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {metrics.map((metric, i) => (
           <Card key={i} className="p-3" data-testid={`card-metric-${i}`}>
             <div className="flex items-start gap-2">
