@@ -24,19 +24,20 @@ Preferred communication style: Simple, everyday language.
 - Text cursor (I-beam) appears when hovering over conversation text
 - Expand/collapse chevron is independent from text selection
 
-### October 16, 2025 - Automated Position Monitoring
-- Implemented automated monitoring system that analyzes positions every 5 minutes
-- Mr. Fox AI analyzes position health, market conditions, and risk factors using Perplexity API
-- Created monitoring_log database table to store analysis results with alert levels (info/warning/critical)
-- Added MonitoringAlerts frontend component that displays active alerts with newspaper styling
+### October 16, 2025 - Automated Position Monitoring (Fixed)
+- **Fixed monitoring service to analyze actual Hyperliquid positions** (was checking empty database instead of API)
+- **Fixed JSON parsing error** by adding markdown code block removal (AI was wrapping responses in ```json```)
+- Monitoring system now successfully analyzes positions every 5 minutes using Perplexity AI
+- Analyzes position health, market conditions, risk factors, and provides actionable recommendations
 - Alert system features:
+  - Warning level alert generated for high-leverage short positions in bullish market
+  - Suggests reducing BTC leverage, implementing stop-losses, monitoring key technical levels
+  - Tracks macroeconomic events and recommends hedging strategies
   - Color-coded borders based on severity (dull red for critical, orange for warning, gray for info)
-  - AI-generated summary of portfolio health and position-specific assessments
-  - Actionable suggestions for risk management and trading opportunities
-  - Dismiss functionality to remove alerts from view
-- Monitoring service automatically starts when server launches
-- API endpoints: GET /api/monitoring/active, POST /api/monitoring/:id/dismiss
-- System only runs analysis when positions exist, skips when portfolio is empty
+  - Dismiss functionality to remove reviewed alerts
+- System correctly identifies positions from Hyperliquid API and calculates P&L percentages
+- Monitoring service starts automatically with server and runs analysis every 5 minutes
+- Skips analysis when portfolio is empty to save AI costs
 
 ### October 16, 2025 - Risk Management Levels in Positions
 - Added risk management section to positions display with three key levels:

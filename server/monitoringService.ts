@@ -31,19 +31,38 @@ async function analyzePositions(): Promise<void> {
       return;
     }
     
-    const positions = await storage.getPositions();
+    // Get actual positions from Hyperliquid API
+    const hyperliquidPositions = await hyperliquidClient.getPositions();
     
-    if (positions.length === 0) {
+    if (!hyperliquidPositions || hyperliquidPositions.length === 0) {
       console.log("[Monitoring] No positions to analyze");
       return;
     }
 
+    console.log(`[Monitoring] Found ${hyperliquidPositions.length} positions to analyze`);
+
     const allMarketData = await hyperliquidClient.getMarketData();
     const marketDataMap = new Map(allMarketData.map(m => [m.symbol, m.price]));
     
+    const positions = hyperliquidPositions.map(pos => {
+      const positionValue = parseFloat(pos.positionValue);
+      const unrealizedPnl = parseFloat(pos.unrealizedPnl);
+      const pnlPercent = positionValue !== 0 ? (unrealizedPnl / positionValue) * 100 : 0;
+      
+      return {
+        symbol: pos.coin,
+        side: parseFloat(pos.szi) > 0 ? 'long' : 'short',
+        size: Math.abs(parseFloat(pos.szi)),
+        entryPrice: parseFloat(pos.entryPx),
+        leverage: pos.leverage.value,
+        currentPrice: parseFloat(marketDataMap.get(pos.coin) || pos.entryPx),
+        pnlPercent: pnlPercent,
+      };
+    });
+    
     const marketData = positions.map(pos => ({
       symbol: pos.symbol,
-      currentPrice: parseFloat(marketDataMap.get(pos.symbol) || pos.currentPrice.toString()),
+      currentPrice: pos.currentPrice,
     }));
 
     const prompt = `You are Mr. Fox, an AI trading analyst. Analyze the current trading positions:
@@ -92,11 +111,19 @@ Focus on:
       throw new Error("No response from AI");
     }
 
+    // Clean the response - remove markdown code blocks if present
+    let cleanedContent = content.trim();
+    if (cleanedContent.startsWith('```json')) {
+      cleanedContent = cleanedContent.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+    } else if (cleanedContent.startsWith('```')) {
+      cleanedContent = cleanedContent.replace(/^```\s*/, '').replace(/\s*```$/, '');
+    }
+
     let analysis: MonitoringAnalysis;
     try {
-      analysis = JSON.parse(content);
+      analysis = JSON.parse(cleanedContent);
     } catch (e) {
-      console.error("[Monitoring] Failed to parse AI response as JSON:", content);
+      console.error("[Monitoring] Failed to parse AI response as JSON:", cleanedContent);
       throw new Error("AI returned invalid JSON");
     }
 
