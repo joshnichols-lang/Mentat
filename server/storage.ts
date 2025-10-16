@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type Trade, type InsertTrade, type Position, type InsertPosition, type PortfolioSnapshot, type InsertPortfolioSnapshot, type AiUsageLog, type InsertAiUsageLog, type MonitoringLog, type InsertMonitoringLog, users, trades, positions, portfolioSnapshots, aiUsageLog, monitoringLog } from "@shared/schema";
+import { type User, type InsertUser, type Trade, type InsertTrade, type Position, type InsertPosition, type PortfolioSnapshot, type InsertPortfolioSnapshot, type AiUsageLog, type InsertAiUsageLog, type MonitoringLog, type InsertMonitoringLog, type UserApiCredential, type InsertUserApiCredential, users, trades, positions, portfolioSnapshots, aiUsageLog, monitoringLog, userApiCredentials } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql } from "drizzle-orm";
 
@@ -47,6 +47,12 @@ export interface IStorage {
   getLatestMonitoringLog(): Promise<MonitoringLog | undefined>;
   dismissMonitoringLog(id: string): Promise<MonitoringLog | undefined>;
   getActiveMonitoringLogs(): Promise<MonitoringLog[]>;
+  
+  // User API Credentials methods
+  getUserCredentials(userId: string): Promise<UserApiCredential | null>;
+  createUserCredentials(credential: InsertUserApiCredential): Promise<UserApiCredential>;
+  updateUserCredentials(userId: string, updates: Partial<UserApiCredential>): Promise<UserApiCredential | undefined>;
+  deleteUserCredentials(userId: string): Promise<void>;
 }
 
 export class DbStorage implements IStorage {
@@ -222,6 +228,32 @@ export class DbStorage implements IStorage {
       .from(monitoringLog)
       .where(eq(monitoringLog.dismissed, 0))
       .orderBy(desc(monitoringLog.timestamp));
+  }
+
+  // User API Credentials methods
+  async getUserCredentials(userId: string): Promise<UserApiCredential | null> {
+    const result = await db.select()
+      .from(userApiCredentials)
+      .where(eq(userApiCredentials.userId, userId))
+      .limit(1);
+    return result[0] || null;
+  }
+
+  async createUserCredentials(credential: InsertUserApiCredential): Promise<UserApiCredential> {
+    const result = await db.insert(userApiCredentials).values(credential).returning();
+    return result[0];
+  }
+
+  async updateUserCredentials(userId: string, updates: Partial<UserApiCredential>): Promise<UserApiCredential | undefined> {
+    const result = await db.update(userApiCredentials)
+      .set(updates)
+      .where(eq(userApiCredentials.userId, userId))
+      .returning();
+    return result[0];
+  }
+
+  async deleteUserCredentials(userId: string): Promise<void> {
+    await db.delete(userApiCredentials).where(eq(userApiCredentials.userId, userId));
   }
 }
 

@@ -34,7 +34,11 @@ Preferred communication style: Simple, everyday language.
 
 ### Authentication & Security
 
-Includes a basic user schema with UUID-based identification and Zod validation.
+**User Credentials:** Uses AES-256-GCM encryption with envelope encryption for storing Hyperliquid API private keys per user. Each credential has a unique Data Encryption Key (DEK) that is encrypted with the master key (ENCRYPTION_MASTER_KEY secret). The `credentialService` provides secure encryption/decryption with proper key isolation - if one credential is compromised, others remain secure.
+
+**User Schema:** Includes UUID-based identification and Zod validation.
+
+**Data Isolation:** Complete per-user data isolation with userId foreign keys on all trading-related tables (trades, positions, portfolio snapshots, AI usage logs). Each user's AI agent learns only from their own interactions.
 
 ### Core Features
 

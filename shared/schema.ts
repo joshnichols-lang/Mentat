@@ -93,8 +93,10 @@ export const monitoringLog = pgTable("monitoring_log", {
 export const userApiCredentials = pgTable("user_api_credentials", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().unique().references(() => users.id, { onDelete: "cascade" }),
-  encryptedPrivateKey: text("encrypted_private_key").notNull(), // Envelope-encrypted Hyperliquid private key
-  encryptionIv: text("encryption_iv").notNull(), // Initialization vector for decryption
+  encryptedPrivateKey: text("encrypted_private_key").notNull(), // Private key encrypted with DEK
+  credentialIv: text("credential_iv").notNull(), // IV for private key encryption
+  encryptedDek: text("encrypted_dek").notNull(), // DEK encrypted with master key
+  dekIv: text("dek_iv").notNull(), // IV for DEK encryption
   createdAt: timestamp("created_at").notNull().defaultNow(),
   lastUsed: timestamp("last_used"),
 });
