@@ -20,10 +20,23 @@ export default function ConversationHistory() {
   const allConversations = usageLogs?.logs?.filter(log => log.success === 1 && log.userPrompt) || [];
   
   const conversations = useMemo(() => {
-    if (!searchQuery.trim()) return allConversations;
+    // Separate monitoring alerts from regular conversations
+    const monitoringAlerts = allConversations.filter(log => log.userPrompt === "[AUTOMATED MONITORING]");
+    const regularConversations = allConversations.filter(log => log.userPrompt !== "[AUTOMATED MONITORING]");
+    
+    // Get only the most recent monitoring alert (last in array = most recent by timestamp)
+    const latestMonitoringAlert = monitoringAlerts.length > 0 
+      ? [monitoringAlerts[monitoringAlerts.length - 1]] 
+      : [];
+    
+    // Combine: monitoring alert first (at top), then regular conversations
+    const combinedConversations = [...latestMonitoringAlert, ...regularConversations];
+    
+    // Apply search filter if query exists
+    if (!searchQuery.trim()) return combinedConversations;
     
     const query = searchQuery.toLowerCase();
-    return allConversations.filter(log => {
+    return combinedConversations.filter(log => {
       // Search in user prompt
       if (log.userPrompt?.toLowerCase().includes(query)) return true;
       

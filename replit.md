@@ -35,6 +35,8 @@ Preferred communication style: Simple, everyday language.
 
 ### October 16, 2025 - Monitoring Results in Conversation History
 - Automated monitoring assessments now appear in conversation history
+- **Only the most recent monitoring alert is displayed** (older alerts are hidden to reduce clutter)
+- Monitoring alert appears at the top of the conversation list for visibility
 - Distinguished from user prompts with Activity icon (vs MessageSquare icon)
 - Shows alert level badge (critical/warning/info) for quick assessment
 - Displays Mr. Fox's complete analysis when expanded:
