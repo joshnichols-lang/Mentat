@@ -8,6 +8,21 @@
 
 Preferred communication style: Simple, everyday language.
 
+## Recent Changes
+
+### October 16, 2025 - Conversation History Display
+- Added conversation history box showing all user prompts and Mr. Fox AI responses
+- Updated aiUsageLog schema with `aiResponse` field to persist AI trading strategies as JSON
+- Created ConversationHistory component with scrollable 500px display area
+- Shows complete conversation flow:
+  - User prompts with timestamp and MessageSquare icon
+  - Mr. Fox responses with Bot icon and model badge
+  - AI interpretation, trading actions with symbol/side/leverage/size, and risk management details
+  - Gracefully handles missing responses for older conversations
+- Component auto-refreshes every 5 seconds to show latest conversations
+- Integrated into Dashboard sidebar above AI Usage Tracker
+- Each trading action displays detailed reasoning in italic text
+
 ## System Architecture
 
 ### Frontend Architecture
