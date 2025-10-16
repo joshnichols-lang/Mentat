@@ -1,7 +1,18 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, decimal, timestamp, integer } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, decimal, timestamp, integer, jsonb, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+
+// Session storage table for Replit Auth
+export const sessions = pgTable(
+  "sessions",
+  {
+    sid: varchar("sid").primaryKey(),
+    sess: jsonb("sess").notNull(),
+    expire: timestamp("expire").notNull(),
+  },
+  (table) => [index("IDX_session_expire").on(table.expire)],
+);
 
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -10,11 +21,15 @@ export const users = pgTable("users", {
   password: text("password"), // Optional - used for username/password auth
   authProviderId: text("auth_provider_id").unique(), // For OAuth (Replit Auth)
   authProvider: text("auth_provider"), // "replit", "email", etc.
+  firstName: text("first_name"), // From Replit Auth
+  lastName: text("last_name"), // From Replit Auth
+  profileImageUrl: text("profile_image_url"), // From Replit Auth
   role: text("role").notNull().default("user"), // "user", "admin"
   subscriptionStatus: text("subscription_status").notNull().default("inactive"), // "inactive", "active", "trial", "cancelled"
   subscriptionId: text("subscription_id"), // Stripe subscription ID
   onboardingComplete: integer("onboarding_complete").notNull().default(0), // 0 = incomplete, 1 = complete
   createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
 export const trades = pgTable("trades", {
@@ -145,7 +160,8 @@ export const automationRuns = pgTable("automation_runs", {
   errorMessage: text("error_message"),
 });
 
-export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true });
+export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true, updatedAt: true });
+export const upsertUserSchema = createInsertSchema(users).omit({ createdAt: true, updatedAt: true }).partial();
 export const insertTradeSchema = createInsertSchema(trades).omit({ id: true, entryTimestamp: true });
 export const insertPositionSchema = createInsertSchema(positions).omit({ id: true, lastUpdated: true });
 export const insertPortfolioSnapshotSchema = createInsertSchema(portfolioSnapshots).omit({ id: true, timestamp: true });
@@ -158,6 +174,7 @@ export const insertPromoCodeRedemptionSchema = createInsertSchema(promoCodeRedem
 export const insertAutomationRunSchema = createInsertSchema(automationRuns).omit({ id: true, timestamp: true });
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
+export type UpsertUser = z.infer<typeof upsertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type InsertTrade = z.infer<typeof insertTradeSchema>;
 export type Trade = typeof trades.$inferSelect;
