@@ -176,7 +176,7 @@ async function developAutonomousStrategy(): Promise<void> {
     // Fetch user prompt history to learn trading style
     let promptHistory: {timestamp: Date, prompt: string}[] = [];
     try {
-      const recentPrompts = await storage.getAiUsageLogs(10);
+      const recentPrompts = await storage.getAiUsageLogs(TEST_USER_ID, 10);
       promptHistory = recentPrompts
         .filter(log => log.success === 1 && log.userPrompt && !log.userPrompt.includes("[AUTOMATED"))
         .slice(0, 5)
@@ -323,8 +323,7 @@ CRITICAL ORDER MANAGEMENT RULES:
     const usageData = response.usage;
     if (usageData) {
       const cost = calculateCost("sonar", usageData.prompt_tokens, usageData.completion_tokens);
-      await storage.logAiUsage({
-        userId: TEST_USER_ID,
+      await storage.logAiUsage(TEST_USER_ID, {
         provider: "perplexity",
         model: "sonar",
         promptTokens: usageData.prompt_tokens,
@@ -354,8 +353,7 @@ CRITICAL ORDER MANAGEMENT RULES:
         }
         
         // Log the autonomous trading session
-        await storage.createMonitoringLog({
-          userId: TEST_USER_ID,
+        await storage.createMonitoringLog(TEST_USER_ID, {
           analysis: JSON.stringify({
             tradeThesis: strategy.tradeThesis,
             marketRegime: strategy.marketRegime,
@@ -379,8 +377,7 @@ CRITICAL ORDER MANAGEMENT RULES:
         console.error("[Autonomous Trading] Failed to execute trades:", execError);
         
         // Log the failed execution
-        await storage.createMonitoringLog({
-          userId: TEST_USER_ID,
+        await storage.createMonitoringLog(TEST_USER_ID, {
           analysis: JSON.stringify({
             tradeThesis: strategy.tradeThesis,
             marketRegime: strategy.marketRegime,
@@ -394,8 +391,7 @@ CRITICAL ORDER MANAGEMENT RULES:
       console.log("[Autonomous Trading] No trading opportunities identified");
       
       // Log the analysis even if no trades
-      await storage.createMonitoringLog({
-        userId: TEST_USER_ID,
+      await storage.createMonitoringLog(TEST_USER_ID, {
         analysis: JSON.stringify({
           tradeThesis: strategy.tradeThesis,
           marketRegime: strategy.marketRegime,

@@ -1,6 +1,18 @@
 import { type User, type InsertUser, type UpsertUser, type Trade, type InsertTrade, type Position, type InsertPosition, type PortfolioSnapshot, type InsertPortfolioSnapshot, type AiUsageLog, type InsertAiUsageLog, type MonitoringLog, type InsertMonitoringLog, type UserApiCredential, type InsertUserApiCredential, users, trades, positions, portfolioSnapshots, aiUsageLog, monitoringLog, userApiCredentials } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, sql } from "drizzle-orm";
+import { eq, desc, sql, and, type SQL } from "drizzle-orm";
+
+// Helper function for userId-scoped conditions
+function withUserFilter<T extends { userId: any }>(
+  table: T,
+  userId: string,
+  ...conditions: SQL[]
+): SQL {
+  const userCondition = eq(table.userId, userId);
+  return conditions.length > 0 
+    ? and(userCondition, ...conditions)! 
+    : userCondition;
+}
 
 export interface IStorage {
   // User methods
@@ -9,32 +21,32 @@ export interface IStorage {
   createUser(user: InsertUser): Promise<User>;
   upsertUser(user: UpsertUser): Promise<User>;
   
-  // Trade methods
-  getTrades(limit?: number): Promise<Trade[]>;
-  getTrade(id: string): Promise<Trade | undefined>;
-  createTrade(trade: InsertTrade): Promise<Trade>;
-  updateTrade(id: string, updates: Partial<Trade>): Promise<Trade | undefined>;
-  closeTrade(id: string, exitPrice: string, pnl: string): Promise<Trade | undefined>;
+  // Trade methods (multi-tenant)
+  getTrades(userId: string, limit?: number): Promise<Trade[]>;
+  getTrade(userId: string, id: string): Promise<Trade | undefined>;
+  createTrade(userId: string, trade: InsertTrade): Promise<Trade>;
+  updateTrade(userId: string, id: string, updates: Partial<Trade>): Promise<Trade | undefined>;
+  closeTrade(userId: string, id: string, exitPrice: string, pnl: string): Promise<Trade | undefined>;
   
-  // Position methods
-  getPositions(): Promise<Position[]>;
-  getPosition(id: string): Promise<Position | undefined>;
-  getPositionBySymbol(symbol: string): Promise<Position | undefined>;
-  createPosition(position: InsertPosition): Promise<Position>;
-  updatePosition(id: string, updates: Partial<Position>): Promise<Position | undefined>;
-  deletePosition(id: string): Promise<void>;
+  // Position methods (multi-tenant)
+  getPositions(userId: string): Promise<Position[]>;
+  getPosition(userId: string, id: string): Promise<Position | undefined>;
+  getPositionBySymbol(userId: string, symbol: string): Promise<Position | undefined>;
+  createPosition(userId: string, position: InsertPosition): Promise<Position>;
+  updatePosition(userId: string, id: string, updates: Partial<Position>): Promise<Position | undefined>;
+  deletePosition(userId: string, id: string): Promise<void>;
   
-  // Portfolio snapshot methods
-  getPortfolioSnapshots(limit?: number): Promise<PortfolioSnapshot[]>;
-  getPortfolioSnapshotsSince(hours: number): Promise<PortfolioSnapshot[]>;
-  getLatestPortfolioSnapshot(): Promise<PortfolioSnapshot | undefined>;
-  createPortfolioSnapshot(snapshot: InsertPortfolioSnapshot): Promise<PortfolioSnapshot>;
+  // Portfolio snapshot methods (multi-tenant)
+  getPortfolioSnapshots(userId: string, limit?: number): Promise<PortfolioSnapshot[]>;
+  getPortfolioSnapshotsSince(userId: string, hours: number): Promise<PortfolioSnapshot[]>;
+  getLatestPortfolioSnapshot(userId: string): Promise<PortfolioSnapshot | undefined>;
+  createPortfolioSnapshot(userId: string, snapshot: InsertPortfolioSnapshot): Promise<PortfolioSnapshot>;
   
-  // AI Usage Log methods
-  logAiUsage(log: InsertAiUsageLog): Promise<AiUsageLog>;
-  getAiUsageLogs(limit?: number): Promise<AiUsageLog[]>;
-  getTotalAiCost(): Promise<string>;
-  getAiUsageStats(): Promise<{
+  // AI Usage Log methods (multi-tenant)
+  logAiUsage(userId: string, log: InsertAiUsageLog): Promise<AiUsageLog>;
+  getAiUsageLogs(userId: string, limit?: number): Promise<AiUsageLog[]>;
+  getTotalAiCost(userId: string): Promise<string>;
+  getAiUsageStats(userId: string): Promise<{
     totalRequests: number;
     totalTokens: number;
     totalPromptTokens: number;
@@ -42,12 +54,12 @@ export interface IStorage {
     totalCost: string;
   }>;
   
-  // Monitoring Log methods
-  createMonitoringLog(log: InsertMonitoringLog): Promise<MonitoringLog>;
-  getMonitoringLogs(limit?: number): Promise<MonitoringLog[]>;
-  getLatestMonitoringLog(): Promise<MonitoringLog | undefined>;
-  dismissMonitoringLog(id: string): Promise<MonitoringLog | undefined>;
-  getActiveMonitoringLogs(): Promise<MonitoringLog[]>;
+  // Monitoring Log methods (multi-tenant)
+  createMonitoringLog(userId: string, log: InsertMonitoringLog): Promise<MonitoringLog>;
+  getMonitoringLogs(userId: string, limit?: number): Promise<MonitoringLog[]>;
+  getLatestMonitoringLog(userId: string): Promise<MonitoringLog | undefined>;
+  dismissMonitoringLog(userId: string, id: string): Promise<MonitoringLog | undefined>;
+  getActiveMonitoringLogs(userId: string): Promise<MonitoringLog[]>;
   
   // User API Credentials methods
   getUserCredentials(userId: string): Promise<UserApiCredential | null>;
@@ -93,26 +105,34 @@ export class DbStorage implements IStorage {
   }
 
   // Trade methods
-  async getTrades(limit: number = 100): Promise<Trade[]> {
-    return await db.select().from(trades).orderBy(desc(trades.entryTimestamp)).limit(limit);
+  async getTrades(userId: string, limit: number = 100): Promise<Trade[]> {
+    return await db.select().from(trades)
+      .where(withUserFilter(trades, userId))
+      .orderBy(desc(trades.entryTimestamp))
+      .limit(limit);
   }
 
-  async getTrade(id: string): Promise<Trade | undefined> {
-    const result = await db.select().from(trades).where(eq(trades.id, id)).limit(1);
+  async getTrade(userId: string, id: string): Promise<Trade | undefined> {
+    const result = await db.select().from(trades)
+      .where(withUserFilter(trades, userId, eq(trades.id, id)))
+      .limit(1);
     return result[0];
   }
 
-  async createTrade(trade: InsertTrade): Promise<Trade> {
-    const result = await db.insert(trades).values(trade).returning();
+  async createTrade(userId: string, trade: InsertTrade): Promise<Trade> {
+    const result = await db.insert(trades).values({ userId, ...trade }).returning();
     return result[0];
   }
 
-  async updateTrade(id: string, updates: Partial<Trade>): Promise<Trade | undefined> {
-    const result = await db.update(trades).set(updates).where(eq(trades.id, id)).returning();
+  async updateTrade(userId: string, id: string, updates: Partial<Trade>): Promise<Trade | undefined> {
+    const result = await db.update(trades)
+      .set(updates)
+      .where(withUserFilter(trades, userId, eq(trades.id, id)))
+      .returning();
     return result[0];
   }
 
-  async closeTrade(id: string, exitPrice: string, pnl: string): Promise<Trade | undefined> {
+  async closeTrade(userId: string, id: string, exitPrice: string, pnl: string): Promise<Trade | undefined> {
     const result = await db.update(trades)
       .set({
         exitPrice,
@@ -120,83 +140,100 @@ export class DbStorage implements IStorage {
         status: "closed",
         exitTimestamp: sql`now()`,
       })
-      .where(eq(trades.id, id))
+      .where(withUserFilter(trades, userId, eq(trades.id, id)))
       .returning();
     return result[0];
   }
 
   // Position methods
-  async getPositions(): Promise<Position[]> {
-    return await db.select().from(positions).orderBy(desc(positions.lastUpdated));
+  async getPositions(userId: string): Promise<Position[]> {
+    return await db.select().from(positions)
+      .where(withUserFilter(positions, userId))
+      .orderBy(desc(positions.lastUpdated));
   }
 
-  async getPosition(id: string): Promise<Position | undefined> {
-    const result = await db.select().from(positions).where(eq(positions.id, id)).limit(1);
+  async getPosition(userId: string, id: string): Promise<Position | undefined> {
+    const result = await db.select().from(positions)
+      .where(withUserFilter(positions, userId, eq(positions.id, id)))
+      .limit(1);
     return result[0];
   }
 
-  async getPositionBySymbol(symbol: string): Promise<Position | undefined> {
-    const result = await db.select().from(positions).where(eq(positions.symbol, symbol)).limit(1);
+  async getPositionBySymbol(userId: string, symbol: string): Promise<Position | undefined> {
+    const result = await db.select().from(positions)
+      .where(withUserFilter(positions, userId, eq(positions.symbol, symbol)))
+      .limit(1);
     return result[0];
   }
 
-  async createPosition(position: InsertPosition): Promise<Position> {
-    const result = await db.insert(positions).values(position).returning();
+  async createPosition(userId: string, position: InsertPosition): Promise<Position> {
+    const result = await db.insert(positions).values({ userId, ...position }).returning();
     return result[0];
   }
 
-  async updatePosition(id: string, updates: Partial<Position>): Promise<Position | undefined> {
+  async updatePosition(userId: string, id: string, updates: Partial<Position>): Promise<Position | undefined> {
     const result = await db.update(positions)
       .set({ ...updates, lastUpdated: sql`now()` })
-      .where(eq(positions.id, id))
+      .where(withUserFilter(positions, userId, eq(positions.id, id)))
       .returning();
     return result[0];
   }
 
-  async deletePosition(id: string): Promise<void> {
-    await db.delete(positions).where(eq(positions.id, id));
+  async deletePosition(userId: string, id: string): Promise<void> {
+    await db.delete(positions).where(withUserFilter(positions, userId, eq(positions.id, id)));
   }
 
   // Portfolio snapshot methods
-  async getPortfolioSnapshots(limit: number = 100): Promise<PortfolioSnapshot[]> {
-    return await db.select().from(portfolioSnapshots).orderBy(desc(portfolioSnapshots.timestamp)).limit(limit);
+  async getPortfolioSnapshots(userId: string, limit: number = 100): Promise<PortfolioSnapshot[]> {
+    return await db.select().from(portfolioSnapshots)
+      .where(withUserFilter(portfolioSnapshots, userId))
+      .orderBy(desc(portfolioSnapshots.timestamp))
+      .limit(limit);
   }
 
-  async getPortfolioSnapshotsSince(hours: number): Promise<PortfolioSnapshot[]> {
+  async getPortfolioSnapshotsSince(userId: string, hours: number): Promise<PortfolioSnapshot[]> {
+    const timeCondition = sql`${portfolioSnapshots.timestamp} >= (now() - (${hours} || ' hours')::interval)`;
     return await db.select()
       .from(portfolioSnapshots)
-      .where(sql`${portfolioSnapshots.timestamp} >= now() - ${hours} * interval '1 hour'`)
+      .where(withUserFilter(portfolioSnapshots, userId, timeCondition))
       .orderBy(portfolioSnapshots.timestamp);
   }
 
-  async getLatestPortfolioSnapshot(): Promise<PortfolioSnapshot | undefined> {
-    const result = await db.select().from(portfolioSnapshots).orderBy(desc(portfolioSnapshots.timestamp)).limit(1);
+  async getLatestPortfolioSnapshot(userId: string): Promise<PortfolioSnapshot | undefined> {
+    const result = await db.select().from(portfolioSnapshots)
+      .where(withUserFilter(portfolioSnapshots, userId))
+      .orderBy(desc(portfolioSnapshots.timestamp))
+      .limit(1);
     return result[0];
   }
 
-  async createPortfolioSnapshot(snapshot: InsertPortfolioSnapshot): Promise<PortfolioSnapshot> {
-    const result = await db.insert(portfolioSnapshots).values(snapshot).returning();
+  async createPortfolioSnapshot(userId: string, snapshot: InsertPortfolioSnapshot): Promise<PortfolioSnapshot> {
+    const result = await db.insert(portfolioSnapshots).values({ userId, ...snapshot }).returning();
     return result[0];
   }
 
   // AI Usage Log methods
-  async logAiUsage(log: InsertAiUsageLog): Promise<AiUsageLog> {
-    const result = await db.insert(aiUsageLog).values(log).returning();
+  async logAiUsage(userId: string, log: InsertAiUsageLog): Promise<AiUsageLog> {
+    const result = await db.insert(aiUsageLog).values({ userId, ...log }).returning();
     return result[0];
   }
 
-  async getAiUsageLogs(limit: number = 100): Promise<AiUsageLog[]> {
-    return await db.select().from(aiUsageLog).orderBy(desc(aiUsageLog.timestamp)).limit(limit);
+  async getAiUsageLogs(userId: string, limit: number = 100): Promise<AiUsageLog[]> {
+    return await db.select().from(aiUsageLog)
+      .where(withUserFilter(aiUsageLog, userId))
+      .orderBy(desc(aiUsageLog.timestamp))
+      .limit(limit);
   }
 
-  async getTotalAiCost(): Promise<string> {
+  async getTotalAiCost(userId: string): Promise<string> {
     const result = await db.select({
       total: sql<string>`COALESCE(SUM(${aiUsageLog.estimatedCost}), 0)`
-    }).from(aiUsageLog);
+    }).from(aiUsageLog)
+      .where(withUserFilter(aiUsageLog, userId));
     return result[0]?.total || "0";
   }
 
-  async getAiUsageStats(): Promise<{
+  async getAiUsageStats(userId: string): Promise<{
     totalRequests: number;
     totalTokens: number;
     totalPromptTokens: number;
@@ -209,7 +246,8 @@ export class DbStorage implements IStorage {
       totalPromptTokens: sql<number>`COALESCE(SUM(${aiUsageLog.promptTokens}), 0)`,
       totalCompletionTokens: sql<number>`COALESCE(SUM(${aiUsageLog.completionTokens}), 0)`,
       totalCost: sql<string>`COALESCE(SUM(${aiUsageLog.estimatedCost}), 0)`,
-    }).from(aiUsageLog).where(eq(aiUsageLog.success, 1));
+    }).from(aiUsageLog)
+      .where(withUserFilter(aiUsageLog, userId, eq(aiUsageLog.success, 1)));
     
     return result[0] || {
       totalRequests: 0,
@@ -221,32 +259,38 @@ export class DbStorage implements IStorage {
   }
 
   // Monitoring Log methods
-  async createMonitoringLog(log: InsertMonitoringLog): Promise<MonitoringLog> {
-    const result = await db.insert(monitoringLog).values(log).returning();
+  async createMonitoringLog(userId: string, log: InsertMonitoringLog): Promise<MonitoringLog> {
+    const result = await db.insert(monitoringLog).values({ userId, ...log }).returning();
     return result[0];
   }
 
-  async getMonitoringLogs(limit: number = 100): Promise<MonitoringLog[]> {
-    return await db.select().from(monitoringLog).orderBy(desc(monitoringLog.timestamp)).limit(limit);
+  async getMonitoringLogs(userId: string, limit: number = 100): Promise<MonitoringLog[]> {
+    return await db.select().from(monitoringLog)
+      .where(withUserFilter(monitoringLog, userId))
+      .orderBy(desc(monitoringLog.timestamp))
+      .limit(limit);
   }
 
-  async getLatestMonitoringLog(): Promise<MonitoringLog | undefined> {
-    const result = await db.select().from(monitoringLog).orderBy(desc(monitoringLog.timestamp)).limit(1);
+  async getLatestMonitoringLog(userId: string): Promise<MonitoringLog | undefined> {
+    const result = await db.select().from(monitoringLog)
+      .where(withUserFilter(monitoringLog, userId))
+      .orderBy(desc(monitoringLog.timestamp))
+      .limit(1);
     return result[0];
   }
 
-  async dismissMonitoringLog(id: string): Promise<MonitoringLog | undefined> {
+  async dismissMonitoringLog(userId: string, id: string): Promise<MonitoringLog | undefined> {
     const result = await db.update(monitoringLog)
       .set({ dismissed: 1 })
-      .where(eq(monitoringLog.id, id))
+      .where(withUserFilter(monitoringLog, userId, eq(monitoringLog.id, id)))
       .returning();
     return result[0];
   }
 
-  async getActiveMonitoringLogs(): Promise<MonitoringLog[]> {
+  async getActiveMonitoringLogs(userId: string): Promise<MonitoringLog[]> {
     return await db.select()
       .from(monitoringLog)
-      .where(eq(monitoringLog.dismissed, 0))
+      .where(withUserFilter(monitoringLog, userId, eq(monitoringLog.dismissed, 0)))
       .orderBy(desc(monitoringLog.timestamp));
   }
 

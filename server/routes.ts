@@ -10,6 +10,8 @@ import { setupAuth, isAuthenticated } from "./replitAuth";
 import { storeUserCredentials, getUserPrivateKey, deleteUserCredentials, hasUserCredentials } from "./credentialService";
 import { z } from "zod";
 
+const TEST_USER_ID = '1fox-test-user-0000-000000000001';
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Initialize Replit Auth
   await setupAuth(app);
@@ -154,7 +156,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get all trades
   app.get("/api/trades", async (_req, res) => {
     try {
-      const trades = await storage.getTrades();
+      const trades = await storage.getTrades(TEST_USER_ID);
       res.json({ success: true, trades });
     } catch (error) {
       console.error("Error fetching trades:", error);
@@ -165,7 +167,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get all positions
   app.get("/api/positions", async (_req, res) => {
     try {
-      const positions = await storage.getPositions();
+      const positions = await storage.getPositions(TEST_USER_ID);
       res.json({ success: true, positions });
     } catch (error) {
       console.error("Error fetching positions:", error);
@@ -177,7 +179,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/portfolio/snapshots", async (req, res) => {
     try {
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 100;
-      const snapshots = await storage.getPortfolioSnapshots(limit);
+      const snapshots = await storage.getPortfolioSnapshots(TEST_USER_ID, limit);
       res.json({ success: true, snapshots });
     } catch (error) {
       console.error("Error fetching portfolio snapshots:", error);
@@ -188,7 +190,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create a new trade
   app.post("/api/trades", async (req, res) => {
     try {
-      const trade = await storage.createTrade(req.body);
+      const trade = await storage.createTrade(TEST_USER_ID, req.body);
       res.json({ success: true, trade });
     } catch (error) {
       console.error("Error creating trade:", error);
@@ -200,7 +202,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/trades/:id/close", async (req, res) => {
     try {
       const { exitPrice, pnl } = req.body;
-      const trade = await storage.closeTrade(req.params.id, exitPrice, pnl);
+      const trade = await storage.closeTrade(TEST_USER_ID, req.params.id, exitPrice, pnl);
       res.json({ success: true, trade });
     } catch (error) {
       console.error("Error closing trade:", error);
@@ -211,7 +213,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create or update position
   app.post("/api/positions", async (req, res) => {
     try {
-      const position = await storage.createPosition(req.body);
+      const position = await storage.createPosition(TEST_USER_ID, req.body);
       res.json({ success: true, position });
     } catch (error) {
       console.error("Error creating position:", error);
@@ -222,7 +224,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Update position
   app.patch("/api/positions/:id", async (req, res) => {
     try {
-      const position = await storage.updatePosition(req.params.id, req.body);
+      const position = await storage.updatePosition(TEST_USER_ID, req.params.id, req.body);
       res.json({ success: true, position });
     } catch (error) {
       console.error("Error updating position:", error);
@@ -233,7 +235,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create portfolio snapshot
   app.post("/api/portfolio/snapshots", async (req, res) => {
     try {
-      const snapshot = await storage.createPortfolioSnapshot(req.body);
+      const snapshot = await storage.createPortfolioSnapshot(TEST_USER_ID, req.body);
       res.json({ success: true, snapshot });
     } catch (error) {
       console.error("Error creating snapshot:", error);
@@ -245,7 +247,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/ai/usage", async (req, res) => {
     try {
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 100;
-      const logs = await storage.getAiUsageLogs(limit);
+      const logs = await storage.getAiUsageLogs(TEST_USER_ID, limit);
       res.json({ success: true, logs });
     } catch (error) {
       console.error("Error fetching AI usage logs:", error);
@@ -256,7 +258,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get total AI cost
   app.get("/api/ai/cost", async (_req, res) => {
     try {
-      const totalCost = await storage.getTotalAiCost();
+      const totalCost = await storage.getTotalAiCost(TEST_USER_ID);
       res.json({ success: true, totalCost });
     } catch (error) {
       console.error("Error fetching AI cost:", error);
@@ -267,7 +269,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get AI usage statistics (cumulative totals)
   app.get("/api/ai/stats", async (_req, res) => {
     try {
-      const stats = await storage.getAiUsageStats();
+      const stats = await storage.getAiUsageStats(TEST_USER_ID);
       res.json({ success: true, stats });
     } catch (error) {
       console.error("Error fetching AI stats:", error);
@@ -279,7 +281,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/monitoring/logs", async (req, res) => {
     try {
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 100;
-      const logs = await storage.getMonitoringLogs(limit);
+      const logs = await storage.getMonitoringLogs(TEST_USER_ID, limit);
       res.json({ success: true, logs });
     } catch (error) {
       console.error("Error fetching monitoring logs:", error);
@@ -290,7 +292,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get active monitoring alerts
   app.get("/api/monitoring/active", async (_req, res) => {
     try {
-      const logs = await storage.getActiveMonitoringLogs();
+      const logs = await storage.getActiveMonitoringLogs(TEST_USER_ID);
       res.json({ success: true, logs });
     } catch (error) {
       console.error("Error fetching active monitoring alerts:", error);
@@ -301,7 +303,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Dismiss monitoring alert
   app.post("/api/monitoring/:id/dismiss", async (req, res) => {
     try {
-      const log = await storage.dismissMonitoringLog(req.params.id);
+      const log = await storage.dismissMonitoringLog(TEST_USER_ID, req.params.id);
       res.json({ success: true, log });
     } catch (error) {
       console.error("Error dismissing monitoring alert:", error);
