@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type Trade, type InsertTrade, type Position, type InsertPosition, type PortfolioSnapshot, type InsertPortfolioSnapshot, type AiUsageLog, type InsertAiUsageLog, users, trades, positions, portfolioSnapshots, aiUsageLog } from "@shared/schema";
+import { type User, type InsertUser, type Trade, type InsertTrade, type Position, type InsertPosition, type PortfolioSnapshot, type InsertPortfolioSnapshot, type AiUsageLog, type InsertAiUsageLog, type MonitoringLog, type InsertMonitoringLog, users, trades, positions, portfolioSnapshots, aiUsageLog, monitoringLog } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql } from "drizzle-orm";
 
@@ -32,6 +32,13 @@ export interface IStorage {
   logAiUsage(log: InsertAiUsageLog): Promise<AiUsageLog>;
   getAiUsageLogs(limit?: number): Promise<AiUsageLog[]>;
   getTotalAiCost(): Promise<string>;
+  
+  // Monitoring Log methods
+  createMonitoringLog(log: InsertMonitoringLog): Promise<MonitoringLog>;
+  getMonitoringLogs(limit?: number): Promise<MonitoringLog[]>;
+  getLatestMonitoringLog(): Promise<MonitoringLog | undefined>;
+  dismissMonitoringLog(id: string): Promise<MonitoringLog | undefined>;
+  getActiveMonitoringLogs(): Promise<MonitoringLog[]>;
 }
 
 export class DbStorage implements IStorage {
@@ -146,6 +153,36 @@ export class DbStorage implements IStorage {
       total: sql<string>`COALESCE(SUM(${aiUsageLog.estimatedCost}), 0)`
     }).from(aiUsageLog);
     return result[0]?.total || "0";
+  }
+
+  // Monitoring Log methods
+  async createMonitoringLog(log: InsertMonitoringLog): Promise<MonitoringLog> {
+    const result = await db.insert(monitoringLog).values(log).returning();
+    return result[0];
+  }
+
+  async getMonitoringLogs(limit: number = 100): Promise<MonitoringLog[]> {
+    return await db.select().from(monitoringLog).orderBy(desc(monitoringLog.timestamp)).limit(limit);
+  }
+
+  async getLatestMonitoringLog(): Promise<MonitoringLog | undefined> {
+    const result = await db.select().from(monitoringLog).orderBy(desc(monitoringLog.timestamp)).limit(1);
+    return result[0];
+  }
+
+  async dismissMonitoringLog(id: string): Promise<MonitoringLog | undefined> {
+    const result = await db.update(monitoringLog)
+      .set({ dismissed: 1 })
+      .where(eq(monitoringLog.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async getActiveMonitoringLogs(): Promise<MonitoringLog[]> {
+    return await db.select()
+      .from(monitoringLog)
+      .where(eq(monitoringLog.dismissed, 0))
+      .orderBy(desc(monitoringLog.timestamp));
   }
 }
 

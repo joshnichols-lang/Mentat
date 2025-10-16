@@ -62,11 +62,21 @@ export const aiUsageLog = pgTable("ai_usage_log", {
   success: integer("success").notNull().default(1), // 1 = success, 0 = error
 });
 
+export const monitoringLog = pgTable("monitoring_log", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  timestamp: timestamp("timestamp").notNull().defaultNow(),
+  analysis: text("analysis").notNull(), // AI's position analysis as JSON
+  alertLevel: text("alert_level").notNull().default("info"), // "info", "warning", "critical"
+  suggestions: text("suggestions"), // Trading suggestions
+  dismissed: integer("dismissed").notNull().default(0), // 0 = active, 1 = dismissed by user
+});
+
 export const insertUserSchema = createInsertSchema(users).omit({ id: true });
 export const insertTradeSchema = createInsertSchema(trades).omit({ id: true, entryTimestamp: true });
 export const insertPositionSchema = createInsertSchema(positions).omit({ id: true, lastUpdated: true });
 export const insertPortfolioSnapshotSchema = createInsertSchema(portfolioSnapshots).omit({ id: true, timestamp: true });
 export const insertAiUsageLogSchema = createInsertSchema(aiUsageLog).omit({ id: true, timestamp: true });
+export const insertMonitoringLogSchema = createInsertSchema(monitoringLog).omit({ id: true, timestamp: true });
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -78,3 +88,5 @@ export type InsertPortfolioSnapshot = z.infer<typeof insertPortfolioSnapshotSche
 export type PortfolioSnapshot = typeof portfolioSnapshots.$inferSelect;
 export type InsertAiUsageLog = z.infer<typeof insertAiUsageLogSchema>;
 export type AiUsageLog = typeof aiUsageLog.$inferSelect;
+export type InsertMonitoringLog = z.infer<typeof insertMonitoringLogSchema>;
+export type MonitoringLog = typeof monitoringLog.$inferSelect;
