@@ -4,7 +4,6 @@ import MarketOverview from "@/components/MarketOverview";
 import PositionsGrid from "@/components/PositionsGrid";
 import PerformanceMetrics from "@/components/PerformanceMetrics";
 import TradeHistory from "@/components/TradeHistory";
-import QuickTrade from "@/components/QuickTrade";
 import PortfolioPerformanceChart from "@/components/PortfolioPerformanceChart";
 import SharpeRatioChart from "@/components/SharpeRatioChart";
 import { AIUsageTracker } from "@/components/AIUsageTracker";
@@ -53,9 +52,6 @@ export default function Dashboard() {
             <div className="space-y-4">
               {/* AI Usage Tracker */}
               <AIUsageTracker />
-              
-              {/* Quick Trade */}
-              <QuickTrade />
             </div>
           </div>
         </div>

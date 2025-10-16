@@ -10,6 +10,10 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+### October 16, 2025 - Removed Quick Trade Panel
+- **Quick Trade panel removed** - Streamlined dashboard by removing redundant quick trade functionality
+- **AI-first approach** - All trading now done through AI prompt panel for consistency
+
 ### October 16, 2025 - Positions Grid Simplified
 - **Removed stop loss/take profit sections** - Positions grid now shows only essential position info on one clean line
 - **Streamlined display**: Size, Entry, Value, Liquidation, P&L all on single row below pair symbol
