@@ -59,6 +59,21 @@ export default function SharpeRatioChart() {
 
   const config = ratioConfig[selectedRatio];
 
+  // Calculate Y-axis domain to keep x-axis at bottom
+  const yDomain = useMemo(() => {
+    if (data.length === 0) return [0, 1];
+    
+    const values = data.map((item: any) => Number(item[config.dataKey] || 0));
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+    
+    // Add 5% padding
+    const yMin = min <= 0 ? min * 1.05 : 0;
+    const yMax = max >= 0 ? max * 1.05 : 0;
+    
+    return [yMin, yMax];
+  }, [data, config.dataKey]);
+
   // Format tick for display
   const formatXAxis = (timestamp: number) => {
     return formatChartDate(timestamp, timeRange);
@@ -142,7 +157,8 @@ export default function SharpeRatioChart() {
                 <YAxis 
                   stroke="hsl(var(--muted-foreground))"
                   tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
-                  domain={[(dataMin: number) => Math.min(0, dataMin), 'auto']}
+                  domain={yDomain}
+                  padding={{ top: 8, bottom: 8 }}
                 />
                 <Tooltip
                   contentStyle={{
