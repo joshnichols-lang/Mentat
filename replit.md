@@ -10,6 +10,13 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+### October 16, 2025 - Fixed Watchlist Drag-and-Drop
+- **Clear visual indicators** - Drag handles now show when drag is enabled/disabled
+- **Easy sort clearing** - Added "Clear" button next to "Sorted by X" badge to quickly re-enable dragging
+- **Tooltips** - Drag handle shows helpful tooltips: "Drag to reorder" when enabled, "Clear sort to enable drag" when disabled
+- **Technical fix**: Drag-and-drop is automatically disabled when column sorting is active (by design), but this was not obvious to users
+- **User-friendly solution**: Visual dimming (opacity-40), cursor changes, and one-click sort clearing make it clear when/how to drag
+
 ### October 16, 2025 - Enhanced Risk Metrics: Calmar and Sortino Ratios
 - **Added Sortino and Calmar ratios** - Portfolio performance now tracks three comprehensive risk-adjusted metrics
 - **Sortino Ratio**: Measures return per unit of downside deviation (only penalizes negative volatility, better for asymmetric returns)

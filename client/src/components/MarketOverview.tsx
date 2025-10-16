@@ -53,10 +53,12 @@ const MAX_WATCHLIST_SIZE = 10;
 
 function SortableWatchlistRow({ 
   market, 
-  onRemove 
+  onRemove,
+  sortColumn
 }: { 
   market: HyperliquidMarketData;
   onRemove: (symbol: string) => void;
+  sortColumn: SortColumn;
 }) {
   const {
     attributes,
@@ -88,9 +90,12 @@ function SortableWatchlistRow({
       <td className="py-2.5">
         <div className="flex items-center gap-2">
           <button
-            className="cursor-grab active:cursor-grabbing touch-none"
-            {...attributes}
-            {...listeners}
+            type="button"
+            className={sortColumn ? "cursor-not-allowed opacity-40" : "cursor-grab active:cursor-grabbing touch-none"}
+            title={sortColumn ? "Clear sort to enable drag" : "Drag to reorder"}
+            disabled={!!sortColumn}
+            {...(!sortColumn ? attributes : {})}
+            {...(!sortColumn ? listeners : {})}
             data-testid={`drag-handle-${displaySymbol}`}
           >
             <GripVertical className="h-4 w-4 text-muted-foreground" />
@@ -329,9 +334,23 @@ export default function MarketOverview() {
             {watchlist.length}/{MAX_WATCHLIST_SIZE}
           </Badge>
           {sortColumn && (
-            <Badge variant="secondary" className="text-xs">
-              Sorted by {sortColumn}
-            </Badge>
+            <div className="flex items-center gap-1">
+              <Badge variant="secondary" className="text-xs">
+                Sorted by {sortColumn}
+              </Badge>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setSortColumn(null);
+                  setSortDirection("desc");
+                }}
+                className="h-5 px-1.5 text-xs"
+                data-testid="button-clear-sort"
+              >
+                Clear
+              </Button>
+            </div>
           )}
         </div>
         
@@ -462,6 +481,7 @@ export default function MarketOverview() {
                     key={market.symbol}
                     market={market}
                     onRemove={removeFromWatchlist}
+                    sortColumn={sortColumn}
                   />
                 ))}
               </tbody>
