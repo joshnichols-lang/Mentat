@@ -1,8 +1,10 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { MessageSquare, Bot } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { MessageSquare, Bot, ChevronDown } from "lucide-react";
 import type { AiUsageLog } from "@shared/schema";
 
 export default function ConversationHistory() {
@@ -47,76 +49,92 @@ export default function ConversationHistory() {
             }
 
             return (
-              <div key={log.id} className="space-y-2" data-testid={`conversation-${log.id}`}>
-                <div className="flex items-start gap-2">
-                  <MessageSquare className="h-3.5 w-3.5 mt-0.5 text-muted-foreground" />
-                  <div className="flex-1 space-y-1">
-                    <div className="text-xs text-muted-foreground">
-                      {new Date(log.timestamp).toLocaleString()}
+              <Collapsible key={log.id} className="space-y-2" data-testid={`conversation-${log.id}`}>
+                <CollapsibleTrigger className="w-full hover-elevate active-elevate-2 p-2 -m-2 transition-colors group" data-testid={`toggle-conversation-${log.id}`}>
+                  <div className="flex items-start gap-2">
+                    <div className="flex items-center gap-1.5">
+                      <MessageSquare className="h-3.5 w-3.5 mt-0.5 text-muted-foreground" />
+                      <ChevronDown className="h-3 w-3 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
                     </div>
-                    <div className="text-xs font-medium" data-testid="user-prompt">
-                      {log.userPrompt}
-                    </div>
-                  </div>
-                </div>
-
-                {aiStrategy && (
-                  <div className="flex items-start gap-2 pl-5 border-l-2 ml-1.5" style={{ borderColor: 'hsl(var(--muted-foreground))' }}>
-                    <Bot className="h-3.5 w-3.5 mt-0.5 text-primary" />
-                    <div className="flex-1 space-y-2">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-semibold">Mr. Fox</span>
-                        <Badge variant="secondary" className="text-xs h-4 px-1.5">
-                          {log.model}
-                        </Badge>
-                      </div>
-                      
-                      {aiStrategy.interpretation && (
-                        <div className="text-xs text-muted-foreground italic" data-testid="ai-interpretation">
-                          {aiStrategy.interpretation}
-                        </div>
-                      )}
-
-                      {aiStrategy.actions && aiStrategy.actions.length > 0 && (
-                        <div className="space-y-1">
-                          <div className="text-xs font-semibold">Actions:</div>
-                          {aiStrategy.actions.map((action: any, idx: number) => (
-                            <div key={idx} className="text-xs bg-muted/50 p-2 space-y-0.5" data-testid={`action-${idx}`}>
-                              <div className="font-mono">
-                                {action.action?.toUpperCase()} {action.symbol?.replace("-PERP", "")} {action.side?.toUpperCase()}
-                                {action.leverage && ` ${action.leverage}x`}
-                              </div>
-                              <div className="text-muted-foreground">Size: {action.size}</div>
-                              {action.reasoning && (
-                                <div className="text-muted-foreground italic">{action.reasoning}</div>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      )}
-
-                      {aiStrategy.riskManagement && (
-                        <div className="text-xs">
-                          <span className="font-semibold">Risk: </span>
-                          <span className="text-muted-foreground">{aiStrategy.riskManagement}</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {!aiStrategy && log.aiResponse && (
-                  <div className="flex items-start gap-2 pl-5 border-l-2 ml-1.5" style={{ borderColor: 'hsl(var(--muted-foreground))' }}>
-                    <Bot className="h-3.5 w-3.5 mt-0.5 text-primary" />
-                    <div className="flex-1">
-                      <div className="text-xs font-semibold mb-1">Mr. Fox</div>
+                    <div className="flex-1 space-y-1 text-left">
                       <div className="text-xs text-muted-foreground">
-                        {log.aiResponse.substring(0, 200)}{log.aiResponse.length > 200 ? '...' : ''}
+                        {new Date(log.timestamp).toLocaleString()}
+                      </div>
+                      <div className="text-xs font-medium" data-testid="user-prompt">
+                        {log.userPrompt}
                       </div>
                     </div>
                   </div>
-                )}
-              </div>
+                </CollapsibleTrigger>
+
+                <CollapsibleContent>
+                  {aiStrategy && (
+                    <div className="flex items-start gap-2 pl-5 border-l-2 ml-1.5 mt-2" style={{ borderColor: 'hsl(var(--muted-foreground))' }}>
+                      <Bot className="h-3.5 w-3.5 mt-0.5 text-primary" />
+                      <div className="flex-1 space-y-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-semibold">Mr. Fox</span>
+                          <Badge variant="secondary" className="text-xs h-4 px-1.5">
+                            {log.model}
+                          </Badge>
+                        </div>
+                        
+                        {aiStrategy.interpretation && (
+                          <div className="text-xs text-muted-foreground italic" data-testid="ai-interpretation">
+                            {aiStrategy.interpretation}
+                          </div>
+                        )}
+
+                        {aiStrategy.actions && aiStrategy.actions.length > 0 && (
+                          <div className="space-y-1">
+                            <div className="text-xs font-semibold">Actions:</div>
+                            {aiStrategy.actions.map((action: any, idx: number) => (
+                              <div key={idx} className="text-xs bg-muted/50 p-2 space-y-0.5" data-testid={`action-${idx}`}>
+                                <div className="font-mono">
+                                  {action.action?.toUpperCase()} {action.symbol?.replace("-PERP", "")} {action.side?.toUpperCase()}
+                                  {action.leverage && ` ${action.leverage}x`}
+                                </div>
+                                <div className="text-muted-foreground">Size: {action.size}</div>
+                                {action.reasoning && (
+                                  <div className="text-muted-foreground italic">{action.reasoning}</div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {aiStrategy.riskManagement && (
+                          <div className="text-xs">
+                            <span className="font-semibold">Risk: </span>
+                            <span className="text-muted-foreground">{aiStrategy.riskManagement}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {!aiStrategy && log.aiResponse && (
+                    <div className="flex items-start gap-2 pl-5 border-l-2 ml-1.5 mt-2" style={{ borderColor: 'hsl(var(--muted-foreground))' }}>
+                      <Bot className="h-3.5 w-3.5 mt-0.5 text-primary" />
+                      <div className="flex-1">
+                        <div className="text-xs font-semibold mb-1">Mr. Fox</div>
+                        <div className="text-xs text-muted-foreground">
+                          {log.aiResponse.substring(0, 200)}{log.aiResponse.length > 200 ? '...' : ''}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {!aiStrategy && !log.aiResponse && (
+                    <div className="flex items-start gap-2 pl-5 border-l-2 ml-1.5 mt-2" style={{ borderColor: 'hsl(var(--muted-foreground))' }}>
+                      <Bot className="h-3.5 w-3.5 mt-0.5 text-muted-foreground" />
+                      <div className="flex-1">
+                        <div className="text-xs text-muted-foreground italic">No response recorded</div>
+                      </div>
+                    </div>
+                  )}
+                </CollapsibleContent>
+              </Collapsible>
             );
           })}
         </div>
