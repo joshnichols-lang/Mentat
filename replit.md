@@ -14,9 +14,14 @@ Preferred communication style: Simple, everyday language.
 - Added conversation history box showing all user prompts and Mr. Fox AI responses
 - Updated aiUsageLog schema with `aiResponse` field to persist AI trading strategies as JSON
 - Created ConversationHistory component with scrollable 500px display area
+- **Collapsible Conversations:** Each conversation entry can be expanded/collapsed:
+  - Click any conversation to toggle expand/collapse
+  - Chevron icon rotates to indicate state (down = collapsed, up = expanded)
+  - Conversations default to collapsed state for cleaner UI
+  - All conversations work independently
 - Shows complete conversation flow:
   - User prompts with timestamp and MessageSquare icon
-  - Mr. Fox responses with Bot icon and model badge
+  - Mr. Fox responses with Bot icon and model badge (shown when expanded)
   - AI interpretation, trading actions with symbol/side/leverage/size, and risk management details
   - Gracefully handles missing responses for older conversations
 - Component auto-refreshes every 5 seconds to show latest conversations
