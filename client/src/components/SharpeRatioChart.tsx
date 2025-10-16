@@ -37,7 +37,7 @@ export default function SharpeRatioChart() {
     const cutoff = now - selectedRange.ms;
     
     return allData.filter((snapshot: any) => {
-      const timestamp = new Date(snapshot.createdAt).getTime();
+      const timestamp = new Date(snapshot.timestamp).getTime();
       return timestamp >= cutoff;
     });
   }, [allData, timeRange]);
@@ -158,7 +158,7 @@ export default function SharpeRatioChart() {
               <LineChart data={data} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                 <XAxis 
-                  dataKey="createdAt" 
+                  dataKey="timestamp" 
                   stroke="hsl(var(--muted-foreground))"
                   tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 10 }}
                   tickFormatter={formatXAxis}
