@@ -58,6 +58,7 @@ export const aiUsageLog = pgTable("ai_usage_log", {
   totalTokens: integer("total_tokens").notNull(),
   estimatedCost: decimal("estimated_cost", { precision: 10, scale: 6 }).notNull(),
   userPrompt: text("user_prompt"),
+  aiResponse: text("ai_response"),
   success: integer("success").notNull().default(1), // 1 = success, 0 = error
 });
 

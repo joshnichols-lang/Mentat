@@ -180,6 +180,9 @@ Generate a trading strategy that addresses the user's current prompt while consi
       cleanedContent = cleanedContent.replace(/^```\s*/, '').replace(/\s*```$/, '');
     }
 
+    // Parse the strategy before logging
+    const strategy = JSON.parse(cleanedContent) as TradingStrategy;
+
     // Log usage and cost
     const usage = completion.usage;
     if (usage) {
@@ -194,6 +197,7 @@ Generate a trading strategy that addresses the user's current prompt while consi
           totalTokens: usage.total_tokens,
           estimatedCost: cost.toFixed(6),
           userPrompt: prompt,
+          aiResponse: JSON.stringify(strategy),
           success: 1
         });
       } catch (error) {
@@ -201,7 +205,7 @@ Generate a trading strategy that addresses the user's current prompt while consi
       }
     }
 
-    return JSON.parse(cleanedContent) as TradingStrategy;
+    return strategy;
   } catch (error) {
     // Log failed attempt
     try {
