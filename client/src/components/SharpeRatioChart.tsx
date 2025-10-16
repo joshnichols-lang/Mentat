@@ -159,6 +159,7 @@ export default function SharpeRatioChart() {
                   tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
                   domain={yDomain}
                   padding={{ top: 8, bottom: 8 }}
+                  tickFormatter={(value) => Number(value).toFixed(4)}
                 />
                 <Tooltip
                   contentStyle={{
