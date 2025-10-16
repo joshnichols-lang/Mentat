@@ -9,7 +9,7 @@ interface MarketData {
 }
 
 interface TradingAction {
-  action: "buy" | "sell" | "hold" | "close";
+  action: "buy" | "sell" | "hold" | "close" | "stop_loss" | "take_profit";
   symbol: string;
   side: "long" | "short";
   size: string;
@@ -18,6 +18,7 @@ interface TradingAction {
   expectedEntry?: string;
   stopLoss?: string;
   takeProfit?: string;
+  triggerPrice?: string; // For stop_loss and take_profit actions
 }
 
 interface TradingStrategy {
@@ -127,22 +128,26 @@ JSON format:
   "interpretation": "Professional analysis of market conditions, regime identification, and alignment with user's trading history",
   "actions": [
     {
-      "action": "buy" | "sell" | "hold" | "close",
+      "action": "buy" | "sell" | "hold" | "close" | "stop_loss" | "take_profit",
       "symbol": "BTC-PERP" | "ETH-PERP" | "SOL-PERP" etc,
       "side": "long" | "short",
       "size": "numeric value as string (e.g. '0.5', '1.25', '10') - MUST be actual number, NOT 'calculated'",
       "leverage": 1-10,
       "reasoning": "Technical analysis across timeframes, entry trigger, risk management rationale",
-      "expectedEntry": "numeric price as string (e.g. '45000.5')",
-      "stopLoss": "numeric price as string (e.g. '44000')",
-      "takeProfit": "numeric price as string (e.g. '48000')"
+      "expectedEntry": "numeric price as string (e.g. '45000.5')" [for buy/sell actions],
+      "triggerPrice": "numeric price as string (e.g. '44000')" [REQUIRED for stop_loss/take_profit actions - the price that triggers the order]
     }
   ],
   "riskManagement": "Detailed risk management strategy including position sizing methodology, stop loss placement, and exposure limits",
   "expectedOutcome": "Expected Sharpe ratio impact, potential drawdown, and compounding strategy"
 }
 
-CRITICAL: The 'size' field must ALWAYS contain an actual numeric value (like "0.5" or "10"), NEVER the word "calculated" or any placeholder text.
+CRITICAL RULES:
+1. The 'size' field must ALWAYS contain an actual numeric value (like "0.5" or "10"), NEVER the word "calculated" or any placeholder text.
+2. To place stop loss orders, use action: "stop_loss" with triggerPrice set to the stop loss price
+3. To place take profit orders, use action: "take_profit" with triggerPrice set to the take profit price
+4. DO NOT use "hold" actions with stopLoss/takeProfit fields - those fields are ignored. Instead, generate separate stop_loss and take_profit ORDER actions.
+5. When user asks to set stop losses or take profits, generate actual stop_loss/take_profit actions for each position.
 
 Output real-time executed trades with professional precision and risk-adjusted optimization.`
       },
