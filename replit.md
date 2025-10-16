@@ -15,11 +15,12 @@ Preferred communication style: Simple, everyday language.
 - **Streamlined display**: Size, Entry, Value, Liquidation, P&L all on single row below pair symbol
 - **SL/TP still active** - Protective orders are still managed by Mr. Fox automatically, just not displayed in positions view
 
-### October 16, 2025 - Risk Ratio Chart Enhancement
-- **Y-axis starts at 0** - Chart never goes below x-axis, preventing negative display
-- **Time frame selection** - Choose from 1H, 1D (default), 1W, 1M, or 1Y to zoom in/out on performance
-- **Smart date formatting** - X-axis shows time (1H/1D), dates (1W/1M), or month/year (1Y) for clarity
-- **Reference lines**: 0 (Breakeven), 1.0 (Good), 2.0 (Excellent) for easy performance assessment
+### October 16, 2025 - Unified Chart Time Scaling
+- **Linear time scaling** - All charts (Portfolio Performance, Risk Ratios) use linear x-axis with `scale="time"` for accurate temporal representation
+- **Time frame selection** - Both main charts have 1H, 1D (default), 1W, 1M, 1Y buttons
+- **Uniform date formatting** - All charts use consistent formatting: time (1H/1D), dates (1W/1M), month/year (1Y)
+- **Y-axis optimization** - Risk ratio charts start at 0, portfolio chart auto-scales
+- **Reference lines**: Risk charts show 0 (Breakeven), 1.0 (Good), 2.0 (Excellent)
 
 ### October 16, 2025 - Fixed Watchlist Drag-and-Drop
 - **Clear visual indicators** - Drag handles now show when drag is enabled/disabled

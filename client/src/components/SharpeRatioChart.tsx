@@ -3,17 +3,9 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { useQuery } from "@tanstack/react-query";
 import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
+import { TimeRange, timeRanges, formatChartDate, filterDataByTimeRange } from "@/lib/chartUtils";
 
 type RatioType = "sharpe" | "sortino" | "calmar";
-type TimeRange = "1h" | "1d" | "1w" | "1m" | "1y";
-
-const timeRanges: { value: TimeRange; label: string; ms: number }[] = [
-  { value: "1h", label: "1H", ms: 60 * 60 * 1000 },
-  { value: "1d", label: "1D", ms: 24 * 60 * 60 * 1000 },
-  { value: "1w", label: "1W", ms: 7 * 24 * 60 * 60 * 1000 },
-  { value: "1m", label: "1M", ms: 30 * 24 * 60 * 60 * 1000 },
-  { value: "1y", label: "1Y", ms: 365 * 24 * 60 * 60 * 1000 },
-];
 
 export default function SharpeRatioChart() {
   const [selectedRatio, setSelectedRatio] = useState<RatioType>("sharpe");
@@ -26,20 +18,13 @@ export default function SharpeRatioChart() {
 
   const allData = snapshots?.snapshots || [];
   
-  // Filter data based on time range
+  // Filter data by time range and convert timestamps to numbers for linear scaling
   const data = useMemo(() => {
-    if (allData.length === 0) return [];
-    
-    const selectedRange = timeRanges.find(r => r.value === timeRange);
-    if (!selectedRange) return allData;
-    
-    const now = Date.now();
-    const cutoff = now - selectedRange.ms;
-    
-    return allData.filter((snapshot: any) => {
-      const timestamp = new Date(snapshot.timestamp).getTime();
-      return timestamp >= cutoff;
-    });
+    const filtered = filterDataByTimeRange(allData, timeRange);
+    return filtered.map((item: any) => ({
+      ...item,
+      timestampNum: new Date(item.timestamp).getTime(),
+    }));
   }, [allData, timeRange]);
   
   const hasData = data.length > 0;
@@ -74,21 +59,9 @@ export default function SharpeRatioChart() {
 
   const config = ratioConfig[selectedRatio];
 
-  // Format timestamp based on time range
-  const formatXAxis = (timestamp: string) => {
-    const date = new Date(timestamp);
-    
-    if (timeRange === "1h") {
-      return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-    } else if (timeRange === "1d") {
-      return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-    } else if (timeRange === "1w") {
-      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-    } else if (timeRange === "1m") {
-      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-    } else {
-      return date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
-    }
+  // Format tick for display
+  const formatXAxis = (timestamp: number) => {
+    return formatChartDate(timestamp, timeRange);
   };
 
   return (
@@ -158,7 +131,10 @@ export default function SharpeRatioChart() {
               <LineChart data={data} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                 <XAxis 
-                  dataKey="timestamp" 
+                  dataKey="timestampNum"
+                  type="number"
+                  domain={['dataMin', 'dataMax']}
+                  scale="time"
                   stroke="hsl(var(--muted-foreground))"
                   tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 10 }}
                   tickFormatter={formatXAxis}
@@ -176,7 +152,7 @@ export default function SharpeRatioChart() {
                     color: "hsl(var(--foreground))",
                   }}
                   formatter={(value: any) => [Number(value || 0).toFixed(2), config.title]}
-                  labelFormatter={(label) => formatXAxis(label)}
+                  labelFormatter={(label) => formatChartDate(label, timeRange)}
                 />
                 <ReferenceLine 
                   y={0} 
