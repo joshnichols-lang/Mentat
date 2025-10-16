@@ -25,6 +25,18 @@ interface HyperliquidPosition {
   };
 }
 
+interface Order {
+  oid: number;
+  coin: string;
+  side: string;
+  limitPx: string;
+  sz: string;
+  reduceOnly: boolean;
+  orderType?: string;
+  triggerPx?: string;
+  tpsl?: string;
+}
+
 export default function PositionsGrid() {
   const { data, isLoading } = useQuery<{ positions: HyperliquidPosition[] }>({
     queryKey: ["/api/hyperliquid/positions"],
@@ -35,7 +47,21 @@ export default function PositionsGrid() {
     queryKey: ["/api/hyperliquid/market-data"],
   });
 
+  const { data: ordersData } = useQuery<{ orders: Order[] }>({
+    queryKey: ["/api/hyperliquid/open-orders"],
+    refetchInterval: 3000, // Refresh every 3 seconds
+  });
+
   const positions = data?.positions || [];
+  const orders = ordersData?.orders || [];
+  
+  // Helper to find stop loss and take profit for a position
+  const getPositionOrders = (coin: string) => {
+    const positionOrders = orders.filter(order => order.coin === coin && order.reduceOnly);
+    const stopLoss = positionOrders.find(order => order.tpsl === "sl");
+    const takeProfit = positionOrders.find(order => order.tpsl === "tp");
+    return { stopLoss, takeProfit };
+  };
 
   const handleClose = (coin: string) => {
     console.log("Close position:", coin);
@@ -152,14 +178,18 @@ export default function PositionsGrid() {
                       </div>
                       <div>
                         <div className="text-xs text-muted-foreground">Stop Loss</div>
-                        <div className="font-mono text-xs text-muted-foreground" data-testid={`text-stoploss-${position.coin}`}>
-                          Not set
+                        <div className={`font-mono text-xs ${getPositionOrders(position.coin).stopLoss ? 'font-semibold text-short' : 'text-muted-foreground'}`} data-testid={`text-stoploss-${position.coin}`}>
+                          {getPositionOrders(position.coin).stopLoss 
+                            ? `$${parseFloat(getPositionOrders(position.coin).stopLoss!.triggerPx!).toLocaleString()}`
+                            : "Not set"}
                         </div>
                       </div>
                       <div>
                         <div className="text-xs text-muted-foreground">Take Profit</div>
-                        <div className="font-mono text-xs text-muted-foreground" data-testid={`text-takeprofit-${position.coin}`}>
-                          Not set
+                        <div className={`font-mono text-xs ${getPositionOrders(position.coin).takeProfit ? 'font-semibold text-long' : 'text-muted-foreground'}`} data-testid={`text-takeprofit-${position.coin}`}>
+                          {getPositionOrders(position.coin).takeProfit 
+                            ? `$${parseFloat(getPositionOrders(position.coin).takeProfit!.triggerPx!).toLocaleString()}`
+                            : "Not set"}
                         </div>
                       </div>
                     </div>
