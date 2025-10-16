@@ -3,6 +3,7 @@ import { getHyperliquidClient } from "./hyperliquid/client";
 import { perplexity, calculateCost } from "./perplexity";
 import { executeTradeStrategy } from "./tradeExecutor";
 import { createPortfolioSnapshot } from "./portfolioSnapshotService";
+import { TEST_USER_ID } from "./constants";
 
 interface MarketData {
   symbol: string;
@@ -323,6 +324,7 @@ CRITICAL ORDER MANAGEMENT RULES:
     if (usageData) {
       const cost = calculateCost("sonar", usageData.prompt_tokens, usageData.completion_tokens);
       await storage.logAiUsage({
+        userId: TEST_USER_ID,
         provider: "perplexity",
         model: "sonar",
         promptTokens: usageData.prompt_tokens,
@@ -353,6 +355,7 @@ CRITICAL ORDER MANAGEMENT RULES:
         
         // Log the autonomous trading session
         await storage.createMonitoringLog({
+          userId: TEST_USER_ID,
           analysis: JSON.stringify({
             tradeThesis: strategy.tradeThesis,
             marketRegime: strategy.marketRegime,
@@ -377,6 +380,7 @@ CRITICAL ORDER MANAGEMENT RULES:
         
         // Log the failed execution
         await storage.createMonitoringLog({
+          userId: TEST_USER_ID,
           analysis: JSON.stringify({
             tradeThesis: strategy.tradeThesis,
             marketRegime: strategy.marketRegime,
@@ -391,6 +395,7 @@ CRITICAL ORDER MANAGEMENT RULES:
       
       // Log the analysis even if no trades
       await storage.createMonitoringLog({
+        userId: TEST_USER_ID,
         analysis: JSON.stringify({
           tradeThesis: strategy.tradeThesis,
           marketRegime: strategy.marketRegime,

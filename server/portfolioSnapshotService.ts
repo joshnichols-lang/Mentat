@@ -1,5 +1,6 @@
 import { storage } from "./storage";
 import type { HyperliquidClient } from "./hyperliquid/client";
+import { TEST_USER_ID } from "./constants";
 
 interface SnapshotMetrics {
   totalValue: string;
@@ -100,6 +101,7 @@ export async function createPortfolioSnapshot(hyperliquid: HyperliquidClient): P
 
     // Create snapshot
     const snapshot = {
+      userId: TEST_USER_ID,
       totalValue,
       totalPnl: totalPnl.toFixed(8),
       sharpeRatio: sharpeRatio.toFixed(6),

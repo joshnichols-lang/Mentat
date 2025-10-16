@@ -1,5 +1,6 @@
 import { perplexity, calculateCost, type PerplexityModel } from "./perplexity";
 import { storage } from "./storage";
+import { TEST_USER_ID } from "./constants";
 
 interface MarketData {
   symbol: string;
@@ -204,6 +205,7 @@ Generate a trading strategy that addresses the user's current prompt while consi
       
       try {
         await storage.logAiUsage({
+          userId: TEST_USER_ID,
           provider: "perplexity",
           model,
           promptTokens: usage.prompt_tokens,
@@ -224,6 +226,7 @@ Generate a trading strategy that addresses the user's current prompt while consi
     // Log failed attempt
     try {
       await storage.logAiUsage({
+        userId: TEST_USER_ID,
         provider: "perplexity",
         model,
         promptTokens: 0,

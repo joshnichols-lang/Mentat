@@ -159,7 +159,9 @@ export async function executeTradeStrategy(
         
         // Log trade to database
         try {
+          const { TEST_USER_ID } = await import("./constants");
           await storage.createTrade({
+            userId: TEST_USER_ID,
             symbol: action.symbol.replace("-PERP", ""),
             side: action.side,
             type: action.expectedEntry ? "limit" : "market",
