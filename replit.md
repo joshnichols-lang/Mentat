@@ -23,6 +23,13 @@ Preferred communication style: Simple, everyday language.
 - Risk levels displayed in 3-column grid below main position details
 - Test IDs added for automated testing: `text-liquidation-{coin}`, `text-stoploss-{coin}`, `text-takeprofit-{coin}`
 
+### October 16, 2025 - Collapsible Panels
+- Made Conversation History and Trades panels collapsible with chevron icons
+- Click panel headers to expand/collapse content
+- Both panels default to expanded state
+- Chevron icons rotate 180° to indicate state (up = expanded, down = collapsed)
+- Helps keep dashboard clean and focused on relevant information
+
 ### October 16, 2025 - Conversation History Display
 - Added conversation history box showing all user prompts and Mr. Fox AI responses
 - Updated aiUsageLog schema with `aiResponse` field to persist AI trading strategies as JSON

@@ -8,6 +8,8 @@ import { MessageSquare, Bot, ChevronDown } from "lucide-react";
 import type { AiUsageLog } from "@shared/schema";
 
 export default function ConversationHistory() {
+  const [isPanelOpen, setIsPanelOpen] = useState(true);
+  
   const { data: usageLogs, isLoading } = useQuery<{ success: boolean; logs: AiUsageLog[] }>({
     queryKey: ["/api/ai/usage"],
     refetchInterval: 5000,
@@ -18,7 +20,7 @@ export default function ConversationHistory() {
   if (isLoading) {
     return (
       <Card className="p-4">
-        <h2 className="text-sm font-semibold mb-3">Conversation History</h2>
+        <h2 className="text-sm font-semibold mb-3">CONVERSATION HISTORY</h2>
         <div className="text-xs text-muted-foreground">Loading...</div>
       </Card>
     );
@@ -27,15 +29,23 @@ export default function ConversationHistory() {
   if (conversations.length === 0) {
     return (
       <Card className="p-4">
-        <h2 className="text-sm font-semibold mb-3">Conversation History</h2>
+        <h2 className="text-sm font-semibold mb-3">CONVERSATION HISTORY</h2>
         <div className="text-xs text-muted-foreground">No conversations yet. Start by asking Mr. Fox a question.</div>
       </Card>
     );
   }
 
   return (
-    <Card className="p-4">
-      <h2 className="text-sm font-semibold mb-3">Conversation History</h2>
+    <Collapsible open={isPanelOpen} onOpenChange={setIsPanelOpen}>
+      <Card className="p-4">
+        <CollapsibleTrigger className="w-full hover-elevate active-elevate-2 -m-4 p-4 mb-0 group" data-testid="toggle-conversation-panel">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold">CONVERSATION HISTORY</h2>
+            <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
+          </div>
+        </CollapsibleTrigger>
+        
+        <CollapsibleContent className="pt-3">
       <ScrollArea className="h-[500px]">
         <div className="space-y-3 pr-3" data-testid="conversation-history">
           {conversations.map((log) => {
@@ -139,6 +149,8 @@ export default function ConversationHistory() {
           })}
         </div>
       </ScrollArea>
-    </Card>
+        </CollapsibleContent>
+      </Card>
+    </Collapsible>
   );
 }

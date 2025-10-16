@@ -2,6 +2,8 @@ import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { ChevronDown } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -25,6 +27,7 @@ interface Trade {
 
 export default function TradeHistory() {
   const [selectedTrade, setSelectedTrade] = useState<Trade | null>(null);
+  const [isPanelOpen, setIsPanelOpen] = useState(true);
 
   const { data: tradesData } = useQuery<any>({
     queryKey: ['/api/trades'],
@@ -39,8 +42,15 @@ export default function TradeHistory() {
   };
 
   return (
-    <div>
-      <h2 className="mb-3 text-sm font-semibold">Trades</h2>
+    <Collapsible open={isPanelOpen} onOpenChange={setIsPanelOpen}>
+      <div className="mb-3 hover-elevate active-elevate-2 -mx-0 group">
+        <CollapsibleTrigger className="w-full flex items-center justify-between" data-testid="toggle-trades-panel">
+          <h2 className="text-sm font-semibold">TRADES</h2>
+          <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
+        </CollapsibleTrigger>
+      </div>
+      
+      <CollapsibleContent>
       <Card className="p-0">
         <ScrollArea className="h-[250px]">
           {trades.length === 0 ? (
@@ -91,6 +101,7 @@ export default function TradeHistory() {
           )}
         </ScrollArea>
       </Card>
+      </CollapsibleContent>
 
       <Dialog open={!!selectedTrade} onOpenChange={() => setSelectedTrade(null)}>
         <DialogContent className="max-w-3xl">
@@ -109,6 +120,6 @@ export default function TradeHistory() {
           )}
         </DialogContent>
       </Dialog>
-    </div>
+    </Collapsible>
   );
 }
