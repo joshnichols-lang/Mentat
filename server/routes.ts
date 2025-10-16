@@ -339,6 +339,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get Hyperliquid open orders
+  app.get("/api/hyperliquid/open-orders", async (req, res) => {
+    try {
+      const address = req.query.address as string | undefined;
+      const orders = await hyperliquid.getOpenOrders(address);
+      
+      // Hyperliquid API doesn't return tpsl field, so we need to infer it
+      // Get positions to determine order direction
+      const positions = await hyperliquid.getPositions(address);
+      const marketData = await hyperliquid.getMarketData();
+      
+      const enrichedOrders = orders.map((order: any) => {
+        // Find matching position
+        const position = positions.find((p: any) => {
+          const orderCoin = order.coin.replace('-PERP', '');
+          const posCoin = p.coin.replace('-PERP', '');
+          return orderCoin === posCoin;
+        });
+        
+        // Find current market price
+        const market = marketData.find((m: any) => m.symbol === order.coin);
+        const currentPrice = market ? parseFloat(market.price) : null;
+        const triggerPx = order.triggerPx ? parseFloat(order.triggerPx) : null;
+        
+        // Infer tpsl type based on trigger price and position direction
+        let tpsl = null;
+        if (order.reduceOnly && triggerPx && position && currentPrice) {
+          const posSize = parseFloat(position.szi);
+          const isLong = posSize > 0;
+          
+          if (isLong) {
+            // For long: stop loss is below current price, take profit is above
+            tpsl = triggerPx < currentPrice ? "sl" : "tp";
+          } else {
+            // For short: stop loss is above current price, take profit is below
+            tpsl = triggerPx > currentPrice ? "sl" : "tp";
+          }
+        }
+        
+        return {
+          ...order,
+          tpsl,
+          // Also preserve triggerPx if it exists
+          triggerPx: order.triggerPx || order.limitPx,
+        };
+      });
+      
+      res.json({ success: true, orders: enrichedOrders });
+    } catch (error) {
+      console.error("Error fetching Hyperliquid open orders:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch open orders" });
+    }
+  });
+
   // Place order on Hyperliquid
   app.post("/api/hyperliquid/order", async (req, res) => {
     try {
