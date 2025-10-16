@@ -10,6 +10,20 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+### October 16, 2025 - Portfolio Performance and Sharpe Ratio Charts Fixed
+- **Fixed empty portfolio charts** - Charts were not displaying because no portfolio snapshots were being created
+- **Implemented automatic portfolio snapshot system:**
+  - Created `portfolioSnapshotService.ts` to calculate and store portfolio metrics
+  - Snapshots created on server startup, every 5 minutes, and after each successful trade
+  - Calculates: total value, total P&L, Sharpe ratio, trade statistics
+- **Snapshot calculation logic:**
+  - Total value: Fetched from Hyperliquid user state (marginSummary.accountValue)
+  - Total P&L: Sum of unrealized P&L from all open positions
+  - Sharpe ratio: Calculated from historical returns (mean return / std deviation)
+  - Trade stats: Number of closed trades and winning trades from database
+- **Fixed SharpeRatioChart error:** Converted sharpeRatio from string (DECIMAL) to number before calling toFixed()
+- Charts now display real-time portfolio performance and risk-adjusted returns
+
 ### October 16, 2025 - Fixed Close Position Orders (Hyperliquid API Compatibility)
 - **Fixed "invalid order type" error when closing positions**
 - **Root cause**: Hyperliquid API does not support pure market orders - all orders must be limit orders

@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import { processTradingPrompt } from "./tradingAgent";
 import { initHyperliquidClient } from "./hyperliquid/client";
 import { executeTradeStrategy } from "./tradeExecutor";
+import { createPortfolioSnapshot } from "./portfolioSnapshotService";
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -34,6 +35,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         try {
           executionSummary = await executeTradeStrategy(strategy.actions);
           console.log(`Executed ${executionSummary.successfulExecutions}/${executionSummary.totalActions} trades successfully`);
+          
+          // Create portfolio snapshot after successful trade execution
+          if (executionSummary.successfulExecutions > 0) {
+            const hyperliquid = initHyperliquidClient();
+            createPortfolioSnapshot(hyperliquid).catch(err => 
+              console.error("Failed to create portfolio snapshot after trade:", err)
+            );
+          }
         } catch (execError: any) {
           console.error("Failed to execute trades:", execError);
           // Continue even if execution fails - return strategy with error

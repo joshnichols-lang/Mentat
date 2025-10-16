@@ -2,6 +2,8 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { startMonitoring } from "./monitoringService";
+import { startPeriodicSnapshots } from "./portfolioSnapshotService";
+import { initHyperliquidClient } from "./hyperliquid/client";
 
 const app = express();
 app.use(express.json());
@@ -69,6 +71,11 @@ app.use((req, res, next) => {
   }, () => {
     log(`serving on port ${port}`);
     
+    // Initialize Hyperliquid client for services
+    const hyperliquid = initHyperliquidClient();
+    
+    // Start automated services
     startMonitoring();
+    startPeriodicSnapshots(hyperliquid);
   });
 })();

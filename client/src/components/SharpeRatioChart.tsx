@@ -10,7 +10,7 @@ export default function SharpeRatioChart() {
 
   const data = snapshots?.snapshots || [];
   const hasData = data.length > 0;
-  const currentSharpe = hasData ? data[data.length - 1]?.sharpeRatio || 0 : 0;
+  const currentSharpe = hasData ? Number(data[data.length - 1]?.sharpeRatio || 0) : 0;
 
   return (
     <Card className="p-3">
