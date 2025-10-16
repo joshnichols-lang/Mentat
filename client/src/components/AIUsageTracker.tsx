@@ -48,14 +48,19 @@ export function AIUsageTracker() {
       const res = await apiRequest('POST', '/api/monitoring/frequency', { 
         minutes: parseInt(frequency) 
       });
+      
+      if (!res.ok) {
+        throw new Error(`Failed to update frequency: ${res.statusText}`);
+      }
+      
       return await res.json();
     },
-    onSuccess: () => {
+    onSuccess: (data, frequency) => {
       toast({
         title: "Monitoring Updated",
-        description: monitoringFrequency === "0" 
+        description: frequency === "0" 
           ? "Automated monitoring disabled" 
-          : `Monitoring every ${MONITORING_FREQUENCIES.find(f => f.value === monitoringFrequency)?.label}`,
+          : `Monitoring every ${MONITORING_FREQUENCIES.find(f => f.value === frequency)?.label}`,
       });
     },
     onError: () => {
@@ -67,10 +72,44 @@ export function AIUsageTracker() {
     },
   });
 
+  // Sync stored frequency with backend on mount
+  useEffect(() => {
+    const syncFrequency = async () => {
+      try {
+        const res = await apiRequest('POST', '/api/monitoring/frequency', { 
+          minutes: parseInt(monitoringFrequency) 
+        });
+        
+        // Only try to parse JSON if response is OK and has content
+        if (res.ok && res.headers.get('content-type')?.includes('application/json')) {
+          await res.json();
+        }
+        
+        console.log(`[Monitoring] Synced frequency to ${monitoringFrequency} minutes`);
+      } catch (error) {
+        // Silently fail - user can manually adjust if needed
+        console.warn("[Monitoring] Could not sync frequency on mount, using default or manual selection");
+      }
+    };
+    
+    // Delay sync slightly to ensure server is ready
+    const timer = setTimeout(syncFrequency, 100);
+    return () => clearTimeout(timer);
+  }, []); // Run once on mount
+
   const handleFrequencyChange = (value: string) => {
+    const previousValue = monitoringFrequency;
+    
     setMonitoringFrequency(value);
     localStorage.setItem("monitoringFrequency", value);
-    updateFrequencyMutation.mutate(value);
+    
+    updateFrequencyMutation.mutate(value, {
+      onError: () => {
+        // Rollback if mutation fails
+        setMonitoringFrequency(previousValue);
+        localStorage.setItem("monitoringFrequency", previousValue);
+      }
+    });
   };
 
   const totalCost = (costData?.success ? costData.totalCost : "0") || "0";
