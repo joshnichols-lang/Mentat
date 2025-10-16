@@ -222,6 +222,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get monitoring logs
+  app.get("/api/monitoring/logs", async (req, res) => {
+    try {
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 100;
+      const logs = await storage.getMonitoringLogs(limit);
+      res.json({ success: true, logs });
+    } catch (error) {
+      console.error("Error fetching monitoring logs:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch monitoring logs" });
+    }
+  });
+
+  // Get active monitoring alerts
+  app.get("/api/monitoring/active", async (_req, res) => {
+    try {
+      const logs = await storage.getActiveMonitoringLogs();
+      res.json({ success: true, logs });
+    } catch (error) {
+      console.error("Error fetching active monitoring alerts:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch active alerts" });
+    }
+  });
+
+  // Dismiss monitoring alert
+  app.post("/api/monitoring/:id/dismiss", async (req, res) => {
+    try {
+      const log = await storage.dismissMonitoringLog(req.params.id);
+      res.json({ success: true, log });
+    } catch (error) {
+      console.error("Error dismissing monitoring alert:", error);
+      res.status(500).json({ success: false, error: "Failed to dismiss alert" });
+    }
+  });
+
   // Initialize Hyperliquid client
   const hyperliquid = initHyperliquidClient();
 
