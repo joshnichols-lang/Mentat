@@ -6,9 +6,40 @@ import { initHyperliquidClient } from "./hyperliquid/client";
 import { executeTradeStrategy } from "./tradeExecutor";
 import { createPortfolioSnapshot } from "./portfolioSnapshotService";
 import { restartMonitoring } from "./monitoringService";
+import { setupAuth, isAuthenticated } from "./replitAuth";
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Initialize Replit Auth
+  await setupAuth(app);
+
+  // Auth status endpoint - returns current user info
+  app.get("/api/auth/user", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const claims = user.claims;
+      
+      // Get user from database
+      const dbUser = await storage.getUser(claims.sub);
+      
+      res.json({
+        success: true,
+        user: {
+          id: claims.sub,
+          email: claims.email,
+          firstName: claims.first_name,
+          lastName: claims.last_name,
+          profileImageUrl: claims.profile_image_url,
+          subscriptionStatus: dbUser?.subscriptionStatus || "inactive",
+          onboardingComplete: dbUser?.onboardingComplete === 1,
+        }
+      });
+    } catch (error: any) {
+      console.error("Error fetching user:", error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
   // AI Trading Prompt endpoint
   app.post("/api/trading/prompt", async (req, res) => {
     try {
