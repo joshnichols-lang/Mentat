@@ -19,15 +19,11 @@ export default function SharpeRatioChart() {
   const allData = snapshots?.snapshots || [];
   
   // Filter data by time range and convert timestamps to numbers for linear scaling
-  // Clamp negative ratios to 0 to prevent chart from going below x-axis
   const data = useMemo(() => {
     const filtered = filterDataByTimeRange(allData, timeRange);
     return filtered.map((item: any) => ({
       ...item,
       timestampNum: new Date(item.timestamp).getTime(),
-      sharpeRatio: Math.max(0, Number(item.sharpeRatio || 0)),
-      sortinoRatio: Math.max(0, Number(item.sortinoRatio || 0)),
-      calmarRatio: Math.max(0, Number(item.calmarRatio || 0)),
     }));
   }, [allData, timeRange]);
   
@@ -146,7 +142,7 @@ export default function SharpeRatioChart() {
                 <YAxis 
                   stroke="hsl(var(--muted-foreground))"
                   tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
-                  domain={[0, 'auto']}
+                  domain={['auto', 'auto']}
                 />
                 <Tooltip
                   contentStyle={{
