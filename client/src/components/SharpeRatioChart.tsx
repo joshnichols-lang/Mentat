@@ -1,20 +1,47 @@
 import { Card } from "@/components/ui/card";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from "recharts";
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 
 type RatioType = "sharpe" | "sortino" | "calmar";
+type TimeRange = "1h" | "1d" | "1w" | "1m" | "1y";
+
+const timeRanges: { value: TimeRange; label: string; ms: number }[] = [
+  { value: "1h", label: "1H", ms: 60 * 60 * 1000 },
+  { value: "1d", label: "1D", ms: 24 * 60 * 60 * 1000 },
+  { value: "1w", label: "1W", ms: 7 * 24 * 60 * 60 * 1000 },
+  { value: "1m", label: "1M", ms: 30 * 24 * 60 * 60 * 1000 },
+  { value: "1y", label: "1Y", ms: 365 * 24 * 60 * 60 * 1000 },
+];
 
 export default function SharpeRatioChart() {
   const [selectedRatio, setSelectedRatio] = useState<RatioType>("sharpe");
+  const [timeRange, setTimeRange] = useState<TimeRange>("1d");
   
   const { data: snapshots } = useQuery<any>({
     queryKey: ['/api/portfolio/snapshots'],
     refetchInterval: 30000,
   });
 
-  const data = snapshots?.snapshots || [];
+  const allData = snapshots?.snapshots || [];
+  
+  // Filter data based on time range
+  const data = useMemo(() => {
+    if (allData.length === 0) return [];
+    
+    const selectedRange = timeRanges.find(r => r.value === timeRange);
+    if (!selectedRange) return allData;
+    
+    const now = Date.now();
+    const cutoff = now - selectedRange.ms;
+    
+    return allData.filter((snapshot: any) => {
+      const timestamp = new Date(snapshot.createdAt).getTime();
+      return timestamp >= cutoff;
+    });
+  }, [allData, timeRange]);
+  
   const hasData = data.length > 0;
   const latestSnapshot = hasData ? data[data.length - 1] : null;
   const currentSharpe = latestSnapshot ? Number(latestSnapshot.sharpeRatio || 0) : 0;
@@ -46,6 +73,23 @@ export default function SharpeRatioChart() {
   };
 
   const config = ratioConfig[selectedRatio];
+
+  // Format timestamp based on time range
+  const formatXAxis = (timestamp: string) => {
+    const date = new Date(timestamp);
+    
+    if (timeRange === "1h") {
+      return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+    } else if (timeRange === "1d") {
+      return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+    } else if (timeRange === "1w") {
+      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    } else if (timeRange === "1m") {
+      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    } else {
+      return date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+    }
+  };
 
   return (
     <Card className="p-3" data-testid="card-risk-ratios">
@@ -84,6 +128,21 @@ export default function SharpeRatioChart() {
           </Button>
         </div>
       </div>
+
+      <div className="mb-3 flex gap-1">
+        {timeRanges.map((range) => (
+          <Button
+            key={range.value}
+            variant={timeRange === range.value ? "default" : "ghost"}
+            size="sm"
+            onClick={() => setTimeRange(range.value)}
+            className="h-6 px-2 text-xs"
+            data-testid={`button-timerange-${range.value}`}
+          >
+            {range.label}
+          </Button>
+        ))}
+      </div>
       
       {!hasData ? (
         <div className="flex h-[200px] items-center justify-center" data-testid="container-no-data">
@@ -99,14 +158,15 @@ export default function SharpeRatioChart() {
               <LineChart data={data} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                 <XAxis 
-                  dataKey="timestamp" 
+                  dataKey="createdAt" 
                   stroke="hsl(var(--muted-foreground))"
-                  tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
+                  tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 10 }}
+                  tickFormatter={formatXAxis}
                 />
                 <YAxis 
                   stroke="hsl(var(--muted-foreground))"
                   tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
-                  domain={['auto', 'auto']}
+                  domain={[0, 'auto']}
                 />
                 <Tooltip
                   contentStyle={{
@@ -116,6 +176,7 @@ export default function SharpeRatioChart() {
                     color: "hsl(var(--foreground))",
                   }}
                   formatter={(value: any) => [Number(value || 0).toFixed(2), config.title]}
+                  labelFormatter={(label) => formatXAxis(label)}
                 />
                 <ReferenceLine 
                   y={0} 

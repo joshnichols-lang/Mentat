@@ -16,10 +16,10 @@ Preferred communication style: Simple, everyday language.
 - **SL/TP still active** - Protective orders are still managed by Mr. Fox automatically, just not displayed in positions view
 
 ### October 16, 2025 - Risk Ratio Chart Enhancement
-- **Added zero reference line** - Solid line at y=0 shows "Breakeven" to indicate when ratios go negative
+- **Y-axis starts at 0** - Chart never goes below x-axis, preventing negative display
+- **Time frame selection** - Choose from 1H, 1D (default), 1W, 1M, or 1Y to zoom in/out on performance
+- **Smart date formatting** - X-axis shows time (1H/1D), dates (1W/1M), or month/year (1Y) for clarity
 - **Reference lines**: 0 (Breakeven), 1.0 (Good), 2.0 (Excellent) for easy performance assessment
-- **Auto-scaling preserved** - Chart shows true values including negatives (correct for risk metrics)
-- **Note**: Negative ratios are mathematically correct and indicate underperformance
 
 ### October 16, 2025 - Fixed Watchlist Drag-and-Drop
 - **Clear visual indicators** - Drag handles now show when drag is enabled/disabled
