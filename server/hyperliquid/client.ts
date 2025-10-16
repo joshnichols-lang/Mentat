@@ -32,8 +32,17 @@ export interface OrderParams {
   is_buy: boolean;
   sz: number;
   limit_px: number;
-  order_type: { limit: { tif: "Gtc" | "Ioc" | "Alo" } } | { market: {} };
+  order_type: { limit: { tif: "Gtc" | "Ioc" | "Alo" } } | { market: {} } | { trigger: { triggerPx: string; isMarket: boolean; tpsl: "tp" | "sl" } };
   reduce_only?: boolean;
+}
+
+export interface TriggerOrderParams {
+  coin: string;
+  is_buy: boolean;
+  sz: number;
+  trigger_px: string;
+  limit_px?: number; // Optional: if not provided, will use market order
+  tpsl: "tp" | "sl";
 }
 
 export class HyperliquidClient {
@@ -207,6 +216,43 @@ export class HyperliquidClient {
       return {
         success: false,
         error: error.message || "Failed to place order",
+      };
+    }
+  }
+
+  async placeTriggerOrder(params: TriggerOrderParams): Promise<{ success: boolean; response?: any; error?: string }> {
+    try {
+      // Ensure asset maps are initialized before trading
+      await this.ensureInitialized();
+      
+      // Build trigger order params
+      const isMarket = !params.limit_px;
+      const orderParams: OrderParams = {
+        coin: params.coin,
+        is_buy: params.is_buy,
+        sz: params.sz,
+        limit_px: params.limit_px || parseFloat(params.trigger_px), // Use trigger price as limit if not specified
+        order_type: {
+          trigger: {
+            triggerPx: params.trigger_px,
+            isMarket,
+            tpsl: params.tpsl,
+          },
+        },
+        reduce_only: true, // Trigger orders always reduce positions
+      };
+      
+      const response = await this.sdk.exchange.placeOrder(orderParams as any);
+      
+      return {
+        success: true,
+        response,
+      };
+    } catch (error: any) {
+      console.error("Failed to place trigger order:", error);
+      return {
+        success: false,
+        error: error.message || "Failed to place trigger order",
       };
     }
   }

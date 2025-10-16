@@ -2,7 +2,7 @@ import { initHyperliquidClient } from "./hyperliquid/client";
 import { storage } from "./storage";
 
 interface TradingAction {
-  action: "buy" | "sell" | "hold" | "close";
+  action: "buy" | "sell" | "hold" | "close" | "stop_loss" | "take_profit";
   symbol: string;
   side: "long" | "short";
   size: string;
@@ -11,6 +11,7 @@ interface TradingAction {
   expectedEntry?: string;
   stopLoss?: string;
   takeProfit?: string;
+  triggerPrice?: string; // For stop_loss and take_profit actions
 }
 
 interface ExecutionResult {
@@ -88,6 +89,18 @@ export async function executeTradeStrategy(
         const closeResult = await executeClosePosition(hyperliquid, action);
         results.push(closeResult);
         if (closeResult.success) {
+          successCount++;
+        } else {
+          failCount++;
+        }
+        continue;
+      }
+
+      // Handle "stop_loss" and "take_profit" actions
+      if (action.action === "stop_loss" || action.action === "take_profit") {
+        const triggerResult = await executeTriggerOrder(hyperliquid, action);
+        results.push(triggerResult);
+        if (triggerResult.success) {
           successCount++;
         } else {
           failCount++;
@@ -203,6 +216,92 @@ async function executeOpenPosition(
       success: false,
       action,
       error: error.message || "Failed to execute order",
+    };
+  }
+}
+
+async function executeTriggerOrder(
+  hyperliquid: any,
+  action: TradingAction
+): Promise<ExecutionResult> {
+  try {
+    if (!action.triggerPrice) {
+      return {
+        success: false,
+        action,
+        error: "Trigger price is required for stop loss/take profit orders",
+      };
+    }
+
+    // Get current position to determine size and direction
+    const positions = await hyperliquid.getPositions();
+    const coinName = action.symbol.replace("-PERP", "").replace("-SPOT", "");
+    const position = positions.find((p: any) => p.coin === coinName);
+
+    if (!position) {
+      return {
+        success: false,
+        action,
+        error: `No open position found for ${coinName}`,
+      };
+    }
+
+    const positionSize = parseFloat(position.szi);
+    
+    if (Math.abs(positionSize) === 0) {
+      return {
+        success: false,
+        action,
+        error: `Position for ${coinName} has zero size`,
+      };
+    }
+
+    const isLong = positionSize > 0;
+    const absSize = Math.abs(positionSize);
+
+    // Validate that the requested side matches the position direction
+    if ((action.side === "long" && !isLong) || (action.side === "short" && isLong)) {
+      return {
+        success: false,
+        action,
+        error: `Cannot place ${action.action} for ${action.side} position: current position is ${isLong ? 'long' : 'short'}`,
+      };
+    }
+
+    // Place trigger order (opposite side to close position)
+    const triggerParams = {
+      coin: action.symbol,
+      is_buy: !isLong, // Opposite direction to close
+      sz: absSize,
+      trigger_px: action.triggerPrice,
+      limit_px: action.triggerPrice, // Use trigger price as limit price for better fill certainty
+      tpsl: action.action === "take_profit" ? "tp" as const : "sl" as const,
+    };
+
+    const result = await hyperliquid.placeTriggerOrder(triggerParams);
+
+    if (!result.success) {
+      console.error(`[Trade Executor] Trigger order failed for ${action.symbol}:`, result.error);
+      console.error(`[Trade Executor] Trigger order params:`, JSON.stringify(triggerParams, null, 2));
+      return {
+        success: false,
+        action,
+        error: result.error || "Failed to place trigger order",
+      };
+    }
+
+    console.log(`[Trade Executor] Trigger order succeeded for ${action.symbol}:`, result.response?.response?.data?.statuses?.[0])
+
+    return {
+      success: true,
+      action,
+      orderId: result.response?.response?.data?.statuses?.[0]?.resting?.oid?.toString(),
+    };
+  } catch (error: any) {
+    return {
+      success: false,
+      action,
+      error: error.message || "Failed to place trigger order",
     };
   }
 }
