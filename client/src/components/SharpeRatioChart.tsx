@@ -118,6 +118,12 @@ export default function SharpeRatioChart() {
                   formatter={(value: any) => [Number(value || 0).toFixed(2), config.title]}
                 />
                 <ReferenceLine 
+                  y={0} 
+                  stroke="hsl(var(--muted-foreground))" 
+                  strokeWidth={2}
+                  label={{ value: "Breakeven (0)", position: "right", fill: "hsl(var(--muted-foreground))", fontSize: 10 }}
+                />
+                <ReferenceLine 
                   y={1} 
                   stroke="hsl(var(--muted-foreground))" 
                   strokeDasharray="3 3"

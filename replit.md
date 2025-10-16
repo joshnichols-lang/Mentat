@@ -10,6 +10,17 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+### October 16, 2025 - Positions Grid Simplified
+- **Removed stop loss/take profit sections** - Positions grid now shows only essential position info on one clean line
+- **Streamlined display**: Size, Entry, Value, Liquidation, P&L all on single row below pair symbol
+- **SL/TP still active** - Protective orders are still managed by Mr. Fox automatically, just not displayed in positions view
+
+### October 16, 2025 - Risk Ratio Chart Enhancement
+- **Added zero reference line** - Solid line at y=0 shows "Breakeven" to indicate when ratios go negative
+- **Reference lines**: 0 (Breakeven), 1.0 (Good), 2.0 (Excellent) for easy performance assessment
+- **Auto-scaling preserved** - Chart shows true values including negatives (correct for risk metrics)
+- **Note**: Negative ratios are mathematically correct and indicate underperformance
+
 ### October 16, 2025 - Fixed Watchlist Drag-and-Drop
 - **Clear visual indicators** - Drag handles now show when drag is enabled/disabled
 - **Easy sort clearing** - Added "Clear" button next to "Sorted by X" badge to quickly re-enable dragging
