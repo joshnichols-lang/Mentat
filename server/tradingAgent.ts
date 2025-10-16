@@ -130,17 +130,19 @@ JSON format:
       "action": "buy" | "sell" | "hold" | "close",
       "symbol": "BTC-PERP" | "ETH-PERP" | "SOL-PERP" etc,
       "side": "long" | "short",
-      "size": "position size as decimal string (calculated with risk-adjusted sizing)",
+      "size": "numeric value as string (e.g. '0.5', '1.25', '10') - MUST be actual number, NOT 'calculated'",
       "leverage": 1-10,
       "reasoning": "Technical analysis across timeframes, entry trigger, risk management rationale",
-      "expectedEntry": "optimal entry price based on key levels",
-      "stopLoss": "calculated stop loss level for risk management",
-      "takeProfit": "target profit level based on risk-reward ratio"
+      "expectedEntry": "numeric price as string (e.g. '45000.5')",
+      "stopLoss": "numeric price as string (e.g. '44000')",
+      "takeProfit": "numeric price as string (e.g. '48000')"
     }
   ],
   "riskManagement": "Detailed risk management strategy including position sizing methodology, stop loss placement, and exposure limits",
   "expectedOutcome": "Expected Sharpe ratio impact, potential drawdown, and compounding strategy"
 }
+
+CRITICAL: The 'size' field must ALWAYS contain an actual numeric value (like "0.5" or "10"), NEVER the word "calculated" or any placeholder text.
 
 Output real-time executed trades with professional precision and risk-adjusted optimization.`
       },

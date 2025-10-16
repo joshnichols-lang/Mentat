@@ -10,6 +10,20 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+### October 16, 2025 - Fixed Trade Execution Error
+- Fixed "invalid size: must be a positive number" error when AI suggests new trades
+- AI was returning literal text "calculated" instead of numeric values for position sizes
+- Updated AI prompt to explicitly require numeric values (e.g., "0.5", "10") for size field
+- Added critical warning in prompt: size must be actual number, never placeholder text
+- Trade execution now works correctly for buy/sell actions
+
+### October 16, 2025 - Conversation History Text Selection
+- Made all conversation history text selectable and copyable
+- Separated chevron toggle from text content to prevent interaction conflicts
+- Users can now highlight and copy prompts to reuse them
+- Text cursor (I-beam) appears when hovering over conversation text
+- Expand/collapse chevron is independent from text selection
+
 ### October 16, 2025 - Automated Position Monitoring
 - Implemented automated monitoring system that analyzes positions every 5 minutes
 - Mr. Fox AI analyzes position health, market conditions, and risk factors using Perplexity API
