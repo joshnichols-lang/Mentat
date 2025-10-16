@@ -8,6 +8,7 @@ import QuickTrade from "@/components/QuickTrade";
 import PortfolioPerformanceChart from "@/components/PortfolioPerformanceChart";
 import SharpeRatioChart from "@/components/SharpeRatioChart";
 import { AIUsageTracker } from "@/components/AIUsageTracker";
+import ConversationHistory from "@/components/ConversationHistory";
 
 export default function Dashboard() {
   return (
@@ -43,6 +44,9 @@ export default function Dashboard() {
 
             {/* Sidebar */}
             <div className="space-y-4">
+              {/* Conversation History */}
+              <ConversationHistory />
+              
               {/* AI Usage Tracker */}
               <AIUsageTracker />
               
