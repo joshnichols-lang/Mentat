@@ -6,6 +6,8 @@ interface SnapshotMetrics {
   totalValue: string;
   totalPnl: string;
   sharpeRatio: string;
+  calmarRatio: string;
+  sortinoRatio: string;
   numTrades: number;
   numWins: number;
 }
@@ -46,6 +48,104 @@ function calculateSharpeRatio(snapshots: any[]): number {
   const sharpeRatio = meanReturn / stdDev;
 
   return sharpeRatio;
+}
+
+/**
+ * Calculate Sortino ratio from recent portfolio snapshots
+ * Sortino Ratio = (Average Return - Risk-Free Rate) / Downside Deviation
+ * Only penalizes downside volatility (negative returns)
+ */
+function calculateSortinoRatio(snapshots: any[]): number {
+  if (snapshots.length < 2) return 0;
+
+  // Calculate returns between consecutive snapshots
+  const returns: number[] = [];
+  for (let i = 1; i < snapshots.length; i++) {
+    const prevValue = parseFloat(snapshots[i - 1].totalValue);
+    const currValue = parseFloat(snapshots[i].totalValue);
+    if (prevValue > 0) {
+      const returnPct = (currValue - prevValue) / prevValue;
+      returns.push(returnPct);
+    }
+  }
+
+  if (returns.length === 0) return 0;
+
+  // Calculate mean return
+  const meanReturn = returns.reduce((sum, r) => sum + r, 0) / returns.length;
+
+  // Calculate downside deviation (only negative returns)
+  const negativeReturns = returns.filter(r => r < 0);
+  
+  if (negativeReturns.length === 0) {
+    // No downside volatility - return a high ratio (capped at 10)
+    return meanReturn > 0 ? 10 : 0;
+  }
+
+  const downsideVariance = negativeReturns.reduce((sum, r) => sum + Math.pow(r, 2), 0) / returns.length;
+  const downsideDeviation = Math.sqrt(downsideVariance);
+
+  // Avoid division by zero
+  if (downsideDeviation === 0) return 0;
+
+  const sortinoRatio = meanReturn / downsideDeviation;
+
+  return sortinoRatio;
+}
+
+/**
+ * Calculate Calmar ratio from recent portfolio snapshots
+ * Calmar Ratio = Annualized Return (CAGR) / Maximum Drawdown
+ * Higher is better - measures return per unit of worst-case loss
+ */
+function calculateCalmarRatio(snapshots: any[]): number {
+  if (snapshots.length < 2) return 0;
+
+  const values = snapshots.map(s => parseFloat(s.totalValue));
+  
+  // Calculate annualized return using CAGR
+  const initialValue = values[0];
+  const finalValue = values[values.length - 1];
+  
+  if (initialValue === 0 || initialValue === finalValue) return 0;
+  
+  // Get elapsed time from actual timestamps
+  const startTime = new Date(snapshots[0].timestamp).getTime();
+  const endTime = new Date(snapshots[snapshots.length - 1].timestamp).getTime();
+  const elapsedDays = (endTime - startTime) / (1000 * 60 * 60 * 24);
+  
+  // Need at least 1 hour of data to calculate meaningful annualized returns
+  if (elapsedDays < 1/24) return 0;
+  
+  // Calculate CAGR: (finalValue/initialValue)^(365.25/elapsedDays) - 1
+  const yearFraction = 365.25 / elapsedDays;
+  const valueRatio = finalValue / initialValue;
+  const annualizedReturn = Math.pow(valueRatio, yearFraction) - 1;
+
+  // Calculate maximum drawdown
+  let maxDrawdown = 0;
+  let peak = values[0];
+
+  for (const value of values) {
+    if (value > peak) {
+      peak = value;
+    }
+    const drawdown = (peak - value) / peak;
+    if (drawdown > maxDrawdown) {
+      maxDrawdown = drawdown;
+    }
+  }
+
+  // Avoid division by zero
+  if (maxDrawdown === 0) {
+    // No drawdown - return a high ratio if positive returns (capped at 10)
+    return annualizedReturn > 0 ? 10 : 0;
+  }
+
+  const calmarRatio = annualizedReturn / maxDrawdown;
+
+  // Cap extreme values to prevent display issues
+  return Math.max(-100, Math.min(100, calmarRatio));
 }
 
 /**
@@ -98,6 +198,8 @@ export async function createPortfolioSnapshot(hyperliquid: HyperliquidClient): P
     }];
     
     const sharpeRatio = calculateSharpeRatio(snapshotsWithCurrent);
+    const sortinoRatio = calculateSortinoRatio(snapshotsWithCurrent);
+    const calmarRatio = calculateCalmarRatio(snapshotsWithCurrent);
 
     // Create snapshot
     const snapshot = {
@@ -105,6 +207,8 @@ export async function createPortfolioSnapshot(hyperliquid: HyperliquidClient): P
       totalValue,
       totalPnl: totalPnl.toFixed(8),
       sharpeRatio: sharpeRatio.toFixed(6),
+      sortinoRatio: sortinoRatio.toFixed(6),
+      calmarRatio: calmarRatio.toFixed(6),
       numTrades,
       numWins,
     };

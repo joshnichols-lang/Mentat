@@ -55,6 +55,8 @@ export const portfolioSnapshots = pgTable("portfolio_snapshots", {
   totalValue: decimal("total_value", { precision: 18, scale: 8 }).notNull(),
   totalPnl: decimal("total_pnl", { precision: 18, scale: 8 }).notNull(),
   sharpeRatio: decimal("sharpe_ratio", { precision: 10, scale: 6 }),
+  calmarRatio: decimal("calmar_ratio", { precision: 10, scale: 6 }),
+  sortinoRatio: decimal("sortino_ratio", { precision: 10, scale: 6 }),
   numTrades: integer("num_trades").notNull().default(0),
   numWins: integer("num_wins").notNull().default(0),
 });

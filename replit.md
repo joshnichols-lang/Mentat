@@ -10,6 +10,27 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+### October 16, 2025 - Enhanced Risk Metrics: Calmar and Sortino Ratios
+- **Added Sortino and Calmar ratios** - Portfolio performance now tracks three comprehensive risk-adjusted metrics
+- **Sortino Ratio**: Measures return per unit of downside deviation (only penalizes negative volatility, better for asymmetric returns)
+- **Calmar Ratio**: Measures annualized return (CAGR) per unit of maximum drawdown (focuses on worst-case losses)
+- **Updated chart display**: Risk-Adjusted Performance Ratios chart now shows all three metrics with color-coded lines (Sharpe/primary, Sortino/chart-2, Calmar/chart-3)
+- **Implementation details:**
+  - Added calmarRatio and sortinoRatio columns to portfolioSnapshots schema
+  - Calculation functions implemented in portfolioSnapshotService.ts
+  - Sortino uses downside deviation (only negative returns), capped at 10 for no downside volatility
+  - Calmar uses CAGR formula: (finalValue/initialValue)^(365.25/elapsedDays) - 1, divided by max drawdown
+  - Requires minimum 1 hour of data for Calmar calculation to prevent runaway annualization
+  - Values capped at ±100 to prevent chart display issues with extreme scenarios
+  - Frontend chart displays all three ratios with legend, color-coded lines, and current values in 3-column grid
+- **Database schema updated**: Pushed changes with `npm run db:push --force`
+- **Testing**: End-to-end tests verify chart rendering with all three metrics and accessible test IDs
+
+### October 16, 2025 - Fixed Open Orders Display
+- **Created /api/hyperliquid/open-orders endpoint** - Positions grid now correctly displays stop loss and take profit orders
+- **Hyperliquid API limitation workaround**: openOrders endpoint doesn't include trigger metadata (tpsl field), so endpoint infers SL vs TP based on trigger price relative to current price (long: SL < price, TP > price; short: reversed)
+- **Order enrichment**: Endpoint fetches positions and market data to accurately categorize protective orders
+
 ### October 16, 2025 - Fully Autonomous Trading Engine with Order Management
 - **Transformed from monitoring to autonomous trading** - Mr. Fox now trades automatically based on market analysis
 - **Autonomous capabilities:**
