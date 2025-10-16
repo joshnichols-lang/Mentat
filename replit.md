@@ -43,6 +43,13 @@ Preferred communication style: Simple, everyday language.
   - Zero minutes disables autonomous trading completely
 - **Error resilience**: Optimistic updates with rollback on server errors, graceful handling of sync failures
 
+### October 16, 2025 - AI Usage Tracking Fix
+- **Fixed cumulative counting** - AI usage metrics now show accurate cumulative totals
+- **Root cause**: Frontend was limited to last 100 log entries, missing older requests when total exceeded 100
+- **Solution**: Created `/api/ai/stats` endpoint that calculates totals directly from database (all records)
+- **New backend method**: `getAiUsageStats()` returns cumulative totals for requests, tokens, and cost
+- **Frontend update**: Now uses stats endpoint instead of manually summing limited logs
+
 ## System Architecture
 
 ### Frontend Architecture

@@ -32,6 +32,13 @@ export interface IStorage {
   logAiUsage(log: InsertAiUsageLog): Promise<AiUsageLog>;
   getAiUsageLogs(limit?: number): Promise<AiUsageLog[]>;
   getTotalAiCost(): Promise<string>;
+  getAiUsageStats(): Promise<{
+    totalRequests: number;
+    totalTokens: number;
+    totalPromptTokens: number;
+    totalCompletionTokens: number;
+    totalCost: string;
+  }>;
   
   // Monitoring Log methods
   createMonitoringLog(log: InsertMonitoringLog): Promise<MonitoringLog>;
@@ -153,6 +160,30 @@ export class DbStorage implements IStorage {
       total: sql<string>`COALESCE(SUM(${aiUsageLog.estimatedCost}), 0)`
     }).from(aiUsageLog);
     return result[0]?.total || "0";
+  }
+
+  async getAiUsageStats(): Promise<{
+    totalRequests: number;
+    totalTokens: number;
+    totalPromptTokens: number;
+    totalCompletionTokens: number;
+    totalCost: string;
+  }> {
+    const result = await db.select({
+      totalRequests: sql<number>`COUNT(*)`,
+      totalTokens: sql<number>`COALESCE(SUM(${aiUsageLog.totalTokens}), 0)`,
+      totalPromptTokens: sql<number>`COALESCE(SUM(${aiUsageLog.promptTokens}), 0)`,
+      totalCompletionTokens: sql<number>`COALESCE(SUM(${aiUsageLog.completionTokens}), 0)`,
+      totalCost: sql<string>`COALESCE(SUM(${aiUsageLog.estimatedCost}), 0)`,
+    }).from(aiUsageLog).where(eq(aiUsageLog.success, 1));
+    
+    return result[0] || {
+      totalRequests: 0,
+      totalTokens: 0,
+      totalPromptTokens: 0,
+      totalCompletionTokens: 0,
+      totalCost: "0"
+    };
   }
 
   // Monitoring Log methods

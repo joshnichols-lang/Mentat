@@ -19,6 +19,16 @@ interface LogsResponse extends ApiResponse<any[]> {
   logs: any[];
 }
 
+interface StatsResponse extends ApiResponse<any> {
+  stats: {
+    totalRequests: number;
+    totalTokens: number;
+    totalPromptTokens: number;
+    totalCompletionTokens: number;
+    totalCost: string;
+  };
+}
+
 const MONITORING_FREQUENCIES = [
   { value: "0", label: "Disabled" },
   { value: "1", label: "1 minute" },
@@ -33,14 +43,9 @@ export function AIUsageTracker() {
     return localStorage.getItem("monitoringFrequency") || "5";
   });
 
-  const { data: costData } = useQuery<CostResponse>({
-    queryKey: ['/api/ai/cost'],
+  const { data: statsData } = useQuery<StatsResponse>({
+    queryKey: ['/api/ai/stats'],
     refetchInterval: 30000, // Refresh every 30 seconds
-  });
-
-  const { data: logsData } = useQuery<LogsResponse>({
-    queryKey: ['/api/ai/usage'],
-    refetchInterval: 30000,
   });
 
   const updateFrequencyMutation = useMutation({
@@ -112,10 +117,10 @@ export function AIUsageTracker() {
     });
   };
 
-  const totalCost = (costData?.success ? costData.totalCost : "0") || "0";
-  const logs = (logsData?.success ? logsData.logs : []) || [];
-  const totalRequests = logs.length;
-  const totalTokens = logs.reduce((sum: number, log: any) => sum + (log.totalTokens || 0), 0);
+  const stats = statsData?.success ? statsData.stats : null;
+  const totalCost = stats?.totalCost || "0";
+  const totalRequests = stats?.totalRequests || 0;
+  const totalTokens = stats?.totalTokens || 0;
 
   return (
     <Card data-testid="card-ai-usage-tracker">

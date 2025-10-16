@@ -232,6 +232,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get AI usage statistics (cumulative totals)
+  app.get("/api/ai/stats", async (_req, res) => {
+    try {
+      const stats = await storage.getAiUsageStats();
+      res.json({ success: true, stats });
+    } catch (error) {
+      console.error("Error fetching AI stats:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch AI stats" });
+    }
+  });
+
   // Get monitoring logs
   app.get("/api/monitoring/logs", async (req, res) => {
     try {
