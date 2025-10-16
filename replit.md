@@ -10,13 +10,13 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
-### October 16, 2025 - Fixed Sortino and Calmar Ratio Display
-- **Fixed zero-value display bug** - Sortino and Calmar ratios now correctly display non-zero values in Risk-Adjusted Performance Ratios chart
+### October 16, 2025 - Fixed Sortino and Calmar Ratio Display & Reverted to Separate Charts
+- **Fixed zero-value display bug** - Sortino and Calmar ratios now correctly display non-zero values
 - **Root cause**: Current values were derived from time-filtered data instead of all data, causing zeros when filter excluded valid snapshots
 - **Solution**: Changed SharpeRatioChart component to use `allData` (unfiltered snapshots) for current value calculations
-- **Chart behavior**: Time-range filtering still applies to chart data points, but current values always show most recent snapshot
+- **Reverted to separate charts** - Risk ratio charts now show one ratio at a time with selector buttons (Sharpe/Sortino/Calmar) instead of all three lines on one chart
+- **Chart behavior**: Time-range filtering (1H/1D/1W/1M/1Y) and ratio selection (Sharpe/Sortino/Calmar) work independently
 - **Database cleanup**: Deleted 237 old portfolio snapshots with calmar_ratio=0 from before the feature was added
-- **Implementation detail**: Latest snapshot now selected from `allData[allData.length - 1]` instead of filtered `data[data.length - 1]`
 
 ### October 16, 2025 - Position Close Controls
 - **Individual close buttons** - Each position now has a close button (X icon) to instantly market close that position
