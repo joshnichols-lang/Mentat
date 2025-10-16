@@ -34,11 +34,15 @@ Preferred communication style: Simple, everyday language.
 
 ### Authentication & Security
 
+**Multi-Tenant Architecture:** The application is now a fully multi-tenant SaaS. All API routes are protected with `isAuthenticated` middleware and use per-user credentials from the database. The `getUserHyperliquidClient(userId)` function retrieves encrypted credentials and initializes individual Hyperliquid client instances for each user.
+
 **User Credentials:** Uses AES-256-GCM encryption with envelope encryption for storing Hyperliquid API private keys per user. Each credential has a unique Data Encryption Key (DEK) that is encrypted with the master key (ENCRYPTION_MASTER_KEY secret). The `credentialService` provides secure encryption/decryption with proper key isolation - if one credential is compromised, others remain secure.
 
 **User Schema:** Includes UUID-based identification and Zod validation.
 
-**Data Isolation:** Complete per-user data isolation with userId foreign keys on all trading-related tables (trades, positions, portfolio snapshots, AI usage logs). Each user's AI agent learns only from their own interactions.
+**Data Isolation:** Complete per-user data isolation with userId foreign keys on all trading-related tables (trades, positions, portfolio snapshots, AI usage logs). Each user's AI agent learns only from their own interactions. All storage methods enforce userId-first parameter pattern with `withUserFilter()` helper.
+
+**Background Services Limitation:** The autonomous trading engine (`monitoringService.ts`) and portfolio snapshot service (`portfolioSnapshotService.ts`) currently use a single `TEST_USER_ID` and need to be redesigned for multi-tenant operation. For production multi-tenant deployment, these services should either be disabled or refactored to run per-user with separate instances.
 
 ### Core Features
 

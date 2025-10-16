@@ -390,7 +390,7 @@ export class HyperliquidClient {
   }
 }
 
-// Singleton instance
+// Singleton instance (for backward compatibility, e.g., monitoring service)
 let hyperliquidClient: HyperliquidClient | null = null;
 
 export function initHyperliquidClient(): HyperliquidClient {
@@ -414,4 +414,25 @@ export function initHyperliquidClient(): HyperliquidClient {
 
 export function getHyperliquidClient(): HyperliquidClient | null {
   return hyperliquidClient;
+}
+
+/**
+ * Get a Hyperliquid client instance for a specific user
+ * Uses the user's stored and encrypted credentials
+ */
+export async function getUserHyperliquidClient(userId: string): Promise<HyperliquidClient> {
+  const { getUserPrivateKey } = await import("../credentialService");
+  
+  const privateKey = await getUserPrivateKey(userId);
+  
+  if (!privateKey) {
+    throw new Error(`No Hyperliquid credentials found for user ${userId}`);
+  }
+
+  const config: HyperliquidConfig = {
+    privateKey,
+    testnet: process.env.HYPERLIQUID_TESTNET === "true",
+  };
+
+  return new HyperliquidClient(config);
 }

@@ -2,15 +2,13 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { processTradingPrompt } from "./tradingAgent";
-import { initHyperliquidClient } from "./hyperliquid/client";
+import { initHyperliquidClient, getUserHyperliquidClient } from "./hyperliquid/client";
 import { executeTradeStrategy } from "./tradeExecutor";
 import { createPortfolioSnapshot } from "./portfolioSnapshotService";
 import { restartMonitoring } from "./monitoringService";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { storeUserCredentials, getUserPrivateKey, deleteUserCredentials, hasUserCredentials } from "./credentialService";
 import { z } from "zod";
-
-const TEST_USER_ID = '1fox-test-user-0000-000000000001';
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Initialize Replit Auth
@@ -44,8 +42,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // AI Trading Prompt endpoint
-  app.post("/api/trading/prompt", async (req, res) => {
+  app.post("/api/trading/prompt", isAuthenticated, async (req, res) => {
     try {
+      const user = req.user as any;
+      const userId = user.claims.sub;
+      
       const schema = z.object({
         prompt: z.string().min(1),
         marketData: z.array(z.object({
@@ -68,13 +69,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Automatically execute trades if enabled
       if (autoExecute && strategy.actions && strategy.actions.length > 0) {
         try {
-          executionSummary = await executeTradeStrategy(strategy.actions);
+          executionSummary = await executeTradeStrategy(userId, strategy.actions);
           console.log(`Executed ${executionSummary.successfulExecutions}/${executionSummary.totalActions} trades successfully`);
           
           // Create portfolio snapshot after successful trade execution
           if (executionSummary.successfulExecutions > 0) {
-            const hyperliquid = initHyperliquidClient();
-            createPortfolioSnapshot(hyperliquid).catch(err => 
+            const hyperliquid = await getUserHyperliquidClient(userId);
+            createPortfolioSnapshot(userId, hyperliquid).catch(err => 
               console.error("Failed to create portfolio snapshot after trade:", err)
             );
           }
@@ -154,9 +155,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get all trades
-  app.get("/api/trades", async (_req, res) => {
+  app.get("/api/trades", isAuthenticated, async (req, res) => {
     try {
-      const trades = await storage.getTrades(TEST_USER_ID);
+      const user = req.user as any;
+      const userId = user.claims.sub;
+      
+      const trades = await storage.getTrades(userId);
       res.json({ success: true, trades });
     } catch (error) {
       console.error("Error fetching trades:", error);
@@ -165,9 +169,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get all positions
-  app.get("/api/positions", async (_req, res) => {
+  app.get("/api/positions", isAuthenticated, async (req, res) => {
     try {
-      const positions = await storage.getPositions(TEST_USER_ID);
+      const user = req.user as any;
+      const userId = user.claims.sub;
+      
+      const positions = await storage.getPositions(userId);
       res.json({ success: true, positions });
     } catch (error) {
       console.error("Error fetching positions:", error);
@@ -176,10 +183,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get portfolio snapshots
-  app.get("/api/portfolio/snapshots", async (req, res) => {
+  app.get("/api/portfolio/snapshots", isAuthenticated, async (req, res) => {
     try {
+      const user = req.user as any;
+      const userId = user.claims.sub;
+      
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 100;
-      const snapshots = await storage.getPortfolioSnapshots(TEST_USER_ID, limit);
+      const snapshots = await storage.getPortfolioSnapshots(userId, limit);
       res.json({ success: true, snapshots });
     } catch (error) {
       console.error("Error fetching portfolio snapshots:", error);
@@ -188,9 +198,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create a new trade
-  app.post("/api/trades", async (req, res) => {
+  app.post("/api/trades", isAuthenticated, async (req, res) => {
     try {
-      const trade = await storage.createTrade(TEST_USER_ID, req.body);
+      const user = req.user as any;
+      const userId = user.claims.sub;
+      
+      const trade = await storage.createTrade(userId, req.body);
       res.json({ success: true, trade });
     } catch (error) {
       console.error("Error creating trade:", error);
@@ -199,10 +212,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Close a trade
-  app.post("/api/trades/:id/close", async (req, res) => {
+  app.post("/api/trades/:id/close", isAuthenticated, async (req, res) => {
     try {
+      const user = req.user as any;
+      const userId = user.claims.sub;
+      
       const { exitPrice, pnl } = req.body;
-      const trade = await storage.closeTrade(TEST_USER_ID, req.params.id, exitPrice, pnl);
+      const trade = await storage.closeTrade(userId, req.params.id, exitPrice, pnl);
       res.json({ success: true, trade });
     } catch (error) {
       console.error("Error closing trade:", error);
@@ -211,9 +227,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create or update position
-  app.post("/api/positions", async (req, res) => {
+  app.post("/api/positions", isAuthenticated, async (req, res) => {
     try {
-      const position = await storage.createPosition(TEST_USER_ID, req.body);
+      const user = req.user as any;
+      const userId = user.claims.sub;
+      
+      const position = await storage.createPosition(userId, req.body);
       res.json({ success: true, position });
     } catch (error) {
       console.error("Error creating position:", error);
@@ -222,9 +241,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update position
-  app.patch("/api/positions/:id", async (req, res) => {
+  app.patch("/api/positions/:id", isAuthenticated, async (req, res) => {
     try {
-      const position = await storage.updatePosition(TEST_USER_ID, req.params.id, req.body);
+      const user = req.user as any;
+      const userId = user.claims.sub;
+      
+      const position = await storage.updatePosition(userId, req.params.id, req.body);
       res.json({ success: true, position });
     } catch (error) {
       console.error("Error updating position:", error);
@@ -233,9 +255,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create portfolio snapshot
-  app.post("/api/portfolio/snapshots", async (req, res) => {
+  app.post("/api/portfolio/snapshots", isAuthenticated, async (req, res) => {
     try {
-      const snapshot = await storage.createPortfolioSnapshot(TEST_USER_ID, req.body);
+      const user = req.user as any;
+      const userId = user.claims.sub;
+      
+      const snapshot = await storage.createPortfolioSnapshot(userId, req.body);
       res.json({ success: true, snapshot });
     } catch (error) {
       console.error("Error creating snapshot:", error);
@@ -244,10 +269,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get AI usage logs
-  app.get("/api/ai/usage", async (req, res) => {
+  app.get("/api/ai/usage", isAuthenticated, async (req, res) => {
     try {
+      const user = req.user as any;
+      const userId = user.claims.sub;
+      
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 100;
-      const logs = await storage.getAiUsageLogs(TEST_USER_ID, limit);
+      const logs = await storage.getAiUsageLogs(userId, limit);
       res.json({ success: true, logs });
     } catch (error) {
       console.error("Error fetching AI usage logs:", error);
@@ -256,9 +284,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get total AI cost
-  app.get("/api/ai/cost", async (_req, res) => {
+  app.get("/api/ai/cost", isAuthenticated, async (req, res) => {
     try {
-      const totalCost = await storage.getTotalAiCost(TEST_USER_ID);
+      const user = req.user as any;
+      const userId = user.claims.sub;
+      
+      const totalCost = await storage.getTotalAiCost(userId);
       res.json({ success: true, totalCost });
     } catch (error) {
       console.error("Error fetching AI cost:", error);
@@ -267,9 +298,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get AI usage statistics (cumulative totals)
-  app.get("/api/ai/stats", async (_req, res) => {
+  app.get("/api/ai/stats", isAuthenticated, async (req, res) => {
     try {
-      const stats = await storage.getAiUsageStats(TEST_USER_ID);
+      const user = req.user as any;
+      const userId = user.claims.sub;
+      
+      const stats = await storage.getAiUsageStats(userId);
       res.json({ success: true, stats });
     } catch (error) {
       console.error("Error fetching AI stats:", error);
@@ -278,10 +312,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get monitoring logs
-  app.get("/api/monitoring/logs", async (req, res) => {
+  app.get("/api/monitoring/logs", isAuthenticated, async (req, res) => {
     try {
+      const user = req.user as any;
+      const userId = user.claims.sub;
+      
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 100;
-      const logs = await storage.getMonitoringLogs(TEST_USER_ID, limit);
+      const logs = await storage.getMonitoringLogs(userId, limit);
       res.json({ success: true, logs });
     } catch (error) {
       console.error("Error fetching monitoring logs:", error);
@@ -290,9 +327,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get active monitoring alerts
-  app.get("/api/monitoring/active", async (_req, res) => {
+  app.get("/api/monitoring/active", isAuthenticated, async (req, res) => {
     try {
-      const logs = await storage.getActiveMonitoringLogs(TEST_USER_ID);
+      const user = req.user as any;
+      const userId = user.claims.sub;
+      
+      const logs = await storage.getActiveMonitoringLogs(userId);
       res.json({ success: true, logs });
     } catch (error) {
       console.error("Error fetching active monitoring alerts:", error);
@@ -301,9 +341,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Dismiss monitoring alert
-  app.post("/api/monitoring/:id/dismiss", async (req, res) => {
+  app.post("/api/monitoring/:id/dismiss", isAuthenticated, async (req, res) => {
     try {
-      const log = await storage.dismissMonitoringLog(TEST_USER_ID, req.params.id);
+      const user = req.user as any;
+      const userId = user.claims.sub;
+      
+      const log = await storage.dismissMonitoringLog(userId, req.params.id);
       res.json({ success: true, log });
     } catch (error) {
       console.error("Error dismissing monitoring alert:", error);
@@ -335,47 +378,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Initialize Hyperliquid client
-  const hyperliquid = initHyperliquidClient();
-
+  // Hyperliquid API Routes - All require authentication
+  
   // Get Hyperliquid market data
-  app.get("/api/hyperliquid/market-data", async (_req, res) => {
+  app.get("/api/hyperliquid/market-data", isAuthenticated, async (req, res) => {
     try {
+      const user = req.user as any;
+      const userId = user.claims.sub;
+      
+      const hyperliquid = await getUserHyperliquidClient(userId);
       const marketData = await hyperliquid.getMarketData();
       res.json({ success: true, marketData });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error fetching Hyperliquid market data:", error);
+      if (error.message?.includes('No Hyperliquid credentials')) {
+        return res.status(401).json({ success: false, error: "Please configure your Hyperliquid API credentials first" });
+      }
       res.status(500).json({ success: false, error: "Failed to fetch market data" });
     }
   });
 
   // Get Hyperliquid user state
-  app.get("/api/hyperliquid/user-state", async (req, res) => {
+  app.get("/api/hyperliquid/user-state", isAuthenticated, async (req, res) => {
     try {
+      const user = req.user as any;
+      const userId = user.claims.sub;
+      
+      const hyperliquid = await getUserHyperliquidClient(userId);
       const address = req.query.address as string | undefined;
       const userState = await hyperliquid.getUserState(address);
       res.json({ success: true, userState });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error fetching Hyperliquid user state:", error);
+      if (error.message?.includes('No Hyperliquid credentials')) {
+        return res.status(401).json({ success: false, error: "Please configure your Hyperliquid API credentials first" });
+      }
       res.status(500).json({ success: false, error: "Failed to fetch user state" });
     }
   });
 
   // Get Hyperliquid positions
-  app.get("/api/hyperliquid/positions", async (req, res) => {
+  app.get("/api/hyperliquid/positions", isAuthenticated, async (req, res) => {
     try {
+      const user = req.user as any;
+      const userId = user.claims.sub;
+      
+      const hyperliquid = await getUserHyperliquidClient(userId);
       const address = req.query.address as string | undefined;
       const positions = await hyperliquid.getPositions(address);
       res.json({ success: true, positions });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error fetching Hyperliquid positions:", error);
+      if (error.message?.includes('No Hyperliquid credentials')) {
+        return res.status(401).json({ success: false, error: "Please configure your Hyperliquid API credentials first" });
+      }
       res.status(500).json({ success: false, error: "Failed to fetch positions" });
     }
   });
 
   // Get Hyperliquid open orders
-  app.get("/api/hyperliquid/open-orders", async (req, res) => {
+  app.get("/api/hyperliquid/open-orders", isAuthenticated, async (req, res) => {
     try {
+      const user = req.user as any;
+      const userId = user.claims.sub;
+      
+      const hyperliquid = await getUserHyperliquidClient(userId);
       const address = req.query.address as string | undefined;
       const orders = await hyperliquid.getOpenOrders(address);
       
@@ -421,15 +488,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       res.json({ success: true, orders: enrichedOrders });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error fetching Hyperliquid open orders:", error);
+      if (error.message?.includes('No Hyperliquid credentials')) {
+        return res.status(401).json({ success: false, error: "Please configure your Hyperliquid API credentials first" });
+      }
       res.status(500).json({ success: false, error: "Failed to fetch open orders" });
     }
   });
 
   // Place order on Hyperliquid
-  app.post("/api/hyperliquid/order", async (req, res) => {
+  app.post("/api/hyperliquid/order", isAuthenticated, async (req, res) => {
     try {
+      const user = req.user as any;
+      const userId = user.claims.sub;
+      
+      const hyperliquid = await getUserHyperliquidClient(userId);
+      
       const baseSchema = z.object({
         coin: z.string(),
         is_buy: z.boolean(),
@@ -486,8 +561,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Cancel order on Hyperliquid
-  app.post("/api/hyperliquid/cancel-order", async (req, res) => {
+  app.post("/api/hyperliquid/cancel-order", isAuthenticated, async (req, res) => {
     try {
+      const user = req.user as any;
+      const userId = user.claims.sub;
+      
+      const hyperliquid = await getUserHyperliquidClient(userId);
+      
       const schema = z.object({
         coin: z.string(),
         oid: z.number(),
@@ -503,13 +583,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     } catch (error: any) {
       console.error("Error cancelling Hyperliquid order:", error);
+      if (error.message?.includes('No Hyperliquid credentials')) {
+        return res.status(401).json({ success: false, error: "Please configure your Hyperliquid API credentials first" });
+      }
       res.status(500).json({ success: false, error: "Failed to cancel order" });
     }
   });
 
   // Close position on Hyperliquid
-  app.post("/api/hyperliquid/close-position", async (req, res) => {
+  app.post("/api/hyperliquid/close-position", isAuthenticated, async (req, res) => {
     try {
+      const user = req.user as any;
+      const userId = user.claims.sub;
+      
+      const hyperliquid = await getUserHyperliquidClient(userId);
+      
       const schema = z.object({
         coin: z.string(),
       });
@@ -558,8 +646,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Close all positions and cancel all orders
-  app.post("/api/hyperliquid/close-all", async (req, res) => {
+  app.post("/api/hyperliquid/close-all", isAuthenticated, async (req, res) => {
     try {
+      const user = req.user as any;
+      const userId = user.claims.sub;
+      
+      const hyperliquid = await getUserHyperliquidClient(userId);
+      
       const results = {
         closedPositions: [] as string[],
         cancelledOrders: [] as number[],
@@ -627,13 +720,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error: any) {
       console.error("Error closing all positions:", error);
+      if (error.message?.includes('No Hyperliquid credentials')) {
+        return res.status(401).json({ success: false, error: "Please configure your Hyperliquid API credentials first" });
+      }
       res.status(500).json({ success: false, error: "Failed to close all positions" });
     }
   });
 
   // Update leverage on Hyperliquid
-  app.post("/api/hyperliquid/leverage", async (req, res) => {
+  app.post("/api/hyperliquid/leverage", isAuthenticated, async (req, res) => {
     try {
+      const user = req.user as any;
+      const userId = user.claims.sub;
+      
+      const hyperliquid = await getUserHyperliquidClient(userId);
+      
       const schema = z.object({
         coin: z.string(),
         is_cross: z.boolean(),

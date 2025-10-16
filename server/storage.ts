@@ -192,7 +192,8 @@ export class DbStorage implements IStorage {
   }
 
   async getPortfolioSnapshotsSince(userId: string, hours: number): Promise<PortfolioSnapshot[]> {
-    const timeCondition = sql`${portfolioSnapshots.timestamp} >= (now() - (${hours} || ' hours')::interval)`;
+    // Use simple interval multiplication for safe interval construction
+    const timeCondition = sql`${portfolioSnapshots.timestamp} >= now() - ${hours} * interval '1 hour'`;
     return await db.select()
       .from(portfolioSnapshots)
       .where(withUserFilter(portfolioSnapshots, userId, timeCondition))

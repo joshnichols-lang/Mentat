@@ -4,6 +4,7 @@ import { setupVite, serveStatic, log } from "./vite";
 import { startMonitoring } from "./monitoringService";
 import { startPeriodicSnapshots } from "./portfolioSnapshotService";
 import { initHyperliquidClient } from "./hyperliquid/client";
+import { TEST_USER_ID } from "./constants";
 
 const app = express();
 app.use(express.json());
@@ -75,7 +76,8 @@ app.use((req, res, next) => {
     const hyperliquid = initHyperliquidClient();
     
     // Start automated services
+    // NOTE: These services use TEST_USER_ID and need to be disabled or redesigned for multi-tenant
     startMonitoring();
-    startPeriodicSnapshots(hyperliquid);
+    startPeriodicSnapshots(TEST_USER_ID, hyperliquid);
   });
 })();

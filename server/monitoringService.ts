@@ -343,13 +343,13 @@ CRITICAL ORDER MANAGEMENT RULES:
     // Execute trades if actions exist
     if (strategy.actions && strategy.actions.length > 0) {
       try {
-        const executionSummary = await executeTradeStrategy(strategy.actions);
+        const executionSummary = await executeTradeStrategy(TEST_USER_ID, strategy.actions);
         
         console.log(`[Autonomous Trading] Executed ${executionSummary.successfulExecutions}/${executionSummary.totalActions} trades`);
         
         // Create portfolio snapshot after successful trades
         if (executionSummary.successfulExecutions > 0) {
-          await createPortfolioSnapshot(hyperliquidClient);
+          await createPortfolioSnapshot(TEST_USER_ID, hyperliquidClient);
         }
         
         // Log the autonomous trading session

@@ -1,4 +1,4 @@
-import { initHyperliquidClient } from "./hyperliquid/client";
+import { getUserHyperliquidClient } from "./hyperliquid/client";
 import { storage } from "./storage";
 
 interface TradingAction {
@@ -58,9 +58,10 @@ function validateLeverage(leverage: number): number {
 }
 
 export async function executeTradeStrategy(
+  userId: string,
   actions: TradingAction[]
 ): Promise<ExecutionSummary> {
-  const hyperliquid = initHyperliquidClient();
+  const hyperliquid = await getUserHyperliquidClient(userId);
   const results: ExecutionResult[] = [];
   
   let successCount = 0;
@@ -159,9 +160,7 @@ export async function executeTradeStrategy(
         
         // Log trade to database
         try {
-          const { TEST_USER_ID } = await import("./constants");
-          await storage.createTrade({
-            userId: TEST_USER_ID,
+          await storage.createTrade(userId, {
             symbol: action.symbol.replace("-PERP", ""),
             side: action.side,
             type: action.expectedEntry ? "limit" : "market",

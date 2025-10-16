@@ -288,7 +288,7 @@ function calculateOmegaRatio(snapshots: any[]): number {
 /**
  * Create a portfolio snapshot by fetching current state and calculating metrics
  */
-export async function createPortfolioSnapshot(hyperliquid: HyperliquidClient): Promise<void> {
+export async function createPortfolioSnapshot(userId: string, hyperliquid: HyperliquidClient): Promise<void> {
   try {
     console.log("[Portfolio Snapshot] Creating new snapshot...");
 
@@ -313,7 +313,7 @@ export async function createPortfolioSnapshot(hyperliquid: HyperliquidClient): P
     }
 
     // Get trade statistics from database
-    const trades = await storage.getTrades();
+    const trades = await storage.getTrades(userId);
     const closedTrades = trades.filter(t => t.status === 'closed');
     const numTrades = closedTrades.length;
     const numWins = closedTrades.filter(t => {
@@ -323,7 +323,7 @@ export async function createPortfolioSnapshot(hyperliquid: HyperliquidClient): P
 
     // Calculate risk ratios from recent snapshots INCLUDING current value
     // Use time-based query (6 hours) to ensure we have enough data for Calmar ratio (requires 1+ hour)
-    const recentSnapshots = await storage.getPortfolioSnapshotsSince(6); // Last 6 hours
+    const recentSnapshots = await storage.getPortfolioSnapshotsSince(userId, 6); // Last 6 hours
     
     // Add current snapshot to the end (it's the newest) for accurate ratio calculation
     const snapshotsWithCurrent = [...recentSnapshots, {
@@ -342,7 +342,7 @@ export async function createPortfolioSnapshot(hyperliquid: HyperliquidClient): P
 
     // Create snapshot
     const snapshot = {
-      userId: TEST_USER_ID,
+      userId,
       totalValue,
       totalPnl: totalPnl.toFixed(8),
       sharpeRatio: sharpeRatio.toFixed(6),
@@ -356,7 +356,7 @@ export async function createPortfolioSnapshot(hyperliquid: HyperliquidClient): P
       numWins,
     };
 
-    await storage.createPortfolioSnapshot(snapshot);
+    await storage.createPortfolioSnapshot(userId, snapshot);
     console.log("[Portfolio Snapshot] Created snapshot:", snapshot);
 
   } catch (error) {
@@ -366,15 +366,17 @@ export async function createPortfolioSnapshot(hyperliquid: HyperliquidClient): P
 
 /**
  * Start periodic snapshot creation (every 5 minutes)
+ * NOTE: This is a single-tenant function. For multi-tenant, this needs to be redesigned
+ * to run per-user with their own credentials or disabled entirely.
  */
-export function startPeriodicSnapshots(hyperliquid: HyperliquidClient): void {
+export function startPeriodicSnapshots(userId: string, hyperliquid: HyperliquidClient): void {
   // Create initial snapshot
-  createPortfolioSnapshot(hyperliquid);
+  createPortfolioSnapshot(userId, hyperliquid);
 
   // Create snapshot every 5 minutes
   const INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
   setInterval(() => {
-    createPortfolioSnapshot(hyperliquid);
+    createPortfolioSnapshot(userId, hyperliquid);
   }, INTERVAL_MS);
 
   console.log("[Portfolio Snapshot] Started periodic snapshot creation (every 5 minutes)");
