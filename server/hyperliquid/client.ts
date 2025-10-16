@@ -200,6 +200,33 @@ export class HyperliquidClient {
     }
   }
 
+  async getOpenOrders(address?: string): Promise<any[]> {
+    try {
+      const state = await this.getUserState(address);
+      if (!state || !state.assetPositions) {
+        return [];
+      }
+      
+      // Collect all open orders from all asset positions
+      const allOrders: any[] = [];
+      for (const assetPos of state.assetPositions) {
+        if (assetPos.position?.openOrders) {
+          for (const order of assetPos.position.openOrders) {
+            allOrders.push({
+              ...order,
+              coin: assetPos.position.coin,
+            });
+          }
+        }
+      }
+      
+      return allOrders;
+    } catch (error) {
+      console.error("Failed to fetch open orders:", error);
+      return [];
+    }
+  }
+
   async placeOrder(params: OrderParams): Promise<{ success: boolean; response?: any; error?: string }> {
     try {
       // Ensure asset maps are initialized before trading

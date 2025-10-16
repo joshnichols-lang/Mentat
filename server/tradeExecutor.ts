@@ -2,7 +2,7 @@ import { initHyperliquidClient } from "./hyperliquid/client";
 import { storage } from "./storage";
 
 interface TradingAction {
-  action: "buy" | "sell" | "hold" | "close" | "stop_loss" | "take_profit";
+  action: "buy" | "sell" | "hold" | "close" | "stop_loss" | "take_profit" | "cancel_order";
   symbol: string;
   side: "long" | "short";
   size: string;
@@ -12,6 +12,7 @@ interface TradingAction {
   stopLoss?: string;
   takeProfit?: string;
   triggerPrice?: string; // For stop_loss and take_profit actions
+  orderId?: number; // For cancel_order action
 }
 
 interface ExecutionResult {
@@ -81,10 +82,37 @@ export async function executeTradeStrategy(
       }
       
       // Validate inputs for actions that will be executed
-      // Note: stop_loss and take_profit derive size and leverage from position, so they can be omitted
-      if (action.action !== "stop_loss" && action.action !== "take_profit") {
+      // Note: stop_loss, take_profit, and cancel_order have special validation rules
+      if (action.action !== "stop_loss" && action.action !== "take_profit" && action.action !== "cancel_order") {
         validateNumericInput(action.size, "size");
         validateLeverage(action.leverage);
+      }
+
+      // Handle "cancel_order" actions
+      if (action.action === "cancel_order") {
+        if (!action.orderId) {
+          throw new Error("orderId is required for cancel_order action");
+        }
+        
+        const cancelResult = await hyperliquid.cancelOrder({
+          coin: action.symbol,
+          oid: action.orderId,
+        });
+        
+        results.push({
+          success: cancelResult.success,
+          action,
+          error: cancelResult.error,
+        });
+        
+        if (cancelResult.success) {
+          successCount++;
+          console.log(`[Trade Executor] Cancelled order ${action.orderId} for ${action.symbol}`);
+        } else {
+          failCount++;
+          console.error(`[Trade Executor] Failed to cancel order ${action.orderId}:`, cancelResult.error);
+        }
+        continue;
       }
 
       // Handle "close" actions

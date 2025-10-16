@@ -9,7 +9,7 @@ interface MarketData {
 }
 
 interface TradingAction {
-  action: "buy" | "sell" | "hold" | "close" | "stop_loss" | "take_profit";
+  action: "buy" | "sell" | "hold" | "close" | "stop_loss" | "take_profit" | "cancel_order";
   symbol: string;
   side: "long" | "short";
   size: string;
@@ -19,6 +19,7 @@ interface TradingAction {
   stopLoss?: string;
   takeProfit?: string;
   triggerPrice?: string; // For stop_loss and take_profit actions
+  orderId?: number; // For cancel_order action
 }
 
 interface TradingStrategy {

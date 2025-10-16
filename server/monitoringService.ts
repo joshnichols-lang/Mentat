@@ -19,7 +19,7 @@ interface VolumeProfile {
 }
 
 interface TradingAction {
-  action: "buy" | "sell" | "hold" | "close" | "stop_loss" | "take_profit";
+  action: "buy" | "sell" | "hold" | "close" | "stop_loss" | "take_profit" | "cancel_order";
   symbol: string;
   side: "long" | "short";
   size: string;
@@ -29,6 +29,7 @@ interface TradingAction {
   stopLoss?: string;
   takeProfit?: string;
   triggerPrice?: string;
+  orderId?: number; // For cancel_order action
 }
 
 interface AutonomousStrategy {
@@ -132,9 +133,10 @@ async function developAutonomousStrategy(): Promise<void> {
       return;
     }
     
-    // Fetch market data and current positions
+    // Fetch market data, current positions, and open orders
     const marketData = await hyperliquidClient.getMarketData();
     const hyperliquidPositions = await hyperliquidClient.getPositions();
+    const openOrders = await hyperliquidClient.getOpenOrders();
     
     if (!marketData || marketData.length === 0) {
       console.log("[Autonomous Trading] No market data available");
@@ -210,6 +212,13 @@ ${currentPositions.length > 0 ? currentPositions.map(pos =>
    Current: $${pos.currentPrice}, P&L: ${pos.pnlPercent.toFixed(2)}%${pos.liquidationPrice ? `, Liq: $${pos.liquidationPrice}` : ''}`
 ).join('\n') : 'No open positions'}
 
+EXISTING OPEN ORDERS:
+${openOrders.length > 0 ? openOrders.map(order => {
+  const orderType = order.orderType?.trigger ? (order.orderType.trigger.tpsl === 'tp' ? 'TAKE PROFIT' : 'STOP LOSS') : 'LIMIT';
+  const triggerPrice = order.orderType?.trigger?.triggerPx || order.limitPx;
+  return `- ${order.coin}: ${orderType} | ID: ${order.oid} | Side: ${order.side} | Size: ${order.sz} | Trigger: $${triggerPrice}`;
+}).join('\n') : 'No open orders'}
+
 ${promptHistory.length > 0 ? `LEARNED TRADING PATTERNS (from user prompts):
 ${promptHistory.map(p => `- ${new Date(p.timestamp).toLocaleDateString()}: "${p.prompt}"`).join('\n')}
 
@@ -224,8 +233,11 @@ AUTONOMOUS TRADING DIRECTIVE:
 2. Identify optimal entry opportunities aligned with the current regime
 3. For each trade, specify exact entry prices, position sizes, leverage, stop losses, and take profits
 4. Manage existing positions: adjust stops, take profits, or close positions based on risk/reward
-5. Learn from user's historical prompts to align with their trading style and preferences
-6. Focus on maximizing Sharpe ratio through optimal sizing and risk management
+5. **ASSESS EXISTING ORDERS**: Review all open orders and determine if they're still valid given current market conditions
+6. **CANCEL INVALID ORDERS**: If existing stop/take profit orders are no longer appropriate, cancel them FIRST before placing new ones
+7. **ONE ORDER PER TYPE**: Each position should have ONLY ONE stop loss and ONE take profit order maximum
+8. Learn from user's historical prompts to align with their trading style and preferences
+9. Focus on maximizing Sharpe ratio through optimal sizing and risk management
 
 Respond in JSON format:
 {
@@ -234,28 +246,35 @@ Respond in JSON format:
   "volumeAnalysis": "Analysis of volume profiles and what they signal",
   "actions": [
     {
-      "action": "buy" | "sell" | "close" | "stop_loss" | "take_profit",
+      "action": "cancel_order" | "buy" | "sell" | "close" | "stop_loss" | "take_profit",
       "symbol": "BTC-PERP" | "ETH-PERP" | etc,
       "side": "long" | "short",
       "size": "numeric value as string (e.g. '0.5', '1.0')",
       "leverage": 1-10,
-      "reasoning": "Multi-timeframe analysis, entry trigger, volume confirmation",
+      "reasoning": "Multi-timeframe analysis, entry trigger, volume confirmation, OR why canceling order",
       "expectedEntry": "numeric price as string" [for buy/sell],
-      "triggerPrice": "numeric price as string" [for stop_loss/take_profit]
+      "triggerPrice": "numeric price as string" [for stop_loss/take_profit],
+      "orderId": number [REQUIRED for cancel_order action]
     }
   ],
   "riskAssessment": "Portfolio risk analysis and position sizing rationale",
   "expectedSharpeImpact": "Expected impact on Sharpe ratio and compounding strategy"
 }
 
-CRITICAL RULES:
-- ALL numeric values (size, expectedEntry, triggerPrice) must be actual numbers as strings, NEVER placeholders
-- For buy/sell actions, expectedEntry is REQUIRED (Hyperliquid uses limit orders only)
-- For stop_loss/take_profit, triggerPrice is REQUIRED
-- Close actions must have matching side to the existing position
-- Focus on high-probability setups aligned with market regime
-- Implement proper risk management with stops on every position
-- If no good opportunities exist, actions can be empty array`;
+CRITICAL ORDER MANAGEMENT RULES:
+1. **Before placing new stop_loss or take_profit**: Check if one already exists for that position
+2. **If an order exists but needs adjustment**: 
+   - FIRST: Include a cancel_order action with the existing orderId
+   - THEN: Include a new stop_loss or take_profit action with updated triggerPrice
+3. **If an order exists and is still valid**: Do NOT create duplicate orders
+4. **Each position limits**: Maximum ONE stop loss + ONE take profit order
+5. ALL numeric values (size, expectedEntry, triggerPrice, orderId) must be actual numbers as strings, NEVER placeholders
+6. For buy/sell actions, expectedEntry is REQUIRED (Hyperliquid uses limit orders only)
+7. For stop_loss/take_profit, triggerPrice is REQUIRED
+8. For cancel_order, orderId is REQUIRED
+9. Close actions must have matching side to the existing position
+10. Focus on high-probability setups aligned with market regime
+11. If no good opportunities exist, actions can be empty array`;
 
     const response = await perplexity.chat.completions.create({
       model: "sonar",
