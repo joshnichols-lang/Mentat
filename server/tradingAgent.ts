@@ -150,6 +150,10 @@ CRITICAL RULES:
 5. DO NOT use "hold" actions with stopLoss/takeProfit fields - those fields are ignored. Instead, generate separate stop_loss and take_profit ORDER actions.
 6. When user asks to set stop losses or take profits, generate actual stop_loss/take_profit actions for each position.
 7. For "close" actions, the expectedEntry field is optional (system will use IOC limit orders to close at market price).
+8. IMPORTANT: For "close" actions, the "side" field MUST match the existing position's side from Current positions data:
+   - If position has positive size (long position), use side: "long"
+   - If position has negative size (short position), use side: "short"
+   - DO NOT use the direction of the closing trade - use the position's current side!
 
 Output real-time executed trades with professional precision and risk-adjusted optimization.`
       },

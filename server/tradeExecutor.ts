@@ -376,9 +376,9 @@ async function executeClosePosition(
       ? currentPrice * 1.1  // Buying back short: 10% above current market
       : currentPrice * 0.9; // Selling long: 10% below current market
     
-    // Round to 1 decimal place to avoid floating point precision issues
-    // Hyperliquid's floatToWire rejects numbers like 121726.00000000001
-    const marketPrice = Math.round(rawMarketPrice * 10) / 10;
+    // Round to whole number (0 decimals) to match Hyperliquid tick size
+    // BTC and most major pairs use tick size of 1.0 (whole dollars)
+    const marketPrice = Math.round(rawMarketPrice);
     
     const orderParams = {
       coin: action.symbol,  // Use full symbol with -PERP suffix

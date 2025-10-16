@@ -207,6 +207,21 @@ export class HyperliquidClient {
       
       const response = await this.sdk.exchange.placeOrder(params as any);
       
+      // Check if the order was accepted by the exchange
+      // Hyperliquid returns a response with statuses array
+      const status = response?.response?.data?.statuses?.[0];
+      
+      if (status && 'error' in status) {
+        // Order was rejected by the exchange
+        const errorMsg = status.error || "Order rejected by exchange";
+        console.error("Order rejected by Hyperliquid:", errorMsg);
+        return {
+          success: false,
+          error: errorMsg,
+          response,
+        };
+      }
+      
       return {
         success: true,
         response,

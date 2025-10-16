@@ -19,7 +19,13 @@ Preferred communication style: Simple, everyday language.
   - For closing shorts (buy back): limit price = current market * 1.1 (10% above current)
   - For closing longs (sell): limit price = current market * 0.9 (10% below current)
   - This ensures fills even when position has moved >10% against entry
-- **Fixed floating point rounding error**: Round limit prices to 1 decimal place to avoid SDK rejection of values like 121726.00000000001
+- **Fixed floating point rounding error**: Round limit prices to whole numbers to match Hyperliquid tick size (BTC tick size = 1.0)
+- **Fixed AI close action side matching**: AI now correctly sets side field to match position's current side (not closing trade direction)
+  - For closing long positions: side="long" (not "short")  
+  - For closing short positions: side="short" (not "long")
+- **Fixed error detection**: placeOrder now properly detects exchange rejections by checking response status
+  - Prevents showing "✓ Successful" when exchange actually rejected the order
+  - Returns proper error messages from Hyperliquid (e.g., tick size violations)
 - Updated AI prompt to require expectedEntry for all buy/sell actions (Hyperliquid doesn't support market orders)
 - All close position functionality now working correctly with proper Hyperliquid-compatible order types
 
