@@ -1,8 +1,14 @@
 import { Card } from "@/components/ui/card";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, Legend } from "recharts";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from "recharts";
 import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+
+type RatioType = "sharpe" | "sortino" | "calmar";
 
 export default function SharpeRatioChart() {
+  const [selectedRatio, setSelectedRatio] = useState<RatioType>("sharpe");
+  
   const { data: snapshots } = useQuery<any>({
     queryKey: ['/api/portfolio/snapshots'],
     refetchInterval: 30000,
@@ -15,11 +21,68 @@ export default function SharpeRatioChart() {
   const currentSortino = latestSnapshot ? Number(latestSnapshot.sortinoRatio || 0) : 0;
   const currentCalmar = latestSnapshot ? Number(latestSnapshot.calmarRatio || 0) : 0;
 
+  const ratioConfig = {
+    sharpe: {
+      title: "Sharpe Ratio",
+      description: "Return per unit of total volatility",
+      dataKey: "sharpeRatio",
+      color: "hsl(var(--primary))",
+      current: currentSharpe,
+    },
+    sortino: {
+      title: "Sortino Ratio",
+      description: "Return per unit of downside volatility",
+      dataKey: "sortinoRatio",
+      color: "hsl(var(--chart-2))",
+      current: currentSortino,
+    },
+    calmar: {
+      title: "Calmar Ratio",
+      description: "Annualized return per max drawdown",
+      dataKey: "calmarRatio",
+      color: "hsl(var(--chart-3))",
+      current: currentCalmar,
+    },
+  };
+
+  const config = ratioConfig[selectedRatio];
+
   return (
     <Card className="p-3" data-testid="card-risk-ratios">
-      <div className="mb-3">
-        <h2 className="text-sm font-semibold" data-testid="text-chart-title">Risk-Adjusted Performance Ratios</h2>
-        <p className="text-xs text-muted-foreground" data-testid="text-chart-subtitle">Sharpe, Sortino & Calmar ratios</p>
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <div>
+          <h2 className="text-sm font-semibold" data-testid="text-chart-title">{config.title}</h2>
+          <p className="text-xs text-muted-foreground" data-testid="text-chart-subtitle">{config.description}</p>
+        </div>
+        <div className="flex gap-1">
+          <Button
+            variant={selectedRatio === "sharpe" ? "default" : "ghost"}
+            size="sm"
+            onClick={() => setSelectedRatio("sharpe")}
+            className="h-7 px-2 text-xs"
+            data-testid="button-sharpe"
+          >
+            Sharpe
+          </Button>
+          <Button
+            variant={selectedRatio === "sortino" ? "default" : "ghost"}
+            size="sm"
+            onClick={() => setSelectedRatio("sortino")}
+            className="h-7 px-2 text-xs"
+            data-testid="button-sortino"
+          >
+            Sortino
+          </Button>
+          <Button
+            variant={selectedRatio === "calmar" ? "default" : "ghost"}
+            size="sm"
+            onClick={() => setSelectedRatio("calmar")}
+            className="h-7 px-2 text-xs"
+            data-testid="button-calmar"
+          >
+            Calmar
+          </Button>
+        </div>
       </div>
       
       {!hasData ? (
@@ -52,21 +115,7 @@ export default function SharpeRatioChart() {
                     borderRadius: "6px",
                     color: "hsl(var(--foreground))",
                   }}
-                  formatter={(value: any, name: string) => {
-                    const displayName = name === "sharpeRatio" ? "Sharpe" 
-                      : name === "sortinoRatio" ? "Sortino" 
-                      : "Calmar";
-                    return [Number(value || 0).toFixed(2), displayName];
-                  }}
-                />
-                <Legend 
-                  wrapperStyle={{ fontSize: "11px" }}
-                  formatter={(value: string) => {
-                    if (value === "sharpeRatio") return "Sharpe";
-                    if (value === "sortinoRatio") return "Sortino";
-                    if (value === "calmarRatio") return "Calmar";
-                    return value;
-                  }}
+                  formatter={(value: any) => [Number(value || 0).toFixed(2), config.title]}
                 />
                 <ReferenceLine 
                   y={1} 
@@ -82,43 +131,23 @@ export default function SharpeRatioChart() {
                 />
                 <Line 
                   type="monotone" 
-                  dataKey="sharpeRatio" 
-                  name="sharpeRatio"
-                  stroke="hsl(var(--primary))" 
+                  dataKey={config.dataKey}
+                  stroke={config.color}
                   strokeWidth={2}
-                  dot={{ fill: "hsl(var(--primary))", r: 2 }}
-                />
-                <Line 
-                  type="monotone" 
-                  dataKey="sortinoRatio" 
-                  name="sortinoRatio"
-                  stroke="hsl(var(--chart-2))" 
-                  strokeWidth={2}
-                  dot={{ fill: "hsl(var(--chart-2))", r: 2 }}
-                />
-                <Line 
-                  type="monotone" 
-                  dataKey="calmarRatio" 
-                  name="calmarRatio"
-                  stroke="hsl(var(--chart-3))" 
-                  strokeWidth={2}
-                  dot={{ fill: "hsl(var(--chart-3))", r: 2 }}
+                  dot={{ fill: config.color, r: 3 }}
                 />
               </LineChart>
             </ResponsiveContainer>
           </div>
-          <div className="mt-3 grid grid-cols-3 gap-3 border-t pt-3" data-testid="container-current-values">
-            <div data-testid="container-sharpe">
-              <div className="text-xs text-muted-foreground" data-testid="text-sharpe-label">Sharpe</div>
-              <div className="font-mono text-base font-bold text-primary" data-testid="text-sharpe-value">{currentSharpe.toFixed(2)}</div>
+          <div className="mt-3 border-t pt-3" data-testid="container-current-value">
+            <div className="flex items-center justify-between">
+              <div className="text-xs text-muted-foreground">Current Value</div>
+              <div className="font-mono text-xl font-bold" style={{ color: config.color }} data-testid="text-ratio-value">
+                {config.current.toFixed(2)}
+              </div>
             </div>
-            <div data-testid="container-sortino">
-              <div className="text-xs text-muted-foreground" data-testid="text-sortino-label">Sortino</div>
-              <div className="font-mono text-base font-bold text-chart-2" data-testid="text-sortino-value">{currentSortino.toFixed(2)}</div>
-            </div>
-            <div data-testid="container-calmar">
-              <div className="text-xs text-muted-foreground" data-testid="text-calmar-label">Calmar</div>
-              <div className="font-mono text-base font-bold text-chart-3" data-testid="text-calmar-value">{currentCalmar.toFixed(2)}</div>
+            <div className="text-xs text-muted-foreground mt-1">
+              {config.current >= 2 ? "Excellent performance" : config.current >= 1 ? "Good performance" : config.current >= 0 ? "Developing" : "Below breakeven"}
             </div>
           </div>
         </>
