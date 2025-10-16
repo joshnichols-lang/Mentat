@@ -10,6 +10,22 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+### October 16, 2025 - Stop Loss/Take Profit Order Implementation
+- **Implemented Hyperliquid trigger orders for stop loss and take profit functionality**
+- Added `stop_loss` and `take_profit` action types to TradingAction interface
+- Created `placeTriggerOrder` method in Hyperliquid client:
+  - Constructs trigger order payload with triggerPx, isMarket, tpsl ("tp" or "sl"), and reduce_only flags
+  - Uses trigger price as limit price for better fill certainty
+  - All trigger orders are reduce-only to close positions
+- Implemented `executeTriggerOrder` function in trade executor:
+  - Fetches live position from Hyperliquid API
+  - Validates position exists and side matches
+  - Places opposite-side trigger order to close position
+  - Handles errors with detailed logging
+- Updated AI prompt to generate stop_loss/take_profit ORDER actions (not hold actions with stopLoss/takeProfit fields)
+- **Fixed position lookup bug:** Positions from Hyperliquid include -PERP suffix in coin field, now matching directly
+- Verified end-to-end: AI correctly generates trigger orders, executor places them on Hyperliquid
+
 ### October 16, 2025 - Fixed Trade Execution Error
 - Fixed "invalid size: must be a positive number" error when AI suggests new trades
 - AI was returning literal text "calculated" instead of numeric values for position sizes
