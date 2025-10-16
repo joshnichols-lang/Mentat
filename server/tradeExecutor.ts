@@ -81,7 +81,10 @@ export async function executeTradeStrategy(
       }
       
       // Validate inputs for actions that will be executed
-      validateNumericInput(action.size, "size");
+      // Note: stop_loss and take_profit derive size from position, so size can be omitted
+      if (action.action !== "stop_loss" && action.action !== "take_profit") {
+        validateNumericInput(action.size, "size");
+      }
       validateLeverage(action.leverage);
 
       // Handle "close" actions

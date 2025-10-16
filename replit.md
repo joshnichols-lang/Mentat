@@ -10,16 +10,29 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+### October 16, 2025 - Fully Autonomous Trading Engine
+- **Transformed from monitoring to autonomous trading** - Mr. Fox now trades automatically based on market analysis
+- **Autonomous capabilities:**
+  - Develops trade theses based on market regime analysis and volume profiles
+  - Identifies market conditions: bullish, bearish, neutral, or volatile with confidence levels
+  - Analyzes volume profiles to detect high-volume breakout opportunities (compares to market average)
+  - Executes trades automatically with proper position sizing and risk management
+  - **Learns from user prompts** - Analyzes historical prompts to understand trading style and preferences
+  - Sets stop losses and take profits based on technical analysis
+- **Configuration**: Frequency control (Disabled/1min/5min/30min/1hr) via AI Usage panel dropdown
+- **Results displayed**: Conversation history shows trade thesis, volume analysis, market regime, execution results, and risk assessment
+- **Error handling**: Graceful handling of insufficient margin, minimum order sizes, and exchange errors
+
 ### October 16, 2025 - Configurable Automated Monitoring Frequency
-- **Added monitoring frequency control** - Users can now adjust how often automated position analysis runs
+- **Added monitoring frequency control** - Users can now adjust how often autonomous trading runs
 - **Frequency options**: Disabled, 1 minute, 5 minutes (default), 30 minutes, 1 hour
 - **Implementation details:**
   - Dropdown selector in AI Usage panel with localStorage persistence
   - Auto-sync with backend on component mount (100ms delay for server readiness)
   - Proper error handling with rollback on failure
   - Backend endpoint `/api/monitoring/frequency` validates frequency (0-1440 minutes)
-  - Monitoring service dynamically restarts with new interval
-  - Zero minutes disables automated monitoring completely
+  - Service dynamically restarts with new interval
+  - Zero minutes disables autonomous trading completely
 - **Error resilience**: Optimistic updates with rollback on server errors, graceful handling of sync failures
 
 ## System Architecture

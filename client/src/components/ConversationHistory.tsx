@@ -20,17 +20,21 @@ export default function ConversationHistory() {
   const allConversations = usageLogs?.logs?.filter(log => log.success === 1 && log.userPrompt) || [];
   
   const conversations = useMemo(() => {
-    // Separate monitoring alerts from regular conversations
-    const monitoringAlerts = allConversations.filter(log => log.userPrompt === "[AUTOMATED MONITORING]");
-    const regularConversations = allConversations.filter(log => log.userPrompt !== "[AUTOMATED MONITORING]");
+    // Separate automated alerts from regular conversations
+    const automatedAlerts = allConversations.filter(log => 
+      log.userPrompt === "[AUTOMATED MONITORING]" || log.userPrompt === "[AUTONOMOUS TRADING]"
+    );
+    const regularConversations = allConversations.filter(log => 
+      log.userPrompt !== "[AUTOMATED MONITORING]" && log.userPrompt !== "[AUTONOMOUS TRADING]"
+    );
     
-    // Get only the most recent monitoring alert (last in array = most recent by timestamp)
-    const latestMonitoringAlert = monitoringAlerts.length > 0 
-      ? [monitoringAlerts[monitoringAlerts.length - 1]] 
+    // Get only the most recent automated alert (last in array = most recent by timestamp)
+    const latestAutomatedAlert = automatedAlerts.length > 0 
+      ? [automatedAlerts[automatedAlerts.length - 1]] 
       : [];
     
-    // Combine: monitoring alert first (at top), then regular conversations
-    const combinedConversations = [...latestMonitoringAlert, ...regularConversations];
+    // Combine: automated alert first (at top), then regular conversations
+    const combinedConversations = [...latestAutomatedAlert, ...regularConversations];
     
     // Apply search filter if query exists
     if (!searchQuery.trim()) return combinedConversations;
@@ -114,14 +118,20 @@ export default function ConversationHistory() {
         <div className="space-y-3 pr-3" data-testid="conversation-history">
           {conversations.map((log) => {
             const isAutomatedMonitoring = log.userPrompt === "[AUTOMATED MONITORING]";
+            const isAutonomousTrading = log.userPrompt === "[AUTONOMOUS TRADING]";
+            const isAutomated = isAutomatedMonitoring || isAutonomousTrading;
+            
             let aiStrategy = null;
             let monitoringAnalysis = null;
+            let autonomousStrategy = null;
             
             try {
               if (log.aiResponse && log.aiResponse.trim()) {
                 const parsed = JSON.parse(log.aiResponse);
                 if (isAutomatedMonitoring) {
                   monitoringAnalysis = parsed;
+                } else if (isAutonomousTrading) {
+                  autonomousStrategy = parsed;
                 } else {
                   aiStrategy = parsed;
                 }
@@ -135,7 +145,7 @@ export default function ConversationHistory() {
                 <div className="flex items-start gap-2">
                   <CollapsibleTrigger className="hover-elevate active-elevate-2 p-1 -m-1 transition-colors group shrink-0" data-testid={`toggle-conversation-${log.id}`}>
                     <div className="flex items-center gap-1.5">
-                      {isAutomatedMonitoring ? (
+                      {isAutomated ? (
                         <Activity className="h-3.5 w-3.5 text-muted-foreground" />
                       ) : (
                         <MessageSquare className="h-3.5 w-3.5 text-muted-foreground" />
@@ -148,7 +158,19 @@ export default function ConversationHistory() {
                       {new Date(log.timestamp).toLocaleString()}
                     </div>
                     <div className="text-xs font-medium select-text" data-testid="user-prompt">
-                      {isAutomatedMonitoring ? (
+                      {isAutonomousTrading ? (
+                        <div className="flex items-center gap-2">
+                          <span>Autonomous Trading</span>
+                          {autonomousStrategy && (
+                            <Badge variant={
+                              autonomousStrategy.marketRegime === 'bullish' ? 'default' :
+                              autonomousStrategy.marketRegime === 'bearish' ? 'destructive' : 'secondary'
+                            } className="text-xs h-4 px-1.5">
+                              {autonomousStrategy.marketRegime}
+                            </Badge>
+                          )}
+                        </div>
+                      ) : isAutomatedMonitoring ? (
                         <div className="flex items-center gap-2">
                           <span>Automated Position Monitoring</span>
                           {monitoringAnalysis && (
@@ -262,7 +284,87 @@ export default function ConversationHistory() {
                     </div>
                   )}
 
-                  {!aiStrategy && !monitoringAnalysis && log.aiResponse && (
+                  {autonomousStrategy && (
+                    <div className="flex items-start gap-2 pl-5 border-l-2 ml-1.5 mt-2 cursor-text select-text" style={{ borderColor: 'hsl(var(--muted-foreground))' }}>
+                      <Bot className="h-3.5 w-3.5 mt-0.5 text-primary shrink-0" />
+                      <div className="flex-1 space-y-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-semibold select-text">Mr. Fox</span>
+                          <Badge variant="secondary" className="text-xs h-4 px-1.5">
+                            {log.model}
+                          </Badge>
+                        </div>
+                        
+                        {autonomousStrategy.tradeThesis && (
+                          <div className="text-xs text-muted-foreground italic select-text">
+                            {autonomousStrategy.tradeThesis}
+                          </div>
+                        )}
+
+                        {autonomousStrategy.volumeAnalysis && (
+                          <div className="text-xs select-text">
+                            <span className="font-semibold">Volume: </span>
+                            <span className="text-muted-foreground">{autonomousStrategy.volumeAnalysis}</span>
+                          </div>
+                        )}
+
+                        {autonomousStrategy.execution && (
+                          <div className="text-xs select-text">
+                            <span className="font-semibold">Execution: </span>
+                            <span className={autonomousStrategy.execution.successful > 0 ? "text-green-600 dark:text-green-400" : "text-muted-foreground"}>
+                              {autonomousStrategy.execution.successful}/{autonomousStrategy.execution.totalActions} trades executed
+                            </span>
+                          </div>
+                        )}
+
+                        {autonomousStrategy.execution && autonomousStrategy.execution.results && autonomousStrategy.execution.results.length > 0 && (
+                          <div className="space-y-1">
+                            <div className="text-xs font-semibold select-text">Actions Taken:</div>
+                            {autonomousStrategy.execution.results.slice(0, 3).map((result: any, idx: number) => (
+                              <div key={idx} className="text-xs bg-muted/50 p-2 space-y-0.5 select-text">
+                                <div className="flex items-center justify-between">
+                                  <span className="font-mono select-text">
+                                    {result.action?.action?.toUpperCase()} {result.action?.symbol?.replace("-PERP", "")} {result.action?.side?.toUpperCase()}
+                                  </span>
+                                  <Badge variant={result.success ? "default" : "destructive"} className="text-xs h-4 px-1.5">
+                                    {result.success ? "success" : "failed"}
+                                  </Badge>
+                                </div>
+                                {result.action?.reasoning && (
+                                  <div className="text-muted-foreground italic select-text">{result.action.reasoning}</div>
+                                )}
+                                {result.error && (
+                                  <div className="text-red-600 dark:text-red-400 text-xs select-text">{result.error}</div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {autonomousStrategy.riskAssessment && (
+                          <div className="text-xs select-text">
+                            <span className="font-semibold">Risk: </span>
+                            <span className="text-muted-foreground">{autonomousStrategy.riskAssessment}</span>
+                          </div>
+                        )}
+
+                        {autonomousStrategy.expectedSharpeImpact && (
+                          <div className="text-xs select-text">
+                            <span className="font-semibold">Expected Impact: </span>
+                            <span className="text-muted-foreground">{autonomousStrategy.expectedSharpeImpact}</span>
+                          </div>
+                        )}
+
+                        {autonomousStrategy.noTradesReason && (
+                          <div className="text-xs text-muted-foreground italic select-text">
+                            {autonomousStrategy.noTradesReason}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {!aiStrategy && !monitoringAnalysis && !autonomousStrategy && log.aiResponse && (
                     <div className="flex items-start gap-2 pl-5 border-l-2 ml-1.5 mt-2 cursor-text select-text" style={{ borderColor: 'hsl(var(--muted-foreground))' }}>
                       <Bot className="h-3.5 w-3.5 mt-0.5 text-primary shrink-0" />
                       <div className="flex-1">
