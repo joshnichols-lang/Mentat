@@ -142,7 +142,7 @@ export default function SharpeRatioChart() {
                 <YAxis 
                   stroke="hsl(var(--muted-foreground))"
                   tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
-                  domain={['auto', 'auto']}
+                  domain={[(dataMin: number) => Math.min(0, dataMin), 'auto']}
                 />
                 <Tooltip
                   contentStyle={{
