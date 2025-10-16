@@ -181,12 +181,16 @@ async function executeOpenPosition(
     const result = await hyperliquid.placeOrder(orderParams);
 
     if (!result.success) {
+      console.error(`[Trade Executor] Order failed for ${action.symbol}:`, result.error);
+      console.error(`[Trade Executor] Order params:`, JSON.stringify(orderParams, null, 2));
       return {
         success: false,
         action,
         error: result.error || "Order placement failed",
       };
     }
+    
+    console.log(`[Trade Executor] Order succeeded for ${action.symbol}:`, result.response?.response?.data?.statuses?.[0])
 
     return {
       success: true,
@@ -258,6 +262,8 @@ async function executeClosePosition(
     const result = await hyperliquid.placeOrder(orderParams);
 
     if (!result.success) {
+      console.error(`[Trade Executor] Close order failed for ${action.symbol}:`, result.error);
+      console.error(`[Trade Executor] Close order params:`, JSON.stringify(orderParams, null, 2));
       return {
         success: false,
         action,
@@ -265,6 +271,8 @@ async function executeClosePosition(
       };
     }
 
+    console.log(`[Trade Executor] Close order succeeded for ${action.symbol}:`, result.response?.response?.data?.statuses?.[0])
+    
     return {
       success: true,
       action,
