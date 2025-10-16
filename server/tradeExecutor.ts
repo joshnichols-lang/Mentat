@@ -11,8 +11,8 @@ interface TradingAction {
   expectedEntry?: string;
   stopLoss?: string;
   takeProfit?: string;
-  triggerPrice?: string; // For stop_loss and take_profit actions
-  orderId?: number; // For cancel_order action
+  triggerPrice?: string;
+  orderId?: number;
 }
 
 interface ExecutionResult {
@@ -31,7 +31,13 @@ interface ExecutionSummary {
   results: ExecutionResult[];
 }
 
-function validateNumericInput(value: string | number, fieldName: string): number {
+// Helper function to validate and parse numeric inputs with explicit error messages
+function validateNumericInput(value: any, fieldName: string): number {
+  if (value === undefined || value === null || value === '') {
+    throw new Error(`${fieldName} is required`);
+  }
+  
+  // If string, parse to number
   const num = typeof value === 'string' ? parseFloat(value) : value;
   
   if (isNaN(num) || num <= 0) {
@@ -61,17 +67,35 @@ export async function executeTradeStrategy(
   let failCount = 0;
   let skipCount = 0;
 
+  // CRITICAL FIX: Group protective orders by symbol to prevent stop loss/take profit from canceling each other
+  // We need to process protective orders for each symbol together
+  const protectiveOrderGroups = new Map<string, TradingAction[]>();
+  const nonProtectiveActions: TradingAction[] = [];
+
+  // First pass: separate protective orders from other actions
   for (const action of actions) {
-    try {
-      // Normalize symbol to ensure it has -PERP suffix
-      console.log(`[Trade Executor] Processing action: ${action.action} ${action.symbol} ${action.side}`);
-      if (!action.symbol.endsWith("-PERP") && !action.symbol.endsWith("-SPOT")) {
-        console.log(`[Trade Executor] Normalizing symbol from "${action.symbol}" to "${action.symbol}-PERP"`);
-        action.symbol = `${action.symbol}-PERP`;
+    // Normalize symbol
+    if (!action.symbol.endsWith("-PERP") && !action.symbol.endsWith("-SPOT")) {
+      action.symbol = `${action.symbol}-PERP`;
+    }
+
+    if (action.action === "stop_loss" || action.action === "take_profit") {
+      if (!protectiveOrderGroups.has(action.symbol)) {
+        protectiveOrderGroups.set(action.symbol, []);
       }
+      protectiveOrderGroups.get(action.symbol)!.push(action);
+    } else {
+      nonProtectiveActions.push(action);
+    }
+  }
+
+  // Process non-protective actions first
+  for (const action of nonProtectiveActions) {
+    try {
+      console.log(`[Trade Executor] Processing action: ${action.action} ${action.symbol} ${action.side}`);
       console.log(`[Trade Executor] Final symbol: ${action.symbol}`);
       
-      // Skip "hold" actions - they don't require execution or validation
+      // Skip "hold" actions
       if (action.action === "hold") {
         skipCount++;
         results.push({
@@ -82,8 +106,7 @@ export async function executeTradeStrategy(
       }
       
       // Validate inputs for actions that will be executed
-      // Note: stop_loss, take_profit, and cancel_order have special validation rules
-      if (action.action !== "stop_loss" && action.action !== "take_profit" && action.action !== "cancel_order") {
+      if (action.action !== "cancel_order") {
         validateNumericInput(action.size, "size");
         validateLeverage(action.leverage);
       }
@@ -127,69 +150,6 @@ export async function executeTradeStrategy(
         continue;
       }
 
-      // Handle "stop_loss" and "take_profit" actions
-      if (action.action === "stop_loss" || action.action === "take_profit") {
-        // CRITICAL: Cancel ALL reduceOnly orders for this position before placing new ones
-        // NOTE: Hyperliquid's openOrders API doesn't include trigger metadata (tpsl field)
-        // so we cannot distinguish stop loss from take profit - we must cancel ALL protective orders
-        console.log(`[Trade Executor] Checking for existing protective orders for ${action.symbol}...`);
-        const openOrders = await hyperliquid.getOpenOrders();
-        console.log(`[Trade Executor] Total open orders found: ${openOrders?.length || 0}`);
-        
-        // Filter for reduceOnly orders on this symbol (these are protective orders)
-        const existingOrders = openOrders.filter((order: any) => {
-          const isSameSymbol = order.coin === action.symbol;
-          const isProtectiveOrder = order.reduceOnly === true;
-          return isSameSymbol && isProtectiveOrder;
-        });
-
-        console.log(`[Trade Executor] Found ${existingOrders.length} existing protective (reduceOnly) orders for ${action.symbol}`);
-
-        // Cancel all existing protective orders before placing new ones
-        let allCancellationsSucceeded = true;
-        let cancellationError = "";
-        
-        for (const existingOrder of existingOrders) {
-          console.log(`[Trade Executor] Auto-canceling existing protective order ${existingOrder.oid} for ${action.symbol} before placing new ${action.action}`);
-          const cancelResult = await hyperliquid.cancelOrder({
-            coin: action.symbol,
-            oid: existingOrder.oid,
-          });
-          
-          if (!cancelResult.success) {
-            console.error(`[Trade Executor] Failed to auto-cancel order ${existingOrder.oid}:`, cancelResult.error);
-            allCancellationsSucceeded = false;
-            cancellationError = cancelResult.error || "Unknown cancellation error";
-            break; // Stop trying to cancel if one fails
-          } else {
-            console.log(`[Trade Executor] Successfully cancelled order ${existingOrder.oid}`);
-          }
-        }
-
-        // Only place the new trigger if ALL cancellations succeeded
-        if (!allCancellationsSucceeded) {
-          console.error(`[Trade Executor] Skipping ${action.action} placement for ${action.symbol} - cancellation failed: ${cancellationError}`);
-          results.push({
-            success: false,
-            action,
-            error: `Cannot place ${action.action}: failed to cancel existing protective order - ${cancellationError}`,
-          });
-          failCount++;
-          skipCount++;
-          continue;
-        }
-
-        // Now place the new trigger order
-        const triggerResult = await executeTriggerOrder(hyperliquid, action);
-        results.push(triggerResult);
-        if (triggerResult.success) {
-          successCount++;
-        } else {
-          failCount++;
-        }
-        continue;
-      }
-
       // Handle "buy" and "sell" actions (opening new positions)
       const openResult = await executeOpenPosition(hyperliquid, action);
       results.push(openResult);
@@ -223,6 +183,86 @@ export async function executeTradeStrategy(
         action,
         error: error.message || "Unknown error",
       });
+    }
+  }
+
+  // Now process protective orders grouped by symbol
+  // This ensures both stop loss and take profit can coexist for the same position
+  for (const [symbol, protectiveActions] of Array.from(protectiveOrderGroups.entries())) {
+    try {
+      console.log(`[Trade Executor] Processing ${protectiveActions.length} protective orders for ${symbol}`);
+      
+      // Cancel ALL existing protective orders for this symbol ONCE
+      console.log(`[Trade Executor] Checking for existing protective orders for ${symbol}...`);
+      const openOrders = await hyperliquid.getOpenOrders();
+      console.log(`[Trade Executor] Total open orders found: ${openOrders?.length || 0}`);
+      
+      // Filter for reduceOnly orders on this symbol
+      const existingOrders = openOrders.filter((order: any) => {
+        const isSameSymbol = order.coin === symbol;
+        const isProtectiveOrder = order.reduceOnly === true;
+        return isSameSymbol && isProtectiveOrder;
+      });
+
+      console.log(`[Trade Executor] Found ${existingOrders.length} existing protective (reduceOnly) orders for ${symbol}`);
+
+      // Cancel all existing protective orders ONCE
+      let allCancellationsSucceeded = true;
+      let cancellationError = "";
+      
+      for (const existingOrder of existingOrders) {
+        console.log(`[Trade Executor] Auto-canceling existing protective order ${existingOrder.oid} for ${symbol}`);
+        const cancelResult = await hyperliquid.cancelOrder({
+          coin: symbol,
+          oid: existingOrder.oid,
+        });
+        
+        if (!cancelResult.success) {
+          console.error(`[Trade Executor] Failed to auto-cancel order ${existingOrder.oid}:`, cancelResult.error);
+          allCancellationsSucceeded = false;
+          cancellationError = cancelResult.error || "Unknown cancellation error";
+          break;
+        } else {
+          console.log(`[Trade Executor] Successfully cancelled order ${existingOrder.oid}`);
+        }
+      }
+
+      // If cancellation failed, skip ALL protective orders for this symbol
+      if (!allCancellationsSucceeded) {
+        console.error(`[Trade Executor] Skipping all protective orders for ${symbol} - cancellation failed: ${cancellationError}`);
+        for (const action of protectiveActions) {
+          results.push({
+            success: false,
+            action,
+            error: `Cannot place ${action.action}: failed to cancel existing protective order - ${cancellationError}`,
+          });
+          failCount++;
+          skipCount++;
+        }
+        continue;
+      }
+
+      // Now place ALL new protective orders for this symbol (both stop loss and take profit)
+      for (const action of protectiveActions) {
+        console.log(`[Trade Executor] Placing ${action.action} for ${symbol} at trigger price ${action.triggerPrice}`);
+        const triggerResult = await executeTriggerOrder(hyperliquid, action);
+        results.push(triggerResult);
+        if (triggerResult.success) {
+          successCount++;
+        } else {
+          failCount++;
+        }
+      }
+    } catch (error: any) {
+      console.error(`Failed to process protective orders for ${symbol}:`, error);
+      for (const action of protectiveActions) {
+        failCount++;
+        results.push({
+          success: false,
+          action,
+          error: error.message || "Unknown error",
+        });
+      }
     }
   }
 
@@ -284,111 +324,25 @@ async function executeOpenPosition(
         error: result.error || "Order placement failed",
       };
     }
-    
-    console.log(`[Trade Executor] Order succeeded for ${action.symbol}:`, result.response?.response?.data?.statuses?.[0])
 
+    // Extract executed price from result
+    let executedPrice = limitPrice.toString();
+    if (result.response?.status === "filled" && result.response?.filled?.avgPx) {
+      executedPrice = result.response.filled.avgPx;
+    }
+
+    console.log(`[Trade Executor] Order succeeded for ${action.symbol}:`, result.response);
+    
     return {
       success: true,
       action,
-      orderId: result.response?.response?.data?.statuses?.[0]?.resting?.oid?.toString(),
-      executedPrice: action.expectedEntry || "market",
+      executedPrice,
     };
   } catch (error: any) {
     return {
       success: false,
       action,
-      error: error.message || "Failed to execute order",
-    };
-  }
-}
-
-async function executeTriggerOrder(
-  hyperliquid: any,
-  action: TradingAction
-): Promise<ExecutionResult> {
-  try {
-    if (!action.triggerPrice) {
-      return {
-        success: false,
-        action,
-        error: "Trigger price is required for stop loss/take profit orders",
-      };
-    }
-
-    // Get current position to determine size and direction
-    const positions = await hyperliquid.getPositions();
-    
-    console.log(`[Trade Executor] Looking for position with symbol: ${action.symbol}`);
-    console.log(`[Trade Executor] Available positions:`, positions.map((p: any) => ({ coin: p.coin, size: p.szi })));
-    
-    // Match directly by symbol (positions already include -PERP suffix)
-    const position = positions.find((p: any) => p.coin === action.symbol);
-
-    if (!position) {
-      console.error(`[Trade Executor] No position found for ${action.symbol}. Available positions:`, positions.map((p: any) => p.coin));
-      return {
-        success: false,
-        action,
-        error: `No open position found for ${action.symbol}`,
-      };
-    }
-
-    const positionSize = parseFloat(position.szi);
-    
-    if (Math.abs(positionSize) === 0) {
-      return {
-        success: false,
-        action,
-        error: `Position for ${action.symbol} has zero size`,
-      };
-    }
-
-    const isLong = positionSize > 0;
-    const absSize = Math.abs(positionSize);
-
-    // Validate that the requested side matches the position direction
-    if ((action.side === "long" && !isLong) || (action.side === "short" && isLong)) {
-      return {
-        success: false,
-        action,
-        error: `Cannot place ${action.action} for ${action.side} position: current position is ${isLong ? 'long' : 'short'}`,
-      };
-    }
-
-    // Place trigger order (opposite side to close position)
-    const triggerParams = {
-      coin: action.symbol,
-      is_buy: !isLong, // Opposite direction to close
-      sz: absSize,
-      trigger_px: action.triggerPrice,
-      limit_px: action.triggerPrice, // Use trigger price as limit price for better fill certainty
-      tpsl: action.action === "take_profit" ? "tp" as const : "sl" as const,
-    };
-
-    const result = await hyperliquid.placeTriggerOrder(triggerParams);
-
-    if (!result.success) {
-      console.error(`[Trade Executor] Trigger order failed for ${action.symbol}:`, result.error);
-      console.error(`[Trade Executor] Trigger order params:`, JSON.stringify(triggerParams, null, 2));
-      return {
-        success: false,
-        action,
-        error: result.error || "Failed to place trigger order",
-      };
-    }
-
-    console.log(`[Trade Executor] Trigger order succeeded for ${action.symbol}:`, result.response?.response?.data?.statuses?.[0])
-
-    return {
-      success: true,
-      action,
-      orderId: result.response?.response?.data?.statuses?.[0]?.resting?.oid?.toString(),
-    };
-  } catch (error: any) {
-    return {
-      success: false,
-      action,
-      error: error.message || "Failed to place trigger order",
+      error: error.message || "Unknown error during order execution",
     };
   }
 }
@@ -398,17 +352,13 @@ async function executeClosePosition(
   action: TradingAction
 ): Promise<ExecutionResult> {
   try {
-    // Get current position to determine size and direction
+    // Get current positions to find the position to close
     const positions = await hyperliquid.getPositions();
     
-    console.log(`[Trade Executor] Looking for position with symbol: ${action.symbol}`);
-    console.log(`[Trade Executor] Available positions:`, positions.map((p: any) => ({ coin: p.coin, size: p.szi })));
-    
-    // Match directly by symbol (positions already include -PERP suffix)
+    // Find the position matching this symbol
     const position = positions.find((p: any) => p.coin === action.symbol);
-
+    
     if (!position) {
-      console.error(`[Trade Executor] No position found for ${action.symbol}. Available positions:`, positions.map((p: any) => p.coin));
       return {
         success: false,
         action,
@@ -416,66 +366,27 @@ async function executeClosePosition(
       };
     }
 
-    const positionSize = parseFloat(position.szi);
+    const positionSize = Math.abs(parseFloat(position.szi));
+    const isLong = parseFloat(position.szi) > 0;
     
-    // Validate position exists and has size
-    if (Math.abs(positionSize) === 0) {
-      return {
-        success: false,
-        action,
-        error: `Position for ${action.symbol} has zero size`,
-      };
-    }
-
-    const isLong = positionSize > 0;
-    const absSize = Math.abs(positionSize);
-
-    // Validate that the requested side matches the position direction
-    if ((action.side === "long" && !isLong) || (action.side === "short" && isLong)) {
-      return {
-        success: false,
-        action,
-        error: `Cannot close ${action.side} position: current position is ${isLong ? 'long' : 'short'}`,
-      };
-    }
-
-    // Close by placing opposite order with reduce_only flag
-    // Hyperliquid doesn't support pure market orders - use IOC limit order with extreme price
-    // IMPORTANT: Use CURRENT market price, not entry price, to ensure fills even when position has moved significantly
-    
-    // Get current market price for the symbol
-    const allMids = await hyperliquid.sdk.info.getAllMids();
-    const currentPrice = parseFloat(allMids[action.symbol] || position.entryPx);
-    
-    if (!allMids[action.symbol]) {
-      console.warn(`[Trade Executor] No current price found for ${action.symbol}, using entry price as fallback`);
-    }
-    
-    // Calculate IOC limit price from CURRENT market price with cushion in favorable direction
-    // For closing short (buy): use high price (10% above current) to guarantee fill
-    // For closing long (sell): use low price (10% below current) to guarantee fill
-    const rawMarketPrice = !isLong 
-      ? currentPrice * 1.1  // Buying back short: 10% above current market
-      : currentPrice * 0.9; // Selling long: 10% below current market
-    
-    // Round to whole number (0 decimals) to match Hyperliquid tick size
-    // BTC and most major pairs use tick size of 1.0 (whole dollars)
-    const marketPrice = Math.round(rawMarketPrice);
-    
-    const orderParams = {
-      coin: action.symbol,  // Use full symbol with -PERP suffix
-      is_buy: !isLong, // Opposite direction to close
-      sz: absSize,
-      limit_px: marketPrice, // Extreme price to guarantee immediate fill
-      order_type: { limit: { tif: "Ioc" } }, // Immediate-or-cancel for market-like execution
+    // Close position by placing an opposing order
+    // If long, we sell; if short, we buy
+    const closeOrder = {
+      coin: action.symbol,
+      is_buy: !isLong,  // Opposite of current position
+      sz: positionSize,
+      limit_px: isLong ? 0.01 : 999999999,  // Market-like execution with extreme prices
+      order_type: {
+        limit: {
+          tif: "Ioc", // Immediate-or-cancel for market-like execution
+        },
+      },
       reduce_only: true,
     };
 
-    const result = await hyperliquid.placeOrder(orderParams);
+    const result = await hyperliquid.placeOrder(closeOrder);
 
     if (!result.success) {
-      console.error(`[Trade Executor] Close order failed for ${action.symbol}:`, result.error);
-      console.error(`[Trade Executor] Close order params:`, JSON.stringify(orderParams, null, 2));
       return {
         success: false,
         action,
@@ -483,18 +394,88 @@ async function executeClosePosition(
       };
     }
 
-    console.log(`[Trade Executor] Close order succeeded for ${action.symbol}:`, result.response?.response?.data?.statuses?.[0])
+    console.log(`[Trade Executor] Closed position for ${action.symbol}`);
     
     return {
       success: true,
       action,
-      orderId: result.response?.response?.data?.statuses?.[0]?.resting?.oid?.toString(),
     };
   } catch (error: any) {
     return {
       success: false,
       action,
-      error: error.message || "Failed to close position",
+      error: error.message || "Unknown error during position close",
+    };
+  }
+}
+
+async function executeTriggerOrder(
+  hyperliquid: any,
+  action: TradingAction
+): Promise<ExecutionResult> {
+  try {
+    // Validate trigger price
+    const triggerPrice = validateNumericInput(action.triggerPrice, "triggerPrice");
+    
+    // Get current positions to determine position size
+    const positions = await hyperliquid.getPositions();
+    console.log(`[Trade Executor] Looking for position with symbol: ${action.symbol}`);
+    console.log(`[Trade Executor] Available positions:`, positions.map((p: any) => ({ coin: p.coin, size: parseFloat(p.szi) })));
+    
+    const position = positions.find((p: any) => p.coin === action.symbol);
+    
+    if (!position) {
+      return {
+        success: false,
+        action,
+        error: `No position found for ${action.symbol}. Available positions: ${positions.map((p: any) => p.coin).join(', ')}`,
+      };
+    }
+
+    const positionSize = Math.abs(parseFloat(position.szi));
+    const isLong = parseFloat(position.szi) > 0;
+    
+    // For stop loss: if long position, trigger sells when price goes down
+    // For take profit: if long position, trigger sells when price goes up
+    // The order itself is always the opposite side of the position (to close it)
+    
+    const triggerOrder = {
+      coin: action.symbol,
+      is_buy: !isLong,  // Opposite of position to close it
+      sz: positionSize,
+      limit_px: triggerPrice,  // The trigger price
+      order_type: {
+        trigger: {
+          triggerPx: triggerPrice.toString(),  // camelCase for SDK
+          isMarket: false,  // camelCase for SDK
+          tpsl: action.action === "stop_loss" ? "sl" : "tp",
+        },
+      },
+      reduce_only: true,  // This ensures it only closes the position
+    };
+
+    console.log(`[Trade Executor] Trigger order params:`, JSON.stringify(triggerOrder, null, 2));
+    const result = await hyperliquid.placeOrder(triggerOrder);
+
+    if (!result.success) {
+      return {
+        success: false,
+        action,
+        error: result.error || "Failed to place trigger order",
+      };
+    }
+
+    console.log(`[Trade Executor] Trigger order succeeded for ${action.symbol}:`, result.response);
+    
+    return {
+      success: true,
+      action,
+    };
+  } catch (error: any) {
+    return {
+      success: false,
+      action,
+      error: error.message || "Unknown error during trigger order execution",
     };
   }
 }
