@@ -39,7 +39,7 @@ export default function ConversationHistory() {
           {conversations.map((log) => {
             let aiStrategy = null;
             try {
-              if (log.aiResponse) {
+              if (log.aiResponse && log.aiResponse.trim()) {
                 aiStrategy = JSON.parse(log.aiResponse);
               }
             } catch (e) {
