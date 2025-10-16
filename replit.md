@@ -10,6 +10,19 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+### October 16, 2025 - Risk Management Levels in Positions
+- Added risk management section to positions display with three key levels:
+  - **Liquidation Price:** Extracted from Hyperliquid API's clearinghouse state (`liquidationPx` field)
+  - **Stop Loss:** Placeholder showing "Not set" (requires separate order tracking)
+  - **Take Profit:** Placeholder showing "Not set" (requires separate order tracking)
+- Updated Position interface and Hyperliquid client to extract liquidationPx from API
+- Implemented grayscale newspaper styling for risk management section:
+  - Liquidation price uses font-semibold for emphasis (no color)
+  - Border-muted creates subtle newspaper-style divider
+  - Spacing follows 4/6/8/12 newspaper rhythm (pt-4 mt-4)
+- Risk levels displayed in 3-column grid below main position details
+- Test IDs added for automated testing: `text-liquidation-{coin}`, `text-stoploss-{coin}`, `text-takeprofit-{coin}`
+
 ### October 16, 2025 - Conversation History Display
 - Added conversation history box showing all user prompts and Mr. Fox AI responses
 - Updated aiUsageLog schema with `aiResponse` field to persist AI trading strategies as JSON
