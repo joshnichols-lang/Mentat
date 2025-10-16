@@ -17,6 +17,18 @@ Preferred communication style: Simple, everyday language.
 - Added critical warning in prompt: size must be actual number, never placeholder text
 - Trade execution now works correctly for buy/sell actions
 
+### October 16, 2025 - Monitoring Results in Conversation History
+- Automated monitoring assessments now appear in conversation history
+- Distinguished from user prompts with Activity icon (vs MessageSquare icon)
+- Shows alert level badge (critical/warning/info) for quick assessment
+- Displays Mr. Fox's complete analysis when expanded:
+  - Portfolio health summary
+  - Position-by-position assessment with P&L percentages
+  - Market context analysis
+  - Actionable trading suggestions
+- All monitoring text is selectable and copyable
+- Updates every 5 minutes when positions are open
+
 ### October 16, 2025 - Conversation History Text Selection
 - Made all conversation history text selectable and copyable
 - Separated chevron toggle from text content to prevent interaction conflicts

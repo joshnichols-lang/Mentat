@@ -5,7 +5,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { MessageSquare, Bot, ChevronDown, Search } from "lucide-react";
+import { MessageSquare, Bot, ChevronDown, Search, Activity } from "lucide-react";
 import type { AiUsageLog } from "@shared/schema";
 
 export default function ConversationHistory() {
@@ -100,10 +100,18 @@ export default function ConversationHistory() {
       <ScrollArea className="h-[500px]">
         <div className="space-y-3 pr-3" data-testid="conversation-history">
           {conversations.map((log) => {
+            const isAutomatedMonitoring = log.userPrompt === "[AUTOMATED MONITORING]";
             let aiStrategy = null;
+            let monitoringAnalysis = null;
+            
             try {
               if (log.aiResponse && log.aiResponse.trim()) {
-                aiStrategy = JSON.parse(log.aiResponse);
+                const parsed = JSON.parse(log.aiResponse);
+                if (isAutomatedMonitoring) {
+                  monitoringAnalysis = parsed;
+                } else {
+                  aiStrategy = parsed;
+                }
               }
             } catch (e) {
               console.error("Failed to parse AI response:", e);
@@ -114,7 +122,11 @@ export default function ConversationHistory() {
                 <div className="flex items-start gap-2">
                   <CollapsibleTrigger className="hover-elevate active-elevate-2 p-1 -m-1 transition-colors group shrink-0" data-testid={`toggle-conversation-${log.id}`}>
                     <div className="flex items-center gap-1.5">
-                      <MessageSquare className="h-3.5 w-3.5 text-muted-foreground" />
+                      {isAutomatedMonitoring ? (
+                        <Activity className="h-3.5 w-3.5 text-muted-foreground" />
+                      ) : (
+                        <MessageSquare className="h-3.5 w-3.5 text-muted-foreground" />
+                      )}
                       <ChevronDown className="h-3 w-3 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
                     </div>
                   </CollapsibleTrigger>
@@ -123,7 +135,21 @@ export default function ConversationHistory() {
                       {new Date(log.timestamp).toLocaleString()}
                     </div>
                     <div className="text-xs font-medium select-text" data-testid="user-prompt">
-                      {log.userPrompt}
+                      {isAutomatedMonitoring ? (
+                        <div className="flex items-center gap-2">
+                          <span>Automated Position Monitoring</span>
+                          {monitoringAnalysis && (
+                            <Badge variant={
+                              monitoringAnalysis.alertLevel === 'critical' ? 'destructive' :
+                              monitoringAnalysis.alertLevel === 'warning' ? 'default' : 'secondary'
+                            } className="text-xs h-4 px-1.5">
+                              {monitoringAnalysis.alertLevel}
+                            </Badge>
+                          )}
+                        </div>
+                      ) : (
+                        log.userPrompt
+                      )}
                     </div>
                   </div>
                 </div>
@@ -174,7 +200,56 @@ export default function ConversationHistory() {
                     </div>
                   )}
 
-                  {!aiStrategy && log.aiResponse && (
+                  {monitoringAnalysis && (
+                    <div className="flex items-start gap-2 pl-5 border-l-2 ml-1.5 mt-2 cursor-text select-text" style={{ borderColor: 'hsl(var(--muted-foreground))' }}>
+                      <Bot className="h-3.5 w-3.5 mt-0.5 text-primary shrink-0" />
+                      <div className="flex-1 space-y-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-semibold select-text">Mr. Fox</span>
+                          <Badge variant="secondary" className="text-xs h-4 px-1.5">
+                            {log.model}
+                          </Badge>
+                        </div>
+                        
+                        {monitoringAnalysis.summary && (
+                          <div className="text-xs text-muted-foreground italic select-text">
+                            {monitoringAnalysis.summary}
+                          </div>
+                        )}
+
+                        {monitoringAnalysis.positionAnalysis && monitoringAnalysis.positionAnalysis.length > 0 && (
+                          <div className="space-y-1">
+                            <div className="text-xs font-semibold select-text">Position Analysis:</div>
+                            {monitoringAnalysis.positionAnalysis.map((pos: any, idx: number) => (
+                              <div key={idx} className="text-xs bg-muted/50 p-2 space-y-0.5 select-text">
+                                <div className="font-mono select-text">
+                                  {pos.symbol} - P&L: {pos.pnlPercent?.toFixed(2)}%
+                                </div>
+                                <div className="text-muted-foreground select-text">{pos.assessment}</div>
+                                <div className="text-muted-foreground italic select-text">{pos.recommendation}</div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {monitoringAnalysis.marketContext && (
+                          <div className="text-xs select-text">
+                            <span className="font-semibold">Market: </span>
+                            <span className="text-muted-foreground">{monitoringAnalysis.marketContext}</span>
+                          </div>
+                        )}
+
+                        {monitoringAnalysis.suggestions && monitoringAnalysis.suggestions.length > 0 && (
+                          <div className="text-xs select-text">
+                            <span className="font-semibold">Suggestions: </span>
+                            <span className="text-muted-foreground">{monitoringAnalysis.suggestions.join(' • ')}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {!aiStrategy && !monitoringAnalysis && log.aiResponse && (
                     <div className="flex items-start gap-2 pl-5 border-l-2 ml-1.5 mt-2 cursor-text select-text" style={{ borderColor: 'hsl(var(--muted-foreground))' }}>
                       <Bot className="h-3.5 w-3.5 mt-0.5 text-primary shrink-0" />
                       <div className="flex-1">
