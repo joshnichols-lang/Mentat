@@ -20,6 +20,7 @@ export interface Position {
   entryPx: string;
   positionValue: string;
   unrealizedPnl: string;
+  liquidationPx: string | null;
   leverage: {
     type: string;
     value: number;
@@ -181,6 +182,7 @@ export class HyperliquidClient {
         entryPx: pos.position.entryPx,
         positionValue: pos.position.positionValue,
         unrealizedPnl: pos.position.unrealizedPnl,
+        liquidationPx: pos.position.liquidationPx || null,
         leverage: pos.position.leverage,
       }));
     } catch (error) {
