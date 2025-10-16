@@ -160,20 +160,29 @@ Focus on:
 }
 
 let monitoringInterval: NodeJS.Timeout | null = null;
+let currentIntervalMinutes: number = 5; // Default to 5 minutes
 
-export function startMonitoring(): void {
+export function startMonitoring(intervalMinutes: number = 5): void {
   if (monitoringInterval) {
     console.log("[Monitoring] Already running");
     return;
   }
 
-  console.log("[Monitoring] Starting automated monitoring (every 5 minutes)");
+  if (intervalMinutes === 0) {
+    console.log("[Monitoring] Monitoring is disabled");
+    return;
+  }
+
+  currentIntervalMinutes = intervalMinutes;
+  console.log(`[Monitoring] Starting automated monitoring (every ${intervalMinutes} minutes)`);
   
+  // Run immediately on start
   analyzePositions();
   
+  // Set up recurring interval
   monitoringInterval = setInterval(() => {
     analyzePositions();
-  }, 5 * 60 * 1000);
+  }, intervalMinutes * 60 * 1000);
 }
 
 export function stopMonitoring(): void {
@@ -182,4 +191,24 @@ export function stopMonitoring(): void {
     monitoringInterval = null;
     console.log("[Monitoring] Stopped automated monitoring");
   }
+}
+
+export function restartMonitoring(intervalMinutes: number): void {
+  console.log(`[Monitoring] Restarting with interval: ${intervalMinutes} minutes`);
+  
+  // Stop current monitoring
+  stopMonitoring();
+  
+  // Start with new interval (or stay stopped if 0)
+  if (intervalMinutes > 0) {
+    startMonitoring(intervalMinutes);
+  } else {
+    console.log("[Monitoring] Monitoring disabled");
+  }
+  
+  currentIntervalMinutes = intervalMinutes;
+}
+
+export function getCurrentInterval(): number {
+  return currentIntervalMinutes;
 }
