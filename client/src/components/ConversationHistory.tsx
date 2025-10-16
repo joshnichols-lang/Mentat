@@ -1,21 +1,54 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { MessageSquare, Bot, ChevronDown } from "lucide-react";
+import { MessageSquare, Bot, ChevronDown, Search } from "lucide-react";
 import type { AiUsageLog } from "@shared/schema";
 
 export default function ConversationHistory() {
   const [isPanelOpen, setIsPanelOpen] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
   
   const { data: usageLogs, isLoading } = useQuery<{ success: boolean; logs: AiUsageLog[] }>({
     queryKey: ["/api/ai/usage"],
     refetchInterval: 5000,
   });
 
-  const conversations = usageLogs?.logs?.filter(log => log.success === 1 && log.userPrompt) || [];
+  const allConversations = usageLogs?.logs?.filter(log => log.success === 1 && log.userPrompt) || [];
+  
+  const conversations = useMemo(() => {
+    if (!searchQuery.trim()) return allConversations;
+    
+    const query = searchQuery.toLowerCase();
+    return allConversations.filter(log => {
+      // Search in user prompt
+      if (log.userPrompt?.toLowerCase().includes(query)) return true;
+      
+      // Search in AI response
+      if (log.aiResponse?.toLowerCase().includes(query)) return true;
+      
+      // Search in parsed strategy
+      try {
+        if (log.aiResponse) {
+          const strategy = JSON.parse(log.aiResponse);
+          if (strategy.interpretation?.toLowerCase().includes(query)) return true;
+          if (strategy.riskManagement?.toLowerCase().includes(query)) return true;
+          if (strategy.actions?.some((action: any) => 
+            action.symbol?.toLowerCase().includes(query) ||
+            action.action?.toLowerCase().includes(query) ||
+            action.reasoning?.toLowerCase().includes(query)
+          )) return true;
+        }
+      } catch (e) {
+        // Ignore parse errors
+      }
+      
+      return false;
+    });
+  }, [allConversations, searchQuery]);
 
   if (isLoading) {
     return (
@@ -26,7 +59,7 @@ export default function ConversationHistory() {
     );
   }
 
-  if (conversations.length === 0) {
+  if (allConversations.length === 0) {
     return (
       <Card className="p-4">
         <h2 className="text-sm font-semibold mb-3">CONVERSATION HISTORY</h2>
@@ -46,6 +79,24 @@ export default function ConversationHistory() {
         </CollapsibleTrigger>
         
         <CollapsibleContent className="pt-3">
+          <div className="relative mb-3">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="text"
+              placeholder="Search conversations..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 text-xs h-8"
+              data-testid="input-search-conversations"
+            />
+          </div>
+          
+          {conversations.length === 0 && searchQuery.trim() && (
+            <div className="text-xs text-muted-foreground text-center py-8">
+              No conversations found matching "{searchQuery}"
+            </div>
+          )}
+          
       <ScrollArea className="h-[500px]">
         <div className="space-y-3 pr-3" data-testid="conversation-history">
           {conversations.map((log) => {

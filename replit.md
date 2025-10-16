@@ -23,6 +23,17 @@ Preferred communication style: Simple, everyday language.
 - Risk levels displayed in 3-column grid below main position details
 - Test IDs added for automated testing: `text-liquidation-{coin}`, `text-stoploss-{coin}`, `text-takeprofit-{coin}`
 
+### October 16, 2025 - Searchable Conversation History
+- Added search functionality to Conversation History panel
+- Comprehensive search across all conversation content:
+  - User prompts
+  - AI responses and interpretations
+  - Trading action symbols, types, and reasoning
+  - Risk management details
+- Real-time filtering as user types (case-insensitive)
+- Shows "No conversations found matching..." when no results
+- Search input includes magnifying glass icon for visual clarity
+
 ### October 16, 2025 - Collapsible Panels
 - Made Conversation History and Trades panels collapsible with chevron icons
 - Click panel headers to expand/collapse content
