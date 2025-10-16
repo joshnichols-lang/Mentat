@@ -8,6 +8,20 @@
 
 Preferred communication style: Simple, everyday language.
 
+## Recent Changes
+
+### October 16, 2025 - Configurable Automated Monitoring Frequency
+- **Added monitoring frequency control** - Users can now adjust how often automated position analysis runs
+- **Frequency options**: Disabled, 1 minute, 5 minutes (default), 30 minutes, 1 hour
+- **Implementation details:**
+  - Dropdown selector in AI Usage panel with localStorage persistence
+  - Auto-sync with backend on component mount (100ms delay for server readiness)
+  - Proper error handling with rollback on failure
+  - Backend endpoint `/api/monitoring/frequency` validates frequency (0-1440 minutes)
+  - Monitoring service dynamically restarts with new interval
+  - Zero minutes disables automated monitoring completely
+- **Error resilience**: Optimistic updates with rollback on server errors, graceful handling of sync failures
+
 ## System Architecture
 
 ### Frontend Architecture
