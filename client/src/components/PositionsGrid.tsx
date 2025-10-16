@@ -18,6 +18,7 @@ interface HyperliquidPosition {
   positionValue: string;
   unrealizedPnl: string;
   returnOnEquity?: string;
+  liquidationPx: string | null;
   leverage: {
     type: string;
     value: number;
@@ -79,6 +80,7 @@ export default function PositionsGrid() {
           const pnl = parseFloat(position.unrealizedPnl || "0");
           const roe = parseFloat(position.returnOnEquity || "0");
           const displaySymbol = position.coin.replace("-PERP", "");
+          const liquidationPrice = position.liquidationPx ? parseFloat(position.liquidationPx) : null;
           
           // Find matching market data for this position
           const market = marketData?.marketData.find(m => m.symbol === position.coin);
@@ -117,25 +119,48 @@ export default function PositionsGrid() {
                     </Badge>
                   </div>
                   
-                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                    <div>
-                      <div className="text-xs text-muted-foreground">Size</div>
-                      <div className="font-mono text-xs font-medium">{absSize.toFixed(4)} {displaySymbol}</div>
+                  <div className="space-y-2">
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                      <div>
+                        <div className="text-xs text-muted-foreground">Size</div>
+                        <div className="font-mono text-xs font-medium">{absSize.toFixed(4)} {displaySymbol}</div>
+                      </div>
+                      <div>
+                        <div className="text-xs text-muted-foreground">Entry</div>
+                        <div className="font-mono text-xs font-medium">${entryPrice.toLocaleString()}</div>
+                      </div>
+                      <div>
+                        <div className="text-xs text-muted-foreground">Value</div>
+                        <div className="font-mono text-xs font-medium">${parseFloat(position.positionValue).toFixed(2)}</div>
+                      </div>
+                      <div>
+                        <div className="text-xs text-muted-foreground">P&L</div>
+                        <div className={`font-mono text-xs font-semibold ${
+                          pnl >= 0 ? "text-long" : "text-short"
+                        }`} data-testid={`text-pnl-${position.coin}`}>
+                          ${pnl >= 0 ? "+" : ""}{pnl.toFixed(2)} ({pnl >= 0 ? "+" : ""}{(roe * 100).toFixed(2)}%)
+                        </div>
+                      </div>
                     </div>
-                    <div>
-                      <div className="text-xs text-muted-foreground">Entry</div>
-                      <div className="font-mono text-xs font-medium">${entryPrice.toLocaleString()}</div>
-                    </div>
-                    <div>
-                      <div className="text-xs text-muted-foreground">Value</div>
-                      <div className="font-mono text-xs font-medium">${parseFloat(position.positionValue).toFixed(2)}</div>
-                    </div>
-                    <div>
-                      <div className="text-xs text-muted-foreground">P&L</div>
-                      <div className={`font-mono text-xs font-semibold ${
-                        pnl >= 0 ? "text-long" : "text-short"
-                      }`} data-testid={`text-pnl-${position.coin}`}>
-                        ${pnl >= 0 ? "+" : ""}{pnl.toFixed(2)} ({pnl >= 0 ? "+" : ""}{(roe * 100).toFixed(2)}%)
+                    
+                    <div className="grid grid-cols-3 gap-3 pt-4 mt-4 border-t border-muted">
+                      <div>
+                        <div className="text-xs text-muted-foreground">Liquidation</div>
+                        <div className="font-mono text-xs font-semibold" data-testid={`text-liquidation-${position.coin}`}>
+                          {liquidationPrice ? `$${liquidationPrice.toLocaleString()}` : "N/A"}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-xs text-muted-foreground">Stop Loss</div>
+                        <div className="font-mono text-xs text-muted-foreground" data-testid={`text-stoploss-${position.coin}`}>
+                          Not set
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-xs text-muted-foreground">Take Profit</div>
+                        <div className="font-mono text-xs text-muted-foreground" data-testid={`text-takeprofit-${position.coin}`}>
+                          Not set
+                        </div>
                       </div>
                     </div>
                   </div>
