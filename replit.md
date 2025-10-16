@@ -10,6 +10,10 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+### October 16, 2025 - Removed Trade History Panel
+- **Trade History panel removed** - Streamlined dashboard by removing the past trades dropdown
+- **Simplified layout** - Focus on active positions and real-time data
+
 ### October 16, 2025 - Fixed Sortino and Calmar Ratio Display & Reverted to Separate Charts
 - **Fixed zero-value display bug** - Sortino and Calmar ratios now correctly display non-zero values
 - **Root cause**: Current values were derived from time-filtered data instead of all data, causing zeros when filter excluded valid snapshots

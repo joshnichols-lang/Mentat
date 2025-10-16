@@ -3,7 +3,6 @@ import AIPromptPanel from "@/components/AIPromptPanel";
 import MarketOverview from "@/components/MarketOverview";
 import PositionsGrid from "@/components/PositionsGrid";
 import PerformanceMetrics from "@/components/PerformanceMetrics";
-import TradeHistory from "@/components/TradeHistory";
 import PortfolioPerformanceChart from "@/components/PortfolioPerformanceChart";
 import SharpeRatioChart from "@/components/SharpeRatioChart";
 import { AIUsageTracker } from "@/components/AIUsageTracker";
@@ -43,9 +42,6 @@ export default function Dashboard() {
 
               {/* Performance Metrics */}
               <PerformanceMetrics />
-
-              {/* Trade History */}
-              <TradeHistory />
             </div>
 
             {/* Sidebar */}
