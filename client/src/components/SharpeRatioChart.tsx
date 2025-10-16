@@ -47,7 +47,7 @@ export default function SharpeRatioChart() {
                 borderRadius: "6px",
                 color: "hsl(var(--foreground))",
               }}
-              formatter={(value: number) => [value.toFixed(2), "Sharpe Ratio"]}
+              formatter={(value: any) => [Number(value || 0).toFixed(2), "Sharpe Ratio"]}
             />
             <ReferenceLine 
               y={1} 
