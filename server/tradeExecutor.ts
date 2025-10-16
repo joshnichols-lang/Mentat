@@ -163,33 +163,33 @@ async function executeOpenPosition(
 
     let orderParams: any;
     
-    // Use market order if no expected entry price is specified
+    // Hyperliquid doesn't support pure market orders
+    // All orders must use limit orders with IOC or GTC
     if (!action.expectedEntry) {
-      orderParams = {
-        coin: action.symbol,  // Use full symbol with -PERP suffix
-        is_buy: isBuy,
-        sz: size,
-        limit_px: 0, // Required but ignored for market orders
-        order_type: { market: {} },
-        reduce_only: false,
-      };
-    } else {
-      // Use limit order with specified entry price
-      const limitPrice = validateNumericInput(action.expectedEntry, "expectedEntry");
-      
-      orderParams = {
-        coin: action.symbol,  // Use full symbol with -PERP suffix
-        is_buy: isBuy,
-        sz: size,
-        limit_px: limitPrice,
-        order_type: {
-          limit: {
-            tif: "Gtc", // Good-til-cancel for limit orders
-          },
-        },
-        reduce_only: false,
+      // If no expected entry, we need current market price
+      // For now, require expectedEntry to be provided by AI
+      return {
+        success: false,
+        action,
+        error: "expectedEntry price is required - Hyperliquid does not support pure market orders",
       };
     }
+    
+    // Use limit order with specified entry price
+    const limitPrice = validateNumericInput(action.expectedEntry, "expectedEntry");
+    
+    orderParams = {
+      coin: action.symbol,  // Use full symbol with -PERP suffix
+      is_buy: isBuy,
+      sz: size,
+      limit_px: limitPrice,
+      order_type: {
+        limit: {
+          tif: "Gtc", // Good-til-cancel for limit orders
+        },
+      },
+      reduce_only: false,
+    };
 
     const result = await hyperliquid.placeOrder(orderParams);
 
@@ -357,13 +357,35 @@ async function executeClosePosition(
       };
     }
 
-    // Close by placing opposite order with reduce_only flag and market order type
+    // Close by placing opposite order with reduce_only flag
+    // Hyperliquid doesn't support pure market orders - use IOC limit order with extreme price
+    // IMPORTANT: Use CURRENT market price, not entry price, to ensure fills even when position has moved significantly
+    
+    // Get current market price for the symbol
+    const allMids = await hyperliquid.sdk.info.getAllMids();
+    const currentPrice = parseFloat(allMids[action.symbol] || position.entryPx);
+    
+    if (!allMids[action.symbol]) {
+      console.warn(`[Trade Executor] No current price found for ${action.symbol}, using entry price as fallback`);
+    }
+    
+    // Calculate IOC limit price from CURRENT market price with cushion in favorable direction
+    // For closing short (buy): use high price (10% above current) to guarantee fill
+    // For closing long (sell): use low price (10% below current) to guarantee fill
+    const rawMarketPrice = !isLong 
+      ? currentPrice * 1.1  // Buying back short: 10% above current market
+      : currentPrice * 0.9; // Selling long: 10% below current market
+    
+    // Round to 1 decimal place to avoid floating point precision issues
+    // Hyperliquid's floatToWire rejects numbers like 121726.00000000001
+    const marketPrice = Math.round(rawMarketPrice * 10) / 10;
+    
     const orderParams = {
       coin: action.symbol,  // Use full symbol with -PERP suffix
       is_buy: !isLong, // Opposite direction to close
       sz: absSize,
-      limit_px: 0, // Required but ignored for market orders
-      order_type: { market: {} },
+      limit_px: marketPrice, // Extreme price to guarantee immediate fill
+      order_type: { limit: { tif: "Ioc" } }, // Immediate-or-cancel for market-like execution
       reduce_only: true,
     };
 

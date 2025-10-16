@@ -10,6 +10,19 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+### October 16, 2025 - Fixed Close Position Orders (Hyperliquid API Compatibility)
+- **Fixed "invalid order type" error when closing positions**
+- **Root cause**: Hyperliquid API does not support pure market orders - all orders must be limit orders
+- **Solution**: Changed from `{ market: {} }` to `{ limit: { tif: "Ioc" } }` for market-like execution
+- IOC (Immediate-or-Cancel) limit orders with extreme prices provide instant execution
+- **Critical fix**: Use CURRENT market price (not entry price) for IOC limit calculation
+  - For closing shorts (buy back): limit price = current market * 1.1 (10% above current)
+  - For closing longs (sell): limit price = current market * 0.9 (10% below current)
+  - This ensures fills even when position has moved >10% against entry
+- **Fixed floating point rounding error**: Round limit prices to 1 decimal place to avoid SDK rejection of values like 121726.00000000001
+- Updated AI prompt to require expectedEntry for all buy/sell actions (Hyperliquid doesn't support market orders)
+- All close position functionality now working correctly with proper Hyperliquid-compatible order types
+
 ### October 16, 2025 - Stop Loss/Take Profit Order Implementation
 - **Implemented Hyperliquid trigger orders for stop loss and take profit functionality**
 - Added `stop_loss` and `take_profit` action types to TradingAction interface

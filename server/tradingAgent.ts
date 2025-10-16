@@ -144,10 +144,12 @@ JSON format:
 
 CRITICAL RULES:
 1. The 'size' field must ALWAYS contain an actual numeric value (like "0.5" or "10"), NEVER the word "calculated" or any placeholder text.
-2. To place stop loss orders, use action: "stop_loss" with triggerPrice set to the stop loss price
-3. To place take profit orders, use action: "take_profit" with triggerPrice set to the take profit price
-4. DO NOT use "hold" actions with stopLoss/takeProfit fields - those fields are ignored. Instead, generate separate stop_loss and take_profit ORDER actions.
-5. When user asks to set stop losses or take profits, generate actual stop_loss/take_profit actions for each position.
+2. For "buy" and "sell" actions, you MUST provide the "expectedEntry" field with the exact limit price. Hyperliquid does not support market orders - all orders must specify a limit price.
+3. To place stop loss orders, use action: "stop_loss" with triggerPrice set to the stop loss price
+4. To place take profit orders, use action: "take_profit" with triggerPrice set to the take profit price
+5. DO NOT use "hold" actions with stopLoss/takeProfit fields - those fields are ignored. Instead, generate separate stop_loss and take_profit ORDER actions.
+6. When user asks to set stop losses or take profits, generate actual stop_loss/take_profit actions for each position.
+7. For "close" actions, the expectedEntry field is optional (system will use IOC limit orders to close at market price).
 
 Output real-time executed trades with professional precision and risk-adjusted optimization.`
       },
