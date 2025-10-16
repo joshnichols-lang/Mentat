@@ -129,6 +129,57 @@ export async function executeTradeStrategy(
 
       // Handle "stop_loss" and "take_profit" actions
       if (action.action === "stop_loss" || action.action === "take_profit") {
+        // CRITICAL: Cancel ALL reduceOnly orders for this position before placing new ones
+        // NOTE: Hyperliquid's openOrders API doesn't include trigger metadata (tpsl field)
+        // so we cannot distinguish stop loss from take profit - we must cancel ALL protective orders
+        console.log(`[Trade Executor] Checking for existing protective orders for ${action.symbol}...`);
+        const openOrders = await hyperliquid.getOpenOrders();
+        console.log(`[Trade Executor] Total open orders found: ${openOrders?.length || 0}`);
+        
+        // Filter for reduceOnly orders on this symbol (these are protective orders)
+        const existingOrders = openOrders.filter((order: any) => {
+          const isSameSymbol = order.coin === action.symbol;
+          const isProtectiveOrder = order.reduceOnly === true;
+          return isSameSymbol && isProtectiveOrder;
+        });
+
+        console.log(`[Trade Executor] Found ${existingOrders.length} existing protective (reduceOnly) orders for ${action.symbol}`);
+
+        // Cancel all existing protective orders before placing new ones
+        let allCancellationsSucceeded = true;
+        let cancellationError = "";
+        
+        for (const existingOrder of existingOrders) {
+          console.log(`[Trade Executor] Auto-canceling existing protective order ${existingOrder.oid} for ${action.symbol} before placing new ${action.action}`);
+          const cancelResult = await hyperliquid.cancelOrder({
+            coin: action.symbol,
+            oid: existingOrder.oid,
+          });
+          
+          if (!cancelResult.success) {
+            console.error(`[Trade Executor] Failed to auto-cancel order ${existingOrder.oid}:`, cancelResult.error);
+            allCancellationsSucceeded = false;
+            cancellationError = cancelResult.error || "Unknown cancellation error";
+            break; // Stop trying to cancel if one fails
+          } else {
+            console.log(`[Trade Executor] Successfully cancelled order ${existingOrder.oid}`);
+          }
+        }
+
+        // Only place the new trigger if ALL cancellations succeeded
+        if (!allCancellationsSucceeded) {
+          console.error(`[Trade Executor] Skipping ${action.action} placement for ${action.symbol} - cancellation failed: ${cancellationError}`);
+          results.push({
+            success: false,
+            action,
+            error: `Cannot place ${action.action}: failed to cancel existing protective order - ${cancellationError}`,
+          });
+          failCount++;
+          skipCount++;
+          continue;
+        }
+
+        // Now place the new trigger order
         const triggerResult = await executeTriggerOrder(hyperliquid, action);
         results.push(triggerResult);
         if (triggerResult.success) {

@@ -10,7 +10,7 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
-### October 16, 2025 - Fully Autonomous Trading Engine
+### October 16, 2025 - Fully Autonomous Trading Engine with Order Management
 - **Transformed from monitoring to autonomous trading** - Mr. Fox now trades automatically based on market analysis
 - **Autonomous capabilities:**
   - Develops trade theses based on market regime analysis and volume profiles
@@ -19,9 +19,17 @@ Preferred communication style: Simple, everyday language.
   - Executes trades automatically with proper position sizing and risk management
   - **Learns from user prompts** - Analyzes historical prompts to understand trading style and preferences
   - Sets stop losses and take profits based on technical analysis
+  - **Order Management System** - Prevents duplicate protective orders:
+    - Fetches existing open orders from Hyperliquid before each protective order placement
+    - Displays existing orders to AI for context-aware decision making
+    - **Auto-cancel logic**: Cancels ALL reduceOnly orders for a position before placing new stop loss/take profit
+    - Ensures maximum ONE stop loss and ONE take profit per position (never duplicates)
+    - **Short-circuit on failure**: Skips protective order placement if any cancellation fails
+    - **Hyperliquid API adaptation**: Filters by `reduceOnly: true` flag since openOrders endpoint lacks trigger metadata
+    - AI can also issue explicit cancel_order commands for non-protective orders
 - **Configuration**: Frequency control (Disabled/1min/5min/30min/1hr) via AI Usage panel dropdown
 - **Results displayed**: Conversation history shows trade thesis, volume analysis, market regime, execution results, and risk assessment
-- **Error handling**: Graceful handling of insufficient margin, minimum order sizes, and exchange errors
+- **Error handling**: Graceful handling of insufficient margin, minimum order sizes, exchange errors, order conflicts, and cancellation failures
 
 ### October 16, 2025 - Configurable Automated Monitoring Frequency
 - **Added monitoring frequency control** - Users can now adjust how often autonomous trading runs

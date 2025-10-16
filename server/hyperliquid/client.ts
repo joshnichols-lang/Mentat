@@ -202,27 +202,56 @@ export class HyperliquidClient {
 
   async getOpenOrders(address?: string): Promise<any[]> {
     try {
-      const state = await this.getUserState(address);
-      if (!state || !state.assetPositions) {
+      const userAddress = address || this.config.walletAddress;
+      if (!userAddress) {
+        console.error("[Hyperliquid] No wallet address provided for getOpenOrders");
+        return [];
+      }
+
+      console.log(`[Hyperliquid] Fetching open orders for ${userAddress}`);
+
+      // Use the direct API endpoint to get open orders
+      const apiUrl = this.config.testnet 
+        ? "https://api.hyperliquid-testnet.xyz/info"
+        : "https://api.hyperliquid.xyz/info";
+        
+      const response = await fetch(apiUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "openOrders",
+          user: userAddress
+        })
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`[Hyperliquid] Failed to fetch open orders: ${response.status} - ${errorText}`);
         return [];
       }
       
-      // Collect all open orders from all asset positions
-      const allOrders: any[] = [];
-      for (const assetPos of state.assetPositions) {
-        if (assetPos.position?.openOrders) {
-          for (const order of assetPos.position.openOrders) {
-            allOrders.push({
-              ...order,
-              coin: assetPos.position.coin,
-            });
-          }
-        }
+      const rawOrders = await response.json();
+      console.log(`[Hyperliquid] Raw open orders response:`, JSON.stringify(rawOrders).substring(0, 200));
+      
+      if (!Array.isArray(rawOrders)) {
+        console.error(`[Hyperliquid] Expected array, got:`, typeof rawOrders);
+        return [];
       }
       
-      return allOrders;
+      // Hyperliquid API returns direct order objects (not wrapped)
+      // NOTE: The openOrders endpoint does NOT include trigger metadata (tpsl, isTrigger, triggerPx)
+      // Trigger orders (stop loss/take profit) appear as regular limit orders with reduceOnly: true
+      // This means we CANNOT distinguish between stop loss and take profit from the API response
+      const normalizedOrders = rawOrders.map((order: any) => ({
+        ...order,
+        // Add -PERP suffix if not present for consistency with position matching
+        coin: order.coin.includes('-') ? order.coin : `${order.coin}-PERP`,
+      }));
+      
+      console.log(`[Hyperliquid] Fetched and normalized ${normalizedOrders.length} open orders`);
+      return normalizedOrders;
     } catch (error) {
-      console.error("Failed to fetch open orders:", error);
+      console.error("[Hyperliquid] Failed to fetch open orders:", error);
       return [];
     }
   }
