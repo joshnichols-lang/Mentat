@@ -1,9 +1,11 @@
-import { X } from "lucide-react";
+import { X, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { queryClient, apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import {
   HoverCard,
   HoverCardContent,
@@ -38,6 +40,8 @@ interface Order {
 }
 
 export default function PositionsGrid() {
+  const { toast } = useToast();
+  
   const { data, isLoading } = useQuery<{ positions: HyperliquidPosition[] }>({
     queryKey: ["/api/hyperliquid/positions"],
     refetchInterval: 3000, // Refresh every 3 seconds
@@ -55,6 +59,66 @@ export default function PositionsGrid() {
   const positions = data?.positions || [];
   const orders = ordersData?.orders || [];
   
+  // Close single position mutation
+  const closePositionMutation = useMutation({
+    mutationFn: async (coin: string) => {
+      const response = await apiRequest("POST", "/api/hyperliquid/close-position", { coin });
+      return response.json();
+    },
+    onSuccess: (_, coin) => {
+      toast({
+        title: "Position Closed",
+        description: `Successfully closed position for ${coin.replace("-PERP", "")}`,
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/hyperliquid/positions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/hyperliquid/open-orders"] });
+    },
+    onError: (error: any, coin) => {
+      toast({
+        title: "Close Failed",
+        description: error.message || `Failed to close position for ${coin.replace("-PERP", "")}`,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Close all positions mutation
+  const closeAllMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/hyperliquid/close-all", {});
+      return response.json();
+    },
+    onSuccess: (data: any) => {
+      const { closedPositions, cancelledOrders, errors } = data.results;
+      
+      let description = "";
+      if (closedPositions.length > 0) {
+        description += `Closed ${closedPositions.length} position(s). `;
+      }
+      if (cancelledOrders.length > 0) {
+        description += `Cancelled ${cancelledOrders.length} order(s). `;
+      }
+      if (errors.length > 0) {
+        description += `${errors.length} error(s) occurred.`;
+      }
+      
+      toast({
+        title: "Close All Completed",
+        description: description || "No positions or orders to close",
+      });
+      
+      queryClient.invalidateQueries({ queryKey: ["/api/hyperliquid/positions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/hyperliquid/open-orders"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Close All Failed",
+        description: error.message || "Failed to close all positions",
+        variant: "destructive",
+      });
+    },
+  });
+  
   // Helper to find stop loss and take profit for a position
   const getPositionOrders = (coin: string) => {
     const positionOrders = orders.filter(order => order.coin === coin && order.reduceOnly);
@@ -64,8 +128,11 @@ export default function PositionsGrid() {
   };
 
   const handleClose = (coin: string) => {
-    console.log("Close position:", coin);
-    // TODO: Implement position closing
+    closePositionMutation.mutate(coin);
+  };
+
+  const handleCloseAll = () => {
+    closeAllMutation.mutate();
   };
 
   if (isLoading) {
@@ -96,7 +163,19 @@ export default function PositionsGrid() {
 
   return (
     <div>
-      <h2 className="mb-3 text-sm font-semibold">Positions</h2>
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <h2 className="text-sm font-semibold">Positions</h2>
+        <Button
+          variant="destructive"
+          size="sm"
+          onClick={handleCloseAll}
+          disabled={closeAllMutation.isPending}
+          data-testid="button-close-all"
+        >
+          <XCircle className="mr-1.5 h-3.5 w-3.5" />
+          {closeAllMutation.isPending ? "Closing..." : "Close All"}
+        </Button>
+      </div>
       <div className="space-y-2">
         {positions.map((position) => {
           const size = parseFloat(position.szi);

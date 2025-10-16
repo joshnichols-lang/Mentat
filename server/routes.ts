@@ -473,6 +473,130 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Close position on Hyperliquid
+  app.post("/api/hyperliquid/close-position", async (req, res) => {
+    try {
+      const schema = z.object({
+        coin: z.string(),
+      });
+
+      const { coin } = schema.parse(req.body);
+      
+      // Get current positions to find the position to close
+      const positions = await hyperliquid.getPositions();
+      const position = positions.find((p: any) => p.coin === coin);
+      
+      if (!position) {
+        return res.status(404).json({
+          success: false,
+          error: `No open position found for ${coin}`,
+        });
+      }
+
+      const positionSize = Math.abs(parseFloat(position.szi));
+      const isLong = parseFloat(position.szi) > 0;
+      
+      // Close position by placing an opposing order
+      const closeOrder = {
+        coin,
+        is_buy: !isLong,
+        sz: positionSize,
+        limit_px: isLong ? 0.01 : 999999999,
+        order_type: {
+          limit: {
+            tif: "Ioc" as const,
+          },
+        },
+        reduce_only: true,
+      };
+
+      const result = await hyperliquid.placeOrder(closeOrder);
+
+      if (result.success) {
+        res.json({ success: true, response: result.response });
+      } else {
+        res.status(400).json({ success: false, error: result.error });
+      }
+    } catch (error: any) {
+      console.error("Error closing position:", error);
+      res.status(500).json({ success: false, error: "Failed to close position" });
+    }
+  });
+
+  // Close all positions and cancel all orders
+  app.post("/api/hyperliquid/close-all", async (req, res) => {
+    try {
+      const results = {
+        closedPositions: [] as string[],
+        cancelledOrders: [] as number[],
+        errors: [] as string[],
+      };
+
+      // Get all current positions
+      const positions = await hyperliquid.getPositions();
+      
+      // Get all open orders
+      const orders = await hyperliquid.getOpenOrders();
+
+      // Close all positions
+      for (const position of positions) {
+        try {
+          const positionSize = Math.abs(parseFloat(position.szi));
+          const isLong = parseFloat(position.szi) > 0;
+          
+          const closeOrder = {
+            coin: position.coin,
+            is_buy: !isLong,
+            sz: positionSize,
+            limit_px: isLong ? 0.01 : 999999999,
+            order_type: {
+              limit: {
+                tif: "Ioc" as const,
+              },
+            },
+            reduce_only: true,
+          };
+
+          const result = await hyperliquid.placeOrder(closeOrder);
+          
+          if (result.success) {
+            results.closedPositions.push(position.coin);
+          } else {
+            results.errors.push(`Failed to close ${position.coin}: ${result.error}`);
+          }
+        } catch (error: any) {
+          results.errors.push(`Error closing ${position.coin}: ${error.message}`);
+        }
+      }
+
+      // Cancel all open orders
+      for (const order of orders) {
+        try {
+          const result = await hyperliquid.cancelOrder({
+            coin: order.coin,
+            oid: order.oid,
+          });
+          
+          if (result.success) {
+            results.cancelledOrders.push(order.oid);
+          } else {
+            results.errors.push(`Failed to cancel order ${order.oid}: ${result.error}`);
+          }
+        } catch (error: any) {
+          results.errors.push(`Error canceling order ${order.oid}: ${error.message}`);
+        }
+      }
+
+      res.json({
+        success: true,
+        results,
+      });
+    } catch (error: any) {
+      console.error("Error closing all positions:", error);
+      res.status(500).json({ success: false, error: "Failed to close all positions" });
+    }
+  });
+
   // Update leverage on Hyperliquid
   app.post("/api/hyperliquid/leverage", async (req, res) => {
     try {

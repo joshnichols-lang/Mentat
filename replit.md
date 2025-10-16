@@ -10,6 +10,17 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+### October 16, 2025 - Position Close Controls
+- **Individual close buttons** - Each position now has a close button (X icon) to instantly market close that position
+- **Close All button** - Added "Close All" button at top of Positions panel to close all positions and cancel all orders at once
+- **Implementation details:**
+  - Backend endpoints: `/api/hyperliquid/close-position` (single) and `/api/hyperliquid/close-all` (all)
+  - Market closes via IOC (immediate-or-cancel) limit orders with extreme prices
+  - Close All cancels all open orders then closes all positions
+  - Toast notifications for success/failure with detailed results
+  - Loading states during operations ("Closing..." button text)
+  - Query cache invalidation to refresh UI immediately
+
 ### October 16, 2025 - Removed Quick Trade Panel
 - **Quick Trade panel removed** - Streamlined dashboard by removing redundant quick trade functionality
 - **AI-first approach** - All trading now done through AI prompt panel for consistency
