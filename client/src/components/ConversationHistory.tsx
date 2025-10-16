@@ -111,53 +111,53 @@ export default function ConversationHistory() {
 
             return (
               <Collapsible key={log.id} className="space-y-2" data-testid={`conversation-${log.id}`}>
-                <CollapsibleTrigger className="w-full hover-elevate active-elevate-2 p-2 -m-2 transition-colors group" data-testid={`toggle-conversation-${log.id}`}>
-                  <div className="flex items-start gap-2">
+                <div className="flex items-start gap-2">
+                  <CollapsibleTrigger className="hover-elevate active-elevate-2 p-1 -m-1 transition-colors group shrink-0" data-testid={`toggle-conversation-${log.id}`}>
                     <div className="flex items-center gap-1.5">
-                      <MessageSquare className="h-3.5 w-3.5 mt-0.5 text-muted-foreground" />
+                      <MessageSquare className="h-3.5 w-3.5 text-muted-foreground" />
                       <ChevronDown className="h-3 w-3 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
                     </div>
-                    <div className="flex-1 space-y-1 text-left">
-                      <div className="text-xs text-muted-foreground">
-                        {new Date(log.timestamp).toLocaleString()}
-                      </div>
-                      <div className="text-xs font-medium" data-testid="user-prompt">
-                        {log.userPrompt}
-                      </div>
+                  </CollapsibleTrigger>
+                  <div className="flex-1 space-y-1 cursor-text select-text">
+                    <div className="text-xs text-muted-foreground select-text">
+                      {new Date(log.timestamp).toLocaleString()}
+                    </div>
+                    <div className="text-xs font-medium select-text" data-testid="user-prompt">
+                      {log.userPrompt}
                     </div>
                   </div>
-                </CollapsibleTrigger>
+                </div>
 
                 <CollapsibleContent>
                   {aiStrategy && (
-                    <div className="flex items-start gap-2 pl-5 border-l-2 ml-1.5 mt-2" style={{ borderColor: 'hsl(var(--muted-foreground))' }}>
-                      <Bot className="h-3.5 w-3.5 mt-0.5 text-primary" />
+                    <div className="flex items-start gap-2 pl-5 border-l-2 ml-1.5 mt-2 cursor-text select-text" style={{ borderColor: 'hsl(var(--muted-foreground))' }}>
+                      <Bot className="h-3.5 w-3.5 mt-0.5 text-primary shrink-0" />
                       <div className="flex-1 space-y-2">
                         <div className="flex items-center gap-2">
-                          <span className="text-xs font-semibold">Mr. Fox</span>
+                          <span className="text-xs font-semibold select-text">Mr. Fox</span>
                           <Badge variant="secondary" className="text-xs h-4 px-1.5">
                             {log.model}
                           </Badge>
                         </div>
                         
                         {aiStrategy.interpretation && (
-                          <div className="text-xs text-muted-foreground italic" data-testid="ai-interpretation">
+                          <div className="text-xs text-muted-foreground italic select-text" data-testid="ai-interpretation">
                             {aiStrategy.interpretation}
                           </div>
                         )}
 
                         {aiStrategy.actions && aiStrategy.actions.length > 0 && (
                           <div className="space-y-1">
-                            <div className="text-xs font-semibold">Actions:</div>
+                            <div className="text-xs font-semibold select-text">Actions:</div>
                             {aiStrategy.actions.map((action: any, idx: number) => (
-                              <div key={idx} className="text-xs bg-muted/50 p-2 space-y-0.5" data-testid={`action-${idx}`}>
-                                <div className="font-mono">
+                              <div key={idx} className="text-xs bg-muted/50 p-2 space-y-0.5 select-text" data-testid={`action-${idx}`}>
+                                <div className="font-mono select-text">
                                   {action.action?.toUpperCase()} {action.symbol?.replace("-PERP", "")} {action.side?.toUpperCase()}
                                   {action.leverage && ` ${action.leverage}x`}
                                 </div>
-                                <div className="text-muted-foreground">Size: {action.size}</div>
+                                <div className="text-muted-foreground select-text">Size: {action.size}</div>
                                 {action.reasoning && (
-                                  <div className="text-muted-foreground italic">{action.reasoning}</div>
+                                  <div className="text-muted-foreground italic select-text">{action.reasoning}</div>
                                 )}
                               </div>
                             ))}
@@ -165,7 +165,7 @@ export default function ConversationHistory() {
                         )}
 
                         {aiStrategy.riskManagement && (
-                          <div className="text-xs">
+                          <div className="text-xs select-text">
                             <span className="font-semibold">Risk: </span>
                             <span className="text-muted-foreground">{aiStrategy.riskManagement}</span>
                           </div>
@@ -175,11 +175,11 @@ export default function ConversationHistory() {
                   )}
 
                   {!aiStrategy && log.aiResponse && (
-                    <div className="flex items-start gap-2 pl-5 border-l-2 ml-1.5 mt-2" style={{ borderColor: 'hsl(var(--muted-foreground))' }}>
-                      <Bot className="h-3.5 w-3.5 mt-0.5 text-primary" />
+                    <div className="flex items-start gap-2 pl-5 border-l-2 ml-1.5 mt-2 cursor-text select-text" style={{ borderColor: 'hsl(var(--muted-foreground))' }}>
+                      <Bot className="h-3.5 w-3.5 mt-0.5 text-primary shrink-0" />
                       <div className="flex-1">
-                        <div className="text-xs font-semibold mb-1">Mr. Fox</div>
-                        <div className="text-xs text-muted-foreground">
+                        <div className="text-xs font-semibold mb-1 select-text">Mr. Fox</div>
+                        <div className="text-xs text-muted-foreground select-text">
                           {log.aiResponse.substring(0, 200)}{log.aiResponse.length > 200 ? '...' : ''}
                         </div>
                       </div>
@@ -188,7 +188,7 @@ export default function ConversationHistory() {
 
                   {!aiStrategy && !log.aiResponse && (
                     <div className="flex items-start gap-2 pl-5 border-l-2 ml-1.5 mt-2" style={{ borderColor: 'hsl(var(--muted-foreground))' }}>
-                      <Bot className="h-3.5 w-3.5 mt-0.5 text-muted-foreground" />
+                      <Bot className="h-3.5 w-3.5 mt-0.5 text-muted-foreground shrink-0" />
                       <div className="flex-1">
                         <div className="text-xs text-muted-foreground italic">No response recorded</div>
                       </div>
