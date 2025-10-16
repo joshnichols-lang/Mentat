@@ -7,6 +7,7 @@ import { executeTradeStrategy } from "./tradeExecutor";
 import { createPortfolioSnapshot } from "./portfolioSnapshotService";
 import { restartMonitoring } from "./monitoringService";
 import { setupAuth, isAuthenticated } from "./replitAuth";
+import { storeUserCredentials, getUserPrivateKey, deleteUserCredentials, hasUserCredentials } from "./credentialService";
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -648,6 +649,77 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error updating Hyperliquid leverage:", error);
       res.status(500).json({ success: false, error: "Failed to update leverage" });
+    }
+  });
+
+  // Credential Management Routes
+  
+  // Add/update Hyperliquid API credentials for current user
+  app.post("/api/credentials", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const userId = user.claims.sub;
+      
+      const schema = z.object({
+        privateKey: z.string().min(1, "Private key is required"),
+      });
+
+      const { privateKey } = schema.parse(req.body);
+      
+      await storeUserCredentials(userId, privateKey);
+      
+      res.json({ 
+        success: true, 
+        message: "Credentials stored successfully" 
+      });
+    } catch (error: any) {
+      console.error("Error storing credentials:", error);
+      res.status(500).json({ 
+        success: false, 
+        error: error.message || "Failed to store credentials" 
+      });
+    }
+  });
+
+  // Check if user has credentials configured
+  app.get("/api/credentials/status", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const userId = user.claims.sub;
+      
+      const hasCredentials = await hasUserCredentials(userId);
+      
+      res.json({ 
+        success: true, 
+        hasCredentials,
+      });
+    } catch (error: any) {
+      console.error("Error checking credential status:", error);
+      res.status(500).json({ 
+        success: false, 
+        error: "Failed to check credential status" 
+      });
+    }
+  });
+
+  // Delete user credentials
+  app.delete("/api/credentials", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const userId = user.claims.sub;
+      
+      await deleteUserCredentials(userId);
+      
+      res.json({ 
+        success: true, 
+        message: "Credentials deleted successfully" 
+      });
+    } catch (error: any) {
+      console.error("Error deleting credentials:", error);
+      res.status(500).json({ 
+        success: false, 
+        error: "Failed to delete credentials" 
+      });
     }
   });
 
