@@ -133,7 +133,7 @@ export default function AIPromptPanel() {
               placeholder="E.g., 'Maximize Sharpe ratio by trading BTC and ETH perpetuals'"
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
-              className="min-h-[70px] resize-none pr-12 text-sm"
+              className="min-h-[120px] resize-none pr-12 text-sm"
               data-testid="input-ai-prompt"
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
