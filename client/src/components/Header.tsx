@@ -1,9 +1,10 @@
-import { Activity, Wallet } from "lucide-react";
+import { Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import ThemeToggle from "./ThemeToggle";
 import AgentModeToggle from "./AgentModeToggle";
 import { useQuery } from "@tanstack/react-query";
+import logoUrl from "@assets/generated-image_1760664087548.png";
 
 export default function Header() {
   const { data: userState } = useQuery<any>({
@@ -18,7 +19,7 @@ export default function Header() {
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
-            <Activity className="h-5 w-5 text-primary" />
+            <img src={logoUrl} alt="1fox logo" className="h-6 w-6" />
             <h1 className="text-lg font-bold">1fox</h1>
           </div>
           <Badge variant="outline" className="gap-1.5 text-xs" data-testid="status-connection">

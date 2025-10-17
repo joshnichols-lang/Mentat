@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { AlertCircle, Brain, TrendingUp, CheckCircle2, Loader2 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
+import logoUrl from "@assets/generated-image_1760664087548.png";
 
 type OnboardingStep = "ai_provider" | "exchange" | "complete";
 
@@ -157,15 +158,18 @@ export default function Onboarding() {
     <div className="flex items-center justify-center min-h-screen bg-background p-4">
       <Card className="w-full max-w-2xl">
         <CardHeader>
-          <div className="flex items-center gap-2 mb-2">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <img src={logoUrl} alt="1fox logo" className="h-8 w-8" />
+              <div className="text-sm font-mono text-muted-foreground" data-testid="text-step-indicator">
+                Step {currentStep === "ai_provider" ? "1" : "2"} of 2
+              </div>
+            </div>
             {currentStep === "ai_provider" ? (
               <Brain className="h-5 w-5 text-primary" data-testid="icon-brain" />
             ) : (
               <TrendingUp className="h-5 w-5 text-primary" data-testid="icon-trending" />
             )}
-            <div className="text-sm font-mono text-muted-foreground" data-testid="text-step-indicator">
-              Step {currentStep === "ai_provider" ? "1" : "2"} of 2
-            </div>
           </div>
           <CardTitle className="text-2xl font-mono" data-testid="text-step-title">
             {currentStep === "ai_provider" ? "Connect AI Provider" : "Connect Trading Exchange"}

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import logoUrl from "@assets/generated-image_1760664087548.png";
 
 const loginSchema = z.object({
   username: z.string().min(3, "Username must be at least 3 characters"),
@@ -64,9 +65,12 @@ export default function AuthPage() {
       <div className="w-full lg:w-1/2 flex items-center justify-center p-8">
         <Card className="w-full max-w-md">
           <CardHeader>
-            <CardTitle className="text-2xl font-mono">
-              {isLogin ? "Welcome Back to 1fox" : "Join 1fox"}
-            </CardTitle>
+            <div className="flex items-center gap-3 mb-2">
+              <img src={logoUrl} alt="1fox logo" className="h-10 w-10" />
+              <CardTitle className="text-2xl font-mono">
+                {isLogin ? "Welcome Back to 1fox" : "Join 1fox"}
+              </CardTitle>
+            </div>
             <CardDescription className="font-mono">
               {isLogin
                 ? "Sign in to access your AI trading terminal"
