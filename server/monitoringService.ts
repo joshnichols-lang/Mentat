@@ -232,8 +232,14 @@ AUTONOMOUS TRADING DIRECTIVE:
 1. Develop a clear trade thesis based on market regime, volume analysis, and technical indicators
 2. Identify optimal entry opportunities aligned with the current regime
 3. For each trade, specify exact entry prices, position sizes, leverage, stop losses, and take profits
-4. Manage existing positions: adjust stops, take profits, or close positions based on risk/reward
-5. **ASSESS EXISTING ORDERS WITH QUANTITATIVE CRITERIA**: For each existing stop loss and take profit order, evaluate against these thresholds:
+4. **MANDATORY RISK MANAGEMENT (CRITICAL)**:
+   - EVERY position MUST have BOTH a stop loss AND a take profit order at ALL times
+   - NO EXCEPTIONS - even if you think the position is "safe", protective orders are REQUIRED
+   - When opening a new position, IMMEDIATELY place both stop loss and take profit in the same action set
+   - If a position lacks either protective order, place it IMMEDIATELY in the next cycle
+   - Position levels based on: user's risk tolerance (from prompt history) + current market analysis + liquidation safety
+5. Manage existing positions: adjust stops, take profits, or close positions based on risk/reward
+6. **ASSESS EXISTING ORDERS WITH QUANTITATIVE CRITERIA**: For each existing stop loss and take profit order, evaluate against these thresholds:
    - KEEP the order if it meets ALL of these criteria:
      * Price has NOT moved more than 5% since order placement (check current price vs trigger price)
      * Risk/reward ratio is still >= 2:1 (measure distance to TP vs SL from current price)
@@ -245,10 +251,10 @@ AUTONOMOUS TRADING DIRECTIVE:
      * Regime change requires different exit strategy
      * Order is >3 ATR away (too far to be relevant)
    - **Default action: KEEP** - If uncertain or close to thresholds, maintain existing orders
-6. **CANCEL ONLY WHEN NECESSARY**: If an order must be adjusted, cancel it FIRST with cancel_order action, THEN place the new order
-7. **ONE ORDER PER TYPE**: Each position should have ONLY ONE stop loss and ONE take profit order maximum
-8. Learn from user's historical prompts to align with their trading style and preferences
-9. Focus on maximizing Sharpe ratio through optimal sizing and risk management
+7. **CANCEL ONLY WHEN NECESSARY**: If an order must be adjusted, cancel it FIRST with cancel_order action, THEN place the new order
+8. **ONE ORDER PER TYPE**: Each position should have ONLY ONE stop loss and ONE take profit order maximum
+9. Learn from user's historical prompts to align with their trading style and preferences
+10. Focus on maximizing Sharpe ratio through optimal sizing and risk management
 
 Respond in JSON format:
 {
@@ -273,33 +279,38 @@ Respond in JSON format:
 }
 
 CRITICAL ORDER MANAGEMENT RULES:
-1. **Before placing new stop_loss or take_profit**: Check if one already exists for that position
-2. **Evaluate existing orders with QUANTITATIVE METRICS**: For each existing order, calculate and check:
+1. **VERIFY FULL RISK MANAGEMENT COVERAGE**: 
+   - Before doing anything else, check if EVERY position has BOTH stop loss AND take profit orders
+   - If ANY position is missing either order, place it IMMEDIATELY - this is the highest priority action
+   - Example: If position has only stop loss, place take profit FIRST before considering any other actions
+2. **Before placing new stop_loss or take_profit**: Check if one already exists for that position
+3. **Evaluate existing orders with QUANTITATIVE METRICS**: For each existing order, calculate and check:
    - Price movement %: (current_price - trigger_price) / trigger_price * 100
    - Current risk/reward ratio: distance_to_TP / distance_to_SL
    - Regime consistency: has bullish/bearish designation changed?
    - ATR distance: is order within 3x Average True Range?
-   - If ALL metrics pass thresholds (see directive #5), KEEP the order (don't include any action for it)
-3. **If an order exists but needs adjustment**: 
+   - If ALL metrics pass thresholds (see directive #6), KEEP the order (don't include any action for it)
+4. **If an order exists but needs adjustment**: 
    - FIRST: Include a cancel_order action with the existing orderId
    - In reasoning, CITE SPECIFIC METRICS: "Price moved 8.2% (>5% threshold), R:R dropped to 1.3:1 (<2:1 threshold), requiring replacement"
    - THEN: Include a new stop_loss or take_profit action with updated triggerPrice and full reasoning
-4. **If an order exists and passes all thresholds**: Do NOT include any actions for it - let it remain as-is
-5. **Each position limits**: Maximum ONE stop loss + ONE take profit order
-6. **LIQUIDATION PRICE SAFETY (CRITICAL)**: 
+5. **If an order exists and passes all thresholds**: Do NOT include any actions for it - let it remain as-is
+6. **Each position limits**: Exactly ONE stop loss + ONE take profit order (BOTH REQUIRED, not optional)
+7. **LIQUIDATION PRICE SAFETY (CRITICAL)**: 
    - For LONG positions: Stop loss MUST be placed ABOVE liquidation price with at least 2% buffer (e.g., if liq=$3700, minimum stop=$3774)
    - For SHORT positions: Stop loss MUST be placed BELOW liquidation price with at least 2% buffer (e.g., if liq=$4300, maximum stop=$4214)
    - NEVER set stops at or past liquidation levels - this causes instant liquidation without controlled exit
    - Stop losses use MARKET execution for guaranteed fills when triggered
    - Take profits use LIMIT execution for better prices
-7. ALL numeric values (size, expectedEntry, triggerPrice, orderId) must be actual numbers as strings, NEVER placeholders
-8. For buy/sell actions, expectedEntry is REQUIRED (Hyperliquid uses limit orders only)
-9. For stop_loss/take_profit, triggerPrice is REQUIRED
-10. For cancel_order, orderId is REQUIRED and reasoning MUST cite which threshold(s) failed with actual calculated values
-11. Close actions must have matching side to the existing position
-12. Focus on high-probability setups aligned with market regime
-13. If no good opportunities exist AND all existing orders are still valid, actions can be empty array
-14. **DISCIPLINED DECISION-MAKING**: Never cancel orders based on "feels" - only based on concrete threshold violations with cited metrics`;
+8. ALL numeric values (size, expectedEntry, triggerPrice, orderId) must be actual numbers as strings, NEVER placeholders
+9. For buy/sell actions, expectedEntry is REQUIRED (Hyperliquid uses limit orders only)
+10. For stop_loss/take_profit, triggerPrice is REQUIRED
+11. For cancel_order, orderId is REQUIRED and reasoning MUST cite which threshold(s) failed with actual calculated values
+12. Close actions must have matching side to the existing position
+13. Focus on high-probability setups aligned with market regime
+14. **NEW POSITIONS**: When opening a position via buy/sell action, ALWAYS include BOTH stop_loss AND take_profit actions in the SAME response
+15. If no good opportunities exist AND all existing positions have valid protective orders, actions can be empty array
+16. **DISCIPLINED DECISION-MAKING**: Never cancel orders based on "feels" - only based on concrete threshold violations with cited metrics`;
 
     const aiResponse = await makeAIRequest(userId, {
       messages: [
