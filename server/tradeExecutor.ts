@@ -461,6 +461,24 @@ async function executeTriggerOrder(
       const minSafeStopLong = Math.ceil(liquidationPrice * 1.03 * 100) / 100; // 3% buffer, rounded up
       const maxSafeStopShort = Math.floor(liquidationPrice * 0.97 * 100) / 100; // 3% buffer, rounded down
       
+      // DIRECTION CHECK: Stop must be in correct direction relative to current price
+      if (isLong && triggerPrice >= currentPrice * 0.995) {
+        console.warn(`[Trade Executor] DIRECTION VIOLATION: Stop loss ${triggerPrice} is not below current price ${currentPrice} for long position`);
+        return {
+          success: false,
+          action,
+          error: `Stop loss must be below current price $${currentPrice.toFixed(2)} for long positions. Your stop: $${triggerPrice}`,
+        };
+      } else if (!isLong && triggerPrice <= currentPrice * 1.005) {
+        console.warn(`[Trade Executor] DIRECTION VIOLATION: Stop loss ${triggerPrice} is not above current price ${currentPrice} for short position`);
+        return {
+          success: false,
+          action,
+          error: `Stop loss must be above current price $${currentPrice.toFixed(2)} for short positions. Your stop: $${triggerPrice}`,
+        };
+      }
+      
+      // LIQUIDATION SAFETY CHECK
       if (isLong && triggerPrice < minSafeStopLong) {
         console.warn(`[Trade Executor] SAFETY VIOLATION: Stop loss ${triggerPrice} is below 3% buffer for long position. Liquidation: ${liquidationPrice}, Minimum safe: ${minSafeStopLong}`);
         return {
