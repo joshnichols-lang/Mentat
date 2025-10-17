@@ -1,4 +1,4 @@
-import { Wallet, LogOut, UserCheck, Settings, Users, ChevronDown } from "lucide-react";
+import { Wallet, LogOut, UserCheck, Settings, Users, ChevronDown, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -9,14 +9,17 @@ import {
 } from "@/components/ui/dropdown-menu";
 import ThemeToggle from "./ThemeToggle";
 import AgentModeToggle from "./AgentModeToggle";
+import { ContactAdmin } from "./ContactAdmin";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
+import { useState } from "react";
 import logoUrl from "@assets/generated-image-removebg-preview_1760665535887.png";
 
 export default function Header() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
+  const [contactDialogOpen, setContactDialogOpen] = useState(false);
   
   const { data: userState } = useQuery<any>({
     queryKey: ['/api/hyperliquid/user-state'],
@@ -88,6 +91,14 @@ export default function Header() {
           <Button 
             variant="ghost" 
             size="icon" 
+            onClick={() => setContactDialogOpen(true)}
+            data-testid="button-contact-admin"
+          >
+            <MessageSquare className="h-4 w-4" />
+          </Button>
+          <Button 
+            variant="ghost" 
+            size="icon" 
             onClick={() => setLocation("/settings")}
             data-testid="button-settings"
           >
@@ -104,6 +115,7 @@ export default function Header() {
           <ThemeToggle />
         </div>
       </div>
+      <ContactAdmin open={contactDialogOpen} onOpenChange={setContactDialogOpen} />
     </header>
   );
 }
