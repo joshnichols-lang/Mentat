@@ -70,7 +70,7 @@ export function PriceVolumeChart({ coin }: PriceVolumeChartProps) {
   // Fetch volume profile data
   const { data: volumeData } = useQuery<{ success: boolean; profile: VolumeProfile }>({
     queryKey: ["/api/indicators/volume-profile", coin],
-    refetchInterval: 2000,
+    refetchInterval: 10000, // Reduced from 2s to 10s to avoid rate limiting
   });
 
   // Calculate time in ms for different intervals

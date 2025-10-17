@@ -44,7 +44,7 @@ export default function PositionsGrid() {
   
   const { data, isLoading } = useQuery<{ positions: HyperliquidPosition[] }>({
     queryKey: ["/api/hyperliquid/positions"],
-    refetchInterval: 15000, // Refresh every 15 seconds
+    refetchInterval: 30000, // Increased from 15s to 30s to reduce API load
   });
 
   const { data: marketData } = useQuery<{ marketData: Array<{ symbol: string; price: string; change24h: string; }> }>({
@@ -53,7 +53,7 @@ export default function PositionsGrid() {
 
   const { data: ordersData } = useQuery<{ orders: Order[] }>({
     queryKey: ["/api/hyperliquid/open-orders"],
-    refetchInterval: 15000, // Refresh every 15 seconds
+    refetchInterval: 30000, // Increased from 15s to 30s to reduce API load
   });
 
   const positions = data?.positions || [];

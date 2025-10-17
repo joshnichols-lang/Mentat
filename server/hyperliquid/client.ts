@@ -434,6 +434,9 @@ export class HyperliquidClient {
 // Singleton instance (for backward compatibility, e.g., monitoring service)
 let hyperliquidClient: HyperliquidClient | null = null;
 
+// Cache for user-specific Hyperliquid clients to avoid recreating instances
+const userClientCache = new Map<string, HyperliquidClient>();
+
 export function initHyperliquidClient(): HyperliquidClient {
   if (!hyperliquidClient) {
     if (!process.env.HYPERLIQUID_PRIVATE_KEY) {
@@ -460,8 +463,14 @@ export function getHyperliquidClient(): HyperliquidClient | null {
 /**
  * Get a Hyperliquid client instance for a specific user
  * Uses the user's stored and encrypted credentials
+ * Caches instances to avoid excessive API calls from SDK initialization
  */
 export async function getUserHyperliquidClient(userId: string): Promise<HyperliquidClient> {
+  // Check cache first
+  if (userClientCache.has(userId)) {
+    return userClientCache.get(userId)!;
+  }
+
   const { getUserHyperliquidCredentials } = await import("../credentialService");
   
   const credentials = await getUserHyperliquidCredentials(userId);
@@ -476,5 +485,27 @@ export async function getUserHyperliquidClient(userId: string): Promise<Hyperliq
     walletAddress: credentials.mainWalletAddress, // Use main wallet address for queries
   };
 
-  return new HyperliquidClient(config);
+  const client = new HyperliquidClient(config);
+  
+  // Cache the client for future use
+  userClientCache.set(userId, client);
+  console.log(`[Hyperliquid] Created and cached client for user ${userId}`);
+
+  return client;
+}
+
+/**
+ * Clear cached client for a specific user (useful when credentials change)
+ */
+export function clearUserClientCache(userId: string): void {
+  userClientCache.delete(userId);
+  console.log(`[Hyperliquid] Cleared cached client for user ${userId}`);
+}
+
+/**
+ * Clear all cached clients
+ */
+export function clearAllClientCaches(): void {
+  userClientCache.clear();
+  console.log(`[Hyperliquid] Cleared all cached clients`);
 }
