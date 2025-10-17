@@ -8,12 +8,18 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Dashboard from "@/pages/Dashboard";
 import Login from "@/pages/Login";
+import Onboarding from "@/pages/Onboarding";
 import NotFound from "@/pages/not-found";
 
 function Router() {
   return (
     <Switch>
       <Route path="/login" component={Login} />
+      <Route path="/onboarding">
+        <ProtectedRoute>
+          <Onboarding />
+        </ProtectedRoute>
+      </Route>
       <Route path="/">
         <ProtectedRoute>
           <Dashboard />
