@@ -233,8 +233,19 @@ AUTONOMOUS TRADING DIRECTIVE:
 2. Identify optimal entry opportunities aligned with the current regime
 3. For each trade, specify exact entry prices, position sizes, leverage, stop losses, and take profits
 4. Manage existing positions: adjust stops, take profits, or close positions based on risk/reward
-5. **ASSESS EXISTING ORDERS**: Review all open orders and determine if they're still valid given current market conditions
-6. **CANCEL INVALID ORDERS**: If existing stop/take profit orders are no longer appropriate, cancel them FIRST before placing new ones
+5. **ASSESS EXISTING ORDERS WITH QUANTITATIVE CRITERIA**: For each existing stop loss and take profit order, evaluate against these thresholds:
+   - KEEP the order if it meets ALL of these criteria:
+     * Price has NOT moved more than 5% since order placement (check current price vs trigger price)
+     * Risk/reward ratio is still >= 2:1 (measure distance to TP vs SL from current price)
+     * Market regime has NOT changed (bullish→bearish or vice versa)
+     * Order is still within 3 ATR (Average True Range) of current price
+   - REPLACE the order ONLY if it FAILS one or more criteria above:
+     * Price moved >5% making the level technically invalid
+     * R:R dropped below 2:1 making it unfavorable
+     * Regime change requires different exit strategy
+     * Order is >3 ATR away (too far to be relevant)
+   - **Default action: KEEP** - If uncertain or close to thresholds, maintain existing orders
+6. **CANCEL ONLY WHEN NECESSARY**: If an order must be adjusted, cancel it FIRST with cancel_order action, THEN place the new order
 7. **ONE ORDER PER TYPE**: Each position should have ONLY ONE stop loss and ONE take profit order maximum
 8. Learn from user's historical prompts to align with their trading style and preferences
 9. Focus on maximizing Sharpe ratio through optimal sizing and risk management
@@ -263,18 +274,26 @@ Respond in JSON format:
 
 CRITICAL ORDER MANAGEMENT RULES:
 1. **Before placing new stop_loss or take_profit**: Check if one already exists for that position
-2. **If an order exists but needs adjustment**: 
+2. **Evaluate existing orders with QUANTITATIVE METRICS**: For each existing order, calculate and check:
+   - Price movement %: (current_price - trigger_price) / trigger_price * 100
+   - Current risk/reward ratio: distance_to_TP / distance_to_SL
+   - Regime consistency: has bullish/bearish designation changed?
+   - ATR distance: is order within 3x Average True Range?
+   - If ALL metrics pass thresholds (see directive #5), KEEP the order (don't include any action for it)
+3. **If an order exists but needs adjustment**: 
    - FIRST: Include a cancel_order action with the existing orderId
-   - THEN: Include a new stop_loss or take_profit action with updated triggerPrice
-3. **If an order exists and is still valid**: Do NOT create duplicate orders
-4. **Each position limits**: Maximum ONE stop loss + ONE take profit order
-5. ALL numeric values (size, expectedEntry, triggerPrice, orderId) must be actual numbers as strings, NEVER placeholders
-6. For buy/sell actions, expectedEntry is REQUIRED (Hyperliquid uses limit orders only)
-7. For stop_loss/take_profit, triggerPrice is REQUIRED
-8. For cancel_order, orderId is REQUIRED
-9. Close actions must have matching side to the existing position
-10. Focus on high-probability setups aligned with market regime
-11. If no good opportunities exist, actions can be empty array`;
+   - In reasoning, CITE SPECIFIC METRICS: "Price moved 8.2% (>5% threshold), R:R dropped to 1.3:1 (<2:1 threshold), requiring replacement"
+   - THEN: Include a new stop_loss or take_profit action with updated triggerPrice and full reasoning
+4. **If an order exists and passes all thresholds**: Do NOT include any actions for it - let it remain as-is
+5. **Each position limits**: Maximum ONE stop loss + ONE take profit order
+6. ALL numeric values (size, expectedEntry, triggerPrice, orderId) must be actual numbers as strings, NEVER placeholders
+7. For buy/sell actions, expectedEntry is REQUIRED (Hyperliquid uses limit orders only)
+8. For stop_loss/take_profit, triggerPrice is REQUIRED
+9. For cancel_order, orderId is REQUIRED and reasoning MUST cite which threshold(s) failed with actual calculated values
+10. Close actions must have matching side to the existing position
+11. Focus on high-probability setups aligned with market regime
+12. If no good opportunities exist AND all existing orders are still valid, actions can be empty array
+13. **DISCIPLINED DECISION-MAKING**: Never cancel orders based on "feels" - only based on concrete threshold violations with cited metrics`;
 
     const aiResponse = await makeAIRequest(userId, {
       messages: [
