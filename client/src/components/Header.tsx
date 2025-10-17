@@ -2,6 +2,7 @@ import { Activity, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import ThemeToggle from "./ThemeToggle";
+import AgentModeToggle from "./AgentModeToggle";
 import { useQuery } from "@tanstack/react-query";
 
 export default function Header() {
@@ -27,7 +28,8 @@ export default function Header() {
         </div>
         
         <div className="flex items-center gap-2">
-          <div className="text-right">
+          <AgentModeToggle />
+          <div className="text-right border-l pl-3">
             <div className="text-xs text-muted-foreground">Balance</div>
             <div className="font-mono text-sm font-semibold" data-testid="text-balance">
               ${accountValue.toFixed(2)}

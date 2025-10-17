@@ -27,6 +27,7 @@ export interface IStorage {
   createUser(user: InsertUser): Promise<User>;
   upsertUser(user: UpsertUser): Promise<User>;
   updateUserMonitoringFrequency(userId: string, minutes: number): Promise<User | undefined>;
+  updateUserAgentMode(userId: string, mode: "passive" | "active"): Promise<User | undefined>;
   
   // Trade methods (multi-tenant)
   getTrades(userId: string, limit?: number): Promise<Trade[]>;
@@ -137,6 +138,18 @@ export class DbStorage implements IStorage {
       .update(users)
       .set({ 
         monitoringFrequencyMinutes: minutes,
+        updatedAt: sql`now()`,
+      })
+      .where(eq(users.id, userId))
+      .returning();
+    return result[0];
+  }
+
+  async updateUserAgentMode(userId: string, mode: "passive" | "active"): Promise<User | undefined> {
+    const result = await db
+      .update(users)
+      .set({ 
+        agentMode: mode,
         updatedAt: sql`now()`,
       })
       .where(eq(users.id, userId))

@@ -56,8 +56,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       let executionSummary = null;
       
-      // Automatically execute trades if enabled
-      if (autoExecute && strategy.actions && strategy.actions.length > 0) {
+      // Get user's agent mode to determine if trades should be executed
+      const user = await storage.getUser(userId);
+      const isActiveMode = user?.agentMode === "active";
+      
+      // Only execute trades if in active mode AND autoExecute is enabled
+      if (isActiveMode && autoExecute && strategy.actions && strategy.actions.length > 0) {
         try {
           executionSummary = await executeTradeStrategy(userId, strategy.actions);
           console.log(`Executed ${executionSummary.successfulExecutions}/${executionSummary.totalActions} trades successfully`);
@@ -86,7 +90,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ 
         success: true, 
         strategy,
-        execution: executionSummary 
+        execution: executionSummary,
+        agentMode: user?.agentMode || "passive",
+        executionSkipped: !isActiveMode && autoExecute && strategy.actions && strategy.actions.length > 0
       });
     } catch (error: any) {
       console.error("Error processing trading prompt:", error);
@@ -140,6 +146,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ 
         success: false, 
         error: "An unexpected error occurred while processing your request. Please try again." 
+      });
+    }
+  });
+
+  // Update user agent mode (passive/active)
+  app.patch("/api/user/agent-mode", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      
+      const schema = z.object({
+        mode: z.enum(["passive", "active"]),
+      });
+      
+      const { mode } = schema.parse(req.body);
+      
+      const updatedUser = await storage.updateUserAgentMode(userId, mode);
+      
+      if (!updatedUser) {
+        return res.status(404).json({ success: false, error: "User not found" });
+      }
+      
+      res.json({ 
+        success: true, 
+        agentMode: updatedUser.agentMode 
+      });
+    } catch (error: any) {
+      console.error("Error updating agent mode:", error);
+      
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({
+          success: false,
+          error: "Invalid request data",
+          details: error.errors
+        });
+      }
+      
+      res.status(500).json({ 
+        success: false, 
+        error: "Failed to update agent mode" 
       });
     }
   });

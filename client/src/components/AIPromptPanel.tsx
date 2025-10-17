@@ -54,14 +54,20 @@ export default function AIPromptPanel() {
         marketData: marketData?.marketData || [],
         currentPositions: positions?.positions || [],
         autoExecute: true,
-        model: "sonar",
+        // Model is optional - AI router will use provider's default
       });
       return await res.json();
     },
     onSuccess: (data: any) => {
       console.log("Trade execution response:", data);
       
-      if (data.execution) {
+      // Check if execution was skipped due to passive mode
+      if (data.executionSkipped) {
+        toast({
+          title: "Passive Mode - Strategy Generated",
+          description: "Mr. Fox generated a trading strategy but did not execute trades. Switch to Active Mode to enable autonomous trading.",
+        });
+      } else if (data.execution) {
         setLastExecution(data.execution);
         
         if (data.execution.successfulExecutions > 0) {

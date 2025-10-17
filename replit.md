@@ -28,9 +28,15 @@ Preferred communication style: Simple, everyday language.
 
 ### AI Integration
 
-**Perplexity AI Integration:** Uses the Perplexity API (OpenAI-compatible) with selectable AI models (Sonar series) for natural language prompt processing. AI usage for tokens and costs is tracked.
+**Multi-Provider AI Router:** Supports multiple AI providers (Perplexity, OpenAI/ChatGPT, xAI/Grok) through a unified interface. The `aiRouter` service:
+- Retrieves and decrypts user's active AI provider credentials from database
+- Creates OpenAI-compatible clients with provider-specific base URLs
+- Validates model compatibility with provider (auto-fallback to defaults if incompatible)
+- Tracks usage (tokens, costs) and updates lastUsed timestamp per provider
+- Returns provider name for accurate logging across success/failure paths
+- Default models: Perplexity (sonar), OpenAI (gpt-4o-mini), xAI (grok-beta)
 
-**Prompt Processing:** The AI trading agent ("Mr. Fox") processes natural language prompts, generates structured trading strategies, and is context-aware. It provides interpretations, trading actions (`buy`, `sell`, `stop_loss`, `take_profit`), risk management plans, and expected outcomes, explicitly requiring numeric values for position sizes.
+**Prompt Processing:** The AI trading agent ("Mr. Fox") processes natural language prompts, generates structured trading strategies, and is context-aware. It provides interpretations, trading actions (`buy`, `sell`, `stop_loss`, `take_profit`), risk management plans, and expected outcomes, explicitly requiring numeric values for position sizes. Supports optional model and preferredProvider parameters for fine-grained control.
 
 ### Authentication & Security
 
