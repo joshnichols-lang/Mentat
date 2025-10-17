@@ -22,7 +22,12 @@ Preferred communication style: Simple, everyday language.
 - Multi-tenant architecture with `isAuthenticated` and `requireVerifiedUser` middleware.
 - Passport.js LocalStrategy for username/password authentication (scrypt-hashed passwords).
 - PostgreSQL session persistence.
-- Multi-step onboarding process requiring Hyperliquid account creation via a referral link and wallet address verification.
+- **Tiered Onboarding Flow:**
+  1. User Registration (username, password, email)
+  2. AI Provider Choice: Platform AI (shared key, free tier) or Personal Key (premium tier)
+  3. AI Provider Setup (optional - only if Personal Key selected)
+  4. Exchange Credentials (Hyperliquid wallet + private key)
+  5. Admin Verification & Approval
 - Admin user management for user verification and deletion.
 - AES-256-GCM encryption with envelope encryption for storing all API keys (AI and exchange).
 - User schema includes agent mode (passive/active), monitoring frequency, and Zod validation for auth requests.
@@ -34,7 +39,11 @@ Preferred communication style: Simple, everyday language.
 - Role-based access: admins see all messages, users see only their own.
 - Screenshots stored as base64 strings in PostgreSQL; consider external storage if volume grows.
 **AI Integration:**
-- **Multi-Provider AI Router:** Supports Perplexity, OpenAI/ChatGPT, and xAI/Grok. Retrieves and decrypts user credentials, creates OpenAI-compatible clients, validates model compatibility, tracks usage, and provides default models.
+- **Tiered AI Provider System:**
+  - **Platform AI (Free/Basic Tier):** Users without personal credentials automatically use shared `PERPLEXITY_API_KEY` from environment. Single shared key serves all free-tier users with complete context isolation per user.
+  - **Personal AI Key (Premium Tier):** Users can provide their own Perplexity, OpenAI, or xAI credentials for direct billing control and premium model access.
+  - Settings UI shows current tier: "Using Platform AI" or "Using Personal AI Key" with switching capabilities.
+- **Multi-Provider AI Router:** Supports Perplexity, OpenAI/ChatGPT, and xAI/Grok. Retrieves and decrypts user credentials, creates OpenAI-compatible clients, validates model compatibility, tracks usage, and provides default models. Falls back to shared platform key when users lack personal credentials.
 - **Prompt Processing:** "Mr. Fox" processes natural language prompts to generate structured trading strategies, providing interpretations, trading actions, risk management plans, and expected outcomes with required numeric values for position sizes.
 **Autonomous Trading System:**
 - Multi-tenant system with per-user monitoring loops.
