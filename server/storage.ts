@@ -1,6 +1,9 @@
 import { type User, type InsertUser, type UpsertUser, type Trade, type InsertTrade, type Position, type InsertPosition, type PortfolioSnapshot, type InsertPortfolioSnapshot, type AiUsageLog, type InsertAiUsageLog, type MonitoringLog, type InsertMonitoringLog, type UserApiCredential, type InsertUserApiCredential, users, trades, positions, portfolioSnapshots, aiUsageLog, monitoringLog, userApiCredentials } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql, and, type SQL } from "drizzle-orm";
+import session from "express-session";
+import connectPg from "connect-pg-simple";
+import { pool } from "./db";
 
 // Helper function for userId-scoped conditions
 function withUserFilter<T extends { userId: any }>(
@@ -15,6 +18,9 @@ function withUserFilter<T extends { userId: any }>(
 }
 
 export interface IStorage {
+  // Session store for authentication
+  sessionStore: session.Store;
+  
   // User methods
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
@@ -69,7 +75,19 @@ export interface IStorage {
   deleteUserCredentials(userId: string): Promise<void>;
 }
 
+const PostgresSessionStore = connectPg(session);
+
 export class DbStorage implements IStorage {
+  public sessionStore: session.Store;
+
+  constructor() {
+    this.sessionStore = new PostgresSessionStore({ 
+      pool, 
+      createTableIfMissing: true,
+      tableName: 'sessions'
+    });
+  }
+
   // User methods
   async getUser(id: string): Promise<User | undefined> {
     const result = await db.select().from(users).where(eq(users.id, id)).limit(1);

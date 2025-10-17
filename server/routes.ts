@@ -6,46 +6,34 @@ import { initHyperliquidClient, getUserHyperliquidClient } from "./hyperliquid/c
 import { executeTradeStrategy } from "./tradeExecutor";
 import { createPortfolioSnapshot } from "./portfolioSnapshotService";
 import { restartMonitoring } from "./monitoringService";
-import { setupAuth, isAuthenticated } from "./replitAuth";
+import { setupAuth } from "./auth";
 import { storeUserCredentials, getUserPrivateKey, deleteUserCredentials, hasUserCredentials } from "./credentialService";
 import { z } from "zod";
 
-export async function registerRoutes(app: Express): Promise<Server> {
-  // Initialize Replit Auth
-  await setupAuth(app);
+// Middleware to check if user is authenticated
+function isAuthenticated(req: any, res: any, next: any) {
+  if (req.isAuthenticated()) {
+    return next();
+  }
+  res.status(401).json({ message: "Unauthorized" });
+}
 
-  // Auth status endpoint - returns current user info
-  app.get("/api/auth/user", isAuthenticated, async (req, res) => {
-    try {
-      const user = req.user as any;
-      const claims = user.claims;
-      
-      // Get user from database
-      const dbUser = await storage.getUser(claims.sub);
-      
-      res.json({
-        success: true,
-        user: {
-          id: claims.sub,
-          email: claims.email,
-          firstName: claims.first_name,
-          lastName: claims.last_name,
-          profileImageUrl: claims.profile_image_url,
-          subscriptionStatus: dbUser?.subscriptionStatus || "inactive",
-          onboardingComplete: dbUser?.onboardingComplete === 1,
-        }
-      });
-    } catch (error: any) {
-      console.error("Error fetching user:", error);
-      res.status(500).json({ success: false, error: error.message });
-    }
-  });
+// Helper to get authenticated user ID
+function getUserId(req: any): string {
+  return req.user!.id;
+}
+
+export async function registerRoutes(app: Express): Promise<Server> {
+  // Initialize username/password authentication
+  setupAuth(app);
+
+  // Note: /api/user, /api/login, /api/register, /api/logout are handled in setupAuth()
 
   // AI Trading Prompt endpoint
   app.post("/api/trading/prompt", isAuthenticated, async (req, res) => {
     try {
-      const user = req.user as any;
-      const userId = user.claims.sub;
+      
+      const userId = getUserId(req);
       
       const schema = z.object({
         prompt: z.string().min(1),
@@ -157,8 +145,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get all trades
   app.get("/api/trades", isAuthenticated, async (req, res) => {
     try {
-      const user = req.user as any;
-      const userId = user.claims.sub;
+      
+      const userId = getUserId(req);
       
       const trades = await storage.getTrades(userId);
       res.json({ success: true, trades });
@@ -171,8 +159,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get all positions
   app.get("/api/positions", isAuthenticated, async (req, res) => {
     try {
-      const user = req.user as any;
-      const userId = user.claims.sub;
+      
+      const userId = getUserId(req);
       
       const positions = await storage.getPositions(userId);
       res.json({ success: true, positions });
@@ -185,8 +173,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get portfolio snapshots
   app.get("/api/portfolio/snapshots", isAuthenticated, async (req, res) => {
     try {
-      const user = req.user as any;
-      const userId = user.claims.sub;
+      
+      const userId = getUserId(req);
       
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 100;
       const snapshots = await storage.getPortfolioSnapshots(userId, limit);
@@ -200,8 +188,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create a new trade
   app.post("/api/trades", isAuthenticated, async (req, res) => {
     try {
-      const user = req.user as any;
-      const userId = user.claims.sub;
+      
+      const userId = getUserId(req);
       
       const trade = await storage.createTrade(userId, req.body);
       res.json({ success: true, trade });
@@ -214,8 +202,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Close a trade
   app.post("/api/trades/:id/close", isAuthenticated, async (req, res) => {
     try {
-      const user = req.user as any;
-      const userId = user.claims.sub;
+      
+      const userId = getUserId(req);
       
       const { exitPrice, pnl } = req.body;
       const trade = await storage.closeTrade(userId, req.params.id, exitPrice, pnl);
@@ -229,8 +217,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create or update position
   app.post("/api/positions", isAuthenticated, async (req, res) => {
     try {
-      const user = req.user as any;
-      const userId = user.claims.sub;
+      
+      const userId = getUserId(req);
       
       const position = await storage.createPosition(userId, req.body);
       res.json({ success: true, position });
@@ -243,8 +231,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Update position
   app.patch("/api/positions/:id", isAuthenticated, async (req, res) => {
     try {
-      const user = req.user as any;
-      const userId = user.claims.sub;
+      
+      const userId = getUserId(req);
       
       const position = await storage.updatePosition(userId, req.params.id, req.body);
       res.json({ success: true, position });
@@ -257,8 +245,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create portfolio snapshot
   app.post("/api/portfolio/snapshots", isAuthenticated, async (req, res) => {
     try {
-      const user = req.user as any;
-      const userId = user.claims.sub;
+      
+      const userId = getUserId(req);
       
       const snapshot = await storage.createPortfolioSnapshot(userId, req.body);
       res.json({ success: true, snapshot });
@@ -271,8 +259,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get AI usage logs
   app.get("/api/ai/usage", isAuthenticated, async (req, res) => {
     try {
-      const user = req.user as any;
-      const userId = user.claims.sub;
+      
+      const userId = getUserId(req);
       
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 100;
       const logs = await storage.getAiUsageLogs(userId, limit);
@@ -286,8 +274,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get total AI cost
   app.get("/api/ai/cost", isAuthenticated, async (req, res) => {
     try {
-      const user = req.user as any;
-      const userId = user.claims.sub;
+      
+      const userId = getUserId(req);
       
       const totalCost = await storage.getTotalAiCost(userId);
       res.json({ success: true, totalCost });
@@ -300,8 +288,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get AI usage statistics (cumulative totals)
   app.get("/api/ai/stats", isAuthenticated, async (req, res) => {
     try {
-      const user = req.user as any;
-      const userId = user.claims.sub;
+      
+      const userId = getUserId(req);
       
       const stats = await storage.getAiUsageStats(userId);
       res.json({ success: true, stats });
@@ -314,8 +302,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get monitoring logs
   app.get("/api/monitoring/logs", isAuthenticated, async (req, res) => {
     try {
-      const user = req.user as any;
-      const userId = user.claims.sub;
+      
+      const userId = getUserId(req);
       
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 100;
       const logs = await storage.getMonitoringLogs(userId, limit);
@@ -329,8 +317,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get active monitoring alerts
   app.get("/api/monitoring/active", isAuthenticated, async (req, res) => {
     try {
-      const user = req.user as any;
-      const userId = user.claims.sub;
+      
+      const userId = getUserId(req);
       
       const logs = await storage.getActiveMonitoringLogs(userId);
       res.json({ success: true, logs });
@@ -343,8 +331,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Dismiss monitoring alert
   app.post("/api/monitoring/:id/dismiss", isAuthenticated, async (req, res) => {
     try {
-      const user = req.user as any;
-      const userId = user.claims.sub;
+      
+      const userId = getUserId(req);
       
       const log = await storage.dismissMonitoringLog(userId, req.params.id);
       res.json({ success: true, log });
@@ -357,8 +345,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Update monitoring frequency (per-user setting)
   app.post("/api/monitoring/frequency", isAuthenticated, async (req, res) => {
     try {
-      const user = req.user as any;
-      const userId = user.claims.sub;
+      
+      const userId = getUserId(req);
       
       const schema = z.object({
         minutes: z.number().int().min(0).max(1440), // 0 to 24 hours
@@ -389,8 +377,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get Hyperliquid market data
   app.get("/api/hyperliquid/market-data", isAuthenticated, async (req, res) => {
     try {
-      const user = req.user as any;
-      const userId = user.claims.sub;
+      
+      const userId = getUserId(req);
       
       const hyperliquid = await getUserHyperliquidClient(userId);
       const marketData = await hyperliquid.getMarketData();
@@ -407,8 +395,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get Hyperliquid user state
   app.get("/api/hyperliquid/user-state", isAuthenticated, async (req, res) => {
     try {
-      const user = req.user as any;
-      const userId = user.claims.sub;
+      
+      const userId = getUserId(req);
       
       const hyperliquid = await getUserHyperliquidClient(userId);
       const address = req.query.address as string | undefined;
@@ -426,8 +414,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get Hyperliquid positions
   app.get("/api/hyperliquid/positions", isAuthenticated, async (req, res) => {
     try {
-      const user = req.user as any;
-      const userId = user.claims.sub;
+      
+      const userId = getUserId(req);
       
       const hyperliquid = await getUserHyperliquidClient(userId);
       const address = req.query.address as string | undefined;
@@ -445,8 +433,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get Hyperliquid open orders
   app.get("/api/hyperliquid/open-orders", isAuthenticated, async (req, res) => {
     try {
-      const user = req.user as any;
-      const userId = user.claims.sub;
+      
+      const userId = getUserId(req);
       
       const hyperliquid = await getUserHyperliquidClient(userId);
       const address = req.query.address as string | undefined;
@@ -506,8 +494,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Place order on Hyperliquid
   app.post("/api/hyperliquid/order", isAuthenticated, async (req, res) => {
     try {
-      const user = req.user as any;
-      const userId = user.claims.sub;
+      
+      const userId = getUserId(req);
       
       const hyperliquid = await getUserHyperliquidClient(userId);
       
@@ -569,8 +557,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Cancel order on Hyperliquid
   app.post("/api/hyperliquid/cancel-order", isAuthenticated, async (req, res) => {
     try {
-      const user = req.user as any;
-      const userId = user.claims.sub;
+      
+      const userId = getUserId(req);
       
       const hyperliquid = await getUserHyperliquidClient(userId);
       
@@ -599,8 +587,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Close position on Hyperliquid
   app.post("/api/hyperliquid/close-position", isAuthenticated, async (req, res) => {
     try {
-      const user = req.user as any;
-      const userId = user.claims.sub;
+      
+      const userId = getUserId(req);
       
       const hyperliquid = await getUserHyperliquidClient(userId);
       
@@ -654,8 +642,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Close all positions and cancel all orders
   app.post("/api/hyperliquid/close-all", isAuthenticated, async (req, res) => {
     try {
-      const user = req.user as any;
-      const userId = user.claims.sub;
+      
+      const userId = getUserId(req);
       
       const hyperliquid = await getUserHyperliquidClient(userId);
       
@@ -736,8 +724,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Update leverage on Hyperliquid
   app.post("/api/hyperliquid/leverage", isAuthenticated, async (req, res) => {
     try {
-      const user = req.user as any;
-      const userId = user.claims.sub;
+      
+      const userId = getUserId(req);
       
       const hyperliquid = await getUserHyperliquidClient(userId);
       
@@ -766,8 +754,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Add/update Hyperliquid API credentials for current user
   app.post("/api/credentials", isAuthenticated, async (req, res) => {
     try {
-      const user = req.user as any;
-      const userId = user.claims.sub;
+      
+      const userId = getUserId(req);
       
       const schema = z.object({
         privateKey: z.string().min(1, "Private key is required"),
@@ -793,8 +781,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Check if user has credentials configured
   app.get("/api/credentials/status", isAuthenticated, async (req, res) => {
     try {
-      const user = req.user as any;
-      const userId = user.claims.sub;
+      
+      const userId = getUserId(req);
       
       const hasCredentials = await hasUserCredentials(userId);
       
@@ -814,8 +802,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Delete user credentials
   app.delete("/api/credentials", isAuthenticated, async (req, res) => {
     try {
-      const user = req.user as any;
-      const userId = user.claims.sub;
+      
+      const userId = getUserId(req);
       
       await deleteUserCredentials(userId);
       
