@@ -251,26 +251,61 @@ export default function Settings() {
                   <Brain className="w-5 h-5" />
                   <CardTitle>AI Provider API Keys</CardTitle>
                 </div>
-                <Button
-                  onClick={() => setIsAddingAI(true)}
-                  variant="outline"
-                  size="sm"
-                  data-testid="button-add-ai-key"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add AI Provider
-                </Button>
+                {aiKeys.length > 0 && (
+                  <Button
+                    onClick={() => setIsAddingAI(true)}
+                    variant="outline"
+                    size="sm"
+                    data-testid="button-add-ai-key"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add AI Provider
+                  </Button>
+                )}
               </div>
               <CardDescription>
-                Manage your AI provider API keys for Mr. Fox
+                Choose between Platform AI (shared) or your own API keys from Perplexity, OpenAI, or xAI
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {aiKeys.length === 0 && !isAddingAI && (
+                <div className="space-y-4">
+                  <Alert>
+                    <Brain className="h-4 w-4" />
+                    <AlertDescription>
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-medium">🦊 Using Platform AI</p>
+                            <p className="text-sm text-muted-foreground mt-1">
+                              You're using our shared Perplexity AI infrastructure. Usage costs are covered by the platform.
+                            </p>
+                          </div>
+                          <Badge variant="outline" className="ml-2">Active</Badge>
+                        </div>
+                      </div>
+                    </AlertDescription>
+                  </Alert>
+                  <div className="flex justify-end">
+                    <Button
+                      onClick={() => setIsAddingAI(true)}
+                      variant="outline"
+                      size="sm"
+                      data-testid="button-switch-to-personal"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Switch to Personal AI Key
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {aiKeys.length > 0 && (
                 <Alert>
                   <AlertCircle className="h-4 w-4" />
                   <AlertDescription>
-                    No AI providers configured. Add one to enable Mr. Fox's trading intelligence.
+                    <strong>Using Personal AI Key</strong> - You're using your own API credentials. 
+                    Delete all personal keys below to switch back to Platform AI (shared infrastructure).
                   </AlertDescription>
                 </Alert>
               )}

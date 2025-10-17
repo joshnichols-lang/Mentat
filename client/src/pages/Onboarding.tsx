@@ -16,7 +16,8 @@ import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 import logoUrl from "@assets/generated-image-removebg-preview_1760665535887.png";
 
-type OnboardingStep = "ai_provider" | "exchange" | "complete";
+type OnboardingStep = "ai_choice" | "ai_provider" | "exchange" | "complete";
+type AIChoice = "platform" | "personal";
 
 const aiProviderSchema = z.object({
   provider: z.enum(["perplexity", "openai", "xai"]),
@@ -51,7 +52,8 @@ export default function Onboarding() {
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  const [currentStep, setCurrentStep] = useState<OnboardingStep>("ai_provider");
+  const [currentStep, setCurrentStep] = useState<OnboardingStep>("ai_choice");
+  const [aiChoice, setAiChoice] = useState<AIChoice | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const aiForm = useForm<AIProviderFormData>({
@@ -123,6 +125,17 @@ export default function Onboarding() {
     },
   });
 
+  const onSelectAIChoice = (choice: AIChoice) => {
+    setAiChoice(choice);
+    if (choice === "platform") {
+      // Skip AI provider setup, go straight to exchange
+      setCurrentStep("exchange");
+    } else {
+      // Show AI provider form for personal key
+      setCurrentStep("ai_provider");
+    }
+  };
+
   const onSubmitAI = (data: AIProviderFormData) => {
     setError(null);
     aiProviderMutation.mutate(data);
@@ -160,21 +173,23 @@ export default function Onboarding() {
             <div className="flex items-center gap-2">
               <img src={logoUrl} alt="1fox logo" className="h-8 w-8" />
               <div className="text-sm font-mono text-muted-foreground" data-testid="text-step-indicator">
-                Step {currentStep === "ai_provider" ? "1" : "2"} of 2
+                Step {currentStep === "ai_choice" ? "1" : currentStep === "ai_provider" ? "2" : currentStep === "exchange" && aiChoice === "platform" ? "2" : "3"} of {aiChoice === "platform" ? "2" : "3"}
               </div>
             </div>
-            {currentStep === "ai_provider" ? (
-              <Brain className="h-5 w-5 text-primary" data-testid="icon-brain" />
-            ) : (
+            {currentStep === "exchange" ? (
               <TrendingUp className="h-5 w-5 text-primary" data-testid="icon-trending" />
+            ) : (
+              <Brain className="h-5 w-5 text-primary" data-testid="icon-brain" />
             )}
           </div>
           <CardTitle className="text-2xl font-mono" data-testid="text-step-title">
-            {currentStep === "ai_provider" ? "Connect AI Provider" : "Connect Trading Exchange"}
+            {currentStep === "ai_choice" ? "Choose AI Provider" : currentStep === "ai_provider" ? "Connect Your AI Provider" : "Connect Trading Exchange"}
           </CardTitle>
           <CardDescription data-testid="text-step-description">
-            {currentStep === "ai_provider"
-              ? "Choose an AI provider to power Mr. Fox's trading intelligence"
+            {currentStep === "ai_choice"
+              ? "Select how you want to power Mr. Fox's trading intelligence"
+              : currentStep === "ai_provider"
+              ? "Enter your personal AI provider credentials"
               : "Connect your exchange account to enable automated trading"}
           </CardDescription>
         </CardHeader>
@@ -186,7 +201,73 @@ export default function Onboarding() {
             </Alert>
           )}
 
-          {currentStep === "ai_provider" ? (
+          {currentStep === "ai_choice" ? (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Card
+                  className="cursor-pointer hover-elevate active-elevate-2 transition-all border-2"
+                  onClick={() => onSelectAIChoice("platform")}
+                  data-testid="card-platform-ai"
+                >
+                  <CardHeader>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <Brain className="h-5 w-5 text-primary" />
+                      Platform AI
+                    </CardTitle>
+                    <CardDescription>
+                      Recommended for most users
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <p className="text-sm">
+                      Use our shared AI infrastructure powered by Perplexity's Sonar model.
+                    </p>
+                    <div className="space-y-1 text-sm text-muted-foreground">
+                      <p>✓ No API key required</p>
+                      <p>✓ Instant setup</p>
+                      <p>✓ Lower costs</p>
+                      <p>✓ Usage included in platform</p>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card
+                  className="cursor-pointer hover-elevate active-elevate-2 transition-all border-2"
+                  onClick={() => onSelectAIChoice("personal")}
+                  data-testid="card-personal-ai"
+                >
+                  <CardHeader>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <Brain className="h-5 w-5 text-primary" />
+                      Personal AI Key
+                    </CardTitle>
+                    <CardDescription>
+                      For advanced users
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <p className="text-sm">
+                      Bring your own API key from Perplexity, OpenAI, or xAI.
+                    </p>
+                    <div className="space-y-1 text-sm text-muted-foreground">
+                      <p>✓ Your own API key</p>
+                      <p>✓ Direct billing control</p>
+                      <p>✓ Choose your provider</p>
+                      <p>✓ Premium models available</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  <strong>Tip:</strong> New users should choose Platform AI to get started quickly. 
+                  You can always add your own API key later in Settings.
+                </AlertDescription>
+              </Alert>
+            </div>
+          ) : currentStep === "ai_provider" ? (
             <Form {...aiForm}>
               <form onSubmit={aiForm.handleSubmit(onSubmitAI)} className="space-y-4">
                 <FormField
@@ -444,7 +525,13 @@ export default function Onboarding() {
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => setCurrentStep("ai_provider")}
+                    onClick={() => {
+                      if (aiChoice === "platform") {
+                        setCurrentStep("ai_choice");
+                      } else {
+                        setCurrentStep("ai_provider");
+                      }
+                    }}
                     disabled={exchangeMutation.isPending}
                     data-testid="button-back"
                   >
