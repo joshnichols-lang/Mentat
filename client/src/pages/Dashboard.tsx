@@ -13,6 +13,7 @@ import { AIUsageTracker } from "@/components/AIUsageTracker";
 import ConversationHistory from "@/components/ConversationHistory";
 import { MonitoringAlerts } from "@/components/MonitoringAlerts";
 import { OrderBook } from "@/components/OrderBook";
+import { CvdChart } from "@/components/CvdChart";
 
 export default function Dashboard() {
   const [, setLocation] = useLocation();
@@ -98,6 +99,9 @@ export default function Dashboard() {
 
               {/* Order Book */}
               <OrderBook coin="BTC" />
+
+              {/* CVD Chart */}
+              <CvdChart coin="BTC" />
             </div>
           </div>
         </div>
