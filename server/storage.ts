@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type UpsertUser, type Trade, type InsertTrade, type Position, type InsertPosition, type PortfolioSnapshot, type InsertPortfolioSnapshot, type AiUsageLog, type InsertAiUsageLog, type MonitoringLog, type InsertMonitoringLog, type UserApiCredential, type InsertUserApiCredential, type ApiKey, type InsertApiKey, users, trades, positions, portfolioSnapshots, aiUsageLog, monitoringLog, userApiCredentials, apiKeys } from "@shared/schema";
+import { type User, type InsertUser, type UpsertUser, type Trade, type InsertTrade, type Position, type InsertPosition, type PortfolioSnapshot, type InsertPortfolioSnapshot, type AiUsageLog, type InsertAiUsageLog, type MonitoringLog, type InsertMonitoringLog, type UserApiCredential, type InsertUserApiCredential, type ApiKey, type InsertApiKey, type ContactMessage, type InsertContactMessage, users, trades, positions, portfolioSnapshots, aiUsageLog, monitoringLog, userApiCredentials, apiKeys, contactMessages } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql, and, type SQL } from "drizzle-orm";
 import session from "express-session";
@@ -89,6 +89,12 @@ export interface IStorage {
   getActiveApiKeyByProvider(userId: string, providerType: string, providerName: string): Promise<ApiKey | undefined>;
   updateApiKeyLastUsed(userId: string, id: string): Promise<void>;
   deleteApiKey(userId: string, id: string): Promise<void>;
+  
+  // Contact Messages methods
+  createContactMessage(userId: string, message: InsertContactMessage): Promise<ContactMessage>;
+  getContactMessages(limit?: number): Promise<ContactMessage[]>;
+  getUserContactMessages(userId: string): Promise<ContactMessage[]>;
+  resolveContactMessage(messageId: string, resolvedBy: string): Promise<ContactMessage | undefined>;
 }
 
 const PostgresSessionStore = connectPg(session);
@@ -499,6 +505,40 @@ export class DbStorage implements IStorage {
   async deleteApiKey(userId: string, id: string): Promise<void> {
     await db.delete(apiKeys)
       .where(withUserFilter(apiKeys, userId, eq(apiKeys.id, id)));
+  }
+
+  // Contact Messages methods
+  async createContactMessage(userId: string, message: InsertContactMessage): Promise<ContactMessage> {
+    const result = await db.insert(contactMessages)
+      .values({ ...message, userId })
+      .returning();
+    return result[0];
+  }
+
+  async getContactMessages(limit: number = 100): Promise<ContactMessage[]> {
+    return await db.select()
+      .from(contactMessages)
+      .orderBy(desc(contactMessages.createdAt))
+      .limit(limit);
+  }
+
+  async getUserContactMessages(userId: string): Promise<ContactMessage[]> {
+    return await db.select()
+      .from(contactMessages)
+      .where(eq(contactMessages.userId, userId))
+      .orderBy(desc(contactMessages.createdAt));
+  }
+
+  async resolveContactMessage(messageId: string, resolvedBy: string): Promise<ContactMessage | undefined> {
+    const result = await db.update(contactMessages)
+      .set({ 
+        status: "resolved", 
+        resolvedBy, 
+        resolvedAt: sql`now()` 
+      })
+      .where(eq(contactMessages.id, messageId))
+      .returning();
+    return result[0];
   }
 }
 

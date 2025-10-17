@@ -1318,6 +1318,93 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Contact Admin routes
+  app.post("/api/contact", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const { message, screenshotUrl } = req.body;
+
+      if (!message || typeof message !== "string") {
+        return res.status(400).json({
+          success: false,
+          error: "Message is required"
+        });
+      }
+
+      const contactMessage = await storage.createContactMessage(userId, {
+        message,
+        screenshotUrl: screenshotUrl || null
+      });
+
+      res.json({
+        success: true,
+        message: contactMessage
+      });
+    } catch (error: any) {
+      console.error("Error creating contact message:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to send message"
+      });
+    }
+  });
+
+  app.get("/api/contact", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user!;
+
+      // If user is admin, get all messages; otherwise get only their own
+      const messages = user.role === "admin" 
+        ? await storage.getContactMessages(100)
+        : await storage.getUserContactMessages(user.id);
+
+      res.json({
+        success: true,
+        messages
+      });
+    } catch (error: any) {
+      console.error("Error fetching contact messages:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to fetch messages"
+      });
+    }
+  });
+
+  app.post("/api/contact/:id/resolve", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user!;
+      
+      if (user.role !== "admin") {
+        return res.status(403).json({
+          success: false,
+          error: "Only admins can resolve messages"
+        });
+      }
+
+      const { id } = req.params;
+      const message = await storage.resolveContactMessage(id, user.id);
+
+      if (!message) {
+        return res.status(404).json({
+          success: false,
+          error: "Message not found"
+        });
+      }
+
+      res.json({
+        success: true,
+        message
+      });
+    } catch (error: any) {
+      console.error("Error resolving contact message:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to resolve message"
+      });
+    }
+  });
+
   const httpServer = createServer(app);
 
   // Initialize market data WebSocket service
