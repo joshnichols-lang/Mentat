@@ -1,168 +1,72 @@
 # 1fox
 
 ## Overview
-
-1fox is an AI-powered cryptocurrency trading terminal for the Hyperliquid perpetual futures exchange. It enables users to interact with an AI trading agent, "Mr. Fox," using natural language to execute automated strategies. The application offers a "Fantastic Mr. Fox" newspaper-themed aesthetic, real-time market data, portfolio tracking, and comprehensive trading controls. The project's goal is to provide a professional AI trading experience focused on maximizing Sharpe ratio through optimal sizing, entries, exits, and continuous risk management.
+1fox is an AI-powered cryptocurrency trading terminal for the Hyperliquid perpetual futures exchange. It allows users to interact with an AI trading agent, "Mr. Fox," using natural language to execute automated strategies. The application provides a "Fantastic Mr. Fox" newspaper-themed interface, real-time market data, portfolio tracking, and comprehensive trading controls. The project aims to deliver a professional AI trading experience focused on maximizing Sharpe ratio through optimal sizing, entries, exits, and continuous risk management. It functions as a multi-tenant SaaS.
 
 ## User Preferences
-
 Preferred communication style: Simple, everyday language.
 
 ## System Architecture
 
-### Frontend Architecture
-
+### Frontend
 **Technology Stack:** React with TypeScript, Vite, Wouter, TanStack Query, Tailwind CSS, and shadcn/ui.
+**Design System:** "Fantastic Mr. Fox" newspaper aesthetic with a grayscale color scheme, "Courier New" monospace typography, newsprint texture, and sharp corners. Dull green/red accents for trading elements.
+**Key UI Components:** AI Prompt Panel, Market Overview watchlist (real-time data, drag-and-drop), Portfolio Performance Chart, Positions Grid, Conversation History. Includes hover tooltips with mini price charts and risk management levels.
 
-**Design System:** Features a "Fantastic Mr. Fox" newspaper aesthetic with a grayscale color scheme, "Courier New" monospace typography, subtle newsprint texture, and sharp corners. Dull green/red accents are used for trading elements.
-
-**Key UI Components:** Includes an AI Prompt Panel, Market Overview watchlist with real-time data and drag-and-drop reordering, Portfolio Performance Chart, Positions Grid, and Conversation History. Hover tooltips with mini price charts display 48-hour hourly data for watchlist items and positions. Risk management levels are displayed within positions.
-
-### Backend Architecture
-
+### Backend
 **Server Framework:** Express.js with TypeScript, integrated with Vite middleware.
-
-**Database Strategy:** Utilizes Drizzle ORM with PostgreSQL for type-safe operations. The schema includes tables for trades, positions, portfolio snapshots (created on server startup, every 5 minutes, and after successful trades), and AI usage logs. Portfolio snapshots calculate total value, P&L, Sharpe ratio, and trade statistics.
-
-**API Design:** RESTful endpoints prefixed with `/api` for trading prompts, database operations, and Hyperliquid exchange interactions (market data, orders, positions, leverage).
-
-### AI Integration
-
-**Multi-Provider AI Router:** Supports multiple AI providers (Perplexity, OpenAI/ChatGPT, xAI/Grok) through a unified interface. The `aiRouter` service:
-- Retrieves and decrypts user's active AI provider credentials from database
-- Creates OpenAI-compatible clients with provider-specific base URLs
-- Validates model compatibility with provider (auto-fallback to defaults if incompatible)
-- Tracks usage (tokens, costs) and updates lastUsed timestamp per provider
-- Returns provider name for accurate logging across success/failure paths
-- Default models: Perplexity (sonar), OpenAI (gpt-4o-mini), xAI (grok-beta)
-
-**Prompt Processing:** The AI trading agent ("Mr. Fox") processes natural language prompts, generates structured trading strategies, and is context-aware. It provides interpretations, trading actions (`buy`, `sell`, `stop_loss`, `take_profit`), risk management plans, and expected outcomes, explicitly requiring numeric values for position sizes. Supports optional model and preferredProvider parameters for fine-grained control.
-
-### Authentication & Security
-
-**Multi-Tenant Architecture:** The application is now a fully multi-tenant SaaS. All API routes are protected with `isAuthenticated` middleware. Critical trading and data routes additionally use `requireVerifiedUser` middleware to enforce wallet verification. User identity is extracted from `req.user.id` and used for all data operations.
-
-**Authentication Flow:**
-1. Users create accounts with username/password (Passport.js LocalStrategy)
-2. Passwords hashed with scrypt (salted, 64-byte hash)
-3. PostgreSQL session persistence (connect-pg-simple)
-4. `isAuthenticated` middleware validates session on all protected routes
-5. New users complete multi-step onboarding:
-   - Step 1: Choose AI provider (Perplexity/ChatGPT/Grok) and add API key with label
-   - Step 2: Connect Hyperliquid exchange (Binance/Bybit removed - Hyperliquid only):
-     - **Mandatory Referral Link:** Users MUST create Hyperliquid accounts via referral link: https://app.hyperliquid.xyz/join/1FOX
-     - **Wallet Address Verification:** Users must paste their wallet address (0x...) for manual admin verification
-     - **Required Confirmation:** Users must check confirmation box acknowledging referral link requirement
-     - **Verification Status:** New users default to "pending" verification status
-6. Dashboard checks credentials and redirects to onboarding if missing
-7. **Wallet Verification Workflow:**
-   - After onboarding completion, users redirected to `/pending-approval` page
-   - Platform access blocked until admin verifies wallet address matches referral signup
-   - Admin uses `/admin/verification` page to approve/reject users
-   - Approved users gain full platform access; rejected users see error message with support instructions
-   - User schema includes `walletAddress`, `verificationStatus` (pending/approved/rejected), and `verifiedAt` timestamp
-
-**Admin User Management:**
-   - Admin users can view all registered users via `/admin/users` page
-   - Comprehensive user information displayed: username, email, wallet address, verification status, agent mode, role, and registration date
-   - Admins can delete users (except their own account) with confirmation dialog
-   - Backend routes enforce admin-only access with role-based authorization
-   - Navigation via dropdown menu in header with "Verify Users" and "Manage Users" options
-
-**User Credentials:** Uses AES-256-GCM encryption with envelope encryption for storing all API keys. The `api_keys` table supports multiple providers (AI and exchanges) with user-defined labels. Each credential has a unique Data Encryption Key (DEK) encrypted with the master key (ENCRYPTION_MASTER_KEY secret). API secrets (for Binance/Bybit) are stored encrypted in the metadata JSONB field. Proper key isolation ensures if one credential is compromised, others remain secure.
-
-**User Schema:** Includes username/password authentication, Zod validation for auth requests (username 3-50 chars, password 6-100 chars, email optional - accepts valid email or empty string, normalized to null in database). Agent mode (passive/active) with UI toggle and confirmation dialog, and per-user settings (monitoring frequency stored in `monitoringFrequencyMinutes` field).
-
-**Form Accessibility:** All authentication and onboarding forms include:
-- HTML autocomplete attributes (username, email, current-password, new-password) for password manager integration
-- Unique test-ids with context-specific prefixes (login-* vs register-*) for reliable E2E testing
-- `autoComplete="off"` on password-type API key inputs to prevent browser password managers from capturing credentials
-
-**Known Testing Limitation:** Playwright-based E2E tests cannot programmatically fill password-type inputs in React Hook Form setup due to framework constraints. This is a test automation limitation, not a product defect - real users can interact with password fields normally. API-level testing recommended for password-protected endpoints.
-
-**Passive/Active Mode:** Users can toggle between passive (learning-only) and active (autonomous trading) modes via a switch in the header:
-- **Passive Mode (default)**: Mr. Fox generates trading strategies without executing trades, allowing users to learn from AI analysis without risk
-- **Active Mode**: Mr. Fox autonomously executes trades based on market analysis after user confirmation
-- Mode changes require confirmation dialog for active mode to ensure users understand autonomous trading implications
-- Trading prompt endpoint checks agentMode before execution, returns executionSkipped flag for passive mode
-- Frontend displays appropriate messaging when strategies are generated but not executed in passive mode
-
-**Multi-Provider API Keys:** The `api_keys` table stores encrypted credentials for both AI providers and exchanges:
-- providerType: "ai" or "exchange"
-- providerName: "perplexity", "openai", "xai" (AI) | "hyperliquid", "binance", "bybit" (exchanges)
-- label: User-defined label (e.g., "Main AI", "Aggressive Strategy")
-- Unique constraint on (userId, providerName, label) prevents duplicates
-- Validation ensures Binance/Bybit require API secrets (frontend Zod refinement + backend validation)
-- `getUserPrivateKey()` retrieves Hyperliquid credentials from `api_keys` table (with fallback to legacy `user_api_credentials` for backwards compatibility)
-
-**Data Isolation:** Complete per-user data isolation achieved:
-- All database tables have userId foreign keys (trades, positions, portfolio_snapshots, ai_usage_log, monitoring_log, user_api_credentials)
-- All storage methods enforce userId-first parameter pattern with `withUserFilter()` helper
-- All API routes extract `userId = req.user.claims.sub` and pass to storage/Hyperliquid clients
-- Per-user Hyperliquid clients via `getUserHyperliquidClient(userId)` with encrypted credentials
-- Monitoring frequency preferences stored per-user and actively used by autonomous trading system
-- Each user's AI agent learns only from their own interactions
-
-**Autonomous Trading System:** Fully multi-tenant autonomous trading system operational:
-- **User Monitoring Manager** (`userMonitoringManager.ts`): Manages per-user monitoring loops in a Map<userId, NodeJS.Timeout>
-- **Per-User Execution**: Each active user has their own monitoring interval running independently
-- **Credential Isolation**: Uses per-user encrypted Hyperliquid credentials and AI provider credentials
-- **Startup Initialization**: Server automatically starts monitoring for all users in active mode on startup (defaults to 5-minute interval if frequency is 0/null)
-- **API Control**: `/api/user/agent-mode` and `/api/monitoring/frequency` routes start/stop/restart monitoring based on user actions
-- **Fail-Fast Design**: Missing credentials throw errors immediately, preventing silent failures
-- **Portfolio Snapshots**: Created on monitoring start, every monitoring cycle, and after successful trades
-- **Edge Cases**: 0-minute frequency auto-corrects to 5 minutes when activating; per-user error isolation prevents cascading failures
+**Database Strategy:** Drizzle ORM with PostgreSQL for type-safe operations. Schema includes tables for trades, positions, portfolio snapshots, and AI usage logs.
+**API Design:** RESTful endpoints (`/api` prefix) for trading prompts, database operations, and Hyperliquid exchange interactions.
+**Authentication & Security:**
+- Multi-tenant architecture with `isAuthenticated` and `requireVerifiedUser` middleware.
+- Passport.js LocalStrategy for username/password authentication (scrypt-hashed passwords).
+- PostgreSQL session persistence.
+- Multi-step onboarding process requiring Hyperliquid account creation via a referral link and wallet address verification.
+- Admin user management for user verification and deletion.
+- AES-256-GCM encryption with envelope encryption for storing all API keys (AI and exchange).
+- User schema includes agent mode (passive/active), monitoring frequency, and Zod validation for auth requests.
+- Form accessibility features (autocomplete, test-ids).
+**AI Integration:**
+- **Multi-Provider AI Router:** Supports Perplexity, OpenAI/ChatGPT, and xAI/Grok. Retrieves and decrypts user credentials, creates OpenAI-compatible clients, validates model compatibility, tracks usage, and provides default models.
+- **Prompt Processing:** "Mr. Fox" processes natural language prompts to generate structured trading strategies, providing interpretations, trading actions, risk management plans, and expected outcomes with required numeric values for position sizes.
+**Autonomous Trading System:**
+- Multi-tenant system with per-user monitoring loops.
+- Uses per-user encrypted Hyperliquid and AI provider credentials.
+- Server starts monitoring for active users on startup.
+- API controls for agent mode and monitoring frequency.
+- Passive (learning-only) and Active (autonomous trading) modes with user confirmation.
 
 ### Market Data & Indicators
-
-**WebSocket Service** (`marketDataWebSocket.ts`): Real-time market data streaming infrastructure:
-- Dual WebSocket architecture: Client-facing server + backend connection to Hyperliquid
-- Supports trades, L2 book (order book), and candle subscriptions
-- Per-client subscription tracking with automatic cleanup on disconnect
-- Aggregates client subscriptions to minimize Hyperliquid connections
-- Auto-reconnection with 5-second delay, 30-second heartbeat
-- Interval-aware candle unsubscription (bug fixed: includes interval in keys)
-
-**CVD Calculator** (`cvdCalculator.ts`): Cumulative Volume Delta with spot + perpetual aggregation:
-- Analyzes real-time trade data to track buying vs selling pressure
-- Aggregates spot and perpetual trades into single delta per base coin
-- Normalizes coin symbols (removes "-SPOT" suffix) for proper aggregation
-- Maintains chronological order with 1000-point history per coin
-- API endpoints: subscribe, unsubscribe, get snapshot, reset CVD
-- Both "BTC" and "BTC-SPOT" trades update same cumulative delta
-- Properly calculates: `delta = buyVolume - sellVolume`
+**WebSocket Service:** Dual WebSocket architecture for real-time market data (trades, L2 book, candles) with client-side aggregation and auto-reconnection.
+**CVD Calculator:** Cumulative Volume Delta with spot + perpetual aggregation, normalizing symbols and maintaining chronological history.
+**Volume Profile Calculator:** Combines historical candle data with real-time trades, distributing candle volume across prices, tracking buy/sell volume, and calculating Point of Control (POC).
 
 ### Core Features
-
-**Autonomous Trading Engine:** Mr. Fox autonomously trades based on market analysis, developing trade theses, identifying market conditions, and analyzing volume profiles. It executes trades with proper position sizing and risk management, learns from user prompts, and sets stop losses and take profits based on technical analysis.
-
-**Order Management System:** Prevents duplicate protective orders by fetching existing open orders, displaying them to the AI, and auto-canceling all `reduceOnly` orders for a position before placing new stop loss/take profit orders. Ensures a maximum of one stop loss and one take profit per position.
-
-**Configurable Monitoring Frequency:** Users can adjust the autonomous trading frequency (Disabled, 1 minute, 5 minutes, 30 minutes, 1 hour).
-
-**Enhanced Performance Metrics:** Tracks Sterling Ratio, Omega Ratio, Maximum Drawdown, Sharpe, Sortino, and Calmar ratios.
-
-**Trading Controls:** Individual and "Close All" buttons for positions, executing market closes via IOC limit orders with extreme prices.
+**Autonomous Trading Engine:** AI develops trade theses, identifies market conditions, analyzes volume profiles, executes trades with proper sizing and risk management, and sets stop losses/take profits.
+**Order Management System:** Prevents duplicate protective orders, fetches existing orders for AI context, and auto-cancels `reduceOnly` orders before placing new ones.
+**Configurable Monitoring Frequency:** Users can adjust autonomous trading frequency (Disabled, 1 min, 5 min, 30 min, 1 hour).
+**Enhanced Performance Metrics:** Tracks Sterling, Omega, Max Drawdown, Sharpe, Sortino, and Calmar ratios.
+**Trading Controls:** Individual and "Close All" buttons for positions, executing market closes via IOC limit orders.
 
 ## External Dependencies
 
 **Trading Infrastructure:**
-- **Hyperliquid Exchange:** Integrated via the `hyperliquid` npm package for perpetual futures trading, market data, order types, and position tracking. Requires `HYPERLIQUID_PRIVATE_KEY`.
+- **Hyperliquid Exchange:** Integrated via the `hyperliquid` npm package.
 
 **UI Component Libraries:**
-- **Radix UI:** For accessible UI primitives.
-- **Recharts:** For data visualization.
-- **Lucide React:** For iconography.
-- **Embla Carousel:** For responsive carousels.
+- **Radix UI:** Accessible UI primitives.
+- **Recharts:** Data visualization.
+- **Lucide React:** Iconography.
+- **Embla Carousel:** Responsive carousels.
 
 **Database & ORM:**
 - `pg` (node-postgres) for PostgreSQL connectivity.
-- **Drizzle ORM:** For type-safe database interactions and schema validation.
+- **Drizzle ORM:** Type-safe database interactions.
 
 **AI/LLM:**
-- **OpenAI SDK:** Used to access the Perplexity API for integrating Perplexity Sonar models.
+- **OpenAI SDK:** Used for Perplexity API integration.
 
 **Development Tools:**
-- **Vite:** For frontend build and development.
-- **ESBuild:** For server bundling in production.
-- **TypeScript:** With strict mode enabled.
+- **Vite:** Frontend build and development.
+- **ESBuild:** Server bundling in production.
+- **TypeScript:** With strict mode.
