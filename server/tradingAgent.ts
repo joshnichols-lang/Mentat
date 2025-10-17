@@ -78,6 +78,106 @@ export async function processTradingPrompt(
 ): Promise<TradingStrategy> {
   
   try {
+    // First, classify if this is a trading question or general question
+    // If screenshots are attached, strongly bias towards trading
+    let classification = { isTrading: true, reason: "default to trading" };
+    
+    // Simple keyword-based pre-check for obvious non-trading questions
+    const generalKeywords = ['what is', 'who was', 'who is', 'when did', 'how does', 'tell me about', 'explain', 'calculate', 'news today', 'president', 'history of'];
+    const tradingKeywords = ['buy', 'sell', 'close', 'position', 'portfolio', 'trade', 'market', 'price', 'chart', 'stop loss', 'take profit', 'long', 'short', 'leverage'];
+    
+    const lowerPrompt = prompt.toLowerCase();
+    const hasGeneralKeywords = generalKeywords.some(kw => lowerPrompt.includes(kw));
+    const hasTradingKeywords = tradingKeywords.some(kw => lowerPrompt.includes(kw));
+    
+    // If user attached screenshots, it's almost certainly trading
+    if (screenshots && screenshots.length > 0) {
+      classification = { isTrading: true, reason: "screenshots attached - likely charts" };
+    }
+    // If has trading keywords, it's trading
+    else if (hasTradingKeywords) {
+      classification = { isTrading: true, reason: "trading keywords detected" };
+    }
+    // If has general keywords OR has no keywords at all (ambiguous), classify via AI
+    else if (hasGeneralKeywords || (!hasGeneralKeywords && !hasTradingKeywords)) {
+      try {
+        const classificationMessages: AIMessage[] = [
+          {
+            role: "system" as const,
+            content: `Determine if this is about trading/markets OR a general question. Respond with JSON: {"isTrading": true/false, "reason": "brief"}`
+          },
+          {
+            role: "user" as const,
+            content: prompt
+          }
+        ];
+
+        const classificationResponse = await makeAIRequest(userId, {
+          messages: classificationMessages,
+          model,
+        }, preferredProvider);
+
+        let cleanContent = classificationResponse.content?.trim() || '{}';
+        if (cleanContent.startsWith('```json')) {
+          cleanContent = cleanContent.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+        } else if (cleanContent.startsWith('```')) {
+          cleanContent = cleanContent.replace(/^```\s*/, '').replace(/\s*```$/, '');
+        }
+        classification = JSON.parse(cleanContent);
+      } catch (e) {
+        console.log("Failed to classify, defaulting to trading question");
+        classification = { isTrading: true, reason: "classification failed - default to trading" };
+      }
+    }
+
+    console.log(`[Trading Prompt] Classification: ${classification.isTrading ? 'TRADING' : 'GENERAL'} - ${classification.reason}`);
+
+    // If it's a general question, respond naturally without trading JSON format
+    if (!classification.isTrading) {
+      const generalMessages: AIMessage[] = [
+        {
+          role: "system" as const,
+          content: `You are Mr. Fox, a helpful and knowledgeable AI assistant. You can answer questions on any topic - math, science, history, current events, general knowledge, and more. Be friendly, accurate, and conversational.
+
+You also happen to be an expert crypto trader, but the user is asking you a general question right now, so respond naturally without any trading jargon unless relevant.`
+        },
+        {
+          role: "user" as const,
+          content: prompt
+        }
+      ];
+
+      const generalResponse = await makeAIRequest(userId, {
+        messages: generalMessages,
+        model,
+      }, preferredProvider);
+
+      // Log usage
+      try {
+        await storage.logAiUsage(userId, {
+          provider: generalResponse.provider,
+          model: generalResponse.model,
+          promptTokens: generalResponse.usage.promptTokens,
+          completionTokens: generalResponse.usage.completionTokens,
+          totalTokens: generalResponse.usage.totalTokens,
+          estimatedCost: generalResponse.cost.toFixed(6),
+          userPrompt: prompt,
+          aiResponse: generalResponse.content || '',
+          success: 1
+        });
+      } catch (logError) {
+        console.error("Failed to log AI usage:", logError);
+      }
+
+      // Return as a "strategy" with the general response in interpretation
+      return {
+        interpretation: generalResponse.content || "I don't have an answer to that.",
+        actions: [],
+        riskManagement: "Not applicable - general question",
+        expectedOutcome: "Not applicable - general question"
+      };
+    }
+
     // Fetch recent user prompt history (last 5 successful prompts)
     let promptHistory: {timestamp: Date, prompt: string}[] = [];
     try {
