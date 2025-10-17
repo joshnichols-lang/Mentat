@@ -382,6 +382,11 @@ export class MarketDataWebSocketService {
     const key = `candle:${candle.s}:${candle.i}`;
     const clients = this.activeSubscriptions.get(key);
     
+    console.log(`[Market Data WS] Broadcasting candle for ${candle.s}:${candle.i}, key=${key}, clients=${clients?.size || 0}`);
+    if (!clients) {
+      console.log(`[Market Data WS] No clients for key ${key}. Active keys:`, Array.from(this.activeSubscriptions.keys()));
+    }
+    
     if (clients) {
       const message = JSON.stringify({
         type: "candle",

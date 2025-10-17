@@ -49,6 +49,44 @@ export function PriceVolumeChart({ coin }: PriceVolumeChartProps) {
     refetchInterval: 2000,
   });
 
+  // Fetch historical candles on mount/coin change
+  useEffect(() => {
+    const fetchHistoricalCandles = async () => {
+      try {
+        const response = await fetch(`https://api.hyperliquid.xyz/info`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'candleSnapshot',
+            req: {
+              coin: coin,
+              interval: '1h',
+              startTime: Date.now() - (50 * 60 * 60 * 1000), // Last 50 hours
+              endTime: Date.now()
+            }
+          })
+        });
+        const data = await response.json();
+        if (data && Array.isArray(data)) {
+          const historicalCandles: CandleData[] = data.map((c: any) => ({
+            time: c.t,
+            open: parseFloat(c.o),
+            high: parseFloat(c.h),
+            low: parseFloat(c.l),
+            close: parseFloat(c.c),
+            volume: parseFloat(c.v),
+          }));
+          setCandles(historicalCandles);
+          console.log("[Price Chart] Loaded", historicalCandles.length, "historical candles");
+        }
+      } catch (err) {
+        console.error("[Price Chart] Error fetching historical candles:", err);
+      }
+    };
+
+    fetchHistoricalCandles();
+  }, [coin]);
+
   // Subscribe to candle WebSocket
   useEffect(() => {
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
@@ -70,6 +108,7 @@ export function PriceVolumeChart({ coin }: PriceVolumeChartProps) {
     socket.onmessage = (event) => {
       try {
         const message = JSON.parse(event.data);
+        console.log("[Price Chart WS] Received message:", message.type, message.data?.s);
         if (message.type === "candle" && message.data.s === coin) {
           const candleData: CandleData = {
             time: message.data.t,
@@ -80,6 +119,7 @@ export function PriceVolumeChart({ coin }: PriceVolumeChartProps) {
             volume: parseFloat(message.data.v),
           };
 
+          console.log("[Price Chart WS] Adding candle:", candleData);
           setCandles(prev => {
             // Keep last 50 candles
             const updated = [...prev];
@@ -91,7 +131,9 @@ export function PriceVolumeChart({ coin }: PriceVolumeChartProps) {
               updated.push(candleData);
             }
             
-            return updated.slice(-50);
+            const newCandles = updated.slice(-50);
+            console.log("[Price Chart WS] Total candles:", newCandles.length);
+            return newCandles;
           });
         }
       } catch (err) {
