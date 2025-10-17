@@ -62,6 +62,13 @@ Preferred communication style: Simple, everyday language.
    - Approved users gain full platform access; rejected users see error message with support instructions
    - User schema includes `walletAddress`, `verificationStatus` (pending/approved/rejected), and `verifiedAt` timestamp
 
+**Admin User Management:**
+   - Admin users can view all registered users via `/admin/users` page
+   - Comprehensive user information displayed: username, email, wallet address, verification status, agent mode, role, and registration date
+   - Admins can delete users (except their own account) with confirmation dialog
+   - Backend routes enforce admin-only access with role-based authorization
+   - Navigation via dropdown menu in header with "Verify Users" and "Manage Users" options
+
 **User Credentials:** Uses AES-256-GCM encryption with envelope encryption for storing all API keys. The `api_keys` table supports multiple providers (AI and exchanges) with user-defined labels. Each credential has a unique Data Encryption Key (DEK) encrypted with the master key (ENCRYPTION_MASTER_KEY secret). API secrets (for Binance/Bybit) are stored encrypted in the metadata JSONB field. Proper key isolation ensures if one credential is compromised, others remain secure.
 
 **User Schema:** Includes username/password authentication, Zod validation for auth requests (username 3-50 chars, password 6-100 chars, email optional - accepts valid email or empty string, normalized to null in database). Agent mode (passive/active) with UI toggle and confirmation dialog, and per-user settings (monitoring frequency stored in `monitoringFrequencyMinutes` field).
