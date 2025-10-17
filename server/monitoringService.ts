@@ -237,15 +237,35 @@ ${(() => {
     
     if (!hasStopLoss) {
       const liq = pos.liquidationPrice;
-      const safeStopLong = liq ? (liq * 1.025).toFixed(2) : "N/A"; // 2.5% buffer to account for rounding
-      const safeStopShort = liq ? (liq * 0.975).toFixed(2) : "N/A";
+      const currentPrice = pos.currentPrice;
+      // Use Math.ceil for longs (round UP) and Math.floor for shorts (round DOWN) to avoid rounding issues
+      const safeStopLong = liq ? (Math.ceil(liq * 1.03 * 100) / 100).toFixed(2) : "N/A"; // 3% buffer, rounded up
+      const safeStopShort = liq ? (Math.floor(liq * 0.97 * 100) / 100).toFixed(2) : "N/A"; // 3% buffer, rounded down
       const safeLevelHint = pos.side === 'long' 
-        ? `minimum safe stop: $${safeStopLong}` 
-        : `maximum safe stop: $${safeStopShort}`;
+        ? `minimum safe stop: $${safeStopLong} (current price: $${currentPrice})` 
+        : `maximum safe stop: $${safeStopShort} (current price: $${currentPrice})`;
       missingProtection.push(`${posSymbol}: MISSING STOP LOSS - PLACE IMMEDIATELY (${safeLevelHint})`);
     }
     if (!hasTakeProfit) {
-      missingProtection.push(`${posSymbol}: MISSING TAKE PROFIT - PLACE IMMEDIATELY`);
+      const currentPrice = pos.currentPrice;
+      const entryPrice = pos.entryPrice;
+      // Calculate minimum take profit for 2:1 R:R
+      const existingStopLoss = openOrders.find(order => 
+        order.coin === posSymbol && 
+        order.orderType?.trigger?.tpsl === 'sl' && 
+        order.reduceOnly
+      );
+      if (existingStopLoss) {
+        const stopPrice = parseFloat(existingStopLoss.orderType?.trigger?.triggerPx || '0');
+        const riskDistance = Math.abs(entryPrice - stopPrice);
+        const minRewardDistance = riskDistance * 2; // 2:1 R:R
+        const minTakeProfit = pos.side === 'long' 
+          ? (entryPrice + minRewardDistance).toFixed(2)
+          : (entryPrice - minRewardDistance).toFixed(2);
+        missingProtection.push(`${posSymbol}: MISSING TAKE PROFIT - PLACE IMMEDIATELY (minimum for 2:1 R:R: $${minTakeProfit}, current price: $${currentPrice})`);
+      } else {
+        missingProtection.push(`${posSymbol}: MISSING TAKE PROFIT - PLACE IMMEDIATELY (current price: $${currentPrice})`);
+      }
     }
   }
   
@@ -276,19 +296,15 @@ AUTONOMOUS TRADING DIRECTIVE:
    - If a position lacks either protective order, place it IMMEDIATELY in the next cycle
    - Position levels based on: user's risk tolerance (from prompt history) + current market analysis + liquidation safety
 7. Manage existing positions: adjust stops, take profits, or close positions based on risk/reward
-8. **STOP ADJUSTING PROTECTIVE ORDERS - LEAVE THEM ALONE**: 
-   - **YOU ARE MAKING TOO MANY UNNECESSARY ADJUSTMENTS - THIS MUST STOP**
-   - **DEFAULT: DO NOT TOUCH protective orders that already exist**
-   - If protective orders exist for a position, your DEFAULT action is ZERO ACTIONS (do not include them in your actions array)
-   - Constantly tweaking take profit from $3950 to $3968 to $4000 is WASTEFUL and WRONG
-   - Once protective orders are set with proper risk management, they should STAY THERE
-   - ONLY cancel/replace an order if you can PROVE a threshold violation with SPECIFIC NUMBERS:
-     * Price moved >5% from trigger: Calculate (current_price - trigger_price) / trigger_price * 100 → Must show "8.2%"
-     * R:R fell below 2:1: Calculate distance_to_TP / distance_to_SL → Must show "1.3:1"
-     * Regime changed: Was bullish, now bearish (or vice versa) → Must cite specific market shift
-     * Order >3 ATR away: Calculate ATR distance → Must show "4.2 ATR"
-   - If you CANNOT cite calculated metrics proving violation, you CANNOT touch the order
-   - Making small "optimizations" without threshold violations is FORBIDDEN
+8. **CRITICAL: NEVER CANCEL EXISTING PROTECTIVE ORDERS UNLESS GENUINELY MISSING**: 
+   - **IF A STOP LOSS ORDER EXISTS, DO NOT INCLUDE IT IN YOUR ACTIONS - LEAVE IT ALONE**
+   - **IF A TAKE PROFIT ORDER EXISTS, DO NOT INCLUDE IT IN YOUR ACTIONS - LEAVE IT ALONE**
+   - Check "EXISTING OPEN ORDERS" section - if you see a STOP LOSS or TAKE PROFIT for a symbol, DO NOT place a new one
+   - ONLY place protective orders when "CRITICAL MISSING PROTECTIVE ORDERS" section explicitly shows they are MISSING
+   - The "MISSING" section is the ONLY source of truth about whether orders need to be placed
+   - If "EXISTING OPEN ORDERS" shows protective orders but "MISSING" section is empty, return ZERO ACTIONS
+   - NEVER replace or "optimize" existing protective orders - this creates wasteful churn
+   - Once placed, protective orders should remain untouched unless truly missing
 9. **CANCEL ONLY WHEN NECESSARY**: If an order must be adjusted, cancel it FIRST with cancel_order action, THEN place the new order
 10. **EXACTLY ONE OF EACH PROTECTIVE ORDER**: Each position gets EXACTLY one stop loss + EXACTLY one take profit
    - In your actions array, you MUST include EXACTLY one stop_loss action per symbol AND EXACTLY one take_profit action per symbol
@@ -323,38 +339,45 @@ Respond in JSON format:
 }
 
 CRITICAL ORDER MANAGEMENT RULES:
-1. **VERIFY FULL RISK MANAGEMENT COVERAGE**: 
-   - Before doing anything else, check if EVERY position has BOTH stop loss AND take profit orders
-   - If ANY position is missing either order, place it IMMEDIATELY - this is the highest priority action
-   - Example: If position has only stop loss, place take profit FIRST before considering any other actions
-2. **Before placing new stop_loss or take_profit**: Check if one already exists for that position
-3. **PROTECTIVE ORDERS: STOP MAKING UNNECESSARY CHANGES**:
-   - **If protective orders exist, DO NOT TOUCH THEM - this is your DEFAULT behavior**
-   - Do NOT include any actions for existing protective orders unless you have PROOF of threshold violation
-   - You have been making too many wasteful adjustments (e.g., changing take profit from $3950 to $3968 to $4000)
-   - To justify canceling an order, you MUST calculate and show SPECIFIC NUMBERS for at least ONE threshold violation:
-     * "ETH price moved from $3850 to $3650 = 5.2% movement (>5% threshold)" ← THIS is acceptable
-     * "Adjusting target higher" ← THIS is NOT acceptable
-     * "ETH R:R = distance_to_TP($100) / distance_to_SL($80) = 1.25:1 (<2:1 threshold)" ← THIS is acceptable  
-     * "Optimizing exit level" ← THIS is NOT acceptable
-   - If you cannot show calculated metrics proving violation, the order STAYS - no exceptions
-4. **If an order exists but VIOLATES a threshold**: 
-   - FIRST: Include a cancel_order action with the existing orderId
-   - In reasoning, CITE SPECIFIC CALCULATED METRICS: "ETH price moved from $3950 to $3730 = 5.6% (>5% threshold), requiring adjustment"
-   - THEN: Include a new stop_loss or take_profit action with updated triggerPrice and full reasoning
-5. **If an order exists and ALL thresholds pass**: Do NOT include ANY actions for it - leave it untouched
-6. **Each position limits**: Exactly ONE stop loss + ONE take profit order (BOTH REQUIRED, not optional)
+1. **READ THE "EXISTING OPEN ORDERS" SECTION FIRST**:
+   - This section shows ALL currently active protective orders
+   - If you see a STOP LOSS for a symbol, IT EXISTS - do not place another one
+   - If you see a TAKE PROFIT for a symbol, IT EXISTS - do not place another one
+2. **READ THE "CRITICAL MISSING PROTECTIVE ORDERS" SECTION SECOND**:
+   - This section ONLY appears when protective orders are genuinely missing
+   - ONLY place orders that appear in this "MISSING" section
+   - If this section is empty or not shown, return ZERO protective order actions
+3. **DEFAULT BEHAVIOR: ZERO ACTIONS**:
+   - If "EXISTING OPEN ORDERS" shows both stop loss AND take profit for all positions, return empty actions array
+   - Do NOT try to "optimize" or "improve" existing orders
+   - Cash/inaction is a valid position - doing nothing is often the best trade
+4. **ONLY PLACE ORDERS EXPLICITLY MARKED AS MISSING**:
+   - If "MISSING" section says "ETH-PERP: MISSING STOP LOSS", place ONLY stop loss for ETH-PERP
+   - If "MISSING" section says "SOL-PERP: MISSING TAKE PROFIT", place ONLY take profit for SOL-PERP
+   - Use the exact safe levels provided in the MISSING section
+5. **Each position limits**: Exactly ONE stop loss + ONE take profit order (BOTH REQUIRED, not optional)
 7. **LIQUIDATION PRICE SAFETY (CRITICAL)**: 
-   - For LONG positions: Stop loss MUST be AT LEAST liquidation price * 1.025 (2.5% buffer for safety)
-   - For SHORT positions: Stop loss MUST be AT MOST liquidation price * 0.975 (2.5% buffer for safety)
+   - For LONG positions: Stop loss MUST be AT LEAST liquidation price * 1.03 (3% buffer for safety)
+   - For SHORT positions: Stop loss MUST be AT MOST liquidation price * 0.97 (3% buffer for safety)
    - ALWAYS use the safe stop level provided in the "CRITICAL MISSING PROTECTIVE ORDERS" section when available
    - NEVER set stops at or past liquidation levels - this causes instant liquidation without controlled exit
    - Stop losses use MARKET execution for guaranteed fills when triggered
    - Take profits use LIMIT execution for better prices
-8. ALL numeric values (size, expectedEntry, triggerPrice, orderId) must be actual numbers as strings, NEVER placeholders
-9. For buy/sell actions, expectedEntry is REQUIRED (Hyperliquid uses limit orders only)
-10. For stop_loss/take_profit, triggerPrice is REQUIRED
-11. For cancel_order, orderId is REQUIRED and reasoning MUST cite which threshold(s) failed with actual calculated values
+8. **MINIMUM DISTANCE FROM CURRENT PRICE**:
+   - Stop loss must be AT LEAST 1.5% away from current market price to avoid immediate trigger/rejection
+   - For LONG: stop_loss_price < current_price * 0.985 (at least 1.5% below)
+   - For SHORT: stop_loss_price > current_price * 1.015 (at least 1.5% above)
+   - If your calculated safe stop violates this, move it further away from current price
+9. **MANDATORY 2:1 RISK:REWARD RATIO**:
+   - Take profit distance MUST be AT LEAST 2x the stop loss distance from entry
+   - For LONG: (take_profit - entry) >= 2 * (entry - stop_loss)
+   - For SHORT: (entry - take_profit) >= 2 * (stop_loss - entry)
+   - Use the minimum take profit level shown in "CRITICAL MISSING PROTECTIVE ORDERS" when available
+   - NEVER place take profits that violate 2:1 R:R - this creates poor risk management
+10. ALL numeric values (size, expectedEntry, triggerPrice, orderId) must be actual numbers as strings, NEVER placeholders
+11. For buy/sell actions, expectedEntry is REQUIRED (Hyperliquid uses limit orders only)
+12. For stop_loss/take_profit, triggerPrice is REQUIRED
+13. For cancel_order, orderId is REQUIRED and reasoning MUST cite which threshold(s) failed with actual calculated values
 12. Close actions must have matching side to the existing position
 13. **WHEN TO STAY OUT** (critical - read this carefully):
    - Market is choppy/ranging without clear directional bias
