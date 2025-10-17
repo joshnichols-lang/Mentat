@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Lock, KeyRound } from "lucide-react";
+import Header from "@/components/Header";
 
 const passwordChangeSchema = z.object({
   currentPassword: z.string().min(6, "Current password is required"),
@@ -64,122 +65,127 @@ export default function Settings() {
   };
 
   return (
-    <div className="container max-w-4xl mx-auto p-6 space-y-6">
-      <div className="flex items-center gap-3 mb-6">
-        <KeyRound className="w-8 h-8" />
-        <div>
-          <h1 className="text-3xl font-bold">Settings</h1>
-          <p className="text-muted-foreground">Manage your account settings</p>
+    <div className="flex flex-col h-screen">
+      <Header />
+      <div className="flex-1 overflow-auto">
+        <div className="container max-w-4xl mx-auto p-6 space-y-6">
+          <div className="flex items-center gap-3 mb-6">
+            <KeyRound className="w-8 h-8" />
+            <div>
+              <h1 className="text-3xl font-bold">Settings</h1>
+              <p className="text-muted-foreground">Manage your account settings</p>
+            </div>
+          </div>
+
+          <Card data-testid="card-password-settings">
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Lock className="w-5 h-5" />
+                <CardTitle>Change Password</CardTitle>
+              </div>
+              <CardDescription>
+                Update your password to keep your account secure
+              </CardDescription>
+            </CardHeader>
+                <CardContent>
+              {!isChangingPassword ? (
+                <Button
+                  onClick={() => setIsChangingPassword(true)}
+                  variant="outline"
+                  data-testid="button-change-password"
+                >
+                  Change Password
+                </Button>
+              ) : (
+                <Form {...form}>
+                      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                    <FormField
+                      control={form.control}
+                      name="currentPassword"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Current Password</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="password"
+                              placeholder="Enter current password"
+                              autoComplete="current-password"
+                              data-testid="input-current-password"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="newPassword"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>New Password</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="password"
+                              placeholder="Enter new password"
+                              autoComplete="new-password"
+                              data-testid="input-new-password"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="confirmPassword"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Confirm New Password</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="password"
+                              placeholder="Confirm new password"
+                              autoComplete="new-password"
+                              data-testid="input-confirm-password"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <div className="flex gap-2">
+                      <Button
+                        type="submit"
+                        disabled={passwordMutation.isPending}
+                        data-testid="button-submit-password"
+                      >
+                        {passwordMutation.isPending ? "Updating..." : "Update Password"}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => {
+                          setIsChangingPassword(false);
+                          form.reset();
+                        }}
+                        data-testid="button-cancel-password"
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </form>
+                </Form>
+              )}
+            </CardContent>
+          </Card>
         </div>
       </div>
-
-      <Card data-testid="card-password-settings">
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <Lock className="w-5 h-5" />
-            <CardTitle>Change Password</CardTitle>
-          </div>
-          <CardDescription>
-            Update your password to keep your account secure
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {!isChangingPassword ? (
-            <Button
-              onClick={() => setIsChangingPassword(true)}
-              variant="outline"
-              data-testid="button-change-password"
-            >
-              Change Password
-            </Button>
-          ) : (
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="currentPassword"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Current Password</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="password"
-                          placeholder="Enter current password"
-                          autoComplete="current-password"
-                          data-testid="input-current-password"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="newPassword"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>New Password</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="password"
-                          placeholder="Enter new password"
-                          autoComplete="new-password"
-                          data-testid="input-new-password"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="confirmPassword"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Confirm New Password</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="password"
-                          placeholder="Confirm new password"
-                          autoComplete="new-password"
-                          data-testid="input-confirm-password"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <div className="flex gap-2">
-                  <Button
-                    type="submit"
-                    disabled={passwordMutation.isPending}
-                    data-testid="button-submit-password"
-                  >
-                    {passwordMutation.isPending ? "Updating..." : "Update Password"}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => {
-                      setIsChangingPassword(false);
-                      form.reset();
-                    }}
-                    data-testid="button-cancel-password"
-                  >
-                    Cancel
-                  </Button>
-                </div>
-              </form>
-            </Form>
-          )}
-        </CardContent>
-      </Card>
     </div>
   );
 }
