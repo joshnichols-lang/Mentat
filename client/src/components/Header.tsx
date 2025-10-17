@@ -1,4 +1,4 @@
-import { Wallet, LogOut, UserCheck } from "lucide-react";
+import { Wallet, LogOut, UserCheck, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import ThemeToggle from "./ThemeToggle";
@@ -54,6 +54,14 @@ export default function Header() {
           </div>
           <Button variant="ghost" size="icon" data-testid="button-wallet">
             <Wallet className="h-4 w-4" />
+          </Button>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={() => setLocation("/settings")}
+            data-testid="button-settings"
+          >
+            <Settings className="h-4 w-4" />
           </Button>
           <Button 
             variant="ghost" 
