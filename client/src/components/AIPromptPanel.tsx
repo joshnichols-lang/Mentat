@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Send, Sparkles, CheckCircle2, AlertCircle, Info } from "lucide-react";
+import { Send, CheckCircle2, AlertCircle, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
@@ -8,6 +8,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import logoUrl from "@assets/generated-image-removebg-preview_1760665535887.png";
 
 interface ExecutionResult {
   success: boolean;
@@ -116,7 +117,7 @@ export default function AIPromptPanel() {
     <div className="space-y-3">
       <Card className="p-4">
         <div className="mb-3 flex items-center gap-2">
-          <Sparkles className="h-4 w-4 text-primary" />
+          <img src={logoUrl} alt="Mr. Fox" className="h-5 w-5" />
           <h2 className="text-sm font-semibold">Mr. Fox</h2>
           {executeTradeMutation.isPending && (
             <Badge variant="secondary" className="gap-1.5 text-xs">

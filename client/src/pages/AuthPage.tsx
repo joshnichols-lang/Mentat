@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import logoUrl from "@assets/generated-image_1760664087548.png";
+import logoUrl from "@assets/generated-image-removebg-preview_1760665535887.png";
 
 const loginSchema = z.object({
   username: z.string().min(3, "Username must be at least 3 characters"),

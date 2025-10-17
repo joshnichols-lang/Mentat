@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import ThemeToggle from "./ThemeToggle";
 import AgentModeToggle from "./AgentModeToggle";
 import { useQuery } from "@tanstack/react-query";
-import logoUrl from "@assets/generated-image_1760664087548.png";
+import logoUrl from "@assets/generated-image-removebg-preview_1760665535887.png";
 
 export default function Header() {
   const { data: userState } = useQuery<any>({

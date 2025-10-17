@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { AlertCircle, Brain, TrendingUp, CheckCircle2, Loader2 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
-import logoUrl from "@assets/generated-image_1760664087548.png";
+import logoUrl from "@assets/generated-image-removebg-preview_1760665535887.png";
 
 type OnboardingStep = "ai_provider" | "exchange" | "complete";
 
@@ -142,6 +142,7 @@ export default function Onboarding() {
         <Card className="w-full max-w-md">
           <CardContent className="pt-6">
             <div className="text-center space-y-4" data-testid="div-onboarding-complete">
+              <img src={logoUrl} alt="1fox logo" className="h-20 w-20 mx-auto mb-2" />
               <CheckCircle2 className="h-16 w-16 text-green-600 mx-auto" data-testid="icon-success" />
               <h2 className="text-2xl font-mono" data-testid="text-setup-complete">Setup Complete!</h2>
               <p className="text-muted-foreground" data-testid="text-redirecting">
