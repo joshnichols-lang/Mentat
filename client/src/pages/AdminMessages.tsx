@@ -28,7 +28,7 @@ export default function AdminMessages() {
 
   const resolveMutation = useMutation({
     mutationFn: async (messageId: string) => {
-      return await apiRequest(`/api/contact/${messageId}/resolve`, "POST", {});
+      return await apiRequest("POST", `/api/contact/${messageId}/resolve`, {});
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/contact"] });

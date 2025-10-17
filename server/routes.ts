@@ -1331,6 +1331,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
+      // Server-side validation for screenshot
+      if (screenshotUrl) {
+        // Validate base64 format and type
+        if (typeof screenshotUrl !== "string" || !screenshotUrl.startsWith("data:image/")) {
+          return res.status(400).json({
+            success: false,
+            error: "Invalid screenshot format"
+          });
+        }
+
+        // Check size (base64 encoded, so roughly 1.33x original size)
+        // Max 5MB original ≈ 6.67MB base64
+        const sizeInBytes = screenshotUrl.length * 0.75; // Approximate decode size
+        const maxSizeBytes = 5 * 1024 * 1024; // 5MB
+        if (sizeInBytes > maxSizeBytes) {
+          return res.status(400).json({
+            success: false,
+            error: "Screenshot too large (max 5MB)"
+          });
+        }
+      }
+
       const contactMessage = await storage.createContactMessage(userId, {
         message,
         screenshotUrl: screenshotUrl || null

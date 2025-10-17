@@ -29,7 +29,7 @@ export function ContactAdmin({ open, onOpenChange }: ContactAdminProps) {
 
   const submitMutation = useMutation({
     mutationFn: async (data: { message: string; screenshotUrl: string | null }) => {
-      return await apiRequest("/api/contact", "POST", data);
+      return await apiRequest("POST", "/api/contact", data);
     },
     onSuccess: () => {
       toast({
