@@ -72,12 +72,12 @@ app.use((req, res, next) => {
   }, () => {
     log(`serving on port ${port}`);
     
-    // Initialize Hyperliquid client for services
-    const hyperliquid = initHyperliquidClient();
-    
-    // Start automated services
-    // NOTE: These services use TEST_USER_ID and need to be disabled or redesigned for multi-tenant
-    startMonitoring();
-    startPeriodicSnapshots(TEST_USER_ID, hyperliquid);
+    // DISABLED: Background services are causing rate limiting issues
+    // These services use TEST_USER_ID and are not multi-tenant ready
+    // TODO: Redesign for per-user background services or remove entirely
+    // 
+    // const hyperliquid = initHyperliquidClient();
+    // startMonitoring();
+    // startPeriodicSnapshots(TEST_USER_ID, hyperliquid);
   });
 })();
