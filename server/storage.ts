@@ -32,6 +32,8 @@ export interface IStorage {
   updateUserWalletAddress(userId: string, walletAddress: string): Promise<User | undefined>;
   updateUserVerificationStatus(userId: string, status: "pending" | "approved" | "rejected"): Promise<User | undefined>;
   getPendingVerificationUsers(): Promise<User[]>;
+  getAllUsers(): Promise<User[]>;
+  deleteUser(userId: string): Promise<void>;
   
   // Trade methods (multi-tenant)
   getTrades(userId: string, limit?: number): Promise<Trade[]>;
@@ -204,6 +206,16 @@ export class DbStorage implements IStorage {
       .from(users)
       .where(eq(users.verificationStatus, "pending"))
       .orderBy(desc(users.createdAt));
+  }
+
+  async getAllUsers(): Promise<User[]> {
+    return await db.select()
+      .from(users)
+      .orderBy(desc(users.createdAt));
+  }
+
+  async deleteUser(userId: string): Promise<void> {
+    await db.delete(users).where(eq(users.id, userId));
   }
 
   // Trade methods

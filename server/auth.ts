@@ -225,4 +225,47 @@ export function setupAuth(app: Express) {
       next(error);
     }
   });
+
+  // Get all users (admin only)
+  app.get("/api/admin/users", async (req, res, next) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    try {
+      const currentUser = req.user!;
+      if (currentUser.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+      
+      const allUsers = await storage.getAllUsers();
+      // Remove passwords from response
+      const safeUsers = allUsers.map(({ password, ...user }) => user);
+      res.json(safeUsers);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // Delete user (admin only)
+  app.delete("/api/admin/users/:userId", async (req, res, next) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    try {
+      const currentUser = req.user!;
+      if (currentUser.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const { userId } = req.params;
+
+      // Prevent admin from deleting themselves
+      if (userId === currentUser.id) {
+        return res.status(400).json({ error: "Cannot delete your own account" });
+      }
+      
+      await storage.deleteUser(userId);
+      res.json({ success: true, message: "User deleted successfully" });
+    } catch (error) {
+      next(error);
+    }
+  });
 }
