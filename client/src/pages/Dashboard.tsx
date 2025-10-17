@@ -12,7 +12,6 @@ import SharpeRatioChart from "@/components/SharpeRatioChart";
 import { AIUsageTracker } from "@/components/AIUsageTracker";
 import ConversationHistory from "@/components/ConversationHistory";
 import { MonitoringAlerts } from "@/components/MonitoringAlerts";
-import { MarketAnalysisPanel } from "@/components/MarketAnalysisPanel";
 
 export default function Dashboard() {
   const [, setLocation] = useLocation();
@@ -97,9 +96,6 @@ export default function Dashboard() {
               <AIUsageTracker />
             </div>
           </div>
-
-          {/* TradingView-Style Market Analysis Panel */}
-          <MarketAnalysisPanel />
         </div>
       </main>
     </div>

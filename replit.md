@@ -12,7 +12,7 @@ Preferred communication style: Simple, everyday language.
 **Technology Stack:** React with TypeScript, Vite, Wouter, TanStack Query, Tailwind CSS, and shadcn/ui.
 **Design System:** "Fantastic Mr. Fox" newspaper aesthetic with a grayscale color scheme, "Courier New" monospace typography, newsprint texture, and sharp corners. Dull green/red accents for trading elements.
 **Key UI Components:** AI Prompt Panel, Market Overview watchlist (real-time data, drag-and-drop), Portfolio Performance Chart, Positions Grid, Conversation History. Includes hover tooltips with mini price charts and risk management levels.
-**TradingView-Style Market Analysis:** Unified interface featuring searchable trading pair selector for all Hyperliquid perpetual and spot markets. Main view includes **interactive line chart** with multiple timeframes (1min, 5min, 15min, 1hr, 4hr, 1day), zoom in/out controls, click-and-drag area selection, and pan/scroll for historical data exploration. Automatically loads 100 historical candles per timeframe with on-demand fetching when scrolling to chart edges. CVD subchart below, and OrderBook with dynamic decimal precision selector. All components auto-update when trading pair changes. OrderBook features intelligent price grouping that rounds bids down and asks up to preserve accurate spreads, with precision options dynamically adjusted based on asset price range.
+**UI Optimization:** Chart and order book components removed to optimize API request capacity for autonomous trading operations. Focus is on AI-driven trading rather than manual technical analysis.
 
 ### Backend
 **Server Framework:** Express.js with TypeScript, integrated with Vite middleware.
@@ -45,8 +45,7 @@ Preferred communication style: Simple, everyday language.
 
 ### Market Data & Indicators
 **WebSocket Service:** Dual WebSocket architecture for real-time market data (trades, L2 book, candles) with client-side aggregation and auto-reconnection.
-**CVD Calculator:** Cumulative Volume Delta with spot + perpetual aggregation, normalizing symbols and maintaining chronological history.
-**Volume Profile Calculator:** Combines historical candle data with real-time trades, distributing candle volume across prices, tracking buy/sell volume, and calculating Point of Control (POC).
+**Backend Indicators:** CVD Calculator and Volume Profile Calculator available via API for AI trading decisions (not exposed in UI to conserve API requests).
 
 ### Core Features
 **Autonomous Trading Engine:** AI develops trade theses, identifies market conditions, analyzes volume profiles, executes trades with proper sizing and risk management, and sets stop losses/take profits.
