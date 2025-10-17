@@ -100,10 +100,18 @@ Preferred communication style: Simple, everyday language.
 - All storage methods enforce userId-first parameter pattern with `withUserFilter()` helper
 - All API routes extract `userId = req.user.claims.sub` and pass to storage/Hyperliquid clients
 - Per-user Hyperliquid clients via `getUserHyperliquidClient(userId)` with encrypted credentials
-- Monitoring frequency preferences stored per-user (not actively used yet)
+- Monitoring frequency preferences stored per-user and actively used by autonomous trading system
 - Each user's AI agent learns only from their own interactions
 
-**Background Services Limitation:** The autonomous trading engine (`monitoringService.ts`) and portfolio snapshot service (`portfolioSnapshotService.ts`) currently use a single `TEST_USER_ID` and are NOT multi-tenant ready. Per-user monitoring preferences are stored in the database but not actively used by these services. **For production multi-tenant deployment, these background services should be disabled OR completely refactored to run per-user with separate instances and proper credential isolation.**
+**Autonomous Trading System:** Fully multi-tenant autonomous trading system operational:
+- **User Monitoring Manager** (`userMonitoringManager.ts`): Manages per-user monitoring loops in a Map<userId, NodeJS.Timeout>
+- **Per-User Execution**: Each active user has their own monitoring interval running independently
+- **Credential Isolation**: Uses per-user encrypted Hyperliquid credentials and AI provider credentials
+- **Startup Initialization**: Server automatically starts monitoring for all users in active mode on startup (defaults to 5-minute interval if frequency is 0/null)
+- **API Control**: `/api/user/agent-mode` and `/api/monitoring/frequency` routes start/stop/restart monitoring based on user actions
+- **Fail-Fast Design**: Missing credentials throw errors immediately, preventing silent failures
+- **Portfolio Snapshots**: Created on monitoring start, every monitoring cycle, and after successful trades
+- **Edge Cases**: 0-minute frequency auto-corrects to 5 minutes when activating; per-user error isolation prevents cascading failures
 
 ### Core Features
 
