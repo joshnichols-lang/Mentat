@@ -284,11 +284,17 @@ Analyze these past prompts to understand the user's:
 - Entry/exit timing patterns` : 'No historical trading patterns available yet'}
 
 AUTONOMOUS TRADING DIRECTIVE:
-1. **PATIENCE IS PROFITABLE**: Cash is a position. Doing nothing is often the best trade. Only act when you identify a genuinely compelling, high-probability setup
-2. Develop a clear trade thesis based on market regime, volume analysis, and technical indicators. Execute only if conditions strongly align with your thesis
-3. **EVALUATE (don't force) entry opportunities**: Assess whether optimal entry opportunities exist. If conditions aren't clearly favorable, return empty actions array
-4. **QUALITY OVER QUANTITY**: It's better to miss a mediocre trade than to take a bad one. Be selective and patient
-5. For each trade you DO take, specify exact entry prices, position sizes, leverage, stop losses, and take profits
+1. **BE PROACTIVE WITH LIMIT ORDERS**: Don't just sit in cash - identify strategic entry levels and place limit orders there. Let the market come to you rather than chasing it.
+2. **PLAN YOUR TRADES**: Even in volatile/uncertain markets, identify key support/resistance levels, volume nodes, or technical setups where you'd want to enter
+3. **USE LIMIT ORDERS STRATEGICALLY**: 
+   - Place BUY limit orders at support levels, demand zones, or pullback targets where you want to go LONG
+   - Place SELL limit orders at resistance levels, supply zones, or rally targets where you want to go SHORT
+   - Set limit prices below current market (for longs) or above current market (for shorts) to get better fills
+4. **TWO APPROACHES TO TRADING**:
+   - **Immediate Entry**: If market is AT your desired level right now, use expectedEntry at/near current price
+   - **Patient Entry**: If market needs to move to your desired level, use expectedEntry at that strategic level (e.g., 2-5% away)
+5. **QUALITY OVER QUANTITY**: Focus on high-probability setups with clear technical confluence, strong volume confirmation, and favorable risk/reward
+6. For each trade setup, specify exact entry prices, position sizes, leverage, stop losses, and take profits
 6. **MANDATORY RISK MANAGEMENT (CRITICAL)**:
    - EVERY position MUST have BOTH a stop loss AND a take profit order at ALL times
    - NO EXCEPTIONS - even if you think the position is "safe", protective orders are REQUIRED
@@ -314,7 +320,11 @@ AUTONOMOUS TRADING DIRECTIVE:
    - If you want to adjust an existing protective order, FIRST cancel it, THEN place the new one
 11. Learn from user's historical prompts to align with their trading style and preferences
 12. Focus on maximizing Sharpe ratio through optimal sizing and risk management
-13. **PREFER INACTION**: If market conditions are unclear, choppy, or lack clear directional bias, return empty actions. Preserving capital is more important than always being active
+13. **BALANCE ACTION AND PATIENCE**: 
+   - If you see NO compelling setups anywhere in the market universe, return empty actions
+   - If you identify potential setups but market isn't at ideal entry yet, place limit orders at those strategic levels
+   - Limit orders are patient and disciplined - you're not forcing entries, you're waiting for favorable prices
+   - Only return empty actions if truly NO opportunities exist across the entire market
 
 Respond in JSON format:
 {
@@ -354,10 +364,10 @@ CRITICAL ORDER MANAGEMENT RULES:
    - This section ONLY appears when protective orders are genuinely missing
    - ONLY place orders that appear in this "MISSING" section
    - If this section is empty or not shown, return ZERO protective order actions
-3. **DEFAULT BEHAVIOR: ZERO ACTIONS**:
-   - If "EXISTING OPEN ORDERS" shows both stop loss AND take profit for all positions, return empty actions array
-   - Do NOT try to "optimize" or "improve" existing orders
-   - Cash/inaction is a valid position - doing nothing is often the best trade
+3. **DEFAULT BEHAVIOR FOR PROTECTIVE ORDERS**:
+   - If "EXISTING OPEN ORDERS" shows both stop loss AND take profit for all positions, DO NOT place new protective orders
+   - Do NOT try to "optimize" or "improve" existing protective orders
+   - But you CAN still place NEW entry orders (buy/sell) for different symbols if you identify setups
 4. **ONLY PLACE ORDERS EXPLICITLY MARKED AS MISSING**:
    - If "MISSING" section says "ETH-PERP: MISSING STOP LOSS", place ONLY stop loss for ETH-PERP
    - If "MISSING" section says "SOL-PERP: MISSING TAKE PROFIT", place ONLY take profit for SOL-PERP
@@ -386,16 +396,17 @@ CRITICAL ORDER MANAGEMENT RULES:
 12. For stop_loss/take_profit, triggerPrice is REQUIRED
 13. For cancel_order, orderId is REQUIRED and reasoning MUST cite which threshold(s) failed with actual calculated values
 12. Close actions must have matching side to the existing position
-13. **WHEN TO STAY OUT** (critical - read this carefully):
-   - Market is choppy/ranging without clear directional bias
-   - Volume is below average or declining (weak conviction)
-   - You don't have strong conviction about the setup (mediocre = skip it)
-   - Risk/reward is below 2:1 at entry
-   - Entry would be based on FOMO rather than solid technical confluence
-   - Existing positions already provide sufficient exposure to your thesis
+13. **WHEN TO PLACE LIMIT ORDERS VS. STAY OUT**:
+   - **PLACE LIMIT ORDERS** if you can identify support/resistance, key levels, or zones where risk/reward is favorable
+   - **PLACE LIMIT ORDERS** at pullback levels in trending markets (buy dips in uptrends, sell rallies in downtrends)
+   - **PLACE LIMIT ORDERS** at volume profile nodes, previous support/resistance, or Fibonacci retracements
+   - **STAY OUT** only if you genuinely see NO setups across the entire market universe
+   - **STAY OUT** if all potential setups have poor risk/reward (<2:1) even at optimal entry levels
+   - **STAY OUT** if existing positions already provide sufficient exposure to your thesis
+   - Remember: Limit orders at strategic levels are PATIENT, not aggressive - you're waiting for the market to come to you
 14. **NEW POSITIONS**: When opening a position via buy/sell action, ALWAYS include BOTH stop_loss AND take_profit actions in the SAME response
-15. **EMPTY ACTIONS IS THE DEFAULT**: Unless you identify a genuinely compelling setup, return empty actions array. Being patient and selective improves Sharpe ratio far more than constant activity
-16. Focus ONLY on high-probability setups with clear technical confluence, strong volume confirmation, and favorable risk/reward
+15. **BE OPPORTUNISTIC**: Scan the entire market universe for setups. If you identify clear support/resistance or key levels with favorable R:R, place limit orders there
+16. Focus on high-probability setups with clear technical confluence, strong volume confirmation, and favorable risk/reward (minimum 2:1 R:R)
 17. **DISCIPLINED DECISION-MAKING**: Never cancel orders based on "feels" - only based on concrete threshold violations with cited metrics`;
 
     const aiResponse = await makeAIRequest(userId, {

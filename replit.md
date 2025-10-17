@@ -1,6 +1,7 @@
 # 1fox
 
 ## Recent Changes (October 17, 2025)
+- **Proactive Limit Order Strategy**: AI now encouraged to place limit orders at strategic entry levels (support/resistance, demand/supply zones) rather than just sitting in cash. Uses patient limit orders to wait for market to come to favorable prices instead of forcing immediate entries.
 - **Full Market Universe Access**: Updated AI prompts to actively scan ALL available Hyperliquid trading pairs, not just BTC/ETH/SOL. AI now explicitly instructed to consider altcoins, memecoins, and emerging assets with strong momentum/volume from top gainers/losers analysis.
 - **Symbol Selection Enhancement**: Removed hardcoded BTC/ETH/SOL examples from prompts that created implicit bias. AI now receives clear guidance to explore the complete market data provided, including specific examples of diverse assets (DOGE-PERP, WIF-PERP, BONK-PERP, LINK-PERP, etc.).
 - **Stop Loss & Risk Management Fixes**: Resolved floating-point rounding errors, increased liquidation buffer to 3%, prioritized liquidation safety over distance requirements, enforced 2:1 R:R ratio, and eliminated order churn with explicit anti-adjustment directives.
