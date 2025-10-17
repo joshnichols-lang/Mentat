@@ -1,6 +1,12 @@
-import { Wallet, LogOut, UserCheck, Settings } from "lucide-react";
+import { Wallet, LogOut, UserCheck, Settings, Users, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import ThemeToggle from "./ThemeToggle";
 import AgentModeToggle from "./AgentModeToggle";
 import { useQuery } from "@tanstack/react-query";
@@ -36,15 +42,35 @@ export default function Header() {
         <div className="flex items-center gap-2">
           <AgentModeToggle />
           {user?.role === "admin" && (
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={() => setLocation("/admin/verification")}
-              data-testid="button-admin-verification"
-            >
-              <UserCheck className="h-4 w-4 mr-2" />
-              Verify Users
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  data-testid="button-admin-menu"
+                >
+                  <UserCheck className="h-4 w-4 mr-2" />
+                  Admin
+                  <ChevronDown className="h-3 w-3 ml-1" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem 
+                  onClick={() => setLocation("/admin/verification")}
+                  data-testid="menu-item-verification"
+                >
+                  <UserCheck className="h-4 w-4 mr-2" />
+                  Verify Users
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={() => setLocation("/admin/users")}
+                  data-testid="menu-item-users"
+                >
+                  <Users className="h-4 w-4 mr-2" />
+                  Manage Users
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           )}
           <div className="text-right border-l pl-3">
             <div className="text-xs text-muted-foreground">Balance</div>
