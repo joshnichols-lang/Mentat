@@ -455,21 +455,17 @@ async function executeTriggerOrder(
     // Get current market price from position data
     const currentPrice = parseFloat(position.markPx || position.entryPx);
     
-    // CRITICAL SAFETY CHECK 1: Enforce 3% buffer from liquidation price
+    // CRITICAL SAFETY CHECK 1: Stop loss direction and liquidation proximity
     if (action.action === "stop_loss" && liquidationPrice) {
-      // Use Math.ceil for longs (round UP to be safe) and Math.floor for shorts (round DOWN to be safe)
-      const minSafeStopLong = Math.ceil(liquidationPrice * 1.03 * 100) / 100; // 3% buffer, rounded up
-      const maxSafeStopShort = Math.floor(liquidationPrice * 0.97 * 100) / 100; // 3% buffer, rounded down
-      
       // DIRECTION CHECK: Stop must be in correct direction relative to current price
-      if (isLong && triggerPrice >= currentPrice * 0.995) {
+      if (isLong && triggerPrice >= currentPrice * 0.998) {
         console.warn(`[Trade Executor] DIRECTION VIOLATION: Stop loss ${triggerPrice} is not below current price ${currentPrice} for long position`);
         return {
           success: false,
           action,
           error: `Stop loss must be below current price $${currentPrice.toFixed(2)} for long positions. Your stop: $${triggerPrice}`,
         };
-      } else if (!isLong && triggerPrice <= currentPrice * 1.005) {
+      } else if (!isLong && triggerPrice <= currentPrice * 1.002) {
         console.warn(`[Trade Executor] DIRECTION VIOLATION: Stop loss ${triggerPrice} is not above current price ${currentPrice} for short position`);
         return {
           success: false,
@@ -478,60 +474,23 @@ async function executeTriggerOrder(
         };
       }
       
-      // LIQUIDATION SAFETY CHECK
-      if (isLong && triggerPrice < minSafeStopLong) {
-        console.warn(`[Trade Executor] SAFETY VIOLATION: Stop loss ${triggerPrice} is below 3% buffer for long position. Liquidation: ${liquidationPrice}, Minimum safe: ${minSafeStopLong}`);
-        return {
-          success: false,
-          action,
-          error: `SAFETY VIOLATION: Stop loss ${triggerPrice} must be at least 3% above liquidation price ${liquidationPrice}. Minimum safe stop: ${minSafeStopLong.toFixed(2)}`,
-        };
-      } else if (!isLong && triggerPrice > maxSafeStopShort) {
-        console.warn(`[Trade Executor] SAFETY VIOLATION: Stop loss ${triggerPrice} is above 3% buffer for short position. Liquidation: ${liquidationPrice}, Maximum safe: ${maxSafeStopShort}`);
-        return {
-          success: false,
-          action,
-          error: `SAFETY VIOLATION: Stop loss ${triggerPrice} must be at least 3% below liquidation price ${liquidationPrice}. Maximum safe stop: ${maxSafeStopShort.toFixed(2)}`,
-        };
+      // LIQUIDATION PROXIMITY WARNING (not rejection - just warn if very close)
+      const distanceToLiq = Math.abs(triggerPrice - liquidationPrice);
+      const distancePercent = (distanceToLiq / liquidationPrice) * 100;
+      
+      if (distancePercent < 1.0) {
+        console.warn(`[Trade Executor] ⚠️ WARNING: Stop loss ${triggerPrice} is very close to liquidation ${liquidationPrice} (${distancePercent.toFixed(2)}% buffer). Risk of liquidation before stop triggers!`);
+        // Allow it but warn - AI may have valid market structure reasons
+      } else {
+        console.log(`[Trade Executor] Stop loss safety check PASSED: trigger=${triggerPrice}, liquidation=${liquidationPrice}, buffer=${distancePercent.toFixed(2)}%`);
       }
-      console.log(`[Trade Executor] Stop loss safety check PASSED: trigger=${triggerPrice}, liquidation=${liquidationPrice}, buffer=${isLong ? 'min=' + minSafeStopLong.toFixed(2) : 'max=' + maxSafeStopShort.toFixed(2)}`);
     }
     
-    // CRITICAL SAFETY CHECK 2: Minimum 1.5% distance from current price for stop losses
-    // BUT: Liquidation safety takes priority - if liquidation forces stop closer than 1.5%, that's acceptable
-    if (action.action === "stop_loss" && liquidationPrice) {
-      const minDistanceFromCurrent = currentPrice * 0.015; // 1.5%
+    // LOG: Stop loss distance from current price (informational only)
+    if (action.action === "stop_loss") {
       const distanceFromCurrent = Math.abs(currentPrice - triggerPrice);
       const percentageDistance = (distanceFromCurrent / currentPrice) * 100;
-      
-      // Check if we're in a "close to liquidation" situation where distance requirement conflicts with safety
-      const minSafeStopLong = liquidationPrice * 1.03;
-      const maxSafeStopShort = liquidationPrice * 0.97;
-      const tooCloseToLiquidation = isLong ? (minSafeStopLong > currentPrice * 0.98) : (maxSafeStopShort < currentPrice * 1.02);
-      
-      if (!tooCloseToLiquidation) {
-        // Normal case: enforce 1.5% distance
-        // For LONG: stop should be below current price by at least 1.5%
-        // For SHORT: stop should be above current price by at least 1.5%
-        if (isLong && triggerPrice >= currentPrice * 0.985) {
-          console.warn(`[Trade Executor] DISTANCE VIOLATION: Stop loss ${triggerPrice} too close to current price ${currentPrice}. Distance: ${percentageDistance.toFixed(2)}% (need >1.5%)`);
-          return {
-            success: false,
-            action,
-            error: `DISTANCE VIOLATION: Stop loss ${triggerPrice} must be at least 1.5% below current price ${currentPrice}. Maximum safe stop: ${(currentPrice * 0.985).toFixed(2)}`,
-          };
-        } else if (!isLong && triggerPrice <= currentPrice * 1.015) {
-          console.warn(`[Trade Executor] DISTANCE VIOLATION: Stop loss ${triggerPrice} too close to current price ${currentPrice}. Distance: ${percentageDistance.toFixed(2)}% (need >1.5%)`);
-          return {
-            success: false,
-            action,
-            error: `DISTANCE VIOLATION: Stop loss ${triggerPrice} must be at least 1.5% above current price ${currentPrice}. Minimum safe stop: ${(currentPrice * 1.015).toFixed(2)}`,
-          };
-        }
-        console.log(`[Trade Executor] Distance check PASSED: trigger=${triggerPrice}, current=${currentPrice}, distance=${percentageDistance.toFixed(2)}%`);
-      } else {
-        console.log(`[Trade Executor] Distance check SKIPPED: position too close to liquidation (liquidation safety prioritized)`);
-      }
+      console.log(`[Trade Executor] Stop loss distance from current: ${percentageDistance.toFixed(2)}% (trigger=${triggerPrice}, current=${currentPrice})`);
     }
     
     // CRITICAL SAFETY CHECK 3: Enforce 2:1 Risk:Reward ratio for take profits

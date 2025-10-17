@@ -259,11 +259,14 @@ ACCOUNT INFORMATION (CRITICAL - READ THIS FIRST):
    - At 5x leverage: margin=$30, notional=$150, size=0.005 BTC
    - At 10x leverage: margin=$30, notional=$300, size=0.01 BTC
    
-4. **STOP LOSS CALCULATION** (leverage-aware):
-   - Risk per trade: 2-5% of account balance
-   - Stop distance = (account_risk% / leverage) from entry
-   - Example at 5x: 5% account risk = 1% stop from entry
-   - Example at 10x: 5% account risk = 0.5% stop from entry
+4. **INTELLIGENT STOP LOSS PLACEMENT** (market structure + risk management):
+   - **PRIMARY**: Base stops on MARKET STRUCTURE (support/resistance, swing lows/highs, volume profile nodes)
+   - **SECONDARY**: Account for LEVERAGE when calculating dollar risk
+   - Risk per trade: 2-5% of account balance (in dollar terms)
+   - Stop distance formula: (desired_dollar_risk / position_notional_value) × entry_price
+   - Example: $100 account, 5% risk ($5), BTC position $150 notional → 3.33% stop from entry
+   - **NEVER use arbitrary percentages** - always find actual support/resistance levels
+   - At high leverage, stops will naturally be tighter (same dollar risk, larger notional)
    
 5. **CURRENT AVAILABLE: $${withdrawable.toFixed(2)}**:
    - With 3x leverage: max notional = $${((withdrawable * 0.30) * 3).toFixed(2)}
@@ -320,36 +323,20 @@ ${(() => {
       const entryPrice = pos.entryPrice;
       const leverage = pos.leverage;
       
-      // Calculate safe stop with leverage awareness
-      let safeStop: string;
-      let reasoning: string;
+      // Provide context for intelligent stop placement
+      const distanceToLiqPercent = liq ? (((currentPrice - liq) / currentPrice) * 100 * (pos.side === 'long' ? 1 : -1)).toFixed(2) : 'N/A';
+      const accountRiskDollars = (accountValue * 0.03).toFixed(2); // 3% of account as example
+      const positionNotional = pos.size * currentPrice;
+      const exampleStopPercent = liq ? (((accountRiskDollars / positionNotional) * 100).toFixed(2)) : '2.0';
       
+      let reasoning: string;
       if (pos.side === 'long') {
-        const minSafeFromLiq = liq ? liq * 1.03 : currentPrice * 0.95; // 3% above liquidation
-        const maxSafeFromCurrent = currentPrice * 0.985; // 1.5% below current
-        
-        // If liquidation safety conflicts with current price, position is too risky
-        if (minSafeFromLiq >= currentPrice * 0.995) {
-          safeStop = (currentPrice * 0.98).toFixed(2); // Emergency stop just below current
-          reasoning = `⚠️ CRITICAL: Position ${(((currentPrice - liq) / currentPrice) * 100).toFixed(2)}% from liquidation at ${leverage}x leverage! Emergency stop at $${safeStop} (2% below current). Consider CLOSING this position - too risky!`;
-        } else {
-          safeStop = Math.max(minSafeFromLiq, currentPrice * 0.97).toFixed(2);
-          reasoning = `safe stop: $${safeStop} (current: $${currentPrice}, liq: $${liq})`;
-        }
+        reasoning = `ANALYZE MARKET STRUCTURE to find support level below $${currentPrice}. Position: ${leverage}x leverage, ${distanceToLiqPercent}% from liq ($${liq}). Example: if support at $${(currentPrice * 0.97).toFixed(2)}, that's a ${((currentPrice - currentPrice * 0.97) / currentPrice * 100).toFixed(2)}% stop = $${((currentPrice - currentPrice * 0.97) * pos.size).toFixed(2)} risk. Cite specific support level in reasoning!`;
       } else {
-        const maxSafeFromLiq = liq ? liq * 0.97 : currentPrice * 1.05; // 3% below liquidation
-        const minSafeFromCurrent = currentPrice * 1.015; // 1.5% above current
-        
-        if (maxSafeFromLiq <= currentPrice * 1.005) {
-          safeStop = (currentPrice * 1.02).toFixed(2); // Emergency stop just above current
-          reasoning = `⚠️ CRITICAL: Position ${(((liq - currentPrice) / currentPrice) * 100).toFixed(2)}% from liquidation at ${leverage}x leverage! Emergency stop at $${safeStop} (2% above current). Consider CLOSING this position - too risky!`;
-        } else {
-          safeStop = Math.min(maxSafeFromLiq, currentPrice * 1.03).toFixed(2);
-          reasoning = `safe stop: $${safeStop} (current: $${currentPrice}, liq: $${liq})`;
-        }
+        reasoning = `ANALYZE MARKET STRUCTURE to find resistance level above $${currentPrice}. Position: ${leverage}x leverage, ${distanceToLiqPercent}% from liq ($${liq}). Example: if resistance at $${(currentPrice * 1.03).toFixed(2)}, that's a ${((currentPrice * 1.03 - currentPrice) / currentPrice * 100).toFixed(2)}% stop = $${((currentPrice * 1.03 - currentPrice) * pos.size).toFixed(2)} risk. Cite specific resistance level in reasoning!`;
       }
       
-      missingProtection.push(`${posSymbol}: MISSING STOP LOSS - PLACE IMMEDIATELY (${reasoning})`);
+      missingProtection.push(`${posSymbol}: MISSING STOP LOSS - ${reasoning}`);
     }
     if (!hasTakeProfit) {
       const currentPrice = pos.currentPrice;
@@ -409,15 +396,17 @@ AUTONOMOUS TRADING DIRECTIVE:
    - **Patient Entry**: If market needs to move to your desired level, use expectedEntry at that strategic level (e.g., 2-5% away)
 6. **QUALITY OVER QUANTITY**: Focus on high-probability setups with clear technical confluence, strong volume confirmation, and favorable risk/reward
 7. For each trade setup, specify exact entry prices, properly calculated position sizes, leverage, stop losses, and take profits
-8. **LEVERAGE-AWARE RISK MANAGEMENT**:
-   - Higher leverage = tighter stops needed (less room for error)
-   - At 40x leverage: 2.5% price move = 100% position change (liquidation or 2x profit)
-   - At 20x leverage: 5% price move = 100% position change
-   - At 10x leverage: 10% price move = 100% position change
-   - FORMULA: Safe stop distance = (desired risk % / leverage) from entry
-   - EXAMPLE: 5% account risk at 20x leverage = 0.25% stop from entry price
-   - Always check "distance to liquidation" - if <5%, position is EXTREMELY dangerous
-   - For positions <3% from liquidation: CLOSE IMMEDIATELY or set emergency tight stop
+8. **INTELLIGENT STOP LOSS PLACEMENT**:
+   - **USE MARKET STRUCTURE**: Place stops just beyond key support (longs) or resistance (shorts)
+   - Examples of valid stop placement:
+     * Below recent swing low + ATR buffer
+     * Below key volume profile support node
+     * Below major moving average with confluence
+     * Below Fibonacci retracement level with volume
+   - **ACCOUNT FOR LEVERAGE**: Higher leverage = same dollar risk but tighter % stop
+   - **AVOID ARBITRARY %**: Don't use "3% stop" or "5% stop" - find actual market levels
+   - **LIQUIDATION AWARENESS**: Ensure stop will trigger BEFORE liquidation (account for wicks/slippage)
+   - **REASONING REQUIRED**: Always explain WHY you placed stop at specific level (cite support/resistance)
 9. **MANDATORY RISK MANAGEMENT (CRITICAL)**:
    - EVERY position MUST have BOTH a stop loss AND a take profit order at ALL times
    - NO EXCEPTIONS - even if you think the position is "safe", protective orders are REQUIRED
@@ -491,18 +480,14 @@ CRITICAL ORDER MANAGEMENT RULES:
    - If "EXISTING OPEN ORDERS" shows both stop loss AND take profit for all positions, DO NOT place new protective orders
    - Do NOT try to "optimize" or "improve" existing protective orders
    - But you CAN still place NEW entry orders (buy/sell) for different symbols if you identify setups
-4. **ONLY PLACE ORDERS EXPLICITLY MARKED AS MISSING**:
-   - If "MISSING" section says "ETH-PERP: MISSING STOP LOSS", place ONLY stop loss for ETH-PERP
-   - If "MISSING" section says "SOL-PERP: MISSING TAKE PROFIT", place ONLY take profit for SOL-PERP
-   - Use the exact safe levels provided in the MISSING section
-5. **Each position limits**: Exactly ONE stop loss + ONE take profit order (BOTH REQUIRED, not optional)
-7. **LIQUIDATION PRICE SAFETY (CRITICAL)**: 
-   - For LONG positions: Stop loss MUST be AT LEAST liquidation price * 1.03 (3% buffer for safety)
-   - For SHORT positions: Stop loss MUST be AT MOST liquidation price * 0.97 (3% buffer for safety)
-   - ALWAYS use the safe stop level provided in the "CRITICAL MISSING PROTECTIVE ORDERS" section when available
-   - NEVER set stops at or past liquidation levels - this causes instant liquidation without controlled exit
-   - Stop losses use MARKET execution for guaranteed fills when triggered
+4. **INTELLIGENT STOP LOSS PLACEMENT**:
+   - **ANALYZE MARKET STRUCTURE**: Identify actual support (longs) or resistance (shorts) levels
+   - **CITE YOUR REASONING**: Explain WHY stop is at specific level (e.g., "below recent swing low at $X" or "below 0.618 Fib at $Y")
+   - **ACCOUNT FOR LEVERAGE**: Higher leverage positions need valid technical levels, not arbitrary percentages
+   - **LIQUIDATION AWARENESS**: Ensure stop will trigger BEFORE liquidation (account for wicks/slippage)
+   - Stop losses use MARKET execution for guaranteed fills
    - Take profits use LIMIT execution for better prices
+5. **Each position limits**: Exactly ONE stop loss + ONE take profit order (BOTH REQUIRED, not optional)
 8. **MINIMUM DISTANCE FROM CURRENT PRICE**:
    - Stop loss must be AT LEAST 1.5% away from current market price to avoid immediate trigger/rejection
    - For LONG: stop_loss_price < current_price * 0.985 (at least 1.5% below)

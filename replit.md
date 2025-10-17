@@ -1,12 +1,12 @@
 # 1fox
 
 ## Recent Changes (October 17, 2025)
-- **Portfolio-Aware Position Sizing**: AI now receives real-time account balance and margin usage data. Mandatory position sizing rules enforce max 30% of available balance per position, accounting for leverage. AI calculates sizes using formula: `size = (available_balance × position_% × leverage) / entry_price`.
-- **Smart Alert System**: Monitoring alerts only post when (1) opening new orders with entry/SL/TP/reasoning or (2) detecting abnormal conditions (volume spikes 3x+ normal). Eliminated spam from routine monitoring cycles with no opportunities.
-- **Volume Spike Detection**: System detects abnormal market conditions when asset volume exceeds 3x recent levels, alerting user to potential news catalysts or significant market events.
-- **Proactive Limit Order Strategy**: AI encouraged to place limit orders at strategic entry levels (support/resistance, demand/supply zones) rather than sitting in cash. Uses patient limit orders to wait for market to come to favorable prices.
-- **Full Market Universe Access**: AI prompts actively scan ALL Hyperliquid trading pairs, not just BTC/ETH/SOL. Explicit guidance to consider altcoins, memecoins, and emerging assets with strong momentum/volume.
-- **Stop Loss & Risk Management**: Liquidation buffer increased to 3%, enforced 2:1 R:R ratio, eliminated order churn with anti-adjustment directives.
+- **Intelligent Market Structure-Based Stops**: Removed rigid 3% liquidation buffer requirement. AI now analyzes market structure (support/resistance, swing lows/highs, volume nodes) to place optimal stops with proper reasoning. Only enforces direction (stops below current for longs, above for shorts) and provides liquidation proximity warnings.
+- **Comprehensive Leverage Education**: AI receives detailed leverage impact guidance showing how leverage affects position sizing, stop placement, and risk. Includes formulas for leverage-aware stop calculations based on dollar risk rather than arbitrary percentages.
+- **Portfolio-Aware Position Sizing**: AI receives real-time account balance and margin usage data with leverage-adjusted examples. Calculates sizes using: `size = (margin × leverage) / entry_price` where margin ≤ 30% of available balance.
+- **Smart Alert System**: Monitoring alerts only post when (1) opening new orders with entry/SL/TP/reasoning or (2) detecting abnormal conditions (volume spikes 3x+ normal). Eliminated spam from routine monitoring cycles.
+- **Volume Spike Detection**: System detects abnormal market conditions when asset volume exceeds 3x recent levels, alerting to potential news catalysts.
+- **Proactive Limit Order Strategy**: AI places limit orders at strategic support/resistance levels rather than forcing market entries.
 
 ## Overview
 1fox is an AI-powered cryptocurrency trading terminal for the Hyperliquid perpetual futures exchange. It allows users to interact with an AI trading agent, "Mr. Fox," using natural language to execute automated strategies. The application provides a "Fantastic Mr. Fox" newspaper-themed interface, real-time market data, portfolio tracking, and comprehensive trading controls. The project aims to deliver a professional AI trading experience focused on maximizing Sharpe ratio through optimal sizing, entries, exits, and continuous risk management. It functions as a multi-tenant SaaS.
