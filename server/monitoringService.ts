@@ -219,6 +219,41 @@ ${openOrders.length > 0 ? openOrders.map(order => {
   return `- ${order.coin}: ${orderType} | ID: ${order.oid} | Side: ${order.side} | Size: ${order.sz} | Trigger: $${triggerPrice}`;
 }).join('\n') : 'No open orders'}
 
+${(() => {
+  // Check for missing protective orders
+  const missingProtection: string[] = [];
+  for (const pos of currentPositions) {
+    const posSymbol = pos.symbol;
+    const hasStopLoss = openOrders.some(order => 
+      order.coin === posSymbol && 
+      order.orderType?.trigger?.tpsl === 'sl' && 
+      order.reduceOnly
+    );
+    const hasTakeProfit = openOrders.some(order => 
+      order.coin === posSymbol && 
+      order.orderType?.trigger?.tpsl === 'tp' && 
+      order.reduceOnly
+    );
+    
+    if (!hasStopLoss) {
+      const liq = pos.liquidationPrice;
+      const safeStopLong = liq ? (liq * 1.025).toFixed(2) : "N/A"; // 2.5% buffer to account for rounding
+      const safeStopShort = liq ? (liq * 0.975).toFixed(2) : "N/A";
+      const safeLevelHint = pos.side === 'long' 
+        ? `minimum safe stop: $${safeStopLong}` 
+        : `maximum safe stop: $${safeStopShort}`;
+      missingProtection.push(`${posSymbol}: MISSING STOP LOSS - PLACE IMMEDIATELY (${safeLevelHint})`);
+    }
+    if (!hasTakeProfit) {
+      missingProtection.push(`${posSymbol}: MISSING TAKE PROFIT - PLACE IMMEDIATELY`);
+    }
+  }
+  
+  return missingProtection.length > 0 
+    ? `\n⚠️ CRITICAL MISSING PROTECTIVE ORDERS:\n${missingProtection.join('\n')}\n`
+    : '';
+})()}
+
 ${promptHistory.length > 0 ? `LEARNED TRADING PATTERNS (from user prompts):
 ${promptHistory.map(p => `- ${new Date(p.timestamp).toLocaleDateString()}: "${p.prompt}"`).join('\n')}
 
@@ -310,8 +345,9 @@ CRITICAL ORDER MANAGEMENT RULES:
 5. **If an order exists and ALL thresholds pass**: Do NOT include ANY actions for it - leave it untouched
 6. **Each position limits**: Exactly ONE stop loss + ONE take profit order (BOTH REQUIRED, not optional)
 7. **LIQUIDATION PRICE SAFETY (CRITICAL)**: 
-   - For LONG positions: Stop loss MUST be placed ABOVE liquidation price with at least 2% buffer (e.g., if liq=$3700, minimum stop=$3774)
-   - For SHORT positions: Stop loss MUST be placed BELOW liquidation price with at least 2% buffer (e.g., if liq=$4300, maximum stop=$4214)
+   - For LONG positions: Stop loss MUST be AT LEAST liquidation price * 1.025 (2.5% buffer for safety)
+   - For SHORT positions: Stop loss MUST be AT MOST liquidation price * 0.975 (2.5% buffer for safety)
+   - ALWAYS use the safe stop level provided in the "CRITICAL MISSING PROTECTIVE ORDERS" section when available
    - NEVER set stops at or past liquidation levels - this causes instant liquidation without controlled exit
    - Stop losses use MARKET execution for guaranteed fills when triggered
    - Take profits use LIMIT execution for better prices
