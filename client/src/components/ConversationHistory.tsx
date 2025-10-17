@@ -367,10 +367,15 @@ export default function ConversationHistory() {
                   {!aiStrategy && !monitoringAnalysis && !autonomousStrategy && log.aiResponse && (
                     <div className="flex items-start gap-2 pl-5 border-l-2 ml-1.5 mt-2 cursor-text select-text" style={{ borderColor: 'hsl(var(--muted-foreground))' }}>
                       <Bot className="h-3.5 w-3.5 mt-0.5 text-primary shrink-0" />
-                      <div className="flex-1">
-                        <div className="text-xs font-semibold mb-1 select-text">Mr. Fox</div>
-                        <div className="text-xs text-muted-foreground select-text">
-                          {log.aiResponse.substring(0, 200)}{log.aiResponse.length > 200 ? '...' : ''}
+                      <div className="flex-1 space-y-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-semibold select-text">Mr. Fox</span>
+                          <Badge variant="secondary" className="text-xs h-4 px-1.5">
+                            {log.model}
+                          </Badge>
+                        </div>
+                        <div className="text-xs text-muted-foreground whitespace-pre-wrap select-text">
+                          {log.aiResponse}
                         </div>
                       </div>
                     </div>
