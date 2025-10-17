@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { AlertCircle, Brain, TrendingUp, CheckCircle2, Loader2 } from "lucide-react";
+import { AlertCircle, Brain, TrendingUp, CheckCircle2, Loader2, ExternalLink } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 import logoUrl from "@assets/generated-image-removebg-preview_1760665535887.png";
@@ -24,23 +24,10 @@ const aiProviderSchema = z.object({
 });
 
 const exchangeSchema = z.object({
-  provider: z.enum(["hyperliquid", "binance", "bybit"]),
-  apiKey: z.string().min(1, "API key/private key is required"),
-  apiSecret: z.string().optional(),
+  provider: z.enum(["hyperliquid"]),
+  apiKey: z.string().min(1, "Private key is required"),
   label: z.string().min(1, "Label is required").max(50),
-}).refine(
-  (data) => {
-    // Binance and Bybit require API secret
-    if ((data.provider === "binance" || data.provider === "bybit") && !data.apiSecret) {
-      return false;
-    }
-    return true;
-  },
-  {
-    message: "API secret is required for Binance and Bybit",
-    path: ["apiSecret"],
-  }
-);
+});
 
 type AIProviderFormData = z.infer<typeof aiProviderSchema>;
 type ExchangeFormData = z.infer<typeof exchangeSchema>;
@@ -51,11 +38,7 @@ const AI_PROVIDERS = [
   { value: "xai", label: "xAI (Grok)", description: "Grok models" },
 ];
 
-const EXCHANGES = [
-  { value: "hyperliquid", label: "Hyperliquid", description: "Decentralized perpetuals exchange" },
-  { value: "binance", label: "Binance", description: "World's largest exchange" },
-  { value: "bybit", label: "Bybit", description: "Derivatives trading platform" },
-];
+const HYPERLIQUID_REFERRAL_URL = "https://app.hyperliquid.xyz/join/1FOX";
 
 export default function Onboarding() {
   const [, setLocation] = useLocation();
@@ -78,13 +61,11 @@ export default function Onboarding() {
     defaultValues: {
       provider: "hyperliquid",
       apiKey: "",
-      apiSecret: undefined,
       label: "Main Account",
     },
   });
 
   const selectedAIProvider = aiForm.watch("provider");
-  const selectedExchange = exchangeForm.watch("provider");
 
   const aiProviderMutation = useMutation({
     mutationFn: async (data: AIProviderFormData) => {
@@ -112,7 +93,6 @@ export default function Onboarding() {
         providerName: data.provider,
         label: data.label,
         apiKey: data.apiKey,
-        apiSecret: data.apiSecret,
       });
       return response.json();
     },
@@ -318,35 +298,24 @@ export default function Onboarding() {
           ) : (
             <Form {...exchangeForm}>
               <form onSubmit={exchangeForm.handleSubmit(onSubmitExchange)} className="space-y-4">
-                <FormField
-                  control={exchangeForm.control}
-                  name="provider"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Exchange</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger data-testid="select-exchange">
-                            <SelectValue placeholder="Select exchange" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {EXCHANGES.map((exchange) => (
-                            <SelectItem key={exchange.value} value={exchange.value}>
-                              <div className="flex flex-col">
-                                <span>{exchange.label}</span>
-                                <span className="text-xs text-muted-foreground">
-                                  {exchange.description}
-                                </span>
-                              </div>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-medium">Hyperliquid Exchange</h3>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => window.open(HYPERLIQUID_REFERRAL_URL, '_blank')}
+                      data-testid="button-create-hyperliquid-account"
+                    >
+                      <ExternalLink className="h-3 w-3 mr-1" />
+                      Create Account
+                    </Button>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Decentralized perpetuals exchange for crypto trading
+                  </p>
+                </div>
 
                 <FormField
                   control={exchangeForm.control}
@@ -375,85 +344,37 @@ export default function Onboarding() {
                   name="apiKey"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>
-                        {selectedExchange === "hyperliquid" ? "Private Key" : "API Key"}
-                      </FormLabel>
+                      <FormLabel>Private Key</FormLabel>
                       <FormControl>
                         <Input
                           {...field}
                           type="password"
-                          placeholder={
-                            selectedExchange === "hyperliquid"
-                              ? "0x..."
-                              : "Enter API key"
-                          }
+                          placeholder="0x..."
                           disabled={exchangeMutation.isPending}
                           autoComplete="off"
                           data-testid="input-exchange-key"
                         />
                       </FormControl>
                       <FormDescription>
-                        {selectedExchange === "hyperliquid"
-                          ? "Your wallet private key (starts with 0x)"
-                          : "Your exchange API key"}
+                        Your wallet private key (starts with 0x)
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
 
-                {(selectedExchange === "binance" || selectedExchange === "bybit") && (
-                  <FormField
-                    control={exchangeForm.control}
-                    name="apiSecret"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>API Secret</FormLabel>
-                        <FormControl>
-                          <Input
-                            {...field}
-                            type="password"
-                            placeholder="Enter API secret"
-                            disabled={exchangeMutation.isPending}
-                            data-testid="input-exchange-secret"
-                          />
-                        </FormControl>
-                        <FormDescription>
-                          Your exchange API secret key
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                )}
-
                 <Alert>
                   <CheckCircle2 className="h-4 w-4" />
                   <AlertDescription>
-                    <p className="font-medium mb-2">How to get your credentials:</p>
+                    <p className="font-medium mb-2">How to get your private key:</p>
                     <ol className="list-decimal list-inside space-y-1 text-sm">
-                      {selectedExchange === "hyperliquid" && (
-                        <>
-                          <li>Use your wallet's private key</li>
-                          <li>Make sure it has trading permissions</li>
-                          <li>Paste it below (starts with "0x")</li>
-                        </>
-                      )}
-                      {selectedExchange === "binance" && (
-                        <>
-                          <li>Go to Binance → API Management</li>
-                          <li>Create a new API key with trading permissions</li>
-                          <li>Copy both API Key and Secret Key</li>
-                        </>
-                      )}
-                      {selectedExchange === "bybit" && (
-                        <>
-                          <li>Go to Bybit → API Management</li>
-                          <li>Create a new API key with trading permissions</li>
-                          <li>Copy both API Key and Secret Key</li>
-                        </>
-                      )}
+                      <li>Use your wallet's private key (MetaMask, Ledger, etc.)</li>
+                      <li>Make sure it has trading permissions</li>
+                      <li>Paste it below (starts with "0x")</li>
                     </ol>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Don't have a Hyperliquid account? Click "Create Account" above to get started with our referral link.
+                    </p>
                   </AlertDescription>
                 </Alert>
 
