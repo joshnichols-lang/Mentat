@@ -125,8 +125,14 @@ export async function processTradingPrompt(
         }
         classification = JSON.parse(cleanContent);
       } catch (e) {
-        console.log("Failed to classify, defaulting to trading question");
-        classification = { isTrading: true, reason: "classification failed - default to trading" };
+        // If classification fails, default based on keyword presence
+        if (hasGeneralKeywords) {
+          console.log("Failed to classify, but has general keywords - defaulting to general question");
+          classification = { isTrading: false, reason: "classification failed but general keywords detected" };
+        } else {
+          console.log("Failed to classify with no keywords - defaulting to general question");
+          classification = { isTrading: false, reason: "classification failed - ambiguous question treated as general" };
+        }
       }
     }
 
@@ -343,8 +349,21 @@ Generate a trading strategy that addresses the user's current prompt while consi
       cleanedContent = cleanedContent.replace(/^```\s*/, '').replace(/\s*```$/, '');
     }
 
-    // Parse the strategy before logging
-    const strategy = JSON.parse(cleanedContent) as TradingStrategy;
+    // Try to parse as JSON, but if it fails, treat as a general conversational response
+    let strategy: TradingStrategy;
+    try {
+      strategy = JSON.parse(cleanedContent) as TradingStrategy;
+    } catch (parseError) {
+      console.log("Failed to parse trading JSON - treating as general conversational response");
+      // If JSON parsing fails, this was likely a general question misclassified as trading
+      // Return the conversational response wrapped in a strategy format
+      strategy = {
+        interpretation: content,
+        actions: [],
+        riskManagement: "Not applicable - conversational response",
+        expectedOutcome: "Not applicable - conversational response"
+      };
+    }
 
     // Log usage and cost
     try {
