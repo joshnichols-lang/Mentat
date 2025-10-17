@@ -10,9 +10,15 @@ interface HLTradeData {
   tid: number;
 }
 
+interface HLL2BookLevel {
+  px: string;
+  sz: string;
+  n: number;
+}
+
 interface HLL2BookData {
   coin: string;
-  levels: [[string, string, number][], [string, string, number][]]; // [bids, asks] - [price, size, numOrders]
+  levels: [HLL2BookLevel[], HLL2BookLevel[]]; // [bids, asks]
   time: number;
 }
 
@@ -100,6 +106,7 @@ export class MarketDataWebSocketService {
     this.hlWs.on("message", (data: string) => {
       try {
         const message = JSON.parse(data.toString());
+        console.log("[Market Data WS] Received from Hyperliquid:", JSON.stringify(message).substring(0, 300));
         this.handleHyperliquidMessage(message);
       } catch (error) {
         console.error("[Market Data WS] Failed to parse Hyperliquid message:", error);
@@ -319,12 +326,16 @@ export class MarketDataWebSocketService {
   private handleHyperliquidMessage(message: any) {
     const { channel, data } = message;
 
-    if (!channel || !data) return;
+    if (!channel || !data) {
+      console.log("[Market Data WS] Received message without channel or data:", JSON.stringify(message).substring(0, 200));
+      return;
+    }
 
     // Broadcast to subscribed clients
     if (channel === "trades") {
       this.broadcastTrades(data);
     } else if (channel === "l2Book") {
+      console.log(`[Market Data WS] Broadcasting l2Book for ${data.coin}`);
       this.broadcastL2Book(data);
     } else if (channel === "candle") {
       this.broadcastCandle(data);

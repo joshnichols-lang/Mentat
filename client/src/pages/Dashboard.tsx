@@ -12,6 +12,7 @@ import SharpeRatioChart from "@/components/SharpeRatioChart";
 import { AIUsageTracker } from "@/components/AIUsageTracker";
 import ConversationHistory from "@/components/ConversationHistory";
 import { MonitoringAlerts } from "@/components/MonitoringAlerts";
+import { OrderBook } from "@/components/OrderBook";
 
 export default function Dashboard() {
   const [, setLocation] = useLocation();
@@ -94,6 +95,9 @@ export default function Dashboard() {
             <div className="space-y-4">
               {/* AI Usage Tracker */}
               <AIUsageTracker />
+
+              {/* Order Book */}
+              <OrderBook coin="BTC" />
             </div>
           </div>
         </div>
