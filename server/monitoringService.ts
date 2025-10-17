@@ -192,7 +192,32 @@ export async function developAutonomousStrategy(userId: string): Promise<void> {
     const topGainers = sorted.slice(0, 3);
     const topLosers = sorted.slice(-3).reverse();
     
+    // Get user state for account balance info
+    const userState = await hyperliquidClient.getUserState();
+    const accountValue = parseFloat(userState?.marginSummary?.accountValue || '0');
+    const withdrawable = parseFloat(userState?.marginSummary?.withdrawable || '0');
+    const totalMarginUsed = parseFloat(userState?.marginSummary?.totalMarginUsed || '0');
+    
     const prompt = `You are Mr. Fox, an autonomous AI trader. Develop a complete trade thesis and execute trades based on current market conditions.
+
+ACCOUNT INFORMATION (CRITICAL - READ THIS FIRST):
+- Total Portfolio Value: $${accountValue.toFixed(2)}
+- Available Balance: $${withdrawable.toFixed(2)}
+- Total Margin Used: $${totalMarginUsed.toFixed(2)}
+
+⚠️ MANDATORY POSITION SIZING RULES:
+1. **CALCULATE BASED ON AVAILABLE BALANCE**: You have $${withdrawable.toFixed(2)} available to trade
+2. **ACCOUNT FOR LEVERAGE**: Notional value = (size × price). Required margin = notional / leverage
+3. **MAXIMUM POSITION SIZE**: Each position's required margin MUST NOT exceed 30% of available balance
+4. **EXAMPLE CALCULATION** (if you had $100 available):
+   - For BTC @ $30,000 with 5x leverage:
+   - Max notional = $100 × 0.30 × 5 = $150
+   - Max size = $150 / $30,000 = 0.005 BTC
+5. **ALWAYS CALCULATE** before placing orders - DO NOT use arbitrary sizes like "0.5" or "1.0"
+6. **WITH CURRENT BALANCE OF $${withdrawable.toFixed(2)}**:
+   - Max 30% position = $${(withdrawable * 0.30).toFixed(2)}
+   - Example: BTC @ $30,000, 3x leverage = size ${((withdrawable * 0.30 * 3) / 30000).toFixed(4)} BTC
+   - Example: ETH @ $2,000, 3x leverage = size ${((withdrawable * 0.30 * 3) / 2000).toFixed(4)} ETH
 
 MARKET REGIME ANALYSIS:
 ${marketRegime.reasoning}
@@ -290,19 +315,28 @@ AUTONOMOUS TRADING DIRECTIVE:
    - Place BUY limit orders at support levels, demand zones, or pullback targets where you want to go LONG
    - Place SELL limit orders at resistance levels, supply zones, or rally targets where you want to go SHORT
    - Set limit prices below current market (for longs) or above current market (for shorts) to get better fills
-4. **TWO APPROACHES TO TRADING**:
+4. **CALCULATE POSITION SIZES PROPERLY** (CRITICAL):
+   - **STEP 1**: Check available balance from "ACCOUNT INFORMATION" section above
+   - **STEP 2**: Decide what % of available balance to risk (max 30% per position)
+   - **STEP 3**: Calculate: max_notional = available_balance × position_% × leverage
+   - **STEP 4**: Calculate: size = max_notional / entry_price
+   - **STEP 5**: Use this calculated size in your actions (not arbitrary numbers!)
+   - **EXAMPLE**: With $28.66 available, BTC @ $30,000, 3x leverage, 30% position:
+     - max_notional = $28.66 × 0.30 × 3 = $25.79
+     - size = $25.79 / $30,000 = 0.0008597 BTC
+5. **TWO APPROACHES TO TRADING**:
    - **Immediate Entry**: If market is AT your desired level right now, use expectedEntry at/near current price
    - **Patient Entry**: If market needs to move to your desired level, use expectedEntry at that strategic level (e.g., 2-5% away)
-5. **QUALITY OVER QUANTITY**: Focus on high-probability setups with clear technical confluence, strong volume confirmation, and favorable risk/reward
-6. For each trade setup, specify exact entry prices, position sizes, leverage, stop losses, and take profits
-6. **MANDATORY RISK MANAGEMENT (CRITICAL)**:
+6. **QUALITY OVER QUANTITY**: Focus on high-probability setups with clear technical confluence, strong volume confirmation, and favorable risk/reward
+7. For each trade setup, specify exact entry prices, properly calculated position sizes, leverage, stop losses, and take profits
+8. **MANDATORY RISK MANAGEMENT (CRITICAL)**:
    - EVERY position MUST have BOTH a stop loss AND a take profit order at ALL times
    - NO EXCEPTIONS - even if you think the position is "safe", protective orders are REQUIRED
    - When opening a new position, IMMEDIATELY place both stop loss and take profit in the same action set
    - If a position lacks either protective order, place it IMMEDIATELY in the next cycle
    - Position levels based on: user's risk tolerance (from prompt history) + current market analysis + liquidation safety
-7. Manage existing positions: adjust stops, take profits, or close positions based on risk/reward
-8. **CRITICAL: NEVER CANCEL EXISTING PROTECTIVE ORDERS UNLESS GENUINELY MISSING**: 
+9. Manage existing positions: adjust stops, take profits, or close positions based on risk/reward
+10. **CRITICAL: NEVER CANCEL EXISTING PROTECTIVE ORDERS UNLESS GENUINELY MISSING**: 
    - **IF A STOP LOSS ORDER EXISTS, DO NOT INCLUDE IT IN YOUR ACTIONS - LEAVE IT ALONE**
    - **IF A TAKE PROFIT ORDER EXISTS, DO NOT INCLUDE IT IN YOUR ACTIONS - LEAVE IT ALONE**
    - Check "EXISTING OPEN ORDERS" section - if you see a STOP LOSS or TAKE PROFIT for a symbol, DO NOT place a new one
@@ -311,16 +345,16 @@ AUTONOMOUS TRADING DIRECTIVE:
    - If "EXISTING OPEN ORDERS" shows protective orders but "MISSING" section is empty, return ZERO ACTIONS
    - NEVER replace or "optimize" existing protective orders - this creates wasteful churn
    - Once placed, protective orders should remain untouched unless truly missing
-9. **CANCEL ONLY WHEN NECESSARY**: If an order must be adjusted, cancel it FIRST with cancel_order action, THEN place the new order
-10. **EXACTLY ONE OF EACH PROTECTIVE ORDER**: Each position gets EXACTLY one stop loss + EXACTLY one take profit
+11. **CANCEL ONLY WHEN NECESSARY**: If an order must be adjusted, cancel it FIRST with cancel_order action, THEN place the new order
+12. **EXACTLY ONE OF EACH PROTECTIVE ORDER**: Each position gets EXACTLY one stop loss + EXACTLY one take profit
    - In your actions array, you MUST include EXACTLY one stop_loss action per symbol AND EXACTLY one take_profit action per symbol
    - NEVER include multiple stop_loss actions for the same symbol  
    - NEVER include multiple take_profit actions for the same symbol
    - Each protective order should be for the FULL position size (no partial exits)
    - If you want to adjust an existing protective order, FIRST cancel it, THEN place the new one
-11. Learn from user's historical prompts to align with their trading style and preferences
-12. Focus on maximizing Sharpe ratio through optimal sizing and risk management
-13. **BALANCE ACTION AND PATIENCE**: 
+13. Learn from user's historical prompts to align with their trading style and preferences
+14. Focus on maximizing Sharpe ratio through optimal sizing and risk management
+15. **BALANCE ACTION AND PATIENCE**: 
    - If you see NO compelling setups anywhere in the market universe, return empty actions
    - If you identify potential setups but market isn't at ideal entry yet, place limit orders at those strategic levels
    - Limit orders are patient and disciplined - you're not forcing entries, you're waiting for favorable prices
