@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, decimal, timestamp, integer, jsonb, index } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, decimal, timestamp, integer, jsonb, index, uniqueIndex } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -18,7 +18,7 @@ export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   username: text("username").notNull().unique(),
   email: text("email").unique(),
-  password: text("password"), // Optional - used for username/password auth
+  password: text("password"), // Hashed password for username/password auth
   authProviderId: text("auth_provider_id").unique(), // For OAuth (Replit Auth)
   authProvider: text("auth_provider"), // "replit", "email", etc.
   firstName: text("first_name"), // From Replit Auth
@@ -27,7 +27,8 @@ export const users = pgTable("users", {
   role: text("role").notNull().default("user"), // "user", "admin"
   subscriptionStatus: text("subscription_status").notNull().default("inactive"), // "inactive", "active", "trial", "cancelled"
   subscriptionId: text("subscription_id"), // Stripe subscription ID
-  onboardingComplete: integer("onboarding_complete").notNull().default(0), // 0 = incomplete, 1 = complete
+  onboardingStep: text("onboarding_step").notNull().default("auth"), // "auth", "ai_provider", "trading_accounts", "complete"
+  agentMode: text("agent_mode").notNull().default("passive"), // "passive", "active"
   monitoringFrequencyMinutes: integer("monitoring_frequency_minutes").notNull().default(0), // 0 = disabled, per-user monitoring frequency
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
@@ -36,6 +37,7 @@ export const users = pgTable("users", {
 export const trades = pgTable("trades", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  apiKeyId: varchar("api_key_id").references(() => apiKeys.id, { onDelete: "set null" }), // Track which account executed this trade
   symbol: text("symbol").notNull(),
   side: text("side").notNull(), // "long" or "short"
   type: text("type").notNull(), // "market" or "limit"
@@ -53,6 +55,7 @@ export const trades = pgTable("trades", {
 export const positions = pgTable("positions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  apiKeyId: varchar("api_key_id").references(() => apiKeys.id, { onDelete: "set null" }), // Track which account holds this position
   symbol: text("symbol").notNull(),
   side: text("side").notNull(),
   size: decimal("size", { precision: 18, scale: 8 }).notNull(),
@@ -85,8 +88,9 @@ export const aiUsageLog = pgTable("ai_usage_log", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   timestamp: timestamp("timestamp").notNull().defaultNow(),
-  provider: text("provider").notNull(), // "openai", "perplexity"
-  model: text("model").notNull(), // e.g., "gpt-5", "sonar-pro"
+  provider: text("provider").notNull(), // "openai", "perplexity", "xai"
+  model: text("model").notNull(), // e.g., "gpt-5", "sonar-pro", "grok-2"
+  mode: text("mode").notNull().default("passive"), // "passive" or "active"
   promptTokens: integer("prompt_tokens").notNull(),
   completionTokens: integer("completion_tokens").notNull(),
   totalTokens: integer("total_tokens").notNull(),
@@ -116,6 +120,29 @@ export const userApiCredentials = pgTable("user_api_credentials", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
   lastUsed: timestamp("last_used"),
 });
+
+// Multi-provider API keys table for AI and Exchange APIs
+export const apiKeys = pgTable("api_keys", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  providerType: text("provider_type").notNull(), // "ai" or "exchange"
+  providerName: text("provider_name").notNull(), // AI: "perplexity", "openai", "xai" | Exchange: "hyperliquid", "binance", "bybit"
+  label: text("label").notNull(), // User-defined label for this API key (e.g., "Main Account", "Aggressive Strategy")
+  // Encrypted credentials using envelope encryption
+  encryptedApiKey: text("encrypted_api_key").notNull(), // API key/secret encrypted with DEK
+  apiKeyIv: text("api_key_iv").notNull(), // IV for API key encryption
+  encryptedDek: text("encrypted_dek").notNull(), // DEK encrypted with master key
+  dekIv: text("dek_iv").notNull(), // IV for DEK encryption
+  // Optional fields for exchange-specific configs
+  publicKey: text("public_key"), // For exchanges that use public/private key pairs
+  metadata: jsonb("metadata"), // Additional provider-specific config (e.g., testnet flag, API permissions)
+  isActive: integer("is_active").notNull().default(1), // 0 = inactive, 1 = active
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  lastUsed: timestamp("last_used"),
+}, (table) => [
+  // Ensure unique labels per provider per user
+  uniqueIndex("api_keys_unique_label").on(table.userId, table.providerName, table.label),
+]);
 
 export const subscriptions = pgTable("subscriptions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -169,6 +196,7 @@ export const insertPortfolioSnapshotSchema = createInsertSchema(portfolioSnapsho
 export const insertAiUsageLogSchema = createInsertSchema(aiUsageLog).omit({ id: true, userId: true, timestamp: true });
 export const insertMonitoringLogSchema = createInsertSchema(monitoringLog).omit({ id: true, userId: true, timestamp: true });
 export const insertUserApiCredentialSchema = createInsertSchema(userApiCredentials).omit({ id: true, createdAt: true });
+export const insertApiKeySchema = createInsertSchema(apiKeys).omit({ id: true, createdAt: true });
 export const insertSubscriptionSchema = createInsertSchema(subscriptions).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertPromoCodeSchema = createInsertSchema(promoCodes).omit({ id: true, createdAt: true });
 export const insertPromoCodeRedemptionSchema = createInsertSchema(promoCodeRedemptions).omit({ id: true, redeemedAt: true });
@@ -189,6 +217,8 @@ export type InsertMonitoringLog = z.infer<typeof insertMonitoringLogSchema>;
 export type MonitoringLog = typeof monitoringLog.$inferSelect;
 export type InsertUserApiCredential = z.infer<typeof insertUserApiCredentialSchema>;
 export type UserApiCredential = typeof userApiCredentials.$inferSelect;
+export type InsertApiKey = z.infer<typeof insertApiKeySchema>;
+export type ApiKey = typeof apiKeys.$inferSelect;
 export type InsertSubscription = z.infer<typeof insertSubscriptionSchema>;
 export type Subscription = typeof subscriptions.$inferSelect;
 export type InsertPromoCode = z.infer<typeof insertPromoCodeSchema>;
