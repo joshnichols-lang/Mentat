@@ -76,6 +76,13 @@ export default function Header() {
                   <Users className="h-4 w-4 mr-2" />
                   Manage Users
                 </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={() => setLocation("/admin/messages")}
+                  data-testid="menu-item-messages"
+                >
+                  <MessageSquare className="h-4 w-4 mr-2" />
+                  Contact Messages
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           )}
