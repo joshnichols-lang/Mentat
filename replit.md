@@ -12,7 +12,7 @@ Preferred communication style: Simple, everyday language.
 **Technology Stack:** React with TypeScript, Vite, Wouter, TanStack Query, Tailwind CSS, and shadcn/ui.
 **Design System:** "Fantastic Mr. Fox" newspaper aesthetic with a grayscale color scheme, "Courier New" monospace typography, newsprint texture, and sharp corners. Dull green/red accents for trading elements.
 **Key UI Components:** AI Prompt Panel, Market Overview watchlist (real-time data, drag-and-drop), Portfolio Performance Chart, Positions Grid, Conversation History. Includes hover tooltips with mini price charts and risk management levels.
-**Market Analysis Indicators:** User-selectable trading pair selector (BTC, ETH, SOL) on dashboard sidebar that dynamically updates Order Book, CVD Chart, and Volume Profile Chart. All indicators auto-subscribe/unsubscribe to appropriate data streams when coin selection changes.
+**TradingView-Style Market Analysis:** Unified interface featuring searchable trading pair selector for all Hyperliquid perpetual and spot markets. Main view includes candlestick chart with volume profile overlay (right side), CVD subchart below, and OrderBook with dynamic decimal precision selector. All components auto-update when trading pair changes. OrderBook features intelligent price grouping that rounds bids down and asks up to preserve accurate spreads, with precision options dynamically adjusted based on asset price range.
 
 ### Backend
 **Server Framework:** Express.js with TypeScript, integrated with Vite middleware.
