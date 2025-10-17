@@ -1013,6 +1013,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Delete an API key
+  app.delete("/api/api-keys/:id", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const { id } = req.params;
+      
+      // Verify the API key belongs to the user
+      const apiKey = await storage.getApiKey(userId, id);
+      
+      if (!apiKey) {
+        return res.status(404).json({ 
+          success: false, 
+          error: "API key not found" 
+        });
+      }
+      
+      await storage.deleteApiKey(userId, id);
+      
+      res.json({ 
+        success: true, 
+        message: "API key deleted successfully" 
+      });
+    } catch (error: any) {
+      console.error("Error deleting API key:", error);
+      res.status(500).json({ 
+        success: false, 
+        error: "Failed to delete API key" 
+      });
+    }
+  });
+
   // Check if user has credentials configured
   app.get("/api/credentials/status", isAuthenticated, async (req, res) => {
     try {
