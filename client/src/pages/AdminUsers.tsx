@@ -19,6 +19,11 @@ interface UserData {
   role: string;
   agentMode: "passive" | "active";
   createdAt: string;
+  aiUsage?: {
+    totalRequests: number;
+    totalCost: string;
+    totalTokens: number;
+  };
 }
 
 export default function AdminUsers() {
@@ -179,6 +184,31 @@ export default function AdminUsers() {
                       </p>
                     </div>
                   </div>
+
+                  {userData.aiUsage && (
+                    <div className="grid md:grid-cols-3 gap-4">
+                      <div className="space-y-2">
+                        <p className="text-sm font-medium">AI Requests:</p>
+                        <p className="text-sm bg-muted p-3 rounded-md font-mono" data-testid="text-ai-requests">
+                          {userData.aiUsage.totalRequests.toLocaleString()}
+                        </p>
+                      </div>
+
+                      <div className="space-y-2">
+                        <p className="text-sm font-medium">Total Tokens:</p>
+                        <p className="text-sm bg-muted p-3 rounded-md font-mono" data-testid="text-ai-tokens">
+                          {userData.aiUsage.totalTokens.toLocaleString()}
+                        </p>
+                      </div>
+
+                      <div className="space-y-2">
+                        <p className="text-sm font-medium">Total AI Cost:</p>
+                        <p className="text-sm bg-muted p-3 rounded-md font-mono" data-testid="text-ai-cost">
+                          ${parseFloat(userData.aiUsage.totalCost).toFixed(4)}
+                        </p>
+                      </div>
+                    </div>
+                  )}
 
                   <div className="space-y-2">
                     <p className="text-sm font-medium">User ID:</p>

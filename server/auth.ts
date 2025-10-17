@@ -237,9 +237,35 @@ export function setupAuth(app: Express) {
       }
       
       const allUsers = await storage.getAllUsers();
-      // Remove passwords from response
-      const safeUsers = allUsers.map(({ password, ...user }) => user);
-      res.json(safeUsers);
+      
+      // Fetch AI usage stats for each user
+      const usersWithStats = await Promise.all(
+        allUsers.map(async ({ password, ...user }) => {
+          try {
+            const aiStats = await storage.getAiUsageStats(user.id);
+            return {
+              ...user,
+              aiUsage: {
+                totalRequests: aiStats.totalRequests,
+                totalCost: aiStats.totalCost,
+                totalTokens: aiStats.totalTokens,
+              }
+            };
+          } catch (error) {
+            console.error(`Failed to fetch AI stats for user ${user.id}:`, error);
+            return {
+              ...user,
+              aiUsage: {
+                totalRequests: 0,
+                totalCost: "0",
+                totalTokens: 0,
+              }
+            };
+          }
+        })
+      );
+      
+      res.json(usersWithStats);
     } catch (error) {
       next(error);
     }
