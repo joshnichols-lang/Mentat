@@ -11,6 +11,7 @@ import AuthPage from "@/pages/AuthPage";
 import Onboarding from "@/pages/Onboarding";
 import PendingApproval from "@/pages/PendingApproval";
 import AdminVerification from "@/pages/AdminVerification";
+import Settings from "@/pages/Settings";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -20,6 +21,7 @@ function Router() {
       <ProtectedRoute path="/onboarding" component={Onboarding} />
       <ProtectedRoute path="/pending-approval" component={PendingApproval} />
       <ProtectedRoute path="/admin/verification" component={AdminVerification} />
+      <ProtectedRoute path="/settings" component={Settings} />
       <ProtectedRoute path="/" component={Dashboard} />
       <Route component={NotFound} />
     </Switch>
