@@ -54,6 +54,7 @@ function calculateCost(model: string, promptTokens: number, completionTokens: nu
 
 /**
  * Get the user's active AI provider client
+ * Falls back to shared platform key if user has no personal credentials
  */
 async function getAIClient(userId: string, preferredProvider?: string): Promise<{ client: OpenAI; providerName: string; apiKeyId: string }> {
   // Try to get the preferred provider or fall back to first active AI key
@@ -69,11 +70,28 @@ async function getAIClient(userId: string, preferredProvider?: string): Promise<
     apiKey = allAiKeys.find(key => key.isActive === 1);
   }
   
+  // If user has no personal AI credentials, use shared platform key
   if (!apiKey) {
-    throw new Error("No AI provider configured. Please add an AI provider in settings.");
+    const sharedPerplexityKey = process.env.PERPLEXITY_API_KEY;
+    
+    if (!sharedPerplexityKey) {
+      throw new Error("No AI provider configured. Please add an AI provider in settings or contact admin.");
+    }
+    
+    // Use shared Perplexity key
+    const client = new OpenAI({
+      apiKey: sharedPerplexityKey,
+      baseURL: "https://api.perplexity.ai",
+    });
+    
+    return {
+      client,
+      providerName: "perplexity",
+      apiKeyId: "shared-platform-key", // Special ID to indicate shared key usage
+    };
   }
   
-  // Decrypt the API key
+  // User has personal credentials - decrypt and use them
   const decryptedKey = decryptCredential(
     apiKey.encryptedApiKey,
     apiKey.apiKeyIv,
