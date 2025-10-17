@@ -37,14 +37,25 @@ Preferred communication style: Simple, everyday language.
 **Multi-Tenant Architecture:** The application is now a fully multi-tenant SaaS. All API routes are protected with `isAuthenticated` middleware using Replit Auth OAuth. User identity is extracted from `req.user.claims.sub` and used for all data operations.
 
 **Authentication Flow:**
-1. Users log in via Replit Auth OAuth (handled by `@replit/auth-node` integration)
-2. `isAuthenticated` middleware validates session on all protected routes
-3. New users are redirected to onboarding to add Hyperliquid API credentials
-4. Dashboard checks credentials and redirects to onboarding if missing
+1. Users create accounts with username/password (Passport.js LocalStrategy)
+2. Passwords hashed with scrypt (salted, 64-byte hash)
+3. PostgreSQL session persistence (connect-pg-simple)
+4. `isAuthenticated` middleware validates session on all protected routes
+5. New users complete multi-step onboarding:
+   - Step 1: Choose AI provider (Perplexity/ChatGPT/Grok) and add API key with label
+   - Step 2: Choose exchange (Hyperliquid/Binance/Bybit) and add credentials with label
+6. Dashboard checks credentials and redirects to onboarding if missing
 
-**User Credentials:** Uses AES-256-GCM encryption with envelope encryption for storing Hyperliquid API private keys per user. Each credential has a unique Data Encryption Key (DEK) that is encrypted with the master key (ENCRYPTION_MASTER_KEY secret). The `credentialService` provides secure encryption/decryption with proper key isolation - if one credential is compromised, others remain secure.
+**User Credentials:** Uses AES-256-GCM encryption with envelope encryption for storing all API keys. The `api_keys` table supports multiple providers (AI and exchanges) with user-defined labels. Each credential has a unique Data Encryption Key (DEK) encrypted with the master key (ENCRYPTION_MASTER_KEY secret). API secrets (for Binance/Bybit) are stored encrypted in the metadata JSONB field. Proper key isolation ensures if one credential is compromised, others remain secure.
 
-**User Schema:** Includes UUID-based identification, Zod validation, and per-user settings (monitoring frequency preferences stored in `monitoringFrequencyMinutes` field).
+**User Schema:** Includes username/password authentication, Zod validation for auth requests (username 3-50 chars, password 6-100 chars), agent mode (passive/active), and per-user settings (monitoring frequency stored in `monitoringFrequencyMinutes` field).
+
+**Multi-Provider API Keys:** The `api_keys` table stores encrypted credentials for both AI providers and exchanges:
+- providerType: "ai" or "exchange"
+- providerName: "perplexity", "openai", "xai" (AI) | "hyperliquid", "binance", "bybit" (exchanges)
+- label: User-defined label (e.g., "Main AI", "Aggressive Strategy")
+- Unique constraint on (userId, providerName, label) prevents duplicates
+- Validation ensures Binance/Bybit require API secrets (frontend Zod refinement + backend validation)
 
 **Data Isolation:** Complete per-user data isolation achieved:
 - All database tables have userId foreign keys (trades, positions, portfolio_snapshots, ai_usage_log, monitoring_log, user_api_credentials)

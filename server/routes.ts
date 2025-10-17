@@ -46,12 +46,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         })),
         currentPositions: z.array(z.any()).optional(),
         autoExecute: z.boolean().optional().default(true),
-        model: z.enum(["sonar", "sonar-pro", "sonar-reasoning", "sonar-reasoning-pro"]).optional().default("sonar"),
+        model: z.string().optional(), // Optional model - AI router will use provider default if not specified
+        preferredProvider: z.enum(["perplexity", "openai", "xai"]).optional(), // Optional preferred AI provider
       });
 
-      const { prompt, marketData, currentPositions = [], autoExecute = true, model = "sonar" } = schema.parse(req.body);
+      const { prompt, marketData, currentPositions = [], autoExecute = true, model, preferredProvider } = schema.parse(req.body);
 
-      const strategy = await processTradingPrompt(prompt, marketData, currentPositions, model);
+      const strategy = await processTradingPrompt(userId, prompt, marketData, currentPositions, model, preferredProvider);
       
       let executionSummary = null;
       

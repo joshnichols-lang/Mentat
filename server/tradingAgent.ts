@@ -1,6 +1,7 @@
-import { perplexity, calculateCost, type PerplexityModel } from "./perplexity";
 import { storage } from "./storage";
 import { TEST_USER_ID } from "./constants";
+import { makeAIRequest, type AIMessage } from "./aiRouter";
+import type { PerplexityModel } from "./perplexity";
 
 interface MarketData {
   symbol: string;
@@ -66,17 +67,19 @@ Market conditions suggest ${sentiment.toLowerCase()} momentum with ${avgChange >
 }
 
 export async function processTradingPrompt(
+  userId: string,
   prompt: string,
   marketData: MarketData[],
   currentPositions: any[],
-  model: PerplexityModel = "sonar"
+  model?: string,
+  preferredProvider?: string
 ): Promise<TradingStrategy> {
   
   try {
     // Fetch recent user prompt history (last 5 successful prompts)
     let promptHistory: {timestamp: Date, prompt: string}[] = [];
     try {
-      const recentPrompts = await storage.getAiUsageLogs(5);
+      const recentPrompts = await storage.getAiUsageLogs(userId, 5);
       promptHistory = recentPrompts
         .filter(log => log.success === 1 && log.userPrompt)
         .map(log => ({
@@ -99,11 +102,9 @@ export async function processTradingPrompt(
       // Continue with fallback message
     }
 
-    const completion = await perplexity.chat.completions.create({
-    model,
-    messages: [
+    const messages: AIMessage[] = [
       {
-        role: "system",
+        role: "system" as const,
         content: `You are Mr. Fox, a professional AI trader managing Hyperliquid perpetual contracts. Your goal is to maximize the Sharpe ratio by executing trades with optimal sizing, entries, exits, and compounding, while enforcing strict risk management.
 
 Core Trading Principles:
@@ -160,7 +161,7 @@ CRITICAL RULES:
 Output real-time executed trades with professional precision and risk-adjusted optimization.`
       },
       {
-        role: "user",
+        role: "user" as const,
         content: `User prompt: "${prompt}"
 
 Current market data:
@@ -179,10 +180,14 @@ Consider the user's historical prompts to understand their trading style, risk t
 
 Generate a trading strategy that addresses the user's current prompt while considering their historical preferences and maximizing risk-adjusted returns based on current market conditions. Remember to respond with ONLY the JSON object, no other text.`
       }
-    ]
-  });
+    ];
 
-    const content = completion.choices[0].message.content;
+    const aiResponse = await makeAIRequest(userId, {
+      messages,
+      model,
+    }, preferredProvider);
+
+    const content = aiResponse.content;
     if (!content) {
       throw new Error("No response from AI");
     }
@@ -199,42 +204,41 @@ Generate a trading strategy that addresses the user's current prompt while consi
     const strategy = JSON.parse(cleanedContent) as TradingStrategy;
 
     // Log usage and cost
-    const usage = completion.usage;
-    if (usage) {
-      const cost = calculateCost(model, usage.prompt_tokens, usage.completion_tokens);
-      
-      try {
-        await storage.logAiUsage({
-          userId: TEST_USER_ID,
-          provider: "perplexity",
-          model,
-          promptTokens: usage.prompt_tokens,
-          completionTokens: usage.completion_tokens,
-          totalTokens: usage.total_tokens,
-          estimatedCost: cost.toFixed(6),
-          userPrompt: prompt,
-          aiResponse: JSON.stringify(strategy),
-          success: 1
-        });
-      } catch (error) {
-        console.error("Failed to log AI usage:", error);
-      }
+    try {
+      await storage.logAiUsage(userId, {
+        provider: aiResponse.provider,
+        model: aiResponse.model,
+        promptTokens: aiResponse.usage.promptTokens,
+        completionTokens: aiResponse.usage.completionTokens,
+        totalTokens: aiResponse.usage.totalTokens,
+        estimatedCost: aiResponse.cost.toFixed(6),
+        userPrompt: prompt,
+        aiResponse: JSON.stringify(strategy),
+        success: 1,
+        mode: "manual", // or "autonomous" - will be set by the caller
+      });
+    } catch (error) {
+      console.error("Failed to log AI usage:", error);
     }
 
     return strategy;
-  } catch (error) {
-    // Log failed attempt
+  } catch (error: any) {
+    // Log failed attempt with provider info from error context
+    // Extract provider and model from error if available (thrown by AI router)
+    const errorProvider = error.provider || preferredProvider || "unknown";
+    const errorModel = error.model || model || "unknown";
+    
     try {
-      await storage.logAiUsage({
-        userId: TEST_USER_ID,
-        provider: "perplexity",
-        model,
+      await storage.logAiUsage(userId, {
+        provider: errorProvider,
+        model: errorModel,
         promptTokens: 0,
         completionTokens: 0,
         totalTokens: 0,
         estimatedCost: "0",
         userPrompt: prompt,
-        success: 0
+        success: 0,
+        mode: "manual",
       });
     } catch (logError) {
       console.error("Failed to log AI usage error:", logError);
