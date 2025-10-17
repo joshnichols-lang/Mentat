@@ -355,7 +355,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update monitoring frequency
-  app.post("/api/monitoring/frequency", async (req, res) => {
+  app.post("/api/monitoring/frequency", isAuthenticated, async (req, res) => {
     try {
       const schema = z.object({
         minutes: z.number().int().min(0).max(1440), // 0 to 24 hours
