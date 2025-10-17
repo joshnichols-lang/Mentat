@@ -137,6 +137,14 @@ export function setupAuth(app: Express) {
     });
   });
 
+  // GET logout route for browser navigation - redirects to login page
+  app.get("/api/logout", (req, res, next) => {
+    req.logout((err) => {
+      if (err) return next(err);
+      res.redirect("/auth");
+    });
+  });
+
   app.get("/api/user", (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     // Sanitize response - don't send password hash
