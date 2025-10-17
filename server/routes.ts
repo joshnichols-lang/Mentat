@@ -9,6 +9,7 @@ import { restartMonitoring } from "./monitoringService";
 import { startUserMonitoring, stopUserMonitoring, restartUserMonitoring } from "./userMonitoringManager";
 import { setupAuth } from "./auth";
 import { storeUserCredentials, getUserPrivateKey, deleteUserCredentials, hasUserCredentials } from "./credentialService";
+import { initializeMarketDataWebSocket } from "./marketDataWebSocket";
 import { encryptCredential } from "./encryption";
 import { z } from "zod";
 import { hashPassword, comparePasswords } from "./auth";
@@ -1125,6 +1126,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   const httpServer = createServer(app);
+
+  // Initialize market data WebSocket service
+  initializeMarketDataWebSocket(httpServer);
 
   return httpServer;
 }
