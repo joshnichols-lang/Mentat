@@ -27,6 +27,12 @@ Preferred communication style: Simple, everyday language.
 - AES-256-GCM encryption with envelope encryption for storing all API keys (AI and exchange).
 - User schema includes agent mode (passive/active), monitoring frequency, and Zod validation for auth requests.
 - Form accessibility features (autocomplete, test-ids).
+**Contact Admin System:**
+- Users can send messages to admin with optional screenshots (max 5MB, images only).
+- Server-side validation enforces screenshot format (base64 data:image/*) and size limits.
+- Admin page displays pending and resolved messages with resolve functionality.
+- Role-based access: admins see all messages, users see only their own.
+- Screenshots stored as base64 strings in PostgreSQL; consider external storage if volume grows.
 **AI Integration:**
 - **Multi-Provider AI Router:** Supports Perplexity, OpenAI/ChatGPT, and xAI/Grok. Retrieves and decrypts user credentials, creates OpenAI-compatible clients, validates model compatibility, tracks usage, and provides default models.
 - **Prompt Processing:** "Mr. Fox" processes natural language prompts to generate structured trading strategies, providing interpretations, trading actions, risk management plans, and expected outcomes with required numeric values for position sizes.
