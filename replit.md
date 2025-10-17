@@ -34,15 +34,27 @@ Preferred communication style: Simple, everyday language.
 
 ### Authentication & Security
 
-**Multi-Tenant Architecture:** The application is now a fully multi-tenant SaaS. All API routes are protected with `isAuthenticated` middleware and use per-user credentials from the database. The `getUserHyperliquidClient(userId)` function retrieves encrypted credentials and initializes individual Hyperliquid client instances for each user.
+**Multi-Tenant Architecture:** The application is now a fully multi-tenant SaaS. All API routes are protected with `isAuthenticated` middleware using Replit Auth OAuth. User identity is extracted from `req.user.claims.sub` and used for all data operations.
+
+**Authentication Flow:**
+1. Users log in via Replit Auth OAuth (handled by `@replit/auth-node` integration)
+2. `isAuthenticated` middleware validates session on all protected routes
+3. New users are redirected to onboarding to add Hyperliquid API credentials
+4. Dashboard checks credentials and redirects to onboarding if missing
 
 **User Credentials:** Uses AES-256-GCM encryption with envelope encryption for storing Hyperliquid API private keys per user. Each credential has a unique Data Encryption Key (DEK) that is encrypted with the master key (ENCRYPTION_MASTER_KEY secret). The `credentialService` provides secure encryption/decryption with proper key isolation - if one credential is compromised, others remain secure.
 
-**User Schema:** Includes UUID-based identification and Zod validation.
+**User Schema:** Includes UUID-based identification, Zod validation, and per-user settings (monitoring frequency preferences stored in `monitoringFrequencyMinutes` field).
 
-**Data Isolation:** Complete per-user data isolation with userId foreign keys on all trading-related tables (trades, positions, portfolio snapshots, AI usage logs). Each user's AI agent learns only from their own interactions. All storage methods enforce userId-first parameter pattern with `withUserFilter()` helper.
+**Data Isolation:** Complete per-user data isolation achieved:
+- All database tables have userId foreign keys (trades, positions, portfolio_snapshots, ai_usage_log, monitoring_log, user_api_credentials)
+- All storage methods enforce userId-first parameter pattern with `withUserFilter()` helper
+- All API routes extract `userId = req.user.claims.sub` and pass to storage/Hyperliquid clients
+- Per-user Hyperliquid clients via `getUserHyperliquidClient(userId)` with encrypted credentials
+- Monitoring frequency preferences stored per-user (not actively used yet)
+- Each user's AI agent learns only from their own interactions
 
-**Background Services Limitation:** The autonomous trading engine (`monitoringService.ts`) and portfolio snapshot service (`portfolioSnapshotService.ts`) currently use a single `TEST_USER_ID` and need to be redesigned for multi-tenant operation. For production multi-tenant deployment, these services should either be disabled or refactored to run per-user with separate instances.
+**Background Services Limitation:** The autonomous trading engine (`monitoringService.ts`) and portfolio snapshot service (`portfolioSnapshotService.ts`) currently use a single `TEST_USER_ID` and are NOT multi-tenant ready. Per-user monitoring preferences are stored in the database but not actively used by these services. **For production multi-tenant deployment, these background services should be disabled OR completely refactored to run per-user with separate instances and proper credential isolation.**
 
 ### Core Features
 

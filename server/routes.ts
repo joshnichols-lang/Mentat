@@ -354,23 +354,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Update monitoring frequency
+  // Update monitoring frequency (per-user setting)
   app.post("/api/monitoring/frequency", isAuthenticated, async (req, res) => {
     try {
+      const user = req.user as any;
+      const userId = user.claims.sub;
+      
       const schema = z.object({
         minutes: z.number().int().min(0).max(1440), // 0 to 24 hours
       });
 
       const { minutes } = schema.parse(req.body);
       
-      // Restart monitoring with new interval
-      restartMonitoring(minutes);
+      // Store per-user monitoring frequency in database
+      await storage.updateUserMonitoringFrequency(userId, minutes);
+      
+      // Note: Background monitoring service currently uses TEST_USER_ID (global)
+      // This per-user setting is stored but not actively used until background services are redesigned
       
       res.json({ 
         success: true, 
         message: minutes === 0 
-          ? "Monitoring disabled" 
-          : `Monitoring frequency updated to ${minutes} minutes` 
+          ? "Monitoring preference set to disabled" 
+          : `Monitoring frequency preference updated to ${minutes} minutes` 
       });
     } catch (error) {
       console.error("Error updating monitoring frequency:", error);

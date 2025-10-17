@@ -28,6 +28,7 @@ export const users = pgTable("users", {
   subscriptionStatus: text("subscription_status").notNull().default("inactive"), // "inactive", "active", "trial", "cancelled"
   subscriptionId: text("subscription_id"), // Stripe subscription ID
   onboardingComplete: integer("onboarding_complete").notNull().default(0), // 0 = incomplete, 1 = complete
+  monitoringFrequencyMinutes: integer("monitoring_frequency_minutes").notNull().default(0), // 0 = disabled, per-user monitoring frequency
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
