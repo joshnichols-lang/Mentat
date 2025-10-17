@@ -1,9 +1,8 @@
 import { storage } from "./storage";
-import { getHyperliquidClient } from "./hyperliquid/client";
-import { perplexity, calculateCost } from "./perplexity";
+import { getUserHyperliquidClient } from "./hyperliquid/client";
 import { executeTradeStrategy } from "./tradeExecutor";
 import { createPortfolioSnapshot } from "./portfolioSnapshotService";
-import { TEST_USER_ID } from "./constants";
+import { makeAIRequest } from "./aiRouter";
 
 interface MarketData {
   symbol: string;
@@ -124,13 +123,13 @@ function identifyMarketRegime(marketData: MarketData[]): { regime: string; confi
   return { regime, confidence, reasoning };
 }
 
-async function developAutonomousStrategy(): Promise<void> {
+export async function developAutonomousStrategy(userId: string): Promise<void> {
   try {
-    console.log("[Autonomous Trading] Developing trade thesis...");
+    console.log(`[Autonomous Trading] Developing trade thesis for user ${userId}...`);
     
-    const hyperliquidClient = getHyperliquidClient();
+    const hyperliquidClient = await getUserHyperliquidClient(userId);
     if (!hyperliquidClient) {
-      console.log("[Autonomous Trading] Hyperliquid client not initialized");
+      console.log(`[Autonomous Trading] Hyperliquid client not initialized for user ${userId}`);
       return;
     }
     
@@ -176,7 +175,7 @@ async function developAutonomousStrategy(): Promise<void> {
     // Fetch user prompt history to learn trading style
     let promptHistory: {timestamp: Date, prompt: string}[] = [];
     try {
-      const recentPrompts = await storage.getAiUsageLogs(TEST_USER_ID, 10);
+      const recentPrompts = await storage.getAiUsageLogs(userId, 10);
       promptHistory = recentPrompts
         .filter(log => log.success === 1 && log.userPrompt && !log.userPrompt.includes("[AUTOMATED"))
         .slice(0, 5)
@@ -277,8 +276,7 @@ CRITICAL ORDER MANAGEMENT RULES:
 10. Focus on high-probability setups aligned with market regime
 11. If no good opportunities exist, actions can be empty array`;
 
-    const response = await perplexity.chat.completions.create({
-      model: "sonar",
+    const aiResponse = await makeAIRequest(userId, {
       messages: [
         { 
           role: "system", 
@@ -289,7 +287,7 @@ CRITICAL ORDER MANAGEMENT RULES:
       temperature: 0.7,
     });
 
-    const content = response.choices[0]?.message?.content;
+    const content = aiResponse.content;
     if (!content) {
       throw new Error("No response from AI");
     }
@@ -328,21 +326,17 @@ CRITICAL ORDER MANAGEMENT RULES:
     }
 
     // Log AI usage
-    const usageData = response.usage;
-    if (usageData) {
-      const cost = calculateCost("sonar", usageData.prompt_tokens, usageData.completion_tokens);
-      await storage.logAiUsage(TEST_USER_ID, {
-        provider: "perplexity",
-        model: "sonar",
-        promptTokens: usageData.prompt_tokens,
-        completionTokens: usageData.completion_tokens,
-        totalTokens: usageData.total_tokens,
-        estimatedCost: cost.toFixed(6),
-        userPrompt: "[AUTONOMOUS TRADING]",
-        aiResponse: JSON.stringify(strategy),
-        success: 1,
-      });
-    }
+    await storage.logAiUsage(userId, {
+      provider: aiResponse.provider,
+      model: aiResponse.model,
+      promptTokens: aiResponse.usage.promptTokens,
+      completionTokens: aiResponse.usage.completionTokens,
+      totalTokens: aiResponse.usage.totalTokens,
+      estimatedCost: aiResponse.cost.toFixed(6),
+      userPrompt: "[AUTONOMOUS TRADING]",
+      aiResponse: JSON.stringify(strategy),
+      success: 1,
+    });
 
     console.log(`[Autonomous Trading] Trade thesis: ${strategy.tradeThesis}`);
     console.log(`[Autonomous Trading] Market regime: ${strategy.marketRegime}`);
@@ -351,17 +345,17 @@ CRITICAL ORDER MANAGEMENT RULES:
     // Execute trades if actions exist
     if (strategy.actions && strategy.actions.length > 0) {
       try {
-        const executionSummary = await executeTradeStrategy(TEST_USER_ID, strategy.actions);
+        const executionSummary = await executeTradeStrategy(userId, strategy.actions);
         
         console.log(`[Autonomous Trading] Executed ${executionSummary.successfulExecutions}/${executionSummary.totalActions} trades`);
         
         // Create portfolio snapshot after successful trades
         if (executionSummary.successfulExecutions > 0) {
-          await createPortfolioSnapshot(TEST_USER_ID, hyperliquidClient);
+          await createPortfolioSnapshot(userId, hyperliquidClient);
         }
         
         // Log the autonomous trading session
-        await storage.createMonitoringLog(TEST_USER_ID, {
+        await storage.createMonitoringLog(userId, {
           analysis: JSON.stringify({
             tradeThesis: strategy.tradeThesis,
             marketRegime: strategy.marketRegime,
@@ -385,7 +379,7 @@ CRITICAL ORDER MANAGEMENT RULES:
         console.error("[Autonomous Trading] Failed to execute trades:", execError);
         
         // Log the failed execution
-        await storage.createMonitoringLog(TEST_USER_ID, {
+        await storage.createMonitoringLog(userId, {
           analysis: JSON.stringify({
             tradeThesis: strategy.tradeThesis,
             marketRegime: strategy.marketRegime,
@@ -399,7 +393,7 @@ CRITICAL ORDER MANAGEMENT RULES:
       console.log("[Autonomous Trading] No trading opportunities identified");
       
       // Log the analysis even if no trades
-      await storage.createMonitoringLog(TEST_USER_ID, {
+      await storage.createMonitoringLog(userId, {
         analysis: JSON.stringify({
           tradeThesis: strategy.tradeThesis,
           marketRegime: strategy.marketRegime,
@@ -416,53 +410,42 @@ CRITICAL ORDER MANAGEMENT RULES:
   }
 }
 
+// DEPRECATED: These global monitoring functions have been replaced with per-user monitoring
+// See userMonitoringManager.ts for the new per-user implementation
+// These are kept for backwards compatibility but should not be used
+
 let monitoringInterval: NodeJS.Timeout | null = null;
 let currentIntervalMinutes: number = 5;
 
+/**
+ * @deprecated Use userMonitoringManager.startUserMonitoring(userId, intervalMinutes) instead
+ */
 export function startMonitoring(intervalMinutes: number = 5): void {
-  if (monitoringInterval) {
-    console.log("[Autonomous Trading] Already running");
-    return;
-  }
-
+  console.warn("[DEPRECATED] Global startMonitoring is deprecated. Use userMonitoringManager instead.");
   if (intervalMinutes === 0) {
     console.log("[Autonomous Trading] Monitoring is disabled");
     return;
   }
-
   currentIntervalMinutes = intervalMinutes;
-  console.log(`[Autonomous Trading] Starting autonomous trading engine (every ${intervalMinutes} minutes)`);
-  
-  // Run immediately on start
-  developAutonomousStrategy();
-  
-  // Set up recurring interval
-  monitoringInterval = setInterval(() => {
-    developAutonomousStrategy();
-  }, intervalMinutes * 60 * 1000);
 }
 
+/**
+ * @deprecated Use userMonitoringManager.stopUserMonitoring(userId) instead
+ */
 export function stopMonitoring(): void {
+  console.warn("[DEPRECATED] Global stopMonitoring is deprecated. Use userMonitoringManager instead.");
   if (monitoringInterval) {
     clearInterval(monitoringInterval);
     monitoringInterval = null;
-    console.log("[Autonomous Trading] Stopped autonomous trading engine");
   }
 }
 
+/**
+ * @deprecated Use userMonitoringManager.restartUserMonitoring(userId, intervalMinutes) instead
+ */
 export function restartMonitoring(intervalMinutes: number): void {
-  console.log(`[Autonomous Trading] Restarting with interval: ${intervalMinutes} minutes`);
-  
-  // Stop current monitoring
+  console.warn("[DEPRECATED] Global restartMonitoring is deprecated. Use userMonitoringManager instead.");
   stopMonitoring();
-  
-  // Start with new interval (or stay stopped if 0)
-  if (intervalMinutes > 0) {
-    startMonitoring(intervalMinutes);
-  } else {
-    console.log("[Autonomous Trading] Autonomous trading disabled");
-  }
-  
   currentIntervalMinutes = intervalMinutes;
 }
 
