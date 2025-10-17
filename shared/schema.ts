@@ -191,6 +191,17 @@ export const automationRuns = pgTable("automation_runs", {
   errorMessage: text("error_message"),
 });
 
+export const contactMessages = pgTable("contact_messages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  message: text("message").notNull(),
+  screenshotUrl: text("screenshot_url"), // Base64 or uploaded file URL
+  status: text("status").notNull().default("pending"), // "pending", "resolved"
+  resolvedBy: varchar("resolved_by").references(() => users.id, { onDelete: "set null" }), // Admin who resolved
+  resolvedAt: timestamp("resolved_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true, updatedAt: true });
 export const upsertUserSchema = createInsertSchema(users).omit({ createdAt: true, updatedAt: true }).partial();
 export const insertTradeSchema = createInsertSchema(trades).omit({ id: true, userId: true, entryTimestamp: true });
@@ -204,6 +215,7 @@ export const insertSubscriptionSchema = createInsertSchema(subscriptions).omit({
 export const insertPromoCodeSchema = createInsertSchema(promoCodes).omit({ id: true, createdAt: true });
 export const insertPromoCodeRedemptionSchema = createInsertSchema(promoCodeRedemptions).omit({ id: true, redeemedAt: true });
 export const insertAutomationRunSchema = createInsertSchema(automationRuns).omit({ id: true, timestamp: true });
+export const insertContactMessageSchema = createInsertSchema(contactMessages).omit({ id: true, userId: true, createdAt: true });
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type UpsertUser = z.infer<typeof upsertUserSchema>;
@@ -230,3 +242,5 @@ export type InsertPromoCodeRedemption = z.infer<typeof insertPromoCodeRedemption
 export type PromoCodeRedemption = typeof promoCodeRedemptions.$inferSelect;
 export type InsertAutomationRun = z.infer<typeof insertAutomationRunSchema>;
 export type AutomationRun = typeof automationRuns.$inferSelect;
+export type InsertContactMessage = z.infer<typeof insertContactMessageSchema>;
+export type ContactMessage = typeof contactMessages.$inferSelect;
