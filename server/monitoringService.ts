@@ -286,14 +286,20 @@ CRITICAL ORDER MANAGEMENT RULES:
    - THEN: Include a new stop_loss or take_profit action with updated triggerPrice and full reasoning
 4. **If an order exists and passes all thresholds**: Do NOT include any actions for it - let it remain as-is
 5. **Each position limits**: Maximum ONE stop loss + ONE take profit order
-6. ALL numeric values (size, expectedEntry, triggerPrice, orderId) must be actual numbers as strings, NEVER placeholders
-7. For buy/sell actions, expectedEntry is REQUIRED (Hyperliquid uses limit orders only)
-8. For stop_loss/take_profit, triggerPrice is REQUIRED
-9. For cancel_order, orderId is REQUIRED and reasoning MUST cite which threshold(s) failed with actual calculated values
-10. Close actions must have matching side to the existing position
-11. Focus on high-probability setups aligned with market regime
-12. If no good opportunities exist AND all existing orders are still valid, actions can be empty array
-13. **DISCIPLINED DECISION-MAKING**: Never cancel orders based on "feels" - only based on concrete threshold violations with cited metrics`;
+6. **LIQUIDATION PRICE SAFETY (CRITICAL)**: 
+   - For LONG positions: Stop loss MUST be placed ABOVE liquidation price with at least 2% buffer (e.g., if liq=$3700, minimum stop=$3774)
+   - For SHORT positions: Stop loss MUST be placed BELOW liquidation price with at least 2% buffer (e.g., if liq=$4300, maximum stop=$4214)
+   - NEVER set stops at or past liquidation levels - this causes instant liquidation without controlled exit
+   - Stop losses use MARKET execution for guaranteed fills when triggered
+   - Take profits use LIMIT execution for better prices
+7. ALL numeric values (size, expectedEntry, triggerPrice, orderId) must be actual numbers as strings, NEVER placeholders
+8. For buy/sell actions, expectedEntry is REQUIRED (Hyperliquid uses limit orders only)
+9. For stop_loss/take_profit, triggerPrice is REQUIRED
+10. For cancel_order, orderId is REQUIRED and reasoning MUST cite which threshold(s) failed with actual calculated values
+11. Close actions must have matching side to the existing position
+12. Focus on high-probability setups aligned with market regime
+13. If no good opportunities exist AND all existing orders are still valid, actions can be empty array
+14. **DISCIPLINED DECISION-MAKING**: Never cancel orders based on "feels" - only based on concrete threshold violations with cited metrics`;
 
     const aiResponse = await makeAIRequest(userId, {
       messages: [

@@ -435,10 +435,38 @@ async function executeTriggerOrder(
 
     const positionSize = Math.abs(parseFloat(position.szi));
     const isLong = parseFloat(position.szi) > 0;
+    const liquidationPrice = position.liquidationPx ? parseFloat(position.liquidationPx) : null;
+    const entryPrice = parseFloat(position.entryPx);
+    
+    // CRITICAL SAFETY CHECK: Enforce 2% buffer from liquidation price
+    if (action.action === "stop_loss" && liquidationPrice) {
+      const minSafeStopLong = liquidationPrice * 1.02; // 2% buffer above liquidation for longs
+      const maxSafeStopShort = liquidationPrice * 0.98; // 2% buffer below liquidation for shorts
+      
+      if (isLong && triggerPrice < minSafeStopLong) {
+        console.warn(`[Trade Executor] SAFETY VIOLATION: Stop loss ${triggerPrice} is below 2% buffer for long position. Liquidation: ${liquidationPrice}, Minimum safe: ${minSafeStopLong}`);
+        return {
+          success: false,
+          action,
+          error: `SAFETY VIOLATION: Stop loss ${triggerPrice} must be at least 2% above liquidation price ${liquidationPrice}. Minimum safe stop: ${minSafeStopLong.toFixed(2)}`,
+        };
+      } else if (!isLong && triggerPrice > maxSafeStopShort) {
+        console.warn(`[Trade Executor] SAFETY VIOLATION: Stop loss ${triggerPrice} is above 2% buffer for short position. Liquidation: ${liquidationPrice}, Maximum safe: ${maxSafeStopShort}`);
+        return {
+          success: false,
+          action,
+          error: `SAFETY VIOLATION: Stop loss ${triggerPrice} must be at least 2% below liquidation price ${liquidationPrice}. Maximum safe stop: ${maxSafeStopShort.toFixed(2)}`,
+        };
+      }
+      console.log(`[Trade Executor] Stop loss safety check PASSED: trigger=${triggerPrice}, liquidation=${liquidationPrice}, buffer=${isLong ? 'min=' + minSafeStopLong.toFixed(2) : 'max=' + maxSafeStopShort.toFixed(2)}`);
+    }
     
     // For stop loss: if long position, trigger sells when price goes down
     // For take profit: if long position, trigger sells when price goes up
     // The order itself is always the opposite side of the position (to close it)
+    
+    // CRITICAL FIX: Use MARKET execution for stop losses (instant fills), LIMIT for take profits (better prices)
+    const useMarketExecution = action.action === "stop_loss";
     
     const triggerOrder = {
       coin: action.symbol,
@@ -448,7 +476,7 @@ async function executeTriggerOrder(
       order_type: {
         trigger: {
           triggerPx: triggerPrice.toString(),  // camelCase for SDK
-          isMarket: false,  // camelCase for SDK
+          isMarket: useMarketExecution,  // TRUE for stop loss (market order), FALSE for take profit (limit order)
           tpsl: action.action === "stop_loss" ? "sl" : "tp",
         },
       },
