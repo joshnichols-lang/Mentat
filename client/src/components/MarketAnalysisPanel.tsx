@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { TradingPairSelector } from "./TradingPairSelector";
 import { PriceVolumeChart } from "./PriceVolumeChart";
-import { CvdSubchart } from "./CvdSubchart";
 import { OrderBook } from "./OrderBook";
 
 export function MarketAnalysisPanel() {
@@ -19,13 +18,10 @@ export function MarketAnalysisPanel() {
 
       {/* Main Chart Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Left Column: Charts */}
-        <div className="lg:col-span-2 space-y-4">
+        {/* Left Column: Chart */}
+        <div className="lg:col-span-2">
           {/* Price & Volume Profile Chart */}
           <PriceVolumeChart coin={selectedPair} />
-          
-          {/* CVD Subchart */}
-          <CvdSubchart coin={selectedPair} />
         </div>
 
         {/* Right Column: Order Book */}

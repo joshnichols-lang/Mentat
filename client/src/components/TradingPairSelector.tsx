@@ -32,6 +32,19 @@ interface TradingPairSelectorProps {
   onChange: (value: string) => void;
 }
 
+// Fallback markets when API is unavailable or rate-limited
+const FALLBACK_MARKETS: Market[] = [
+  { symbol: "BTC", displayName: "BTC-USD", type: "perp", index: 0, maxLeverage: 50 },
+  { symbol: "ETH", displayName: "ETH-USD", type: "perp", index: 1, maxLeverage: 50 },
+  { symbol: "SOL", displayName: "SOL-USD", type: "perp", index: 2, maxLeverage: 20 },
+  { symbol: "ARB", displayName: "ARB-USD", type: "perp", index: 3, maxLeverage: 20 },
+  { symbol: "OP", displayName: "OP-USD", type: "perp", index: 4, maxLeverage: 20 },
+  { symbol: "AVAX", displayName: "AVAX-USD", type: "perp", index: 5, maxLeverage: 20 },
+  { symbol: "DOGE", displayName: "DOGE-USD", type: "perp", index: 6, maxLeverage: 20 },
+  { symbol: "XRP", displayName: "XRP-USD", type: "perp", index: 7, maxLeverage: 20 },
+  { symbol: "MATIC", displayName: "MATIC-USD", type: "perp", index: 8, maxLeverage: 20 },
+];
+
 export function TradingPairSelector({ value, onChange }: TradingPairSelectorProps) {
   const [open, setOpen] = useState(false);
 
@@ -42,7 +55,10 @@ export function TradingPairSelector({ value, onChange }: TradingPairSelectorProp
     staleTime: 30000, // Consider data fresh for 30 seconds
   });
 
-  const markets = marketsData?.markets || [];
+  // Use API markets if available, otherwise use fallback markets
+  const markets = (marketsData?.markets && marketsData.markets.length > 0) 
+    ? marketsData.markets 
+    : FALLBACK_MARKETS;
   
   // Find the selected market
   const selectedMarket = markets.find(m => m.symbol === value);
