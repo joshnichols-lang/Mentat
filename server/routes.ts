@@ -11,6 +11,7 @@ import { setupAuth } from "./auth";
 import { storeUserCredentials, getUserPrivateKey, deleteUserCredentials, hasUserCredentials } from "./credentialService";
 import { initializeMarketDataWebSocket } from "./marketDataWebSocket";
 import { CVDCalculator } from "./cvdCalculator";
+import { VolumeProfileCalculator } from "./volumeProfileCalculator";
 import { encryptCredential } from "./encryption";
 import { z } from "zod";
 import { hashPassword, comparePasswords } from "./auth";
@@ -1128,6 +1129,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // CVD (Cumulative Volume Delta) endpoints
   let cvdCalculator: CVDCalculator;
+  let volumeProfileCalculator: VolumeProfileCalculator;
 
   app.post("/api/indicators/cvd/subscribe", requireVerifiedUser, async (req, res) => {
     try {
@@ -1213,6 +1215,98 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Volume Profile endpoints
+  app.post("/api/indicators/volume-profile/subscribe", requireVerifiedUser, async (req, res) => {
+    try {
+      const schema = z.object({
+        coin: z.string().min(1),
+      });
+
+      const { coin } = schema.parse(req.body);
+
+      volumeProfileCalculator.subscribeToCoin(coin);
+
+      res.json({
+        success: true,
+        message: `Subscribed to Volume Profile for ${coin}`
+      });
+    } catch (error: any) {
+      console.error("Error subscribing to Volume Profile:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to subscribe to Volume Profile"
+      });
+    }
+  });
+
+  app.post("/api/indicators/volume-profile/unsubscribe", requireVerifiedUser, async (req, res) => {
+    try {
+      const schema = z.object({
+        coin: z.string().min(1),
+      });
+
+      const { coin } = schema.parse(req.body);
+
+      volumeProfileCalculator.unsubscribeFromCoin(coin);
+
+      res.json({
+        success: true,
+        message: `Unsubscribed from Volume Profile for ${coin}`
+      });
+    } catch (error: any) {
+      console.error("Error unsubscribing from Volume Profile:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to unsubscribe from Volume Profile"
+      });
+    }
+  });
+
+  app.get("/api/indicators/volume-profile/:coin", requireVerifiedUser, async (req, res) => {
+    try {
+      const { coin } = req.params;
+
+      const profile = volumeProfileCalculator.getVolumeProfile(coin);
+
+      if (!profile) {
+        return res.status(404).json({
+          success: false,
+          error: "No volume profile data for this coin"
+        });
+      }
+
+      res.json({
+        success: true,
+        profile
+      });
+    } catch (error: any) {
+      console.error("Error getting Volume Profile:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to get Volume Profile"
+      });
+    }
+  });
+
+  app.post("/api/indicators/volume-profile/:coin/reset", requireVerifiedUser, async (req, res) => {
+    try {
+      const { coin } = req.params;
+
+      volumeProfileCalculator.resetProfile(coin);
+
+      res.json({
+        success: true,
+        message: `Volume Profile reset for ${coin}`
+      });
+    } catch (error: any) {
+      console.error("Error resetting Volume Profile:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to reset Volume Profile"
+      });
+    }
+  });
+
   const httpServer = createServer(app);
 
   // Initialize market data WebSocket service
@@ -1223,6 +1317,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const marketDataWsUrl = "ws://localhost:5000/market-data";
   cvdCalculator = new CVDCalculator(marketDataWsUrl);
   console.log(`[CVD Calculator] Initialized with market data URL: ${marketDataWsUrl}`);
+
+  // Initialize Volume Profile calculator
+  // Use 1.0 tick size for better price level granularity
+  volumeProfileCalculator = new VolumeProfileCalculator(marketDataWsUrl, 1.0);
+  console.log(`[Volume Profile] Initialized with market data URL: ${marketDataWsUrl}, tick size: 1.0`);
 
   return httpServer;
 }

@@ -111,17 +111,20 @@ export class CVDCalculator {
   }
 
   subscribeToCoin(coin: string) {
+    // Normalize input to base coin FIRST (remove -SPOT, -PERP suffixes)
+    const baseCoin = coin.replace("-SPOT", "").replace("-PERP", "");
+    
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-      console.log(`[CVD Calculator] WebSocket not ready, queuing subscription for ${coin}`);
-      this.subscribedCoins.add(coin);
+      console.log(`[CVD Calculator] WebSocket not ready, queuing subscription for ${baseCoin}`);
+      this.subscribedCoins.add(baseCoin);
       return;
     }
 
-    this.subscribedCoins.add(coin);
+    this.subscribedCoins.add(baseCoin);
 
     // Subscribe to both spot and perp trades for aggregation
-    const perpCoin = coin; // e.g., "BTC"
-    const spotCoin = `${coin}-SPOT`; // e.g., "BTC-SPOT"
+    const perpCoin = baseCoin;
+    const spotCoin = `${baseCoin}-SPOT`;
 
     this.ws.send(JSON.stringify({
       action: "subscribe",
@@ -139,12 +142,20 @@ export class CVDCalculator {
   }
 
   unsubscribeFromCoin(coin: string) {
-    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
+    // Normalize input to base coin FIRST
+    const baseCoin = coin.replace("-SPOT", "").replace("-PERP", "");
+    
+    // Remove from subscribed set BEFORE checking WebSocket readiness
+    // This prevents reconnect from resubscribing
+    this.subscribedCoins.delete(baseCoin);
 
-    this.subscribedCoins.delete(coin);
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+      console.log(`[CVD Calculator] WebSocket not ready, queued unsubscription from ${baseCoin}`);
+      return;
+    }
 
-    const perpCoin = coin;
-    const spotCoin = `${coin}-SPOT`;
+    const perpCoin = baseCoin;
+    const spotCoin = `${baseCoin}-SPOT`;
 
     this.ws.send(JSON.stringify({
       action: "unsubscribe",
@@ -162,17 +173,21 @@ export class CVDCalculator {
   }
 
   getCVDSnapshot(coin: string): CVDSnapshot {
+    // Normalize input to base coin for lookup
+    const baseCoin = coin.replace("-SPOT", "").replace("-PERP", "");
     return {
-      coin,
-      data: this.cvdData.get(coin) || [],
-      currentDelta: this.currentDelta.get(coin) || 0
+      coin: baseCoin,
+      data: this.cvdData.get(baseCoin) || [],
+      currentDelta: this.currentDelta.get(baseCoin) || 0
     };
   }
 
   resetCVD(coin: string) {
-    this.currentDelta.set(coin, 0);
-    this.cvdData.set(coin, []);
-    console.log(`[CVD Calculator] Reset CVD for ${coin}`);
+    // Normalize input to base coin
+    const baseCoin = coin.replace("-SPOT", "").replace("-PERP", "");
+    this.currentDelta.set(baseCoin, 0);
+    this.cvdData.set(baseCoin, []);
+    console.log(`[CVD Calculator] Reset CVD for ${baseCoin}`);
   }
 
   cleanup() {

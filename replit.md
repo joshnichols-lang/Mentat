@@ -113,6 +113,25 @@ Preferred communication style: Simple, everyday language.
 - **Portfolio Snapshots**: Created on monitoring start, every monitoring cycle, and after successful trades
 - **Edge Cases**: 0-minute frequency auto-corrects to 5 minutes when activating; per-user error isolation prevents cascading failures
 
+### Market Data & Indicators
+
+**WebSocket Service** (`marketDataWebSocket.ts`): Real-time market data streaming infrastructure:
+- Dual WebSocket architecture: Client-facing server + backend connection to Hyperliquid
+- Supports trades, L2 book (order book), and candle subscriptions
+- Per-client subscription tracking with automatic cleanup on disconnect
+- Aggregates client subscriptions to minimize Hyperliquid connections
+- Auto-reconnection with 5-second delay, 30-second heartbeat
+- Interval-aware candle unsubscription (bug fixed: includes interval in keys)
+
+**CVD Calculator** (`cvdCalculator.ts`): Cumulative Volume Delta with spot + perpetual aggregation:
+- Analyzes real-time trade data to track buying vs selling pressure
+- Aggregates spot and perpetual trades into single delta per base coin
+- Normalizes coin symbols (removes "-SPOT" suffix) for proper aggregation
+- Maintains chronological order with 1000-point history per coin
+- API endpoints: subscribe, unsubscribe, get snapshot, reset CVD
+- Both "BTC" and "BTC-SPOT" trades update same cumulative delta
+- Properly calculates: `delta = buyVolume - sellVolume`
+
 ### Core Features
 
 **Autonomous Trading Engine:** Mr. Fox autonomously trades based on market analysis, developing trade theses, identifying market conditions, and analyzing volume profiles. It executes trades with proper position sizing and risk management, learns from user prompts, and sets stop losses and take profits based on technical analysis.
