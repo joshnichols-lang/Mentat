@@ -26,6 +26,9 @@ const aiProviderSchema = z.object({
 
 const exchangeSchema = z.object({
   provider: z.enum(["hyperliquid"]),
+  walletAddress: z.string()
+    .min(1, "Wallet address is required")
+    .regex(/^0x[a-fA-F0-9]{40}$/, "Invalid Ethereum wallet address (must start with 0x and be 42 characters)"),
   apiKey: z.string().min(1, "Private key is required"),
   label: z.string().min(1, "Label is required").max(50),
   confirmedReferral: z.boolean().refine((val) => val === true, {
@@ -64,6 +67,7 @@ export default function Onboarding() {
     resolver: zodResolver(exchangeSchema),
     defaultValues: {
       provider: "hyperliquid",
+      walletAddress: "",
       apiKey: "",
       label: "Main Account",
       confirmedReferral: false,
@@ -93,12 +97,19 @@ export default function Onboarding() {
 
   const exchangeMutation = useMutation({
     mutationFn: async (data: ExchangeFormData) => {
+      // First save the exchange credentials
       const response = await apiRequest("POST", "/api/api-keys", {
         providerType: "exchange",
         providerName: data.provider,
         label: data.label,
         apiKey: data.apiKey,
       });
+      
+      // Then update the user's wallet address
+      await apiRequest("POST", "/api/user/wallet-address", {
+        walletAddress: data.walletAddress,
+      });
+      
       return response.json();
     },
     onSuccess: () => {
@@ -323,6 +334,27 @@ export default function Onboarding() {
                     </Button>
                   </AlertDescription>
                 </Alert>
+
+                <FormField
+                  control={exchangeForm.control}
+                  name="walletAddress"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Wallet Address</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          placeholder="0x..."
+                          data-testid="input-wallet-address"
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Enter your Hyperliquid wallet address (starts with 0x). We'll verify this matches the account created through our referral link.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
                 <FormField
                   control={exchangeForm.control}

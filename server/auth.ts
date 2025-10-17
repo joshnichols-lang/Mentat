@@ -143,4 +143,28 @@ export function setupAuth(app: Express) {
     const { password, ...safeUser } = req.user!;
     res.json(safeUser);
   });
+
+  app.post("/api/user/wallet-address", async (req, res, next) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    try {
+      const schema = z.object({
+        walletAddress: z.string()
+          .regex(/^0x[a-fA-F0-9]{40}$/, "Invalid Ethereum wallet address"),
+      });
+      
+      const { walletAddress } = schema.parse(req.body);
+      const userId = req.user!.id;
+      
+      // Update user's wallet address (verification status remains pending by default)
+      await storage.updateUserWalletAddress(userId, walletAddress);
+      
+      res.json({ success: true, walletAddress });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid wallet address", details: error.errors });
+      }
+      next(error);
+    }
+  });
 }
