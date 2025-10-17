@@ -297,18 +297,26 @@ CRITICAL ORDER MANAGEMENT RULES:
     // Clean the response - extract only the JSON part
     let cleanedContent = content.trim();
     
-    // Remove code fences if present
-    if (cleanedContent.startsWith('```json')) {
-      cleanedContent = cleanedContent.replace(/^```json\s*/, '').replace(/\s*```[\s\S]*$/, '');
-    } else if (cleanedContent.startsWith('```')) {
-      cleanedContent = cleanedContent.replace(/^```\s*/, '').replace(/\s*```[\s\S]*$/, '');
-    }
-    
-    // If there's text after the JSON (like explanations), remove it
-    // Find the last closing brace of the JSON object
-    const lastBraceIndex = cleanedContent.lastIndexOf('}');
-    if (lastBraceIndex !== -1 && lastBraceIndex < cleanedContent.length - 1) {
-      cleanedContent = cleanedContent.substring(0, lastBraceIndex + 1);
+    // Handle markdown-wrapped JSON (text before code block)
+    // Look for ```json or ``` followed by JSON content
+    // CRITICAL: Capture ALL content between code fences, not just to first closing brace
+    const jsonBlockMatch = cleanedContent.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+    if (jsonBlockMatch) {
+      cleanedContent = jsonBlockMatch[1].trim();
+    } else {
+      // Fallback: remove code fences if they start the content
+      if (cleanedContent.startsWith('```json')) {
+        cleanedContent = cleanedContent.replace(/^```json\s*/, '').replace(/\s*```[\s\S]*$/, '');
+      } else if (cleanedContent.startsWith('```')) {
+        cleanedContent = cleanedContent.replace(/^```\s*/, '').replace(/\s*```[\s\S]*$/, '');
+      }
+      
+      // Safety net: Find first "{" and last "}" to extract JSON
+      const firstBrace = cleanedContent.indexOf('{');
+      const lastBrace = cleanedContent.lastIndexOf('}');
+      if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+        cleanedContent = cleanedContent.substring(firstBrace, lastBrace + 1);
+      }
     }
 
     let strategy: AutonomousStrategy;
