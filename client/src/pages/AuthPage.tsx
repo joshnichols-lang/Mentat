@@ -197,7 +197,7 @@ export default function AuthPage() {
 
             <div className="mt-4 text-center">
               <Button
-                variant="link"
+                variant="ghost"
                 onClick={() => setIsLogin(!isLogin)}
                 className="font-mono"
                 data-testid="button-toggle-auth"

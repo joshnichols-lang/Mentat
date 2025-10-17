@@ -76,6 +76,9 @@ export function setupAuth(app: Express) {
         }
         return done(null, user);
       } catch (error) {
+        if (error instanceof z.ZodError) {
+          return done(null, false); // Invalid format treated as failed login
+        }
         return done(error);
       }
     }),
@@ -114,6 +117,9 @@ export function setupAuth(app: Express) {
         res.status(201).json(safeUser);
       });
     } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid input", details: error.errors });
+      }
       next(error);
     }
   });
