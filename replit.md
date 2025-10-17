@@ -1,10 +1,12 @@
 # 1fox
 
 ## Recent Changes (October 17, 2025)
-- **Proactive Limit Order Strategy**: AI now encouraged to place limit orders at strategic entry levels (support/resistance, demand/supply zones) rather than just sitting in cash. Uses patient limit orders to wait for market to come to favorable prices instead of forcing immediate entries.
-- **Full Market Universe Access**: Updated AI prompts to actively scan ALL available Hyperliquid trading pairs, not just BTC/ETH/SOL. AI now explicitly instructed to consider altcoins, memecoins, and emerging assets with strong momentum/volume from top gainers/losers analysis.
-- **Symbol Selection Enhancement**: Removed hardcoded BTC/ETH/SOL examples from prompts that created implicit bias. AI now receives clear guidance to explore the complete market data provided, including specific examples of diverse assets (DOGE-PERP, WIF-PERP, BONK-PERP, LINK-PERP, etc.).
-- **Stop Loss & Risk Management Fixes**: Resolved floating-point rounding errors, increased liquidation buffer to 3%, prioritized liquidation safety over distance requirements, enforced 2:1 R:R ratio, and eliminated order churn with explicit anti-adjustment directives.
+- **Portfolio-Aware Position Sizing**: AI now receives real-time account balance and margin usage data. Mandatory position sizing rules enforce max 30% of available balance per position, accounting for leverage. AI calculates sizes using formula: `size = (available_balance × position_% × leverage) / entry_price`.
+- **Smart Alert System**: Monitoring alerts only post when (1) opening new orders with entry/SL/TP/reasoning or (2) detecting abnormal conditions (volume spikes 3x+ normal). Eliminated spam from routine monitoring cycles with no opportunities.
+- **Volume Spike Detection**: System detects abnormal market conditions when asset volume exceeds 3x recent levels, alerting user to potential news catalysts or significant market events.
+- **Proactive Limit Order Strategy**: AI encouraged to place limit orders at strategic entry levels (support/resistance, demand/supply zones) rather than sitting in cash. Uses patient limit orders to wait for market to come to favorable prices.
+- **Full Market Universe Access**: AI prompts actively scan ALL Hyperliquid trading pairs, not just BTC/ETH/SOL. Explicit guidance to consider altcoins, memecoins, and emerging assets with strong momentum/volume.
+- **Stop Loss & Risk Management**: Liquidation buffer increased to 3%, enforced 2:1 R:R ratio, eliminated order churn with anti-adjustment directives.
 
 ## Overview
 1fox is an AI-powered cryptocurrency trading terminal for the Hyperliquid perpetual futures exchange. It allows users to interact with an AI trading agent, "Mr. Fox," using natural language to execute automated strategies. The application provides a "Fantastic Mr. Fox" newspaper-themed interface, real-time market data, portfolio tracking, and comprehensive trading controls. The project aims to deliver a professional AI trading experience focused on maximizing Sharpe ratio through optimal sizing, entries, exits, and continuous risk management. It functions as a multi-tenant SaaS.

@@ -41,6 +41,41 @@ interface AutonomousStrategy {
   expectedSharpeImpact: string;
 }
 
+// Store previous volume data for abnormal condition detection
+const previousVolumeData = new Map<string, Map<string, number>>();
+
+function detectAbnormalConditions(marketData: MarketData[]): { symbol: string; condition: string; volumeRatio: number }[] {
+  const abnormalConditions: { symbol: string; condition: string; volumeRatio: number }[] = [];
+  const VOLUME_SPIKE_THRESHOLD = 3.0; // 3x normal volume is abnormal
+  
+  for (const asset of marketData) {
+    const symbol = asset.symbol;
+    const currentVolume = parseFloat(asset.volume24h || '0');
+    
+    // Get global previous volume map
+    if (!previousVolumeData.has('global')) {
+      previousVolumeData.set('global', new Map());
+    }
+    const volumeMap = previousVolumeData.get('global')!;
+    const previousVolume = volumeMap.get(symbol) || currentVolume;
+    
+    // Detect volume spikes (current volume is 3x+ previous volume)
+    if (previousVolume > 0 && currentVolume > previousVolume * VOLUME_SPIKE_THRESHOLD) {
+      const volumeRatio = currentVolume / previousVolume;
+      abnormalConditions.push({
+        symbol,
+        condition: `Volume spike detected: ${volumeRatio.toFixed(2)}x normal volume`,
+        volumeRatio
+      });
+    }
+    
+    // Update previous volume
+    volumeMap.set(symbol, currentVolume);
+  }
+  
+  return abnormalConditions;
+}
+
 function analyzeVolumeProfile(marketData: MarketData[]): VolumeProfile[] {
   // Calculate total market volume for baseline comparison
   const totalVolume = marketData.reduce((sum, m) => sum + parseFloat(m.volume24h || "0"), 0);
@@ -509,6 +544,18 @@ CRITICAL ORDER MANAGEMENT RULES:
     console.log(`[Autonomous Trading] Market regime: ${strategy.marketRegime}`);
     console.log(`[Autonomous Trading] Generated ${strategy.actions.length} actions`);
 
+    // Detect abnormal market conditions (volume spikes)
+    const abnormalConditions = detectAbnormalConditions(marketData);
+    
+    // Only create monitoring logs when there are actual trading actions or abnormal conditions
+    const hasEntryActions = strategy.actions.some(a => a.action === 'buy' || a.action === 'sell');
+    const shouldAlert = hasEntryActions || abnormalConditions.length > 0;
+    
+    if (!shouldAlert && strategy.actions.length === 0) {
+      console.log("[Autonomous Trading] No trading opportunities or abnormal conditions - no alert posted");
+      return;
+    }
+
     // Execute trades if actions exist
     if (strategy.actions && strategy.actions.length > 0) {
       try {
@@ -521,6 +568,32 @@ CRITICAL ORDER MANAGEMENT RULES:
           await createPortfolioSnapshot(userId, hyperliquidClient);
         }
         
+        // Extract entry actions with their protective orders for the alert
+        const entryActions = strategy.actions.filter(a => a.action === 'buy' || a.action === 'sell');
+        const alertMessages: string[] = [];
+        
+        for (const entry of entryActions) {
+          const stopLoss = strategy.actions.find(a => 
+            a.symbol === entry.symbol && a.action === 'stop_loss'
+          );
+          const takeProfit = strategy.actions.find(a => 
+            a.symbol === entry.symbol && a.action === 'take_profit'
+          );
+          
+          const message = `${entry.action.toUpperCase()} ${entry.symbol} ${entry.side.toUpperCase()} ${entry.size} @ $${entry.expectedEntry}
+Stop Loss: $${stopLoss?.triggerPrice || 'N/A'} | Take Profit: $${takeProfit?.triggerPrice || 'N/A'}
+Reason: ${entry.reasoning}`;
+          alertMessages.push(message);
+        }
+        
+        // Add abnormal conditions to alert
+        if (abnormalConditions.length > 0) {
+          alertMessages.push('\n⚠️ ABNORMAL CONDITIONS DETECTED:');
+          for (const condition of abnormalConditions) {
+            alertMessages.push(`${condition.symbol}: ${condition.condition}`);
+          }
+        }
+        
         // Log the autonomous trading session
         await storage.createMonitoringLog(userId, {
           analysis: JSON.stringify({
@@ -529,6 +602,7 @@ CRITICAL ORDER MANAGEMENT RULES:
             volumeAnalysis: strategy.volumeAnalysis,
             riskAssessment: strategy.riskAssessment,
             expectedSharpeImpact: strategy.expectedSharpeImpact,
+            abnormalConditions: abnormalConditions,
             execution: {
               totalActions: executionSummary.totalActions,
               successful: executionSummary.successfulExecutions,
@@ -537,9 +611,7 @@ CRITICAL ORDER MANAGEMENT RULES:
             }
           }),
           alertLevel: executionSummary.successfulExecutions > 0 ? "info" : "warning",
-          suggestions: strategy.actions.map(a => 
-            `${a.action.toUpperCase()} ${a.symbol} ${a.side} ${a.size} @ ${a.expectedEntry || a.triggerPrice || 'market'}`
-          ).join(" | "),
+          suggestions: alertMessages.join('\n\n'),
         });
         
       } catch (execError: any) {
@@ -556,19 +628,22 @@ CRITICAL ORDER MANAGEMENT RULES:
           suggestions: "Trade execution failed - check logs for details",
         });
       }
-    } else {
-      console.log("[Autonomous Trading] No trading opportunities identified");
+    } else if (abnormalConditions.length > 0) {
+      // Alert on abnormal conditions even if no trades
+      console.log("[Autonomous Trading] No trades but abnormal conditions detected");
       
-      // Log the analysis even if no trades
+      const conditionMessages = abnormalConditions.map(c => 
+        `${c.symbol}: ${c.condition}`
+      ).join('\n');
+      
       await storage.createMonitoringLog(userId, {
         analysis: JSON.stringify({
           tradeThesis: strategy.tradeThesis,
           marketRegime: strategy.marketRegime,
-          volumeAnalysis: strategy.volumeAnalysis,
-          noTradesReason: "No high-probability setups aligned with market regime"
+          abnormalConditions: abnormalConditions,
         }),
-        alertLevel: "info",
-        suggestions: "No immediate trading opportunities - monitoring continues",
+        alertLevel: "warning",
+        suggestions: `⚠️ ABNORMAL MARKET CONDITIONS:\n${conditionMessages}\n\nNo trades executed - monitoring for opportunities.`,
       });
     }
     
