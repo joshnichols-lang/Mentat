@@ -28,7 +28,9 @@ Preferred communication style: Simple, everyday language.
   3. AI Provider Setup (optional - only if Personal Key selected)
   4. Exchange Credentials (Hyperliquid wallet + private key)
   5. Admin Verification & Approval
-- Admin user management for user verification and deletion.
+- Admin user management for user verification, deletion, and AI usage analytics.
+  - Admin page displays per-user AI usage statistics: total requests, total tokens consumed, and estimated total cost.
+  - Statistics aggregated from AI usage logs and displayed in real-time for all users.
 - AES-256-GCM encryption with envelope encryption for storing all API keys (AI and exchange).
 - User schema includes agent mode (passive/active), monitoring frequency, and Zod validation for auth requests.
 - Form accessibility features (autocomplete, test-ids).
