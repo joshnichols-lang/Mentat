@@ -1268,13 +1268,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const profile = volumeProfileCalculator.getVolumeProfile(coin);
 
-      if (!profile) {
-        return res.status(404).json({
-          success: false,
-          error: "No volume profile data for this coin"
-        });
-      }
-
       res.json({
         success: true,
         profile

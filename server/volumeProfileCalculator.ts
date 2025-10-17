@@ -312,11 +312,22 @@ export class VolumeProfileCalculator {
     console.log(`[Volume Profile] Unsubscribed from ${perpCoin} and ${spotCoin} trades + candles`);
   }
 
-  getVolumeProfile(coin: string): VolumeProfileSnapshot | null {
+  getVolumeProfile(coin: string): VolumeProfileSnapshot {
     // Normalize input coin to base for lookup (remove -SPOT, -PERP suffixes)
     const baseCoin = coin.replace("-SPOT", "").replace("-PERP", "");
     const profile = this.profiles.get(baseCoin);
-    if (!profile) return null;
+    
+    // Return empty profile if none exists yet
+    if (!profile) {
+      return {
+        coin: baseCoin,
+        levels: [],
+        minPrice: 0,
+        maxPrice: 0,
+        totalVolume: 0,
+        pointOfControl: 0
+      };
+    }
 
     // Convert Map to sorted array
     const levels = Array.from(profile.priceLevels.values())

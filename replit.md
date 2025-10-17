@@ -12,6 +12,7 @@ Preferred communication style: Simple, everyday language.
 **Technology Stack:** React with TypeScript, Vite, Wouter, TanStack Query, Tailwind CSS, and shadcn/ui.
 **Design System:** "Fantastic Mr. Fox" newspaper aesthetic with a grayscale color scheme, "Courier New" monospace typography, newsprint texture, and sharp corners. Dull green/red accents for trading elements.
 **Key UI Components:** AI Prompt Panel, Market Overview watchlist (real-time data, drag-and-drop), Portfolio Performance Chart, Positions Grid, Conversation History. Includes hover tooltips with mini price charts and risk management levels.
+**Market Analysis Indicators:** User-selectable trading pair selector (BTC, ETH, SOL) on dashboard sidebar that dynamically updates Order Book, CVD Chart, and Volume Profile Chart. All indicators auto-subscribe/unsubscribe to appropriate data streams when coin selection changes.
 
 ### Backend
 **Server Framework:** Express.js with TypeScript, integrated with Vite middleware.
