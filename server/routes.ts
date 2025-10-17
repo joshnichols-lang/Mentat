@@ -10,6 +10,7 @@ import { setupAuth } from "./auth";
 import { storeUserCredentials, getUserPrivateKey, deleteUserCredentials, hasUserCredentials } from "./credentialService";
 import { encryptCredential } from "./encryption";
 import { z } from "zod";
+import { hashPassword, comparePasswords } from "./auth";
 
 // Middleware to check if user is authenticated
 function isAuthenticated(req: any, res: any, next: any) {
@@ -202,6 +203,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ 
         success: false, 
         error: "Failed to update agent mode" 
+      });
+    }
+  });
+
+  // Change user password
+  app.patch("/api/user/password", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      
+      const schema = z.object({
+        currentPassword: z.string().min(6).max(100),
+        newPassword: z.string().min(6).max(100),
+      });
+      
+      const { currentPassword, newPassword } = schema.parse(req.body);
+      
+      // Get user to verify current password
+      const user = await storage.getUser(userId);
+      
+      if (!user || !user.password) {
+        return res.status(400).json({ success: false, error: "User not found or invalid account type" });
+      }
+      
+      // Verify current password
+      const isValidPassword = await comparePasswords(currentPassword, user.password);
+      
+      if (!isValidPassword) {
+        return res.status(400).json({ success: false, error: "Current password is incorrect" });
+      }
+      
+      // Hash new password
+      const hashedNewPassword = await hashPassword(newPassword);
+      
+      // Update password in database
+      await storage.updateUserPassword(userId, hashedNewPassword);
+      
+      res.json({ 
+        success: true, 
+        message: "Password updated successfully" 
+      });
+    } catch (error: any) {
+      console.error("Error changing password:", error);
+      
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({
+          success: false,
+          error: "Invalid request data",
+          details: error.errors
+        });
+      }
+      
+      res.status(500).json({ 
+        success: false, 
+        error: "Failed to change password" 
       });
     }
   });
