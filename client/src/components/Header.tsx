@@ -20,7 +20,7 @@ export default function Header() {
   
   const { data: userState } = useQuery<any>({
     queryKey: ['/api/hyperliquid/user-state'],
-    refetchInterval: 5000,
+    refetchInterval: 30000,
   });
 
   const accountValue = (userState?.userState?.marginSummary?.accountValue as number) || 0;

@@ -173,7 +173,7 @@ export default function MarketOverview() {
 
   const { data, isLoading, error, refetch } = useQuery<{ marketData: HyperliquidMarketData[] }>({
     queryKey: ["/api/hyperliquid/market-data"],
-    refetchInterval: 5000,
+    refetchInterval: 30000,
   });
 
   const sensors = useSensors(

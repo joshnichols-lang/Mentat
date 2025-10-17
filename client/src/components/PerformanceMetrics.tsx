@@ -13,7 +13,7 @@ interface Metric {
 export default function PerformanceMetrics() {
   const { data: userState } = useQuery<any>({
     queryKey: ['/api/hyperliquid/user-state'],
-    refetchInterval: 5000,
+    refetchInterval: 30000,
   });
 
   const { data: snapshots } = useQuery<any>({
