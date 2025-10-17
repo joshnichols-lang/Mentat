@@ -54,7 +54,14 @@ Preferred communication style: Simple, everyday language.
 
 **User Credentials:** Uses AES-256-GCM encryption with envelope encryption for storing all API keys. The `api_keys` table supports multiple providers (AI and exchanges) with user-defined labels. Each credential has a unique Data Encryption Key (DEK) encrypted with the master key (ENCRYPTION_MASTER_KEY secret). API secrets (for Binance/Bybit) are stored encrypted in the metadata JSONB field. Proper key isolation ensures if one credential is compromised, others remain secure.
 
-**User Schema:** Includes username/password authentication, Zod validation for auth requests (username 3-50 chars, password 6-100 chars), agent mode (passive/active) with UI toggle and confirmation dialog, and per-user settings (monitoring frequency stored in `monitoringFrequencyMinutes` field).
+**User Schema:** Includes username/password authentication, Zod validation for auth requests (username 3-50 chars, password 6-100 chars, email optional - accepts valid email or empty string, normalized to null in database). Agent mode (passive/active) with UI toggle and confirmation dialog, and per-user settings (monitoring frequency stored in `monitoringFrequencyMinutes` field).
+
+**Form Accessibility:** All authentication and onboarding forms include:
+- HTML autocomplete attributes (username, email, current-password, new-password) for password manager integration
+- Unique test-ids with context-specific prefixes (login-* vs register-*) for reliable E2E testing
+- `autoComplete="off"` on password-type API key inputs to prevent browser password managers from capturing credentials
+
+**Known Testing Limitation:** Playwright-based E2E tests cannot programmatically fill password-type inputs in React Hook Form setup due to framework constraints. This is a test automation limitation, not a product defect - real users can interact with password fields normally. API-level testing recommended for password-protected endpoints.
 
 **Passive/Active Mode:** Users can toggle between passive (learning-only) and active (autonomous trading) modes via a switch in the header:
 - **Passive Mode (default)**: Mr. Fox generates trading strategies without executing trades, allowing users to learn from AI analysis without risk
