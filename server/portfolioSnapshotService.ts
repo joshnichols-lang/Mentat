@@ -1,6 +1,5 @@
 import { storage } from "./storage";
 import type { HyperliquidClient } from "./hyperliquid/client";
-import { TEST_USER_ID } from "./constants";
 
 interface SnapshotMetrics {
   totalValue: string;
@@ -365,19 +364,15 @@ export async function createPortfolioSnapshot(userId: string, hyperliquid: Hyper
 }
 
 /**
- * Start periodic snapshot creation (every 5 minutes)
- * NOTE: This is a single-tenant function. For multi-tenant, this needs to be redesigned
- * to run per-user with their own credentials or disabled entirely.
+ * @deprecated This global snapshot scheduler is deprecated. Use userMonitoringManager instead.
+ * The userMonitoringManager handles per-user snapshot scheduling along with autonomous trading.
+ * 
+ * For multi-tenant operation, snapshots are created:
+ * 1. On server startup (for each user)
+ * 2. After successful autonomous trades
+ * 3. After manual trades via API
  */
 export function startPeriodicSnapshots(userId: string, hyperliquid: HyperliquidClient): void {
-  // Create initial snapshot
-  createPortfolioSnapshot(userId, hyperliquid);
-
-  // Create snapshot every 5 minutes
-  const INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
-  setInterval(() => {
-    createPortfolioSnapshot(userId, hyperliquid);
-  }, INTERVAL_MS);
-
-  console.log("[Portfolio Snapshot] Started periodic snapshot creation (every 5 minutes)");
+  console.warn("[DEPRECATED] startPeriodicSnapshots is deprecated. Use userMonitoringManager for per-user scheduling.");
+  console.log(`[Portfolio Snapshot] Skipping global snapshot scheduler for user ${userId}`);
 }
