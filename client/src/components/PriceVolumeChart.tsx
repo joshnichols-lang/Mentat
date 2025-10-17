@@ -13,7 +13,7 @@ import {
   ReferenceArea,
 } from "recharts";
 import { useQuery } from "@tanstack/react-query";
-import { ZoomIn, ZoomOut, Maximize2 } from "lucide-react";
+import { ZoomIn, ZoomOut, Maximize2, RotateCcw } from "lucide-react";
 
 interface CandleData {
   time: number;
@@ -278,6 +278,13 @@ export function PriceVolumeChart({ coin }: PriceVolumeChartProps) {
     setRight(newRight);
   }, [candles, left, right]);
 
+  const resetScale = useCallback(() => {
+    setLeft("dataMin");
+    setRight("dataMax");
+    setTop("dataMax+10");
+    setBottom("dataMin-10");
+  }, []);
+
   // Load more data when scrolling to edges
   const handleMouseMove = useCallback((e: any) => {
     if (!e) return;
@@ -345,6 +352,15 @@ export function PriceVolumeChart({ coin }: PriceVolumeChartProps) {
                 data-testid="button-zoom-out"
               >
                 <Maximize2 className="h-3 w-3" />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={resetScale}
+                className="h-7 w-7 p-0"
+                data-testid="button-reset-scale"
+              >
+                <RotateCcw className="h-3 w-3" />
               </Button>
             </div>
           </div>
