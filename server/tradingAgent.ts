@@ -71,6 +71,7 @@ export async function processTradingPrompt(
   prompt: string,
   marketData: MarketData[],
   currentPositions: any[],
+  userState: any,
   model?: string,
   preferredProvider?: string,
   screenshots?: string[]
@@ -169,6 +170,11 @@ Output real-time executed trades with professional precision and risk-adjusted o
                 type: "text" as const,
                 text: `User prompt: "${prompt}"
 
+Account Information:
+- Total Portfolio Value: $${userState?.marginSummary?.accountValue || '0'}
+- Available Balance: $${userState?.marginSummary?.withdrawable || '0'}
+- Total Margin Used: $${userState?.marginSummary?.totalMarginUsed || '0'}
+
 Current market data:
 ${JSON.stringify(marketData, null, 2)}
 
@@ -195,6 +201,11 @@ Generate a trading strategy that addresses the user's current prompt while consi
               }))
             ]
           : `User prompt: "${prompt}"
+
+Account Information:
+- Total Portfolio Value: $${userState?.marginSummary?.accountValue || '0'}
+- Available Balance: $${userState?.marginSummary?.withdrawable || '0'}
+- Total Margin Used: $${userState?.marginSummary?.totalMarginUsed || '0'}
 
 Current market data:
 ${JSON.stringify(marketData, null, 2)}

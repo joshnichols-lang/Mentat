@@ -106,7 +106,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      const strategy = await processTradingPrompt(userId, prompt, marketData, currentPositions, model, preferredProvider, screenshots);
+      // Fetch user account state to include portfolio value
+      const hyperliquid = await getUserHyperliquidClient(userId);
+      const userState = await hyperliquid.getUserState();
+
+      const strategy = await processTradingPrompt(userId, prompt, marketData, currentPositions, userState, model, preferredProvider, screenshots);
       
       let executionSummary = null;
       
