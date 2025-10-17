@@ -1,4 +1,4 @@
-import { Wallet } from "lucide-react";
+import { Wallet, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import ThemeToggle from "./ThemeToggle";
@@ -38,6 +38,14 @@ export default function Header() {
           </div>
           <Button variant="ghost" size="icon" data-testid="button-wallet">
             <Wallet className="h-4 w-4" />
+          </Button>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            data-testid="button-logout"
+            onClick={() => window.location.href = '/api/logout'}
+          >
+            <LogOut className="h-4 w-4" />
           </Button>
           <ThemeToggle />
         </div>
