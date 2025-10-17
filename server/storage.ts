@@ -30,6 +30,7 @@ export interface IStorage {
   updateUserAgentMode(userId: string, mode: "passive" | "active"): Promise<User | undefined>;
   updateUserWalletAddress(userId: string, walletAddress: string): Promise<User | undefined>;
   updateUserVerificationStatus(userId: string, status: "pending" | "approved" | "rejected"): Promise<User | undefined>;
+  getPendingVerificationUsers(): Promise<User[]>;
   
   // Trade methods (multi-tenant)
   getTrades(userId: string, limit?: number): Promise<Trade[]>;
@@ -183,6 +184,13 @@ export class DbStorage implements IStorage {
       .where(eq(users.id, userId))
       .returning();
     return result[0];
+  }
+
+  async getPendingVerificationUsers(): Promise<User[]> {
+    return await db.select()
+      .from(users)
+      .where(eq(users.verificationStatus, "pending"))
+      .orderBy(desc(users.createdAt));
   }
 
   // Trade methods

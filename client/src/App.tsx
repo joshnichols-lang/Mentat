@@ -10,6 +10,7 @@ import Dashboard from "@/pages/Dashboard";
 import AuthPage from "@/pages/AuthPage";
 import Onboarding from "@/pages/Onboarding";
 import PendingApproval from "@/pages/PendingApproval";
+import AdminVerification from "@/pages/AdminVerification";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -18,6 +19,7 @@ function Router() {
       <Route path="/auth" component={AuthPage} />
       <ProtectedRoute path="/onboarding" component={Onboarding} />
       <ProtectedRoute path="/pending-approval" component={PendingApproval} />
+      <ProtectedRoute path="/admin/verification" component={AdminVerification} />
       <ProtectedRoute path="/" component={Dashboard} />
       <Route component={NotFound} />
     </Switch>

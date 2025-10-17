@@ -1,12 +1,17 @@
-import { Wallet, LogOut } from "lucide-react";
+import { Wallet, LogOut, UserCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import ThemeToggle from "./ThemeToggle";
 import AgentModeToggle from "./AgentModeToggle";
 import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/hooks/use-auth";
+import { useLocation } from "wouter";
 import logoUrl from "@assets/generated-image-removebg-preview_1760665535887.png";
 
 export default function Header() {
+  const { user } = useAuth();
+  const [, setLocation] = useLocation();
+  
   const { data: userState } = useQuery<any>({
     queryKey: ['/api/hyperliquid/user-state'],
     refetchInterval: 5000,
@@ -30,6 +35,17 @@ export default function Header() {
         
         <div className="flex items-center gap-2">
           <AgentModeToggle />
+          {user?.role === "admin" && (
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => setLocation("/admin/verification")}
+              data-testid="button-admin-verification"
+            >
+              <UserCheck className="h-4 w-4 mr-2" />
+              Verify Users
+            </Button>
+          )}
           <div className="text-right border-l pl-3">
             <div className="text-xs text-muted-foreground">Balance</div>
             <div className="font-mono text-sm font-semibold" data-testid="text-balance">

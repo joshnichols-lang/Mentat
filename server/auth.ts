@@ -167,4 +167,54 @@ export function setupAuth(app: Express) {
       next(error);
     }
   });
+
+  // Admin routes for user verification
+  app.get("/api/admin/pending-users", async (req, res, next) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    try {
+      // Check if user is admin
+      const currentUser = req.user!;
+      if (currentUser.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+      
+      const pendingUsers = await storage.getPendingVerificationUsers();
+      res.json(pendingUsers);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.post("/api/admin/verify-user/:userId", async (req, res, next) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    try {
+      // Check if user is admin
+      const currentUser = req.user!;
+      if (currentUser.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+      
+      const schema = z.object({
+        status: z.enum(["approved", "rejected"]),
+      });
+      
+      const { status } = schema.parse(req.body);
+      const { userId } = req.params;
+      
+      const updatedUser = await storage.updateUserVerificationStatus(userId, status);
+      
+      if (!updatedUser) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      
+      res.json({ success: true, user: updatedUser });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid request", details: error.errors });
+      }
+      next(error);
+    }
+  });
 }
