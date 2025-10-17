@@ -60,7 +60,7 @@ Preferred communication style: Simple, everyday language.
 
 ### Core Features
 **Autonomous Trading Engine:** AI develops trade theses, identifies market conditions, analyzes volume profiles, executes trades with proper sizing and risk management, and sets stop losses/take profits.
-**Order Management System:** Prevents duplicate protective orders, fetches existing orders for AI context, and auto-cancels `reduceOnly` orders before placing new ones.
+**Order Management System:** Prevents duplicate protective orders, fetches existing orders for AI context, and auto-cancels `reduceOnly` orders before placing new ones. **Quantitative Order Assessment:** AI evaluates existing stop loss and take profit orders against specific thresholds before replacing them: 5% price movement limit, 2:1 minimum risk/reward ratio, 3 ATR distance check, and market regime consistency. Default behavior is to KEEP orders unless thresholds are violated, with AI required to cite calculated metrics when canceling orders to enforce disciplined decision-making.
 **Configurable Monitoring Frequency:** Users can adjust autonomous trading frequency (Disabled, 1 min, 5 min, 30 min, 1 hour).
 **Enhanced Performance Metrics:** Tracks Sterling, Omega, Max Drawdown, Sharpe, Sortino, and Calmar ratios.
 **Trading Controls:** Individual and "Close All" buttons for positions, executing market closes via IOC limit orders.
