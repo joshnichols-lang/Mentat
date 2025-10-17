@@ -52,6 +52,25 @@ export async function storeUserCredentials(
  */
 export async function getUserPrivateKey(userId: string): Promise<string | null> {
   try {
+    // First try to get from new api_keys table
+    const apiKey = await storage.getActiveApiKeyByProvider(userId, "exchange", "hyperliquid");
+    
+    if (apiKey) {
+      // Decrypt using envelope encryption
+      const privateKey = decryptCredential(
+        apiKey.encryptedApiKey,
+        apiKey.apiKeyIv,
+        apiKey.encryptedDek,
+        apiKey.dekIv
+      );
+      
+      // Update last used timestamp
+      await storage.updateApiKeyLastUsed(userId, apiKey.id);
+      
+      return privateKey;
+    }
+    
+    // Fallback to old user_api_credentials table for backwards compatibility
     const credentials = await storage.getUserCredentials(userId);
     
     if (!credentials) {

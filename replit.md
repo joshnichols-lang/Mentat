@@ -93,6 +93,7 @@ Preferred communication style: Simple, everyday language.
 - label: User-defined label (e.g., "Main AI", "Aggressive Strategy")
 - Unique constraint on (userId, providerName, label) prevents duplicates
 - Validation ensures Binance/Bybit require API secrets (frontend Zod refinement + backend validation)
+- `getUserPrivateKey()` retrieves Hyperliquid credentials from `api_keys` table (with fallback to legacy `user_api_credentials` for backwards compatibility)
 
 **Data Isolation:** Complete per-user data isolation achieved:
 - All database tables have userId foreign keys (trades, positions, portfolio_snapshots, ai_usage_log, monitoring_log, user_api_credentials)
