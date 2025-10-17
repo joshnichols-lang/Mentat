@@ -324,7 +324,7 @@ Respond in JSON format:
   "actions": [
     {
       "action": "cancel_order" | "buy" | "sell" | "close" | "stop_loss" | "take_profit",
-      "symbol": "BTC-PERP" | "ETH-PERP" | etc,
+      "symbol": "<ANY_SYMBOL_FROM_ANALYSIS>" (use ANY symbol from Top Gainers, Top Losers, or High Volume Assets - not limited to BTC/ETH/SOL),
       "side": "long" | "short",
       "size": "numeric value as string (e.g. '0.5', '1.0')",
       "leverage": 1-10,
@@ -337,6 +337,13 @@ Respond in JSON format:
   "riskAssessment": "Portfolio risk analysis and position sizing rationale",
   "expectedSharpeImpact": "Expected impact on Sharpe ratio and compounding strategy"
 }
+
+CRITICAL - MARKET UNIVERSE:
+- You have access to the ENTIRE Hyperliquid market - scan ALL available trading pairs
+- Review "Top Gainers", "Top Losers", and "High Volume Assets" sections for opportunities
+- Don't default to BTC/ETH/SOL - consider altcoins, memecoins, and emerging assets
+- Look for asymmetric opportunities where smaller assets show strong momentum/volume
+- Use exact symbol format from the data (e.g. "DOGE-PERP", "WIF-PERP", "BONK-PERP", "LINK-PERP")
 
 CRITICAL ORDER MANAGEMENT RULES:
 1. **READ THE "EXISTING OPEN ORDERS" SECTION FIRST**:

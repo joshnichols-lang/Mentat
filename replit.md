@@ -1,5 +1,10 @@
 # 1fox
 
+## Recent Changes (October 17, 2025)
+- **Full Market Universe Access**: Updated AI prompts to actively scan ALL available Hyperliquid trading pairs, not just BTC/ETH/SOL. AI now explicitly instructed to consider altcoins, memecoins, and emerging assets with strong momentum/volume from top gainers/losers analysis.
+- **Symbol Selection Enhancement**: Removed hardcoded BTC/ETH/SOL examples from prompts that created implicit bias. AI now receives clear guidance to explore the complete market data provided, including specific examples of diverse assets (DOGE-PERP, WIF-PERP, BONK-PERP, LINK-PERP, etc.).
+- **Stop Loss & Risk Management Fixes**: Resolved floating-point rounding errors, increased liquidation buffer to 3%, prioritized liquidation safety over distance requirements, enforced 2:1 R:R ratio, and eliminated order churn with explicit anti-adjustment directives.
+
 ## Overview
 1fox is an AI-powered cryptocurrency trading terminal for the Hyperliquid perpetual futures exchange. It allows users to interact with an AI trading agent, "Mr. Fox," using natural language to execute automated strategies. The application provides a "Fantastic Mr. Fox" newspaper-themed interface, real-time market data, portfolio tracking, and comprehensive trading controls. The project aims to deliver a professional AI trading experience focused on maximizing Sharpe ratio through optimal sizing, entries, exits, and continuous risk management. It functions as a multi-tenant SaaS.
 
