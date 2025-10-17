@@ -30,6 +30,9 @@ export const users = pgTable("users", {
   onboardingStep: text("onboarding_step").notNull().default("auth"), // "auth", "ai_provider", "trading_accounts", "complete"
   agentMode: text("agent_mode").notNull().default("passive"), // "passive", "active"
   monitoringFrequencyMinutes: integer("monitoring_frequency_minutes").notNull().default(0), // 0 = disabled, per-user monitoring frequency
+  walletAddress: text("wallet_address"), // Hyperliquid wallet address for referral verification
+  verificationStatus: text("verification_status").notNull().default("pending"), // "pending", "approved", "rejected"
+  verifiedAt: timestamp("verified_at"), // Timestamp when admin verified the wallet
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
