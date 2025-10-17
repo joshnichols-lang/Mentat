@@ -40,7 +40,7 @@ Preferred communication style: Simple, everyday language.
 
 ### Authentication & Security
 
-**Multi-Tenant Architecture:** The application is now a fully multi-tenant SaaS. All API routes are protected with `isAuthenticated` middleware using Replit Auth OAuth. User identity is extracted from `req.user.claims.sub` and used for all data operations.
+**Multi-Tenant Architecture:** The application is now a fully multi-tenant SaaS. All API routes are protected with `isAuthenticated` middleware. Critical trading and data routes additionally use `requireVerifiedUser` middleware to enforce wallet verification. User identity is extracted from `req.user.id` and used for all data operations.
 
 **Authentication Flow:**
 1. Users create accounts with username/password (Passport.js LocalStrategy)
