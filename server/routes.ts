@@ -10,6 +10,7 @@ import { startUserMonitoring, stopUserMonitoring, restartUserMonitoring } from "
 import { setupAuth } from "./auth";
 import { storeUserCredentials, getUserPrivateKey, deleteUserCredentials, hasUserCredentials } from "./credentialService";
 import { initializeMarketDataWebSocket } from "./marketDataWebSocket";
+import { CVDCalculator } from "./cvdCalculator";
 import { encryptCredential } from "./encryption";
 import { z } from "zod";
 import { hashPassword, comparePasswords } from "./auth";
@@ -1125,10 +1126,103 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // CVD (Cumulative Volume Delta) endpoints
+  let cvdCalculator: CVDCalculator;
+
+  app.post("/api/indicators/cvd/subscribe", requireVerifiedUser, async (req, res) => {
+    try {
+      const schema = z.object({
+        coin: z.string().min(1), // e.g., "BTC"
+      });
+
+      const { coin } = schema.parse(req.body);
+
+      cvdCalculator.subscribeToCoin(coin);
+
+      res.json({
+        success: true,
+        message: `Subscribed to CVD for ${coin}`
+      });
+    } catch (error: any) {
+      console.error("Error subscribing to CVD:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to subscribe to CVD"
+      });
+    }
+  });
+
+  app.post("/api/indicators/cvd/unsubscribe", requireVerifiedUser, async (req, res) => {
+    try {
+      const schema = z.object({
+        coin: z.string().min(1),
+      });
+
+      const { coin } = schema.parse(req.body);
+
+      cvdCalculator.unsubscribeFromCoin(coin);
+
+      res.json({
+        success: true,
+        message: `Unsubscribed from CVD for ${coin}`
+      });
+    } catch (error: any) {
+      console.error("Error unsubscribing from CVD:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to unsubscribe from CVD"
+      });
+    }
+  });
+
+  app.get("/api/indicators/cvd/:coin", requireVerifiedUser, async (req, res) => {
+    try {
+      const { coin } = req.params;
+
+      const snapshot = cvdCalculator.getCVDSnapshot(coin);
+
+      res.json({
+        success: true,
+        cvd: snapshot
+      });
+    } catch (error: any) {
+      console.error("Error getting CVD snapshot:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to get CVD snapshot"
+      });
+    }
+  });
+
+  app.post("/api/indicators/cvd/:coin/reset", requireVerifiedUser, async (req, res) => {
+    try {
+      const { coin } = req.params;
+
+      cvdCalculator.resetCVD(coin);
+
+      res.json({
+        success: true,
+        message: `CVD reset for ${coin}`
+      });
+    } catch (error: any) {
+      console.error("Error resetting CVD:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to reset CVD"
+      });
+    }
+  });
+
   const httpServer = createServer(app);
 
   // Initialize market data WebSocket service
   initializeMarketDataWebSocket(httpServer);
+
+  // Initialize CVD calculator
+  // In Replit, connect to localhost since everything runs on the same server
+  const marketDataWsUrl = "ws://localhost:5000/market-data";
+  cvdCalculator = new CVDCalculator(marketDataWsUrl);
+  console.log(`[CVD Calculator] Initialized with market data URL: ${marketDataWsUrl}`);
 
   return httpServer;
 }
