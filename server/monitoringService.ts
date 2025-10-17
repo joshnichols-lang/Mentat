@@ -325,7 +325,7 @@ ${(() => {
       
       // Provide context for intelligent stop placement
       const distanceToLiqPercent = liq ? (((currentPrice - liq) / currentPrice) * 100 * (pos.side === 'long' ? 1 : -1)).toFixed(2) : 'N/A';
-      const accountRiskDollars = (accountValue * 0.03).toFixed(2); // 3% of account as example
+      const accountRiskDollars = accountValue * 0.03; // 3% of account as example
       const positionNotional = pos.size * currentPrice;
       const exampleStopPercent = liq ? (((accountRiskDollars / positionNotional) * 100).toFixed(2)) : '2.0';
       
