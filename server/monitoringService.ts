@@ -240,19 +240,34 @@ ACCOUNT INFORMATION (CRITICAL - READ THIS FIRST):
 - Available Balance: $${withdrawable.toFixed(2)}
 - Total Margin Used: $${totalMarginUsed.toFixed(2)}
 
-⚠️ MANDATORY POSITION SIZING RULES:
-1. **CALCULATE BASED ON AVAILABLE BALANCE**: You have $${withdrawable.toFixed(2)} available to trade
-2. **ACCOUNT FOR LEVERAGE**: Notional value = (size × price). Required margin = notional / leverage
-3. **MAXIMUM POSITION SIZE**: Each position's required margin MUST NOT exceed 30% of available balance
-4. **EXAMPLE CALCULATION** (if you had $100 available):
-   - For BTC @ $30,000 with 5x leverage:
-   - Max notional = $100 × 0.30 × 5 = $150
-   - Max size = $150 / $30,000 = 0.005 BTC
-5. **ALWAYS CALCULATE** before placing orders - DO NOT use arbitrary sizes like "0.5" or "1.0"
-6. **WITH CURRENT BALANCE OF $${withdrawable.toFixed(2)}**:
-   - Max 30% position = $${(withdrawable * 0.30).toFixed(2)}
-   - Example: BTC @ $30,000, 3x leverage = size ${((withdrawable * 0.30 * 3) / 30000).toFixed(4)} BTC
-   - Example: ETH @ $2,000, 3x leverage = size ${((withdrawable * 0.30 * 3) / 2000).toFixed(4)} ETH
+⚠️ MANDATORY POSITION SIZING & LEVERAGE RULES:
+1. **LEVERAGE SELECTION** (CRITICAL - impacts ALL calculations):
+   - **Recommended: 3x-5x leverage** for balanced risk/reward
+   - **Conservative: 2x-3x** for choppy/uncertain markets
+   - **Aggressive: 5x-10x** for high-conviction setups with tight stops
+   - **NEVER USE >10x** - extremely dangerous, liquidation risk too high
+   - Higher leverage = tighter stop loss required = less room for price movement
+   
+2. **POSITION SIZE CALCULATION** (accounting for leverage):
+   - Available Balance: $${withdrawable.toFixed(2)}
+   - Max position margin: 30% of available = $${(withdrawable * 0.30).toFixed(2)}
+   - Notional value = margin × leverage
+   - Position size = notional / entry_price
+   
+3. **EXAMPLE with $100 available, BTC @ $30,000**:
+   - At 3x leverage: margin=$30, notional=$90, size=0.003 BTC
+   - At 5x leverage: margin=$30, notional=$150, size=0.005 BTC
+   - At 10x leverage: margin=$30, notional=$300, size=0.01 BTC
+   
+4. **STOP LOSS CALCULATION** (leverage-aware):
+   - Risk per trade: 2-5% of account balance
+   - Stop distance = (account_risk% / leverage) from entry
+   - Example at 5x: 5% account risk = 1% stop from entry
+   - Example at 10x: 5% account risk = 0.5% stop from entry
+   
+5. **CURRENT AVAILABLE: $${withdrawable.toFixed(2)}**:
+   - With 3x leverage: max notional = $${((withdrawable * 0.30) * 3).toFixed(2)}
+   - With 5x leverage: max notional = $${((withdrawable * 0.30) * 5).toFixed(2)}
 
 MARKET REGIME ANALYSIS:
 ${marketRegime.reasoning}
@@ -267,10 +282,14 @@ Top Gainers: ${topGainers.map(m => `${m.symbol} (+${m.change24h}%, Vol: $${(pars
 Top Losers: ${topLosers.map(m => `${m.symbol} (${m.change24h}%, Vol: $${(parseFloat(m.volume24h) / 1e6).toFixed(1)}M)`).join(', ')}
 
 CURRENT POSITIONS:
-${currentPositions.length > 0 ? currentPositions.map(pos => 
-  `- ${pos.symbol}: ${pos.side.toUpperCase()} ${pos.size} @ $${pos.entryPrice} (${pos.leverage}x)
-   Current: $${pos.currentPrice}, P&L: ${pos.pnlPercent.toFixed(2)}%${pos.liquidationPrice ? `, Liq: $${pos.liquidationPrice}` : ''}`
-).join('\n') : 'No open positions'}
+${currentPositions.length > 0 ? currentPositions.map(pos => {
+  const distanceToLiq = pos.liquidationPrice 
+    ? (Math.abs(pos.currentPrice - pos.liquidationPrice) / pos.currentPrice * 100).toFixed(2)
+    : 'N/A';
+  return `- ${pos.symbol}: ${pos.side.toUpperCase()} ${pos.size} @ $${pos.entryPrice} (${pos.leverage}x leverage)
+   Current: $${pos.currentPrice}, P&L: ${pos.pnlPercent.toFixed(2)}%${pos.liquidationPrice ? `, Liquidation: $${pos.liquidationPrice} (${distanceToLiq}% away)` : ''}
+   ⚠️ HIGH LEVERAGE WARNING: At ${pos.leverage}x, this position moves ${pos.leverage}x faster than the market. A ${(100/pos.leverage).toFixed(2)}% price move = ${((100/pos.leverage)*pos.leverage).toFixed(0)}% position change!`;
+}).join('\n') : 'No open positions'}
 
 EXISTING OPEN ORDERS:
 ${openOrders.length > 0 ? openOrders.map(order => {
@@ -298,13 +317,39 @@ ${(() => {
     if (!hasStopLoss) {
       const liq = pos.liquidationPrice;
       const currentPrice = pos.currentPrice;
-      // Use Math.ceil for longs (round UP) and Math.floor for shorts (round DOWN) to avoid rounding issues
-      const safeStopLong = liq ? (Math.ceil(liq * 1.03 * 100) / 100).toFixed(2) : "N/A"; // 3% buffer, rounded up
-      const safeStopShort = liq ? (Math.floor(liq * 0.97 * 100) / 100).toFixed(2) : "N/A"; // 3% buffer, rounded down
-      const safeLevelHint = pos.side === 'long' 
-        ? `minimum safe stop: $${safeStopLong} (current price: $${currentPrice})` 
-        : `maximum safe stop: $${safeStopShort} (current price: $${currentPrice})`;
-      missingProtection.push(`${posSymbol}: MISSING STOP LOSS - PLACE IMMEDIATELY (${safeLevelHint})`);
+      const entryPrice = pos.entryPrice;
+      const leverage = pos.leverage;
+      
+      // Calculate safe stop with leverage awareness
+      let safeStop: string;
+      let reasoning: string;
+      
+      if (pos.side === 'long') {
+        const minSafeFromLiq = liq ? liq * 1.03 : currentPrice * 0.95; // 3% above liquidation
+        const maxSafeFromCurrent = currentPrice * 0.985; // 1.5% below current
+        
+        // If liquidation safety conflicts with current price, position is too risky
+        if (minSafeFromLiq >= currentPrice * 0.995) {
+          safeStop = (currentPrice * 0.98).toFixed(2); // Emergency stop just below current
+          reasoning = `⚠️ CRITICAL: Position ${(((currentPrice - liq) / currentPrice) * 100).toFixed(2)}% from liquidation at ${leverage}x leverage! Emergency stop at $${safeStop} (2% below current). Consider CLOSING this position - too risky!`;
+        } else {
+          safeStop = Math.max(minSafeFromLiq, currentPrice * 0.97).toFixed(2);
+          reasoning = `safe stop: $${safeStop} (current: $${currentPrice}, liq: $${liq})`;
+        }
+      } else {
+        const maxSafeFromLiq = liq ? liq * 0.97 : currentPrice * 1.05; // 3% below liquidation
+        const minSafeFromCurrent = currentPrice * 1.015; // 1.5% above current
+        
+        if (maxSafeFromLiq <= currentPrice * 1.005) {
+          safeStop = (currentPrice * 1.02).toFixed(2); // Emergency stop just above current
+          reasoning = `⚠️ CRITICAL: Position ${(((liq - currentPrice) / currentPrice) * 100).toFixed(2)}% from liquidation at ${leverage}x leverage! Emergency stop at $${safeStop} (2% above current). Consider CLOSING this position - too risky!`;
+        } else {
+          safeStop = Math.min(maxSafeFromLiq, currentPrice * 1.03).toFixed(2);
+          reasoning = `safe stop: $${safeStop} (current: $${currentPrice}, liq: $${liq})`;
+        }
+      }
+      
+      missingProtection.push(`${posSymbol}: MISSING STOP LOSS - PLACE IMMEDIATELY (${reasoning})`);
     }
     if (!hasTakeProfit) {
       const currentPrice = pos.currentPrice;
@@ -364,7 +409,16 @@ AUTONOMOUS TRADING DIRECTIVE:
    - **Patient Entry**: If market needs to move to your desired level, use expectedEntry at that strategic level (e.g., 2-5% away)
 6. **QUALITY OVER QUANTITY**: Focus on high-probability setups with clear technical confluence, strong volume confirmation, and favorable risk/reward
 7. For each trade setup, specify exact entry prices, properly calculated position sizes, leverage, stop losses, and take profits
-8. **MANDATORY RISK MANAGEMENT (CRITICAL)**:
+8. **LEVERAGE-AWARE RISK MANAGEMENT**:
+   - Higher leverage = tighter stops needed (less room for error)
+   - At 40x leverage: 2.5% price move = 100% position change (liquidation or 2x profit)
+   - At 20x leverage: 5% price move = 100% position change
+   - At 10x leverage: 10% price move = 100% position change
+   - FORMULA: Safe stop distance = (desired risk % / leverage) from entry
+   - EXAMPLE: 5% account risk at 20x leverage = 0.25% stop from entry price
+   - Always check "distance to liquidation" - if <5%, position is EXTREMELY dangerous
+   - For positions <3% from liquidation: CLOSE IMMEDIATELY or set emergency tight stop
+9. **MANDATORY RISK MANAGEMENT (CRITICAL)**:
    - EVERY position MUST have BOTH a stop loss AND a take profit order at ALL times
    - NO EXCEPTIONS - even if you think the position is "safe", protective orders are REQUIRED
    - When opening a new position, IMMEDIATELY place both stop loss and take profit in the same action set
