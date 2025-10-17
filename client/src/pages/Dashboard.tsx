@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useLocation } from "wouter";
 import { useCredentials } from "@/hooks/useCredentials";
+import { useAuth } from "@/hooks/use-auth";
 import Header from "@/components/Header";
 import AIPromptPanel from "@/components/AIPromptPanel";
 import MarketOverview from "@/components/MarketOverview";
@@ -14,7 +15,15 @@ import { MonitoringAlerts } from "@/components/MonitoringAlerts";
 
 export default function Dashboard() {
   const [, setLocation] = useLocation();
+  const { user } = useAuth();
   const { hasCredentials, isLoading, error, isSuccess } = useCredentials();
+
+  // Check verification status and redirect if not approved
+  useEffect(() => {
+    if (user && user.verificationStatus !== "approved") {
+      setLocation("/pending-approval");
+    }
+  }, [user, setLocation]);
 
   useEffect(() => {
     if (isSuccess && !hasCredentials) {

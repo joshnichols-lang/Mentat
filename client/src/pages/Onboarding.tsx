@@ -114,8 +114,9 @@ export default function Onboarding() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/credentials/status"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/user"] }); // Refresh user data
       setCurrentStep("complete");
-      setTimeout(() => setLocation("/"), 2000);
+      setTimeout(() => setLocation("/pending-approval"), 2000);
     },
     onError: (err: any) => {
       setError(err.message || "Failed to save exchange credentials. Please try again.");
@@ -142,7 +143,7 @@ export default function Onboarding() {
               <CheckCircle2 className="h-16 w-16 text-green-600 mx-auto" data-testid="icon-success" />
               <h2 className="text-2xl font-mono" data-testid="text-setup-complete">Setup Complete!</h2>
               <p className="text-muted-foreground" data-testid="text-redirecting">
-                Redirecting to your trading terminal...
+                Your wallet address is being verified. Please wait for admin approval...
               </p>
             </div>
           </CardContent>
