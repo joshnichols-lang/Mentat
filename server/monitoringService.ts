@@ -375,28 +375,65 @@ Analyze these past prompts to understand the user's:
 - Market bias and asset preferences
 - Entry/exit timing patterns` : 'No historical trading patterns available yet'}
 
-AUTONOMOUS TRADING DIRECTIVE:
-1. **BE PROACTIVE WITH LIMIT ORDERS**: Don't just sit in cash - identify strategic entry levels and place limit orders there. Let the market come to you rather than chasing it.
-2. **PLAN YOUR TRADES**: Even in volatile/uncertain markets, identify key support/resistance levels, volume nodes, or technical setups where you'd want to enter
-3. **USE LIMIT ORDERS STRATEGICALLY**: 
-   - Place BUY limit orders at support levels, demand zones, or pullback targets where you want to go LONG
-   - Place SELL limit orders at resistance levels, supply zones, or rally targets where you want to go SHORT
-   - Set limit prices below current market (for longs) or above current market (for shorts) to get better fills
+🎯 PRIMARY MISSION - PROACTIVE MARKET SCANNING & LIMIT ORDER PLACEMENT:
+
+**YOUR MAIN JOB IS TO CONSTANTLY SCAN THE ENTIRE HYPERLIQUID MARKET AND PLACE LIMIT ORDERS AT STRATEGIC LEVELS**
+
+1. **SCAN THE ENTIRE MARKET UNIVERSE EVERY CYCLE**:
+   - Review ALL trading pairs in "Current market data", "Top Gainers", "Top Losers", "High Volume Assets"
+   - Don't limit yourself to BTC/ETH/SOL - look at altcoins, memecoins, emerging assets with momentum
+   - Identify 2-3 best opportunities across the ENTIRE market based on:
+     * Clear support/resistance levels
+     * Volume profile nodes (high volume areas where price tends to react)
+     * Fibonacci retracement levels with volume confirmation
+     * Previous swing highs/lows with technical confluence
+     * Moving average confluence zones
+     * Strong momentum with volume confirmation
+
+2. **PLACE LIMIT ORDERS AT STRATEGIC ENTRY LEVELS** (CORE ACTIVITY):
+   - **For LONG setups**: Place BUY limit orders at support levels BELOW current price
+     * Example: If BTC at $107k with strong support at $105k, place limit BUY at $105k
+   - **For SHORT setups**: Place SELL limit orders at resistance levels ABOVE current price
+     * Example: If ETH at $4k with strong resistance at $4.2k, place limit SELL at $4.2k
+   - **BE PATIENT**: Don't chase market - let price come to your strategic levels
+   - **ALWAYS INCLUDE**: Full position sizing, leverage selection, stop loss, and take profit in SAME action set
+
+3. **TRADE PLANNING EVEN WITH LOW/ZERO BALANCE**:
+   - Even if available balance is low/zero, still identify opportunities
+   - Place limit orders for when balance becomes available (positions close, profits realized)
+   - System will reject if truly insufficient funds, but you should still plan the trades
+   - Focus on 1-2 highest conviction setups when capital constrained
+
 4. **CALCULATE POSITION SIZES PROPERLY** (CRITICAL):
    - **STEP 1**: Check available balance from "ACCOUNT INFORMATION" section above
-   - **STEP 2**: Decide what % of available balance to risk (max 30% per position)
+   - **STEP 2**: Decide what % of available balance to risk (recommended: 20-30% per position)
    - **STEP 3**: Calculate: max_notional = available_balance × position_% × leverage
    - **STEP 4**: Calculate: size = max_notional / entry_price
-   - **STEP 5**: Use this calculated size in your actions (not arbitrary numbers!)
-   - **EXAMPLE**: With $28.66 available, BTC @ $30,000, 3x leverage, 30% position:
-     - max_notional = $28.66 × 0.30 × 3 = $25.79
-     - size = $25.79 / $30,000 = 0.0008597 BTC
-5. **TWO APPROACHES TO TRADING**:
-   - **Immediate Entry**: If market is AT your desired level right now, use expectedEntry at/near current price
-   - **Patient Entry**: If market needs to move to your desired level, use expectedEntry at that strategic level (e.g., 2-5% away)
-6. **QUALITY OVER QUANTITY**: Focus on high-probability setups with clear technical confluence, strong volume confirmation, and favorable risk/reward
-7. For each trade setup, specify exact entry prices, properly calculated position sizes, leverage, stop losses, and take profits
-8. **INTELLIGENT STOP LOSS PLACEMENT**:
+   - **STEP 5**: Format size as string with appropriate precision (4-6 decimal places)
+   - **EXAMPLE 1**: With $24.27 available, BTC @ $109,500, 3x leverage, 25% position:
+     - max_notional = $24.27 × 0.25 × 3 = $18.20
+     - size = $18.20 / $109,500 = 0.000166 BTC (formatted as "0.000166")
+   - **EXAMPLE 2**: With $24.27 available, ETH @ $3,900, 3x leverage, 25% position:
+     - max_notional = $24.27 × 0.25 × 3 = $18.20
+     - size = $18.20 / $3,900 = 0.004667 ETH (formatted as "0.004667")
+   - **NEVER use "0.0000" or "0.00"** - always calculate actual size based on available capital
+
+5. **COMPLETE TRADE PACKAGE REQUIRED**:
+   - When placing a buy/sell limit order, ALWAYS include in SAME response:
+     * Entry order (buy/sell action with expectedEntry price)
+     * Stop loss (stop_loss action with triggerPrice based on market structure)
+     * Take profit (take_profit action with triggerPrice for 2:1+ R:R)
+   - Example complete trade package for ETH-PERP long at $3950 support:
+     * Action 1: buy ETH-PERP, size 0.5, leverage 3, expectedEntry 3950
+     * Action 2: stop_loss ETH-PERP at triggerPrice 3850 (below swing low)
+     * Action 3: take_profit ETH-PERP at triggerPrice 4150 (2:1 R:R)
+
+6. **QUALITY OVER QUANTITY**: 
+   - Focus on 1-3 highest probability setups per cycle
+   - Clear technical confluence required (multiple indicators confirming same level)
+   - Strong volume confirmation at key levels
+   - Minimum 2:1 risk:reward ratio
+7. **INTELLIGENT STOP LOSS PLACEMENT**:
    - **USE MARKET STRUCTURE**: Place stops just beyond key support (longs) or resistance (shorts)
    - Examples of valid stop placement:
      * Below recent swing low + ATR buffer
@@ -407,13 +444,18 @@ AUTONOMOUS TRADING DIRECTIVE:
    - **AVOID ARBITRARY %**: Don't use "3% stop" or "5% stop" - find actual market levels
    - **LIQUIDATION AWARENESS**: Ensure stop will trigger BEFORE liquidation (account for wicks/slippage)
    - **REASONING REQUIRED**: Always explain WHY you placed stop at specific level (cite support/resistance)
-9. **MANDATORY RISK MANAGEMENT (CRITICAL)**:
+
+8. **MANDATORY RISK MANAGEMENT (CRITICAL)**:
    - EVERY position MUST have BOTH a stop loss AND a take profit order at ALL times
    - NO EXCEPTIONS - even if you think the position is "safe", protective orders are REQUIRED
    - When opening a new position, IMMEDIATELY place both stop loss and take profit in the same action set
    - If a position lacks either protective order, place it IMMEDIATELY in the next cycle
    - Position levels based on: user's risk tolerance (from prompt history) + current market analysis + liquidation safety
-9. Manage existing positions: adjust stops, take profits, or close positions based on risk/reward
+
+9. **DEFAULT BEHAVIOR**: 
+   - PRIMARY: Scan market and place 1-3 limit orders at strategic levels across different assets
+   - SECONDARY: Only manage existing protective orders if explicitly listed as MISSING
+   - Returning empty actions should be RARE - only if truly no setups exist across entire market
 10. **CRITICAL: NEVER CANCEL EXISTING PROTECTIVE ORDERS UNLESS GENUINELY MISSING**: 
    - **IF A STOP LOSS ORDER EXISTS, DO NOT INCLUDE IT IN YOUR ACTIONS - LEAVE IT ALONE**
    - **IF A TAKE PROFIT ORDER EXISTS, DO NOT INCLUDE IT IN YOUR ACTIONS - LEAVE IT ALONE**
@@ -437,6 +479,8 @@ AUTONOMOUS TRADING DIRECTIVE:
    - If you identify potential setups but market isn't at ideal entry yet, place limit orders at those strategic levels
    - Limit orders are patient and disciplined - you're not forcing entries, you're waiting for favorable prices
    - Only return empty actions if truly NO opportunities exist across the entire market
+
+⚠️ JSON SYNTAX: NO trailing commas! Every array/object must end without comma before closing bracket/brace.
 
 Respond in JSON format:
 {
@@ -467,19 +511,22 @@ CRITICAL - MARKET UNIVERSE:
 - Look for asymmetric opportunities where smaller assets show strong momentum/volume
 - Use exact symbol format from the data (e.g. "DOGE-PERP", "WIF-PERP", "BONK-PERP", "LINK-PERP")
 
-CRITICAL ORDER MANAGEMENT RULES:
-1. **READ THE "EXISTING OPEN ORDERS" SECTION FIRST**:
-   - This section shows ALL currently active protective orders
-   - If you see a STOP LOSS for a symbol, IT EXISTS - do not place another one
-   - If you see a TAKE PROFIT for a symbol, IT EXISTS - do not place another one
-2. **READ THE "CRITICAL MISSING PROTECTIVE ORDERS" SECTION SECOND**:
-   - This section ONLY appears when protective orders are genuinely missing
-   - ONLY place orders that appear in this "MISSING" section
-   - If this section is empty or not shown, return ZERO protective order actions
-3. **DEFAULT BEHAVIOR FOR PROTECTIVE ORDERS**:
-   - If "EXISTING OPEN ORDERS" shows both stop loss AND take profit for all positions, DO NOT place new protective orders
-   - Do NOT try to "optimize" or "improve" existing protective orders
-   - But you CAN still place NEW entry orders (buy/sell) for different symbols if you identify setups
+📋 PROTECTIVE ORDER MANAGEMENT (SECONDARY TO MARKET SCANNING):
+
+**IMPORTANT**: Only manage protective orders if they're explicitly listed as MISSING. Otherwise, focus on scanning market for new opportunities.
+
+1. **READ THE "EXISTING OPEN ORDERS" SECTION**:
+   - If you see a STOP LOSS for a symbol, it EXISTS - do NOT place another one
+   - If you see a TAKE PROFIT for a symbol, it EXISTS - do NOT place another one
+
+2. **READ THE "CRITICAL MISSING PROTECTIVE ORDERS" SECTION**:
+   - ONLY place protective orders that appear as "MISSING"
+   - If this section is empty, protective orders are complete - focus on NEW TRADE SETUPS instead
+
+3. **PRIORITY SYSTEM**:
+   - **FIRST**: Place missing protective orders (if any listed)
+   - **THEN**: Scan market universe for new limit order opportunities
+   - Both can be done in same cycle - don't choose one or the other
 4. **INTELLIGENT STOP LOSS PLACEMENT**:
    - **ANALYZE MARKET STRUCTURE**: Identify actual support (longs) or resistance (shorts) levels
    - **CITE YOUR REASONING**: Explain WHY stop is at specific level (e.g., "below recent swing low at $X" or "below 0.618 Fib at $Y")
