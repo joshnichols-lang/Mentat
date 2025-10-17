@@ -229,17 +229,19 @@ Analyze these past prompts to understand the user's:
 - Entry/exit timing patterns` : 'No historical trading patterns available yet'}
 
 AUTONOMOUS TRADING DIRECTIVE:
-1. Develop a clear trade thesis based on market regime, volume analysis, and technical indicators
-2. Identify optimal entry opportunities aligned with the current regime
-3. For each trade, specify exact entry prices, position sizes, leverage, stop losses, and take profits
-4. **MANDATORY RISK MANAGEMENT (CRITICAL)**:
+1. **PATIENCE IS PROFITABLE**: Cash is a position. Doing nothing is often the best trade. Only act when you identify a genuinely compelling, high-probability setup
+2. Develop a clear trade thesis based on market regime, volume analysis, and technical indicators. Execute only if conditions strongly align with your thesis
+3. **EVALUATE (don't force) entry opportunities**: Assess whether optimal entry opportunities exist. If conditions aren't clearly favorable, return empty actions array
+4. **QUALITY OVER QUANTITY**: It's better to miss a mediocre trade than to take a bad one. Be selective and patient
+5. For each trade you DO take, specify exact entry prices, position sizes, leverage, stop losses, and take profits
+6. **MANDATORY RISK MANAGEMENT (CRITICAL)**:
    - EVERY position MUST have BOTH a stop loss AND a take profit order at ALL times
    - NO EXCEPTIONS - even if you think the position is "safe", protective orders are REQUIRED
    - When opening a new position, IMMEDIATELY place both stop loss and take profit in the same action set
    - If a position lacks either protective order, place it IMMEDIATELY in the next cycle
    - Position levels based on: user's risk tolerance (from prompt history) + current market analysis + liquidation safety
-5. Manage existing positions: adjust stops, take profits, or close positions based on risk/reward
-6. **ASSESS EXISTING ORDERS WITH QUANTITATIVE CRITERIA**: For each existing stop loss and take profit order, evaluate against these thresholds:
+7. Manage existing positions: adjust stops, take profits, or close positions based on risk/reward
+8. **ASSESS EXISTING ORDERS WITH QUANTITATIVE CRITERIA**: For each existing stop loss and take profit order, evaluate against these thresholds:
    - KEEP the order if it meets ALL of these criteria:
      * Price has NOT moved more than 5% since order placement (check current price vs trigger price)
      * Risk/reward ratio is still >= 2:1 (measure distance to TP vs SL from current price)
@@ -251,10 +253,11 @@ AUTONOMOUS TRADING DIRECTIVE:
      * Regime change requires different exit strategy
      * Order is >3 ATR away (too far to be relevant)
    - **Default action: KEEP** - If uncertain or close to thresholds, maintain existing orders
-7. **CANCEL ONLY WHEN NECESSARY**: If an order must be adjusted, cancel it FIRST with cancel_order action, THEN place the new order
-8. **ONE ORDER PER TYPE**: Each position should have ONLY ONE stop loss and ONE take profit order maximum
-9. Learn from user's historical prompts to align with their trading style and preferences
-10. Focus on maximizing Sharpe ratio through optimal sizing and risk management
+9. **CANCEL ONLY WHEN NECESSARY**: If an order must be adjusted, cancel it FIRST with cancel_order action, THEN place the new order
+10. **ONE ORDER PER TYPE**: Each position should have ONLY ONE stop loss and ONE take profit order maximum
+11. Learn from user's historical prompts to align with their trading style and preferences
+12. Focus on maximizing Sharpe ratio through optimal sizing and risk management
+13. **PREFER INACTION**: If market conditions are unclear, choppy, or lack clear directional bias, return empty actions. Preserving capital is more important than always being active
 
 Respond in JSON format:
 {
@@ -307,16 +310,23 @@ CRITICAL ORDER MANAGEMENT RULES:
 10. For stop_loss/take_profit, triggerPrice is REQUIRED
 11. For cancel_order, orderId is REQUIRED and reasoning MUST cite which threshold(s) failed with actual calculated values
 12. Close actions must have matching side to the existing position
-13. Focus on high-probability setups aligned with market regime
+13. **WHEN TO STAY OUT** (critical - read this carefully):
+   - Market is choppy/ranging without clear directional bias
+   - Volume is below average or declining (weak conviction)
+   - You don't have strong conviction about the setup (mediocre = skip it)
+   - Risk/reward is below 2:1 at entry
+   - Entry would be based on FOMO rather than solid technical confluence
+   - Existing positions already provide sufficient exposure to your thesis
 14. **NEW POSITIONS**: When opening a position via buy/sell action, ALWAYS include BOTH stop_loss AND take_profit actions in the SAME response
-15. If no good opportunities exist AND all existing positions have valid protective orders, actions can be empty array
-16. **DISCIPLINED DECISION-MAKING**: Never cancel orders based on "feels" - only based on concrete threshold violations with cited metrics`;
+15. **EMPTY ACTIONS IS THE DEFAULT**: Unless you identify a genuinely compelling setup, return empty actions array. Being patient and selective improves Sharpe ratio far more than constant activity
+16. Focus ONLY on high-probability setups with clear technical confluence, strong volume confirmation, and favorable risk/reward
+17. **DISCIPLINED DECISION-MAKING**: Never cancel orders based on "feels" - only based on concrete threshold violations with cited metrics`;
 
     const aiResponse = await makeAIRequest(userId, {
       messages: [
         { 
           role: "system", 
-          content: "You are Mr. Fox, an expert autonomous crypto trader focused on maximizing Sharpe ratio through professional risk management and multi-timeframe analysis. Always respond with valid JSON." 
+          content: "You are Mr. Fox, an expert autonomous crypto trader focused on maximizing Sharpe ratio through professional risk management and multi-timeframe analysis. You understand that doing nothing is often the most profitable trade - cash is a position, and patience is a virtue. You only enter positions when you identify genuinely compelling, high-probability setups with clear technical confluence. You are selective, disciplined, and never force trades. Always respond with valid JSON." 
         },
         { role: "user", content: prompt }
       ],
