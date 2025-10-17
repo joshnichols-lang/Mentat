@@ -41,7 +41,8 @@ const aiProviderSchema = z.object({
 });
 
 const hyperliquidSchema = z.object({
-  apiKey: z.string().min(1, "Private key is required"),
+  apiKey: z.string().min(1, "API wallet private key is required"),
+  mainWalletAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/, "Invalid Ethereum address"),
   label: z.string().min(1, "Label is required").max(50),
 });
 
@@ -103,6 +104,7 @@ export default function Settings() {
     resolver: zodResolver(hyperliquidSchema),
     defaultValues: {
       apiKey: "",
+      mainWalletAddress: "",
       label: "",
     },
   });
@@ -163,6 +165,9 @@ export default function Settings() {
         providerName: "hyperliquid",
         label: data.label,
         apiKey: data.apiKey,
+        metadata: {
+          mainWalletAddress: data.mainWalletAddress,
+        },
       });
       return response.json();
     },
@@ -463,6 +468,13 @@ export default function Settings() {
               {isAddingHyperliquid && (
                 <Form {...hyperliquidForm}>
                   <form onSubmit={hyperliquidForm.handleSubmit(onSubmitHyperliquid)} className="space-y-4 p-4 border rounded-md">
+                    <Alert>
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertDescription>
+                        Hyperliquid uses an API wallet system: Your main wallet holds funds, while a separate API wallet signs trades on its behalf.
+                      </AlertDescription>
+                    </Alert>
+
                     <FormField
                       control={hyperliquidForm.control}
                       name="label"
@@ -486,21 +498,42 @@ export default function Settings() {
 
                     <FormField
                       control={hyperliquidForm.control}
+                      name="mainWalletAddress"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Main Wallet Address</FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder="0x..."
+                              data-testid="input-hyperliquid-main-wallet"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            Your main Hyperliquid wallet address (where your funds are stored)
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={hyperliquidForm.control}
                       name="apiKey"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Private Key</FormLabel>
+                          <FormLabel>API Wallet Private Key</FormLabel>
                           <FormControl>
                             <Input
                               type="password"
-                              placeholder="Enter your Hyperliquid private key"
+                              placeholder="Enter your API wallet private key"
                               autoComplete="off"
                               data-testid="input-hyperliquid-private-key"
                               {...field}
                             />
                           </FormControl>
                           <FormDescription>
-                            Your Hyperliquid private key for trading operations
+                            The private key for the API wallet (from Hyperliquid API settings)
                           </FormDescription>
                           <FormMessage />
                         </FormItem>

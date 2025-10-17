@@ -421,17 +421,18 @@ export function getHyperliquidClient(): HyperliquidClient | null {
  * Uses the user's stored and encrypted credentials
  */
 export async function getUserHyperliquidClient(userId: string): Promise<HyperliquidClient> {
-  const { getUserPrivateKey } = await import("../credentialService");
+  const { getUserHyperliquidCredentials } = await import("../credentialService");
   
-  const privateKey = await getUserPrivateKey(userId);
+  const credentials = await getUserHyperliquidCredentials(userId);
   
-  if (!privateKey) {
+  if (!credentials) {
     throw new Error(`No Hyperliquid credentials found for user ${userId}`);
   }
 
   const config: HyperliquidConfig = {
-    privateKey,
+    privateKey: credentials.privateKey,
     testnet: process.env.HYPERLIQUID_TESTNET === "true",
+    walletAddress: credentials.mainWalletAddress, // Use main wallet address for queries
   };
 
   return new HyperliquidClient(config);

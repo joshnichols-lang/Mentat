@@ -99,6 +99,60 @@ export async function getUserPrivateKey(userId: string): Promise<string | null> 
 }
 
 /**
+ * Retrieve Hyperliquid credentials including both private key and main wallet address
+ */
+export async function getUserHyperliquidCredentials(userId: string): Promise<{ privateKey: string; mainWalletAddress?: string } | null> {
+  try {
+    // First try to get from new api_keys table
+    const apiKey = await storage.getActiveApiKeyByProvider(userId, "exchange", "hyperliquid");
+    
+    if (apiKey) {
+      // Decrypt using envelope encryption
+      const privateKey = decryptCredential(
+        apiKey.encryptedApiKey,
+        apiKey.apiKeyIv,
+        apiKey.encryptedDek,
+        apiKey.dekIv
+      );
+      
+      // Update last used timestamp
+      await storage.updateApiKeyLastUsed(userId, apiKey.id);
+      
+      // Extract main wallet address from metadata
+      const mainWalletAddress = (apiKey.metadata as { mainWalletAddress?: string } | null)?.mainWalletAddress;
+      
+      return { privateKey, mainWalletAddress };
+    }
+    
+    // Fallback to old user_api_credentials table for backwards compatibility
+    const credentials = await storage.getUserCredentials(userId);
+    
+    if (!credentials) {
+      console.log(`[Credentials] No credentials found for user ${userId}`);
+      return null;
+    }
+    
+    // Decrypt using envelope encryption
+    const privateKey = decryptCredential(
+      credentials.encryptedPrivateKey,
+      credentials.credentialIv,
+      credentials.encryptedDek,
+      credentials.dekIv
+    );
+    
+    // Update last used timestamp
+    await storage.updateUserCredentials(userId, {
+      lastUsed: new Date(),
+    });
+    
+    return { privateKey };
+  } catch (error) {
+    console.error(`[Credentials] Error retrieving Hyperliquid credentials for user ${userId}:`, error);
+    throw new Error('Failed to retrieve user credentials');
+  }
+}
+
+/**
  * Delete a user's credentials
  */
 export async function deleteUserCredentials(userId: string): Promise<void> {
