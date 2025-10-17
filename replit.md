@@ -42,8 +42,8 @@ Preferred communication style: Simple, everyday language.
 - Screenshots stored as base64 strings in PostgreSQL; consider external storage if volume grows.
 **AI Integration:**
 - **Tiered AI Provider System:**
-  - **Platform AI (Free/Basic Tier):** Users without personal credentials automatically use shared `PERPLEXITY_API_KEY` from environment. Single shared key serves all free-tier users with complete context isolation per user.
-  - **Personal AI Key (Premium Tier):** Users can provide their own Perplexity, OpenAI, or xAI credentials for direct billing control and premium model access.
+  - **Platform AI (Free/Basic Tier):** Users without personal credentials automatically use shared `PERPLEXITY_API_KEY` from environment. Single shared key serves all free-tier users with complete context isolation per user. AI usage statistics hidden from platform users.
+  - **Personal AI Key (Premium Tier):** Users can provide their own Perplexity, OpenAI, or xAI credentials for direct billing control and premium model access. AI usage statistics (cost, tokens, requests) visible only to personal key users.
   - Settings UI shows current tier: "Using Platform AI" or "Using Personal AI Key" with switching capabilities.
 - **Multi-Provider AI Router:** Supports Perplexity, OpenAI/ChatGPT, and xAI/Grok. Retrieves and decrypts user credentials, creates OpenAI-compatible clients, validates model compatibility, tracks usage, and provides default models. Falls back to shared platform key when users lack personal credentials.
 - **Prompt Processing:** "Mr. Fox" processes natural language prompts to generate structured trading strategies, providing interpretations, trading actions, risk management plans, and expected outcomes with required numeric values for position sizes.
