@@ -6,6 +6,7 @@ import { initHyperliquidClient, getUserHyperliquidClient } from "./hyperliquid/c
 import { executeTradeStrategy } from "./tradeExecutor";
 import { createPortfolioSnapshot } from "./portfolioSnapshotService";
 import { restartMonitoring } from "./monitoringService";
+import { startUserMonitoring, stopUserMonitoring, restartUserMonitoring } from "./userMonitoringManager";
 import { setupAuth } from "./auth";
 import { storeUserCredentials, getUserPrivateKey, deleteUserCredentials, hasUserCredentials } from "./credentialService";
 import { encryptCredential } from "./encryption";
@@ -183,6 +184,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!updatedUser) {
         return res.status(404).json({ success: false, error: "User not found" });
+      }
+      
+      // Start or stop autonomous trading monitoring based on mode
+      if (mode === "active") {
+        // Get user's monitoring frequency (default to 5 minutes if 0 or null)
+        // Note: 0 means "disabled" so we use default 5 minutes when activating
+        let intervalMinutes = updatedUser.monitoringFrequencyMinutes || 5;
+        if (intervalMinutes === 0) {
+          intervalMinutes = 5;
+          // Update user's frequency to 5 minutes (remove the "disabled" setting)
+          await storage.updateUserMonitoringFrequency(userId, 5);
+        }
+        
+        try {
+          await startUserMonitoring(userId, intervalMinutes);
+          console.log(`[Agent Mode] Started monitoring for user ${userId} (${intervalMinutes} min interval)`);
+        } catch (monitoringError: any) {
+          console.error(`[Agent Mode] Failed to start monitoring for user ${userId}:`, monitoringError);
+          // Return error if monitoring can't start (e.g., missing credentials)
+          return res.status(400).json({ 
+            success: false, 
+            error: monitoringError.message || "Failed to start autonomous trading. Please ensure your credentials are configured." 
+          });
+        }
+      } else {
+        // Stop monitoring when switching to passive mode
+        await stopUserMonitoring(userId);
+        console.log(`[Agent Mode] Stopped monitoring for user ${userId}`);
       }
       
       res.json({ 
@@ -476,14 +505,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Store per-user monitoring frequency in database
       await storage.updateUserMonitoringFrequency(userId, minutes);
       
-      // Note: Background monitoring service currently uses TEST_USER_ID (global)
-      // This per-user setting is stored but not actively used until background services are redesigned
+      // Get user to check if they're in active mode
+      const user = await storage.getUser(userId);
+      
+      if (user && user.agentMode === "active") {
+        // Restart monitoring with new interval (or stop if minutes = 0)
+        await restartUserMonitoring(userId, minutes);
+        console.log(`[Monitoring Frequency] Updated interval for user ${userId} to ${minutes} minutes`);
+      }
       
       res.json({ 
         success: true, 
         message: minutes === 0 
           ? "Monitoring preference set to disabled" 
-          : `Monitoring frequency preference updated to ${minutes} minutes` 
+          : `Monitoring frequency updated to ${minutes} minutes` 
       });
     } catch (error) {
       console.error("Error updating monitoring frequency:", error);
