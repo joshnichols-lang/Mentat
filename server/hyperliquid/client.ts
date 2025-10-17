@@ -163,6 +163,47 @@ export class HyperliquidClient {
     }
   }
 
+  async getMarkets(): Promise<any> {
+    try {
+      // Fetch perpetual markets
+      const perpMeta = await this.sdk.info.perpetuals.getMeta();
+      
+      // Fetch spot markets
+      const spotMeta = await this.sdk.info.spot.getSpotMeta();
+      
+      // Format perpetual markets
+      const perpMarkets = perpMeta.universe.map((asset: any, index: number) => ({
+        symbol: asset.name,
+        displayName: asset.name,
+        type: 'perp' as const,
+        szDecimals: asset.szDecimals,
+        maxLeverage: asset.maxLeverage,
+        index,
+      }));
+      
+      // Format spot markets
+      const spotMarkets = spotMeta.universe
+        .filter((pair: any) => pair.name) // Only include pairs with names
+        .map((pair: any) => ({
+          symbol: `${pair.name.replace('/', '-')}-SPOT`,
+          displayName: pair.name,
+          type: 'spot' as const,
+          index: pair.index,
+          tokens: pair.tokens,
+        }));
+      
+      // Combine and sort by display name
+      const allMarkets = [...perpMarkets, ...spotMarkets].sort((a, b) => 
+        a.displayName.localeCompare(b.displayName)
+      );
+      
+      return allMarkets;
+    } catch (error) {
+      console.error("Failed to fetch Hyperliquid markets:", error);
+      return [];
+    }
+  }
+
   async getUserState(address?: string): Promise<any> {
     try {
       const userAddress = address || this.config.walletAddress;

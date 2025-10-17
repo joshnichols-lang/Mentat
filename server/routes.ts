@@ -531,6 +531,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Hyperliquid API Routes - All require authentication
   
+  // Get all available Hyperliquid markets (perpetuals + spot)
+  app.get("/api/hyperliquid/markets", requireVerifiedUser, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const hyperliquid = await getUserHyperliquidClient(userId);
+      
+      const markets = await hyperliquid.getMarkets();
+      
+      res.json({ success: true, markets });
+    } catch (error: any) {
+      console.error("Error fetching Hyperliquid markets:", error);
+      if (error.message?.includes('No Hyperliquid credentials')) {
+        return res.status(401).json({ success: false, error: "Please configure your Hyperliquid API credentials first" });
+      }
+      res.status(500).json({ success: false, error: "Failed to fetch markets" });
+    }
+  });
+  
   // Get Hyperliquid market data
   app.get("/api/hyperliquid/market-data", requireVerifiedUser, async (req, res) => {
     try {

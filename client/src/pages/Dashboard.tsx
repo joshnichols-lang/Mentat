@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useLocation } from "wouter";
 import { useCredentials } from "@/hooks/useCredentials";
 import { useAuth } from "@/hooks/use-auth";
@@ -12,17 +12,12 @@ import SharpeRatioChart from "@/components/SharpeRatioChart";
 import { AIUsageTracker } from "@/components/AIUsageTracker";
 import ConversationHistory from "@/components/ConversationHistory";
 import { MonitoringAlerts } from "@/components/MonitoringAlerts";
-import { OrderBook } from "@/components/OrderBook";
-import { CvdChart } from "@/components/CvdChart";
-import VolumeProfileChart from "@/components/VolumeProfileChart";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { MarketAnalysisPanel } from "@/components/MarketAnalysisPanel";
 
 export default function Dashboard() {
   const [, setLocation] = useLocation();
   const { user } = useAuth();
   const { hasCredentials, isLoading, error, isSuccess } = useCredentials();
-  const [selectedCoin, setSelectedCoin] = useState("BTC");
 
   // Check verification status and redirect if not approved
   useEffect(() => {
@@ -100,36 +95,11 @@ export default function Dashboard() {
             <div className="space-y-4">
               {/* AI Usage Tracker */}
               <AIUsageTracker />
-
-              {/* Trading Pair Selector */}
-              <Card className="p-4" data-testid="card-coin-selector">
-                <h3 className="font-mono text-sm font-bold mb-3">MARKET ANALYSIS</h3>
-                <div className="flex gap-2 flex-wrap">
-                  {["BTC", "ETH", "SOL"].map((coin) => (
-                    <Button
-                      key={coin}
-                      variant={selectedCoin === coin ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setSelectedCoin(coin)}
-                      className="font-mono"
-                      data-testid={`button-select-${coin.toLowerCase()}`}
-                    >
-                      {coin}
-                    </Button>
-                  ))}
-                </div>
-              </Card>
-
-              {/* Order Book */}
-              <OrderBook coin={selectedCoin} />
-
-              {/* CVD Chart */}
-              <CvdChart coin={selectedCoin} />
-
-              {/* Volume Profile Chart */}
-              <VolumeProfileChart coin={selectedCoin} />
             </div>
           </div>
+
+          {/* TradingView-Style Market Analysis Panel */}
+          <MarketAnalysisPanel />
         </div>
       </main>
     </div>
