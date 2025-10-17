@@ -27,6 +27,7 @@ interface StatsResponse extends ApiResponse<any> {
     totalCompletionTokens: number;
     totalCost: string;
   };
+  hasPersonalAiKeys: boolean;
 }
 
 const MONITORING_FREQUENCIES = [
@@ -121,6 +122,11 @@ export function AIUsageTracker() {
   const totalCost = stats?.totalCost || "0";
   const totalRequests = stats?.totalRequests || 0;
   const totalTokens = stats?.totalTokens || 0;
+
+  // Hide AI usage stats for platform AI users
+  if (statsData?.hasPersonalAiKeys === false) {
+    return null;
+  }
 
   return (
     <Card data-testid="card-ai-usage-tracker">

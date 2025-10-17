@@ -480,7 +480,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = getUserId(req);
       
       const stats = await storage.getAiUsageStats(userId);
-      res.json({ success: true, stats });
+      
+      // Check if user has personal AI keys
+      const aiKeys = await storage.getApiKeysByProvider(userId, "ai", "");
+      const hasPersonalAiKeys = aiKeys.length > 0;
+      
+      res.json({ success: true, stats, hasPersonalAiKeys });
     } catch (error) {
       console.error("Error fetching AI stats:", error);
       res.status(500).json({ success: false, error: "Failed to fetch AI stats" });
