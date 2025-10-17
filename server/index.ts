@@ -5,6 +5,8 @@ import { startMonitoring } from "./monitoringService";
 import { startPeriodicSnapshots } from "./portfolioSnapshotService";
 import { initHyperliquidClient } from "./hyperliquid/client";
 import { TEST_USER_ID } from "./constants";
+import { startUserMonitoring } from "./userMonitoringManager";
+import { storage } from "./storage";
 
 const app = express();
 app.use(express.json());
@@ -69,15 +71,34 @@ app.use((req, res, next) => {
     port,
     host: "0.0.0.0",
     reusePort: true,
-  }, () => {
+  }, async () => {
     log(`serving on port ${port}`);
     
-    // DISABLED: Background services are causing rate limiting issues
-    // These services use TEST_USER_ID and are not multi-tenant ready
-    // TODO: Redesign for per-user background services or remove entirely
-    // 
-    // const hyperliquid = initHyperliquidClient();
-    // startMonitoring();
-    // startPeriodicSnapshots(TEST_USER_ID, hyperliquid);
+    // Initialize autonomous trading for all active users
+    try {
+      const users = await storage.getAllUsers();
+      const activeUsers = users.filter(u => u.agentMode === "active");
+      
+      log(`[Startup] Found ${activeUsers.length} active users, initializing monitoring...`);
+      
+      for (const user of activeUsers) {
+        try {
+          // Default to 5 minutes if frequency is 0 or null
+          const intervalMinutes = user.monitoringFrequencyMinutes && user.monitoringFrequencyMinutes > 0 
+            ? user.monitoringFrequencyMinutes 
+            : 5;
+          
+          await startUserMonitoring(user.id, intervalMinutes);
+          log(`[Startup] ✓ Started monitoring for user ${user.id} (${intervalMinutes} min interval)`);
+        } catch (error: any) {
+          log(`[Startup] ✗ Failed to start monitoring for user ${user.id}: ${error.message}`);
+          // Continue to next user even if one fails
+        }
+      }
+      
+      log(`[Startup] Autonomous trading initialization complete`);
+    } catch (error) {
+      log(`[Startup] Error initializing autonomous trading: ${error}`);
+    }
   });
 })();
