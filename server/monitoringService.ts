@@ -241,18 +241,19 @@ AUTONOMOUS TRADING DIRECTIVE:
    - If a position lacks either protective order, place it IMMEDIATELY in the next cycle
    - Position levels based on: user's risk tolerance (from prompt history) + current market analysis + liquidation safety
 7. Manage existing positions: adjust stops, take profits, or close positions based on risk/reward
-8. **ASSESS EXISTING ORDERS WITH QUANTITATIVE CRITERIA**: For each existing stop loss and take profit order, evaluate against these thresholds:
-   - KEEP the order if it meets ALL of these criteria:
-     * Price has NOT moved more than 5% since order placement (check current price vs trigger price)
-     * Risk/reward ratio is still >= 2:1 (measure distance to TP vs SL from current price)
-     * Market regime has NOT changed (bullish→bearish or vice versa)
-     * Order is still within 3 ATR (Average True Range) of current price
-   - REPLACE the order ONLY if it FAILS one or more criteria above:
-     * Price moved >5% making the level technically invalid
-     * R:R dropped below 2:1 making it unfavorable
-     * Regime change requires different exit strategy
-     * Order is >3 ATR away (too far to be relevant)
-   - **Default action: KEEP** - If uncertain or close to thresholds, maintain existing orders
+8. **STOP ADJUSTING PROTECTIVE ORDERS - LEAVE THEM ALONE**: 
+   - **YOU ARE MAKING TOO MANY UNNECESSARY ADJUSTMENTS - THIS MUST STOP**
+   - **DEFAULT: DO NOT TOUCH protective orders that already exist**
+   - If protective orders exist for a position, your DEFAULT action is ZERO ACTIONS (do not include them in your actions array)
+   - Constantly tweaking take profit from $3950 to $3968 to $4000 is WASTEFUL and WRONG
+   - Once protective orders are set with proper risk management, they should STAY THERE
+   - ONLY cancel/replace an order if you can PROVE a threshold violation with SPECIFIC NUMBERS:
+     * Price moved >5% from trigger: Calculate (current_price - trigger_price) / trigger_price * 100 → Must show "8.2%"
+     * R:R fell below 2:1: Calculate distance_to_TP / distance_to_SL → Must show "1.3:1"
+     * Regime changed: Was bullish, now bearish (or vice versa) → Must cite specific market shift
+     * Order >3 ATR away: Calculate ATR distance → Must show "4.2 ATR"
+   - If you CANNOT cite calculated metrics proving violation, you CANNOT touch the order
+   - Making small "optimizations" without threshold violations is FORBIDDEN
 9. **CANCEL ONLY WHEN NECESSARY**: If an order must be adjusted, cancel it FIRST with cancel_order action, THEN place the new order
 10. **EXACTLY ONE OF EACH PROTECTIVE ORDER**: Each position gets EXACTLY one stop loss + EXACTLY one take profit
    - In your actions array, you MUST include EXACTLY one stop_loss action per symbol AND EXACTLY one take_profit action per symbol
@@ -292,17 +293,21 @@ CRITICAL ORDER MANAGEMENT RULES:
    - If ANY position is missing either order, place it IMMEDIATELY - this is the highest priority action
    - Example: If position has only stop loss, place take profit FIRST before considering any other actions
 2. **Before placing new stop_loss or take_profit**: Check if one already exists for that position
-3. **Evaluate existing orders with QUANTITATIVE METRICS**: For each existing order, calculate and check:
-   - Price movement %: (current_price - trigger_price) / trigger_price * 100
-   - Current risk/reward ratio: distance_to_TP / distance_to_SL
-   - Regime consistency: has bullish/bearish designation changed?
-   - ATR distance: is order within 3x Average True Range?
-   - If ALL metrics pass thresholds (see directive #6), KEEP the order (don't include any action for it)
-4. **If an order exists but needs adjustment**: 
+3. **PROTECTIVE ORDERS: STOP MAKING UNNECESSARY CHANGES**:
+   - **If protective orders exist, DO NOT TOUCH THEM - this is your DEFAULT behavior**
+   - Do NOT include any actions for existing protective orders unless you have PROOF of threshold violation
+   - You have been making too many wasteful adjustments (e.g., changing take profit from $3950 to $3968 to $4000)
+   - To justify canceling an order, you MUST calculate and show SPECIFIC NUMBERS for at least ONE threshold violation:
+     * "ETH price moved from $3850 to $3650 = 5.2% movement (>5% threshold)" ← THIS is acceptable
+     * "Adjusting target higher" ← THIS is NOT acceptable
+     * "ETH R:R = distance_to_TP($100) / distance_to_SL($80) = 1.25:1 (<2:1 threshold)" ← THIS is acceptable  
+     * "Optimizing exit level" ← THIS is NOT acceptable
+   - If you cannot show calculated metrics proving violation, the order STAYS - no exceptions
+4. **If an order exists but VIOLATES a threshold**: 
    - FIRST: Include a cancel_order action with the existing orderId
-   - In reasoning, CITE SPECIFIC METRICS: "Price moved 8.2% (>5% threshold), R:R dropped to 1.3:1 (<2:1 threshold), requiring replacement"
+   - In reasoning, CITE SPECIFIC CALCULATED METRICS: "ETH price moved from $3950 to $3730 = 5.6% (>5% threshold), requiring adjustment"
    - THEN: Include a new stop_loss or take_profit action with updated triggerPrice and full reasoning
-5. **If an order exists and passes all thresholds**: Do NOT include any actions for it - let it remain as-is
+5. **If an order exists and ALL thresholds pass**: Do NOT include ANY actions for it - leave it untouched
 6. **Each position limits**: Exactly ONE stop loss + ONE take profit order (BOTH REQUIRED, not optional)
 7. **LIQUIDATION PRICE SAFETY (CRITICAL)**: 
    - For LONG positions: Stop loss MUST be placed ABOVE liquidation price with at least 2% buffer (e.g., if liq=$3700, minimum stop=$3774)
