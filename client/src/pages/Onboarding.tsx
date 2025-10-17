@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { AlertCircle, Brain, TrendingUp, CheckCircle2, Loader2, ExternalLink } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
@@ -27,6 +28,9 @@ const exchangeSchema = z.object({
   provider: z.enum(["hyperliquid"]),
   apiKey: z.string().min(1, "Private key is required"),
   label: z.string().min(1, "Label is required").max(50),
+  confirmedReferral: z.boolean().refine((val) => val === true, {
+    message: "You must confirm that you created your account using our referral link",
+  }),
 });
 
 type AIProviderFormData = z.infer<typeof aiProviderSchema>;
@@ -62,6 +66,7 @@ export default function Onboarding() {
       provider: "hyperliquid",
       apiKey: "",
       label: "Main Account",
+      confirmedReferral: false,
     },
   });
 
@@ -298,24 +303,26 @@ export default function Onboarding() {
           ) : (
             <Form {...exchangeForm}>
               <form onSubmit={exchangeForm.handleSubmit(onSubmitExchange)} className="space-y-4">
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-medium">Hyperliquid Exchange</h3>
+                <Alert className="border-primary/50 bg-primary/5">
+                  <AlertCircle className="h-4 w-4 text-primary" />
+                  <AlertDescription>
+                    <p className="font-semibold text-primary mb-2">⚠️ Required: Create Account via Referral Link</p>
+                    <p className="text-sm mb-3">
+                      To use 1fox, you must create your Hyperliquid account through our referral link below. 
+                      Accounts not created through this link will be removed.
+                    </p>
                     <Button
                       type="button"
-                      variant="outline"
-                      size="sm"
+                      className="w-full"
+                      size="lg"
                       onClick={() => window.open(HYPERLIQUID_REFERRAL_URL, '_blank')}
                       data-testid="button-create-hyperliquid-account"
                     >
-                      <ExternalLink className="h-3 w-3 mr-1" />
-                      Create Account
+                      <ExternalLink className="h-4 w-4 mr-2" />
+                      Create Hyperliquid Account (Required)
                     </Button>
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    Decentralized perpetuals exchange for crypto trading
-                  </p>
-                </div>
+                  </AlertDescription>
+                </Alert>
 
                 <FormField
                   control={exchangeForm.control}
@@ -363,18 +370,40 @@ export default function Onboarding() {
                   )}
                 />
 
+                <FormField
+                  control={exchangeForm.control}
+                  name="confirmedReferral"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                          data-testid="checkbox-confirm-referral"
+                        />
+                      </FormControl>
+                      <div className="space-y-1 leading-none">
+                        <FormLabel className="font-medium">
+                          I confirm that I created my Hyperliquid account using the referral link above
+                        </FormLabel>
+                        <FormDescription>
+                          This is required to use 1fox. Accounts not created through our referral will be removed.
+                        </FormDescription>
+                        <FormMessage />
+                      </div>
+                    </FormItem>
+                  )}
+                />
+
                 <Alert>
                   <CheckCircle2 className="h-4 w-4" />
                   <AlertDescription>
                     <p className="font-medium mb-2">How to get your private key:</p>
                     <ol className="list-decimal list-inside space-y-1 text-sm">
-                      <li>Use your wallet's private key (MetaMask, Ledger, etc.)</li>
+                      <li>Export your wallet's private key (MetaMask, Ledger, etc.)</li>
                       <li>Make sure it has trading permissions</li>
                       <li>Paste it below (starts with "0x")</li>
                     </ol>
-                    <p className="text-xs text-muted-foreground mt-2">
-                      Don't have a Hyperliquid account? Click "Create Account" above to get started with our referral link.
-                    </p>
                   </AlertDescription>
                 </Alert>
 
