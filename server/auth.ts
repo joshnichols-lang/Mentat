@@ -17,7 +17,7 @@ const loginSchema = z.object({
 const registerSchema = z.object({
   username: z.string().min(3).max(50),
   password: z.string().min(6).max(100),
-  email: z.string().email().optional(),
+  email: z.string().email("Invalid email address").or(z.literal("")),
 });
 
 declare global {
@@ -107,7 +107,7 @@ export function setupAuth(app: Express) {
       const user = await storage.createUser({
         username: validatedData.username,
         password: await hashPassword(validatedData.password),
-        email: validatedData.email,
+        email: validatedData.email || null, // Normalize empty string to null for unique constraint
       });
 
       req.login(user, (err) => {

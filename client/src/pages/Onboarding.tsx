@@ -262,6 +262,7 @@ export default function Onboarding() {
                               : "xai-..."
                           }
                           disabled={aiProviderMutation.isPending}
+                          autoComplete="off"
                           data-testid="input-ai-key"
                         />
                       </FormControl>
@@ -387,6 +388,7 @@ export default function Onboarding() {
                               : "Enter API key"
                           }
                           disabled={exchangeMutation.isPending}
+                          autoComplete="off"
                           data-testid="input-exchange-key"
                         />
                       </FormControl>

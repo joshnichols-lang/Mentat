@@ -16,7 +16,7 @@ const loginSchema = z.object({
 });
 
 const registerSchema = loginSchema.extend({
-  email: z.string().email("Invalid email address").optional(),
+  email: z.string().email("Invalid email address").or(z.literal("")),
 });
 
 type LoginFormData = z.infer<typeof loginSchema>;
@@ -92,7 +92,8 @@ export default function AuthPage() {
                             {...field}
                             placeholder="Enter your username"
                             className="font-mono"
-                            data-testid="input-username"
+                            autoComplete="username"
+                            data-testid="input-login-username"
                           />
                         </FormControl>
                         <FormMessage />
@@ -111,7 +112,8 @@ export default function AuthPage() {
                             type="password"
                             placeholder="Enter your password"
                             className="font-mono"
-                            data-testid="input-password"
+                            autoComplete="current-password"
+                            data-testid="input-login-password"
                           />
                         </FormControl>
                         <FormMessage />
@@ -142,7 +144,8 @@ export default function AuthPage() {
                             {...field}
                             placeholder="Choose a username"
                             className="font-mono"
-                            data-testid="input-username"
+                            autoComplete="username"
+                            data-testid="input-register-username"
                           />
                         </FormControl>
                         <FormMessage />
@@ -161,7 +164,8 @@ export default function AuthPage() {
                             type="email"
                             placeholder="your@email.com"
                             className="font-mono"
-                            data-testid="input-email"
+                            autoComplete="email"
+                            data-testid="input-register-email"
                           />
                         </FormControl>
                         <FormMessage />
@@ -180,7 +184,8 @@ export default function AuthPage() {
                             type="password"
                             placeholder="Create a password"
                             className="font-mono"
-                            data-testid="input-password"
+                            autoComplete="new-password"
+                            data-testid="input-register-password"
                           />
                         </FormControl>
                         <FormMessage />
