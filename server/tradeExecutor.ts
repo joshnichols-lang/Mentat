@@ -90,6 +90,20 @@ export async function executeTradeStrategy(
     }
   }
 
+  // VALIDATION: Ensure at most ONE stop_loss and ONE take_profit per symbol
+  for (const [symbol, protectiveActions] of Array.from(protectiveOrderGroups.entries())) {
+    const stopLossCount = protectiveActions.filter((a: TradingAction) => a.action === "stop_loss").length;
+    const takeProfitCount = protectiveActions.filter((a: TradingAction) => a.action === "take_profit").length;
+    
+    if (stopLossCount > 1) {
+      throw new Error(`VALIDATION ERROR: Multiple stop_loss actions (${stopLossCount}) for ${symbol}. Only ONE stop_loss per symbol is allowed.`);
+    }
+    
+    if (takeProfitCount > 1) {
+      throw new Error(`VALIDATION ERROR: Multiple take_profit actions (${takeProfitCount}) for ${symbol}. Only ONE take_profit per symbol is allowed.`);
+    }
+  }
+
   // Process non-protective actions first
   for (const action of nonProtectiveActions) {
     try {

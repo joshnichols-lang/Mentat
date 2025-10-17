@@ -254,7 +254,12 @@ AUTONOMOUS TRADING DIRECTIVE:
      * Order is >3 ATR away (too far to be relevant)
    - **Default action: KEEP** - If uncertain or close to thresholds, maintain existing orders
 9. **CANCEL ONLY WHEN NECESSARY**: If an order must be adjusted, cancel it FIRST with cancel_order action, THEN place the new order
-10. **ONE ORDER PER TYPE**: Each position should have ONLY ONE stop loss and ONE take profit order maximum
+10. **EXACTLY ONE OF EACH PROTECTIVE ORDER**: Each position gets EXACTLY one stop loss + EXACTLY one take profit
+   - In your actions array, you MUST include EXACTLY one stop_loss action per symbol AND EXACTLY one take_profit action per symbol
+   - NEVER include multiple stop_loss actions for the same symbol  
+   - NEVER include multiple take_profit actions for the same symbol
+   - Each protective order should be for the FULL position size (no partial exits)
+   - If you want to adjust an existing protective order, FIRST cancel it, THEN place the new one
 11. Learn from user's historical prompts to align with their trading style and preferences
 12. Focus on maximizing Sharpe ratio through optimal sizing and risk management
 13. **PREFER INACTION**: If market conditions are unclear, choppy, or lack clear directional bias, return empty actions. Preserving capital is more important than always being active
