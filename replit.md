@@ -54,7 +54,14 @@ Preferred communication style: Simple, everyday language.
 
 **User Credentials:** Uses AES-256-GCM encryption with envelope encryption for storing all API keys. The `api_keys` table supports multiple providers (AI and exchanges) with user-defined labels. Each credential has a unique Data Encryption Key (DEK) encrypted with the master key (ENCRYPTION_MASTER_KEY secret). API secrets (for Binance/Bybit) are stored encrypted in the metadata JSONB field. Proper key isolation ensures if one credential is compromised, others remain secure.
 
-**User Schema:** Includes username/password authentication, Zod validation for auth requests (username 3-50 chars, password 6-100 chars), agent mode (passive/active), and per-user settings (monitoring frequency stored in `monitoringFrequencyMinutes` field).
+**User Schema:** Includes username/password authentication, Zod validation for auth requests (username 3-50 chars, password 6-100 chars), agent mode (passive/active) with UI toggle and confirmation dialog, and per-user settings (monitoring frequency stored in `monitoringFrequencyMinutes` field).
+
+**Passive/Active Mode:** Users can toggle between passive (learning-only) and active (autonomous trading) modes via a switch in the header:
+- **Passive Mode (default)**: Mr. Fox generates trading strategies without executing trades, allowing users to learn from AI analysis without risk
+- **Active Mode**: Mr. Fox autonomously executes trades based on market analysis after user confirmation
+- Mode changes require confirmation dialog for active mode to ensure users understand autonomous trading implications
+- Trading prompt endpoint checks agentMode before execution, returns executionSkipped flag for passive mode
+- Frontend displays appropriate messaging when strategies are generated but not executed in passive mode
 
 **Multi-Provider API Keys:** The `api_keys` table stores encrypted credentials for both AI providers and exchanges:
 - providerType: "ai" or "exchange"
