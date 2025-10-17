@@ -19,6 +19,23 @@ function isAuthenticated(req: any, res: any, next: any) {
   res.status(401).json({ message: "Unauthorized" });
 }
 
+// Middleware to check if user is verified (approved)
+function requireVerifiedUser(req: any, res: any, next: any) {
+  if (!req.isAuthenticated()) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+  
+  const user = req.user!;
+  if (user.verificationStatus !== "approved") {
+    return res.status(403).json({ 
+      message: "Account pending verification", 
+      verificationStatus: user.verificationStatus 
+    });
+  }
+  
+  return next();
+}
+
 // Helper to get authenticated user ID
 function getUserId(req: any): string {
   return req.user!.id;
@@ -31,7 +48,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Note: /api/user, /api/login, /api/register, /api/logout are handled in setupAuth()
 
   // AI Trading Prompt endpoint
-  app.post("/api/trading/prompt", isAuthenticated, async (req, res) => {
+  app.post("/api/trading/prompt", requireVerifiedUser, async (req, res) => {
     try {
       
       const userId = getUserId(req);
@@ -422,7 +439,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Hyperliquid API Routes - All require authentication
   
   // Get Hyperliquid market data
-  app.get("/api/hyperliquid/market-data", isAuthenticated, async (req, res) => {
+  app.get("/api/hyperliquid/market-data", requireVerifiedUser, async (req, res) => {
     try {
       
       const userId = getUserId(req);
@@ -440,7 +457,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get Hyperliquid user state
-  app.get("/api/hyperliquid/user-state", isAuthenticated, async (req, res) => {
+  app.get("/api/hyperliquid/user-state", requireVerifiedUser, async (req, res) => {
     try {
       
       const userId = getUserId(req);
@@ -459,7 +476,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get Hyperliquid positions
-  app.get("/api/hyperliquid/positions", isAuthenticated, async (req, res) => {
+  app.get("/api/hyperliquid/positions", requireVerifiedUser, async (req, res) => {
     try {
       
       const userId = getUserId(req);
@@ -478,7 +495,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get Hyperliquid open orders
-  app.get("/api/hyperliquid/open-orders", isAuthenticated, async (req, res) => {
+  app.get("/api/hyperliquid/open-orders", requireVerifiedUser, async (req, res) => {
     try {
       
       const userId = getUserId(req);
@@ -539,7 +556,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Place order on Hyperliquid
-  app.post("/api/hyperliquid/order", isAuthenticated, async (req, res) => {
+  app.post("/api/hyperliquid/order", requireVerifiedUser, async (req, res) => {
     try {
       
       const userId = getUserId(req);
@@ -602,7 +619,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Cancel order on Hyperliquid
-  app.post("/api/hyperliquid/cancel-order", isAuthenticated, async (req, res) => {
+  app.post("/api/hyperliquid/cancel-order", requireVerifiedUser, async (req, res) => {
     try {
       
       const userId = getUserId(req);
@@ -632,7 +649,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Close position on Hyperliquid
-  app.post("/api/hyperliquid/close-position", isAuthenticated, async (req, res) => {
+  app.post("/api/hyperliquid/close-position", requireVerifiedUser, async (req, res) => {
     try {
       
       const userId = getUserId(req);
@@ -687,7 +704,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Close all positions and cancel all orders
-  app.post("/api/hyperliquid/close-all", isAuthenticated, async (req, res) => {
+  app.post("/api/hyperliquid/close-all", requireVerifiedUser, async (req, res) => {
     try {
       
       const userId = getUserId(req);
@@ -769,7 +786,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update leverage on Hyperliquid
-  app.post("/api/hyperliquid/leverage", isAuthenticated, async (req, res) => {
+  app.post("/api/hyperliquid/leverage", requireVerifiedUser, async (req, res) => {
     try {
       
       const userId = getUserId(req);

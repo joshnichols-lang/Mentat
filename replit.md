@@ -49,8 +49,18 @@ Preferred communication style: Simple, everyday language.
 4. `isAuthenticated` middleware validates session on all protected routes
 5. New users complete multi-step onboarding:
    - Step 1: Choose AI provider (Perplexity/ChatGPT/Grok) and add API key with label
-   - Step 2: Choose exchange (Hyperliquid/Binance/Bybit) and add credentials with label
+   - Step 2: Connect Hyperliquid exchange (Binance/Bybit removed - Hyperliquid only):
+     - **Mandatory Referral Link:** Users MUST create Hyperliquid accounts via referral link: https://app.hyperliquid.xyz/join/1FOX
+     - **Wallet Address Verification:** Users must paste their wallet address (0x...) for manual admin verification
+     - **Required Confirmation:** Users must check confirmation box acknowledging referral link requirement
+     - **Verification Status:** New users default to "pending" verification status
 6. Dashboard checks credentials and redirects to onboarding if missing
+7. **Wallet Verification Workflow:**
+   - After onboarding completion, users redirected to `/pending-approval` page
+   - Platform access blocked until admin verifies wallet address matches referral signup
+   - Admin uses `/admin/verification` page to approve/reject users
+   - Approved users gain full platform access; rejected users see error message with support instructions
+   - User schema includes `walletAddress`, `verificationStatus` (pending/approved/rejected), and `verifiedAt` timestamp
 
 **User Credentials:** Uses AES-256-GCM encryption with envelope encryption for storing all API keys. The `api_keys` table supports multiple providers (AI and exchanges) with user-defined labels. Each credential has a unique Data Encryption Key (DEK) encrypted with the master key (ENCRYPTION_MASTER_KEY secret). API secrets (for Binance/Bybit) are stored encrypted in the metadata JSONB field. Proper key isolation ensures if one credential is compromised, others remain secure.
 

@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -9,6 +10,14 @@ import logoUrl from "@assets/generated-image-removebg-preview_1760665535887.png"
 export default function PendingApproval() {
   const { user, logoutMutation } = useAuth();
   const [, setLocation] = useLocation();
+
+  // Redirect approved users to dashboard
+  useEffect(() => {
+    if (user?.verificationStatus === "approved") {
+      const timer = setTimeout(() => setLocation("/"), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [user?.verificationStatus, setLocation]);
 
   const handleLogout = () => {
     logoutMutation.mutate();
@@ -47,11 +56,6 @@ export default function PendingApproval() {
         };
     }
   };
-
-  // Redirect approved users to dashboard
-  if (user?.verificationStatus === "approved") {
-    setTimeout(() => setLocation("/"), 1000);
-  }
 
   const status = getStatusMessage();
 
