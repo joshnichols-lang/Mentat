@@ -8,6 +8,7 @@ import { createPortfolioSnapshot } from "./portfolioSnapshotService";
 import { restartMonitoring } from "./monitoringService";
 import { setupAuth } from "./auth";
 import { storeUserCredentials, getUserPrivateKey, deleteUserCredentials, hasUserCredentials } from "./credentialService";
+import { encryptCredential } from "./encryption";
 import { z } from "zod";
 
 // Middleware to check if user is authenticated
@@ -778,17 +779,136 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Create multi-provider API key
+  app.post("/api/api-keys", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      
+      const schema = z.object({
+        providerType: z.enum(["ai", "exchange"]),
+        providerName: z.string(),
+        label: z.string().min(1).max(50),
+        apiKey: z.string().min(1),
+        apiSecret: z.string().optional(),
+        metadata: z.record(z.any()).optional(),
+      }).refine(
+        (data) => {
+          // Binance and Bybit exchanges require API secret
+          if (
+            data.providerType === "exchange" && 
+            (data.providerName === "binance" || data.providerName === "bybit") && 
+            !data.apiSecret
+          ) {
+            return false;
+          }
+          return true;
+        },
+        {
+          message: "API secret is required for Binance and Bybit exchanges",
+          path: ["apiSecret"],
+        }
+      );
+
+      const validated = schema.parse(req.body);
+
+      // Encrypt the API key
+      const {
+        encryptedPrivateKey: encryptedApiKey,
+        credentialIv: apiKeyIv,
+        encryptedDek,
+        dekIv
+      } = encryptCredential(validated.apiKey);
+
+      // For exchanges that need API secret, store it in metadata
+      const metadata: any = validated.metadata || {};
+      if (validated.apiSecret) {
+        const secretEncrypted = encryptCredential(validated.apiSecret);
+        metadata.encryptedSecret = secretEncrypted.encryptedPrivateKey;
+        metadata.secretIv = secretEncrypted.credentialIv;
+        metadata.secretDek = secretEncrypted.encryptedDek;
+        metadata.secretDekIv = secretEncrypted.dekIv;
+      }
+
+      // Create the API key record
+      const apiKey = await storage.createApiKey(userId, {
+        providerType: validated.providerType,
+        providerName: validated.providerName,
+        label: validated.label,
+        encryptedApiKey,
+        apiKeyIv,
+        encryptedDek,
+        dekIv,
+        metadata: Object.keys(metadata).length > 0 ? metadata : undefined,
+      });
+
+      res.json({ 
+        success: true, 
+        apiKey: {
+          id: apiKey.id,
+          providerType: apiKey.providerType,
+          providerName: apiKey.providerName,
+          label: apiKey.label,
+          isActive: apiKey.isActive,
+          createdAt: apiKey.createdAt,
+        }
+      });
+    } catch (error: any) {
+      console.error("Error creating API key:", error);
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ 
+          success: false, 
+          error: "Invalid input", 
+          details: error.errors 
+        });
+      }
+      res.status(500).json({ 
+        success: false, 
+        error: error.message || "Failed to create API key" 
+      });
+    }
+  });
+
+  // Get user's API keys
+  app.get("/api/api-keys", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const apiKeys = await storage.getApiKeys(userId);
+      
+      // Return without sensitive data
+      const sanitized = apiKeys.map(key => ({
+        id: key.id,
+        providerType: key.providerType,
+        providerName: key.providerName,
+        label: key.label,
+        isActive: key.isActive,
+        createdAt: key.createdAt,
+        lastUsed: key.lastUsed,
+      }));
+      
+      res.json({ success: true, apiKeys: sanitized });
+    } catch (error: any) {
+      console.error("Error fetching API keys:", error);
+      res.status(500).json({ 
+        success: false, 
+        error: "Failed to fetch API keys" 
+      });
+    }
+  });
+
   // Check if user has credentials configured
   app.get("/api/credentials/status", isAuthenticated, async (req, res) => {
     try {
       
       const userId = getUserId(req);
       
-      const hasCredentials = await hasUserCredentials(userId);
+      // Check both old credentials and new api_keys
+      const hasOldCredentials = await hasUserCredentials(userId);
+      const apiKeys = await storage.getApiKeys(userId);
+      const hasApiKeys = apiKeys.length > 0;
       
       res.json({ 
         success: true, 
-        hasCredentials,
+        hasCredentials: hasOldCredentials || hasApiKeys,
       });
     } catch (error: any) {
       console.error("Error checking credential status:", error);

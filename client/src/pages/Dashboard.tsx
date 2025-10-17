@@ -40,7 +40,11 @@ export default function Dashboard() {
   }
 
   if (!hasCredentials) {
-    return null;
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <p className="text-muted-foreground" data-testid="text-onboarding-redirect">Redirecting to onboarding...</p>
+      </div>
+    );
   }
 
   return (

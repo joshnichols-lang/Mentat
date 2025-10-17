@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type UpsertUser, type Trade, type InsertTrade, type Position, type InsertPosition, type PortfolioSnapshot, type InsertPortfolioSnapshot, type AiUsageLog, type InsertAiUsageLog, type MonitoringLog, type InsertMonitoringLog, type UserApiCredential, type InsertUserApiCredential, users, trades, positions, portfolioSnapshots, aiUsageLog, monitoringLog, userApiCredentials } from "@shared/schema";
+import { type User, type InsertUser, type UpsertUser, type Trade, type InsertTrade, type Position, type InsertPosition, type PortfolioSnapshot, type InsertPortfolioSnapshot, type AiUsageLog, type InsertAiUsageLog, type MonitoringLog, type InsertMonitoringLog, type UserApiCredential, type InsertUserApiCredential, type ApiKey, type InsertApiKey, users, trades, positions, portfolioSnapshots, aiUsageLog, monitoringLog, userApiCredentials, apiKeys } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql, and, type SQL } from "drizzle-orm";
 import session from "express-session";
@@ -73,6 +73,15 @@ export interface IStorage {
   createUserCredentials(credential: InsertUserApiCredential): Promise<UserApiCredential>;
   updateUserCredentials(userId: string, updates: Partial<UserApiCredential>): Promise<UserApiCredential | undefined>;
   deleteUserCredentials(userId: string): Promise<void>;
+  
+  // Multi-provider API Keys methods
+  createApiKey(userId: string, apiKey: InsertApiKey): Promise<ApiKey>;
+  getApiKeys(userId: string): Promise<ApiKey[]>;
+  getApiKey(userId: string, id: string): Promise<ApiKey | undefined>;
+  getApiKeysByProvider(userId: string, providerType: string, providerName: string): Promise<ApiKey[]>;
+  getActiveApiKeyByProvider(userId: string, providerType: string, providerName: string): Promise<ApiKey | undefined>;
+  updateApiKeyLastUsed(userId: string, id: string): Promise<void>;
+  deleteApiKey(userId: string, id: string): Promise<void>;
 }
 
 const PostgresSessionStore = connectPg(session);
@@ -350,6 +359,72 @@ export class DbStorage implements IStorage {
 
   async deleteUserCredentials(userId: string): Promise<void> {
     await db.delete(userApiCredentials).where(eq(userApiCredentials.userId, userId));
+  }
+
+  // Multi-provider API Keys methods
+  async createApiKey(userId: string, apiKey: InsertApiKey): Promise<ApiKey> {
+    const result = await db.insert(apiKeys).values({
+      ...apiKey,
+      userId,
+    }).returning();
+    return result[0];
+  }
+
+  async getApiKeys(userId: string): Promise<ApiKey[]> {
+    return await db.select()
+      .from(apiKeys)
+      .where(withUserFilter(apiKeys, userId))
+      .orderBy(desc(apiKeys.createdAt));
+  }
+
+  async getApiKey(userId: string, id: string): Promise<ApiKey | undefined> {
+    const result = await db.select()
+      .from(apiKeys)
+      .where(withUserFilter(apiKeys, userId, eq(apiKeys.id, id)))
+      .limit(1);
+    return result[0];
+  }
+
+  async getApiKeysByProvider(userId: string, providerType: string, providerName: string): Promise<ApiKey[]> {
+    return await db.select()
+      .from(apiKeys)
+      .where(
+        withUserFilter(
+          apiKeys, 
+          userId, 
+          eq(apiKeys.providerType, providerType),
+          eq(apiKeys.providerName, providerName)
+        )
+      )
+      .orderBy(desc(apiKeys.createdAt));
+  }
+
+  async getActiveApiKeyByProvider(userId: string, providerType: string, providerName: string): Promise<ApiKey | undefined> {
+    const result = await db.select()
+      .from(apiKeys)
+      .where(
+        withUserFilter(
+          apiKeys,
+          userId,
+          eq(apiKeys.providerType, providerType),
+          eq(apiKeys.providerName, providerName),
+          eq(apiKeys.isActive, 1)
+        )
+      )
+      .orderBy(desc(apiKeys.lastUsed))
+      .limit(1);
+    return result[0];
+  }
+
+  async updateApiKeyLastUsed(userId: string, id: string): Promise<void> {
+    await db.update(apiKeys)
+      .set({ lastUsed: sql`now()` })
+      .where(withUserFilter(apiKeys, userId, eq(apiKeys.id, id)));
+  }
+
+  async deleteApiKey(userId: string, id: string): Promise<void> {
+    await db.delete(apiKeys)
+      .where(withUserFilter(apiKeys, userId, eq(apiKeys.id, id)));
   }
 }
 
