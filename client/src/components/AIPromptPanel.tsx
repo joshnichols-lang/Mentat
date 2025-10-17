@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Send, CheckCircle2, AlertCircle, Info } from "lucide-react";
+import { useState, useRef } from "react";
+import { Send, CheckCircle2, AlertCircle, Info, Image, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
@@ -38,6 +38,8 @@ interface ExecutionSummary {
 export default function AIPromptPanel() {
   const [prompt, setPrompt] = useState("");
   const [lastExecution, setLastExecution] = useState<ExecutionSummary | null>(null);
+  const [screenshots, setScreenshots] = useState<string[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
   const { data: marketData } = useQuery<any>({
@@ -49,12 +51,13 @@ export default function AIPromptPanel() {
   });
 
   const executeTradeMutation = useMutation({
-    mutationFn: async (promptText: string) => {
+    mutationFn: async ({ promptText, images }: { promptText: string; images: string[] }) => {
       const res = await apiRequest("POST", "/api/trading/prompt", {
         prompt: promptText,
         marketData: marketData?.marketData || [],
         currentPositions: positions?.positions || [],
         autoExecute: true,
+        screenshots: images.length > 0 ? images : undefined,
         // Model is optional - AI router will use provider's default
       });
       return await res.json();
@@ -109,8 +112,48 @@ export default function AIPromptPanel() {
 
   const handleSubmit = () => {
     if (!prompt.trim()) return;
-    executeTradeMutation.mutate(prompt);
+    executeTradeMutation.mutate({ promptText: prompt, images: screenshots });
     setPrompt("");
+    setScreenshots([]);
+  };
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    
+    files.forEach((file) => {
+      if (!file.type.startsWith('image/')) {
+        toast({
+          title: "Invalid File",
+          description: "Please upload only image files",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (file.size > 5 * 1024 * 1024) {
+        toast({
+          title: "File Too Large",
+          description: "Screenshots must be under 5MB",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const base64 = event.target?.result as string;
+        setScreenshots((prev) => [...prev, base64]);
+      };
+      reader.readAsDataURL(file);
+    });
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const removeScreenshot = (index: number) => {
+    setScreenshots((prev) => prev.filter((_, i) => i !== index));
   };
 
   return (
@@ -128,12 +171,35 @@ export default function AIPromptPanel() {
         </div>
         
         <div className="space-y-2.5">
+          {screenshots.length > 0 && (
+            <div className="flex gap-2 flex-wrap">
+              {screenshots.map((screenshot, index) => (
+                <div key={index} className="relative group">
+                  <img 
+                    src={screenshot} 
+                    alt={`Screenshot ${index + 1}`}
+                    className="h-20 w-20 object-cover rounded-md border"
+                  />
+                  <Button
+                    size="icon"
+                    variant="destructive"
+                    className="absolute -top-2 -right-2 h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={() => removeScreenshot(index)}
+                    data-testid={`button-remove-screenshot-${index}`}
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+          
           <div className="relative">
             <Textarea
-              placeholder="E.g., 'Maximize Sharpe ratio by trading BTC and ETH perpetuals'"
+              placeholder="E.g., 'Maximize Sharpe ratio by trading BTC and ETH perpetuals' - Attach charts to explain market structure"
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
-              className="min-h-[120px] resize-none pr-12 text-sm"
+              className="min-h-[120px] resize-none pr-24 text-sm"
               data-testid="input-ai-prompt"
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
@@ -142,15 +208,36 @@ export default function AIPromptPanel() {
                 }
               }}
             />
-            <Button
-              size="icon"
-              className="absolute bottom-2 right-2"
-              onClick={handleSubmit}
-              disabled={!prompt.trim() || executeTradeMutation.isPending}
-              data-testid="button-submit-prompt"
-            >
-              <Send className="h-3.5 w-3.5" />
-            </Button>
+            <div className="absolute bottom-2 right-2 flex gap-1">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                multiple
+                className="hidden"
+                onChange={handleImageUpload}
+                data-testid="input-screenshot-upload"
+              />
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-9 w-9"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={executeTradeMutation.isPending}
+                data-testid="button-add-screenshot"
+              >
+                <Image className="h-3.5 w-3.5" />
+              </Button>
+              <Button
+                size="icon"
+                className="h-9 w-9"
+                onClick={handleSubmit}
+                disabled={!prompt.trim() || executeTradeMutation.isPending}
+                data-testid="button-submit-prompt"
+              >
+                <Send className="h-3.5 w-3.5" />
+              </Button>
+            </div>
           </div>
         </div>
       </Card>

@@ -72,7 +72,8 @@ export async function processTradingPrompt(
   marketData: MarketData[],
   currentPositions: any[],
   model?: string,
-  preferredProvider?: string
+  preferredProvider?: string,
+  screenshots?: string[]
 ): Promise<TradingStrategy> {
   
   try {
@@ -162,7 +163,38 @@ Output real-time executed trades with professional precision and risk-adjusted o
       },
       {
         role: "user" as const,
-        content: `User prompt: "${prompt}"
+        content: screenshots && screenshots.length > 0 
+          ? [
+              {
+                type: "text" as const,
+                text: `User prompt: "${prompt}"
+
+Current market data:
+${JSON.stringify(marketData, null, 2)}
+
+Market analysis:
+${marketTrends}
+
+Current positions:
+${currentPositions.length > 0 ? JSON.stringify(currentPositions, null, 2) : "No open positions"}
+
+${promptHistory.length > 0 ? `Recent user prompt history (for context on trading style and preferences):
+${promptHistory.map(p => `- ${new Date(p.timestamp).toLocaleString()}: "${p.prompt}"`).join('\n')}
+
+Consider the user's historical prompts to understand their trading style, risk tolerance, and strategic preferences. Build upon previous strategies and refine suggestions based on learned patterns.` : ''}
+
+The user has attached ${screenshots.length} screenshot(s) showing price charts or market structure. Analyze these images along with the prompt and market data to generate your trading strategy.
+
+Generate a trading strategy that addresses the user's current prompt while considering their historical preferences and maximizing risk-adjusted returns based on current market conditions. Remember to respond with ONLY the JSON object, no other text.`
+              },
+              ...screenshots.map(screenshot => ({
+                type: "image_url" as const,
+                image_url: {
+                  url: screenshot
+                }
+              }))
+            ]
+          : `User prompt: "${prompt}"
 
 Current market data:
 ${JSON.stringify(marketData, null, 2)}

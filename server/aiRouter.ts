@@ -4,7 +4,13 @@ import { decryptCredential } from "./encryption";
 
 export interface AIMessage {
   role: "system" | "user" | "assistant";
-  content: string;
+  content: string | Array<{
+    type: "text" | "image_url";
+    text?: string;
+    image_url?: {
+      url: string;
+    };
+  }>;
 }
 
 export interface AICompletionRequest {
@@ -163,6 +169,32 @@ function isModelCompatible(model: string, providerName: string): boolean {
 }
 
 /**
+ * Get vision-capable model for provider
+ */
+function getVisionModel(providerName: string): string {
+  switch (providerName) {
+    case "openai":
+      return "gpt-4o"; // Supports vision
+    case "xai":
+      return "grok-vision-beta"; // Supports vision
+    case "perplexity":
+      return "sonar-pro"; // Use best available
+    default:
+      return getDefaultModel(providerName);
+  }
+}
+
+/**
+ * Check if request contains images
+ */
+function hasImages(messages: AIMessage[]): boolean {
+  return messages.some(msg => 
+    Array.isArray(msg.content) && 
+    msg.content.some(part => part.type === "image_url")
+  );
+}
+
+/**
  * Make an AI completion request using the user's configured AI provider
  */
 export async function makeAIRequest(
@@ -172,12 +204,15 @@ export async function makeAIRequest(
 ): Promise<AICompletionResponse> {
   const { client, providerName, apiKeyId } = await getAIClient(userId, preferredProvider);
   
+  // Check if request contains images - use vision model if so
+  const containsImages = hasImages(request.messages);
+  
   // Use provided model or default for the provider
-  // If provided model is incompatible with provider, use default
-  let model = request.model || getDefaultModel(providerName);
+  // If request contains images, use vision-capable model
+  let model = request.model || (containsImages ? getVisionModel(providerName) : getDefaultModel(providerName));
   if (request.model && !isModelCompatible(request.model, providerName)) {
-    console.warn(`Model ${request.model} incompatible with provider ${providerName}, using default: ${getDefaultModel(providerName)}`);
-    model = getDefaultModel(providerName);
+    console.warn(`Model ${request.model} incompatible with provider ${providerName}, using ${containsImages ? 'vision' : 'default'}: ${containsImages ? getVisionModel(providerName) : getDefaultModel(providerName)}`);
+    model = containsImages ? getVisionModel(providerName) : getDefaultModel(providerName);
   }
   
   try {

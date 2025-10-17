@@ -70,11 +70,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
         autoExecute: z.boolean().optional().default(true),
         model: z.string().optional(), // Optional model - AI router will use provider default if not specified
         preferredProvider: z.enum(["perplexity", "openai", "xai"]).optional(), // Optional preferred AI provider
+        screenshots: z.array(z.string()).optional(), // Optional base64 encoded screenshots
       });
 
-      const { prompt, marketData, currentPositions = [], autoExecute = true, model, preferredProvider } = schema.parse(req.body);
+      const { prompt, marketData, currentPositions = [], autoExecute = true, model, preferredProvider, screenshots } = schema.parse(req.body);
 
-      const strategy = await processTradingPrompt(userId, prompt, marketData, currentPositions, model, preferredProvider);
+      // Validate screenshots if provided
+      if (screenshots && screenshots.length > 0) {
+        // Limit to 5 screenshots max
+        if (screenshots.length > 5) {
+          return res.status(400).json({
+            success: false,
+            error: "Maximum 5 screenshots allowed per prompt"
+          });
+        }
+
+        // Validate each screenshot
+        for (const screenshot of screenshots) {
+          // Must be a data URI
+          if (!screenshot.startsWith('data:image/')) {
+            return res.status(400).json({
+              success: false,
+              error: "Screenshots must be base64 encoded image data URIs"
+            });
+          }
+
+          // Check size (5MB limit per image)
+          const sizeInBytes = screenshot.length * 0.75; // Base64 is ~33% larger
+          if (sizeInBytes > 5 * 1024 * 1024) {
+            return res.status(400).json({
+              success: false,
+              error: "Each screenshot must be under 5MB"
+            });
+          }
+        }
+      }
+
+      const strategy = await processTradingPrompt(userId, prompt, marketData, currentPositions, model, preferredProvider, screenshots);
       
       let executionSummary = null;
       
