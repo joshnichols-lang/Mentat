@@ -52,15 +52,15 @@ export function PriceVolumeChart({ coin }: PriceVolumeChartProps) {
   // Subscribe to candle WebSocket
   useEffect(() => {
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const wsUrl = `${protocol}//${window.location.host}/ws/market-data`;
+    const wsUrl = `${protocol}//${window.location.host}/market-data`;
     const socket = new WebSocket(wsUrl);
 
     socket.onopen = () => {
       console.log("[Price Chart WS] Connected");
       // Subscribe to 1h candles for the selected coin
       socket.send(JSON.stringify({
-        type: "subscribe",
-        channel: "candle",
+        action: "subscribe",
+        type: "candle",
         coin: coin,
         interval: "1h"
       }));
@@ -112,8 +112,8 @@ export function PriceVolumeChart({ coin }: PriceVolumeChartProps) {
     return () => {
       if (socket.readyState === WebSocket.OPEN) {
         socket.send(JSON.stringify({
-          type: "unsubscribe",
-          channel: "candle",
+          action: "unsubscribe",
+          type: "candle",
           coin: coin,
           interval: "1h"
         }));
