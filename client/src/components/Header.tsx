@@ -29,7 +29,11 @@ export default function Header() {
     <header className="border-b px-6 py-3">
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2">
+          <div 
+            className="flex items-center gap-2 cursor-pointer hover-elevate active-elevate-2 px-2 py-1 rounded-md -ml-2" 
+            onClick={() => setLocation("/")}
+            data-testid="link-logo-home"
+          >
             <img src={logoUrl} alt="1fox logo" className="h-6 w-6" />
             <h1 className="text-lg font-bold">1fox</h1>
           </div>
