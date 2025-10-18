@@ -51,7 +51,8 @@ const previousVolumeData = new Map<string, Map<string, number>>();
  */
 async function discoverAndTrackExistingPositions(userId: number): Promise<void> {
   try {
-    const hyperliquid = await getUserHyperliquidClient(userId);
+    const userIdStr = userId.toString();
+    const hyperliquid = await getUserHyperliquidClient(userIdStr);
     
     // Get all positions, open orders, and market data
     const [positions, openOrders, marketData] = await Promise.all([
@@ -71,7 +72,7 @@ async function discoverAndTrackExistingPositions(userId: number): Promise<void> 
       const symbol = position.coin;
       
       // Check if we already have protective order state tracked for this position
-      const existingState = await storage.getProtectiveOrderState(userId, symbol);
+      const existingState = await storage.getProtectiveOrderState(userIdStr, symbol);
       
       if (existingState) {
         console.log(`[Position Discovery] ${symbol} already tracked, skipping`);
@@ -133,7 +134,7 @@ async function discoverAndTrackExistingPositions(userId: number): Promise<void> 
         const tpToStore = takeProfitPrice || (isLong ? (currentPrice * 1.05).toFixed(2) : (currentPrice * 0.95).toFixed(2));
         
         await storage.setInitialProtectiveOrders(
-          userId,
+          userIdStr,
           symbol,
           stopLossPrice,
           tpToStore,
@@ -430,22 +431,21 @@ ${activeTradingMode.parameters.preferredAssets ? `- Preferred Assets: ${activeTr
 ${activeTradingMode.description ? `- Description: ${activeTradingMode.description}` : ''}
 ${activeTradingMode.parameters.customRules ? `- Custom Rules:\n${activeTradingMode.parameters.customRules}` : ''}
 
-⚠️ STRATEGY COMPLIANCE RULES:
+⚠️ STRATEGY COMPLIANCE RULES (MANDATORY - NON-NEGOTIABLE):
 1. ONLY trade assets from the preferred assets list (if specified)
 2. NEVER exceed the max positions limit
-3. USE the specified leverage (${activeTradingMode.parameters.preferredLeverage || 5}x)
+3. **CRITICAL: USE EXACTLY ${activeTradingMode.parameters.preferredLeverage || 5}x LEVERAGE FOR EVERY TRADE** - This is the user's explicit requirement
 4. RISK exactly ${activeTradingMode.parameters.riskPercentage || 2}% per trade
 5. FOLLOW the timeframe and trading style specified above
 6. RESPECT all custom rules specified above
 
 ` : '⚠️ NO ACTIVE TRADING STRATEGY - Using general conservative approach\n'}
 ⚠️ MANDATORY POSITION SIZING & LEVERAGE RULES:
-1. **LEVERAGE SELECTION** (CRITICAL - impacts ALL calculations):
-   - **Recommended: 3x-5x leverage** for balanced risk/reward
-   - **Conservative: 2x-3x** for choppy/uncertain markets
-   - **Aggressive: 5x-10x** for high-conviction setups with tight stops
-   - **NEVER USE >10x** - extremely dangerous, liquidation risk too high
+1. **LEVERAGE REQUIREMENT** (CRITICAL - NON-NEGOTIABLE):
+   - **YOU MUST USE ${activeTradingMode ? activeTradingMode.parameters.preferredLeverage || 5 : 5}x LEVERAGE FOR ALL TRADES**
+   - This is the user's configured setting - DO NOT choose a different leverage
    - Higher leverage = tighter stop loss required = less room for price movement
+   - Cross margin mode is enabled (not isolated)
    
 2. **POSITION SIZE CALCULATION** (⚠️ LIMITS ARE ON MARGIN, NOT NOTIONAL):
    - Available Balance: $${withdrawable.toFixed(2)}
@@ -461,28 +461,19 @@ ${activeTradingMode.parameters.customRules ? `- Custom Rules:\n${activeTradingMo
    - ⚠️ DO NOT exceed $30 margin per position even if leverage allows bigger notional
    
 4. **INTELLIGENT STOP LOSS PLACEMENT** (LEVERAGE-ADJUSTED + market structure):
-   - **CRITICAL**: Higher leverage = MUCH TIGHTER stop loss required
+   - **CRITICAL**: With ${activeTradingMode ? activeTradingMode.parameters.preferredLeverage || 5 : 5}x leverage, stop losses MUST be VERY TIGHT
    - **FORMULA**: Max stop loss % from entry = (Risk % of account) / Leverage
-     * Example: 3% account risk ÷ 20x leverage = 0.15% max stop from entry price
-     * Example: 3% account risk ÷ 5x leverage = 0.6% max stop from entry price
-     * Example: 3% account risk ÷ 3x leverage = 1.0% max stop from entry price
+     * With ${activeTradingMode ? activeTradingMode.parameters.preferredLeverage || 5 : 5}x leverage and ${activeTradingMode ? activeTradingMode.parameters.riskPercentage || 2 : 2}% risk = ${((activeTradingMode ? activeTradingMode.parameters.riskPercentage || 2 : 2) / (activeTradingMode ? activeTradingMode.parameters.preferredLeverage || 5 : 5)).toFixed(3)}% max stop from entry
    - **PLACEMENT PROCESS**:
-     1. First, calculate maximum stop distance using leverage formula above
-     2. Then, find nearest support/resistance level within that range
-     3. If no strong level exists within range, DON'T TAKE THE TRADE
-   - **CONCRETE EXAMPLES**:
-     * ETH @ $3800, 20x leverage: Max 0.15% stop = $3794.30 stop loss (very tight!)
-     * ETH @ $3800, 10x leverage: Max 0.30% stop = $3788.60 stop loss (tight)
-     * ETH @ $3800, 5x leverage: Max 0.60% stop = $3777.20 stop loss (moderate)
-     * ETH @ $3800, 3x leverage: Max 1.0% stop = $3762.00 stop loss (comfortable)
-   - **NEVER use wide stops with high leverage** - this leads to liquidation
+     1. Calculate maximum stop distance using formula: ${((activeTradingMode ? activeTradingMode.parameters.riskPercentage || 2 : 2) / (activeTradingMode ? activeTradingMode.parameters.preferredLeverage || 5 : 5)).toFixed(3)}% from entry
+     2. Find nearest support/resistance level within that range
+     3. If no strong level exists within range, use scaled entries to improve average price
+   - **WARNING**: ${activeTradingMode && activeTradingMode.parameters.preferredLeverage && activeTradingMode.parameters.preferredLeverage > 20 ? 'VERY HIGH LEVERAGE - Stops must be EXTREMELY tight. Only enter on exact support/resistance touches.' : 'Use market structure for stop placement within calculated range.'}
    - **Position-specific risk**: Calculate based on THIS position's margin used, not notional value
    
 5. **CURRENT AVAILABLE: $${withdrawable.toFixed(2)}**:
    - **MAX MARGIN PER POSITION: $${(withdrawable * 0.30).toFixed(2)}** (this is the hard limit)
-   - This margin allows these notional sizes at different leverages:
-     * 3x leverage: max notional = $${((withdrawable * 0.30) * 3).toFixed(2)}
-     * 5x leverage: max notional = $${((withdrawable * 0.30) * 5).toFixed(2)}
+   - With ${activeTradingMode ? activeTradingMode.parameters.preferredLeverage || 5 : 5}x leverage: max notional = $${((withdrawable * 0.30) * (activeTradingMode ? activeTradingMode.parameters.preferredLeverage || 5 : 5)).toFixed(2)}
 
 MARKET REGIME ANALYSIS:
 ${marketRegime.reasoning}
@@ -822,7 +813,7 @@ Respond in JSON format:
       "symbol": "<ANY_SYMBOL_FROM_ANALYSIS>" (use ANY symbol from Top Gainers, Top Losers, or High Volume Assets - not limited to BTC/ETH/SOL),
       "side": "long" | "short",
       "size": "numeric value as string (e.g. '0.5', '1.0')",
-      "leverage": 1-10,
+      "leverage": ${activeTradingMode ? activeTradingMode.parameters.preferredLeverage || 5 : 5} (⚠️ CRITICAL: USE EXACTLY THIS VALUE - DO NOT CHOOSE YOUR OWN LEVERAGE),
       "reasoning": "Multi-timeframe analysis, entry trigger, volume confirmation, OR why canceling order",
       "expectedEntry": "numeric price as string" [for buy/sell],
       "triggerPrice": "numeric price as string" [for stop_loss/take_profit],
