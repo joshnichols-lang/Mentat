@@ -487,6 +487,8 @@ Analyze these past prompts to understand the user's:
    - NEVER include multiple take_profit actions for the same symbol
    - Each protective order should be for the FULL position size (no partial exits)
    - If you want to adjust an existing protective order, FIRST cancel it, THEN place the new one
+   - **CRITICAL: NO DUPLICATE ORDERS**: NEVER include multiple buy/sell actions with the same symbol, side, and price in one response
+   - Duplicate orders waste capital and create unnecessary positions - deduplication will automatically skip them
 13. Learn from user's historical prompts to align with their trading style and preferences
 14. Focus on maximizing Sharpe ratio through optimal sizing and risk management
 15. **BALANCE ACTION AND PATIENCE**: 

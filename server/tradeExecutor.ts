@@ -115,8 +115,61 @@ export async function executeTradeStrategy(
     }
   }
 
-  // Process non-protective actions first
+  // DEDUPLICATION: Remove duplicate buy/sell orders (same symbol, side, price, size)
+  // Uses exchange tick size and size decimals to catch post-rounding duplicates
+  const deduplicatedActions: TradingAction[] = [];
+  const seenOrders = new Set<string>();
+  
   for (const action of nonProtectiveActions) {
+    if (action.action === "buy" || action.action === "sell") {
+      // Fetch asset metadata for proper tick size rounding
+      const metadata = await hyperliquid.getAssetMetadata(action.symbol);
+      
+      if (!metadata) {
+        // If metadata fetch fails, allow the order through (will fail later with clear error)
+        console.warn(`[Trade Executor] Could not fetch metadata for ${action.symbol}, skipping deduplication check`);
+        deduplicatedActions.push(action);
+        continue;
+      }
+      
+      // Normalize price and size using EXCHANGE rounding rules (same as execution)
+      let normalizedPrice: string;
+      if (action.expectedEntry) {
+        const price = parseFloat(action.expectedEntry);
+        const roundedPrice = roundToTickSize(price, metadata.tickSize);
+        normalizedPrice = roundedPrice.toString();
+      } else {
+        normalizedPrice = 'market';
+      }
+      
+      const size = parseFloat(action.size);
+      const roundedSize = roundToSizeDecimals(size, metadata.szDecimals);
+      const normalizedSize = roundedSize.toString();
+      
+      // Create unique key: symbol-side-roundedPrice-roundedSize
+      const orderKey = `${action.symbol}-${action.side}-${normalizedPrice}-${normalizedSize}`;
+      
+      if (seenOrders.has(orderKey)) {
+        console.warn(`[Trade Executor] DUPLICATE DETECTED: Skipping duplicate ${action.action} order for ${action.symbol} ${action.side} ${normalizedSize} @ ${normalizedPrice}`);
+        skipCount++;
+        results.push({
+          success: true,
+          action,
+          error: "Duplicate order skipped - identical order already exists in this batch",
+        });
+        continue;
+      }
+      
+      seenOrders.add(orderKey);
+    }
+    
+    deduplicatedActions.push(action);
+  }
+
+  console.log(`[Trade Executor] Deduplicated ${nonProtectiveActions.length - deduplicatedActions.length} duplicate orders`);
+
+  // Process deduplicated non-protective actions first
+  for (const action of deduplicatedActions) {
     try {
       console.log(`[Trade Executor] Processing action: ${action.action} ${action.symbol} ${action.side}`);
       console.log(`[Trade Executor] Final symbol: ${action.symbol}`);
