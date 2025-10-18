@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type UpsertUser, type Trade, type InsertTrade, type Position, type InsertPosition, type PortfolioSnapshot, type InsertPortfolioSnapshot, type AiUsageLog, type InsertAiUsageLog, type MonitoringLog, type InsertMonitoringLog, type UserApiCredential, type InsertUserApiCredential, type ApiKey, type InsertApiKey, type ContactMessage, type InsertContactMessage, type ProtectiveOrderEvent, type InsertProtectiveOrderEvent, users, trades, positions, portfolioSnapshots, aiUsageLog, monitoringLog, userApiCredentials, apiKeys, contactMessages, protectiveOrderEvents } from "@shared/schema";
+import { type User, type InsertUser, type UpsertUser, type Trade, type InsertTrade, type Position, type InsertPosition, type PortfolioSnapshot, type InsertPortfolioSnapshot, type AiUsageLog, type InsertAiUsageLog, type MonitoringLog, type InsertMonitoringLog, type UserApiCredential, type InsertUserApiCredential, type ApiKey, type InsertApiKey, type ContactMessage, type InsertContactMessage, type ProtectiveOrderEvent, type InsertProtectiveOrderEvent, type UserTradeHistoryImport, type InsertUserTradeHistoryImport, type UserTradeHistoryTrade, type InsertUserTradeHistoryTrade, type TradeStyleProfile, type InsertTradeStyleProfile, users, trades, positions, portfolioSnapshots, aiUsageLog, monitoringLog, userApiCredentials, apiKeys, contactMessages, protectiveOrderEvents, userTradeHistoryImports, userTradeHistoryTrades, tradeStyleProfiles } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql, and, type SQL } from "drizzle-orm";
 import session from "express-session";
@@ -102,6 +102,25 @@ export interface IStorage {
   getContactMessages(limit?: number): Promise<ContactMessage[]>;
   getUserContactMessages(userId: string): Promise<ContactMessage[]>;
   resolveContactMessage(messageId: string, resolvedBy: string): Promise<ContactMessage | undefined>;
+  
+  // Trade History Import methods
+  createTradeHistoryImport(userId: string, data: InsertUserTradeHistoryImport): Promise<UserTradeHistoryImport>;
+  getTradeHistoryImports(userId: string, limit?: number): Promise<UserTradeHistoryImport[]>;
+  getTradeHistoryImport(userId: string, id: string): Promise<UserTradeHistoryImport | undefined>;
+  updateTradeHistoryImport(userId: string, id: string, updates: Partial<UserTradeHistoryImport>): Promise<UserTradeHistoryImport | undefined>;
+  deleteTradeHistoryImport(userId: string, id: string): Promise<void>;
+  
+  // Trade History Trades methods
+  createTradeHistoryTrade(userId: string, data: InsertUserTradeHistoryTrade): Promise<UserTradeHistoryTrade>;
+  getTradeHistoryTrades(userId: string, importId: string): Promise<UserTradeHistoryTrade[]>;
+  deleteTradeHistoryTradesByImportId(userId: string, importId: string): Promise<void>;
+  
+  // Trade Style Profile methods
+  createTradeStyleProfile(userId: string, data: InsertTradeStyleProfile): Promise<TradeStyleProfile>;
+  getTradeStyleProfiles(userId: string, limit?: number): Promise<TradeStyleProfile[]>;
+  getActiveTradeStyleProfile(userId: string): Promise<TradeStyleProfile | undefined>;
+  updateTradeStyleProfile(userId: string, id: string, updates: Partial<TradeStyleProfile>): Promise<TradeStyleProfile | undefined>;
+  deleteTradeStyleProfile(userId: string, id: string): Promise<void>;
 }
 
 const PostgresSessionStore = connectPg(session);
@@ -684,6 +703,107 @@ export class DbStorage implements IStorage {
       .where(eq(contactMessages.id, messageId))
       .returning();
     return result[0];
+  }
+
+  // Trade History Import methods
+  async createTradeHistoryImport(userId: string, data: InsertUserTradeHistoryImport): Promise<UserTradeHistoryImport> {
+    const result = await db.insert(userTradeHistoryImports)
+      .values({ ...data, userId })
+      .returning();
+    return result[0];
+  }
+
+  async getTradeHistoryImports(userId: string, limit: number = 50): Promise<UserTradeHistoryImport[]> {
+    return await db.select()
+      .from(userTradeHistoryImports)
+      .where(eq(userTradeHistoryImports.userId, userId))
+      .orderBy(desc(userTradeHistoryImports.createdAt))
+      .limit(limit);
+  }
+
+  async getTradeHistoryImport(userId: string, id: string): Promise<UserTradeHistoryImport | undefined> {
+    const result = await db.select()
+      .from(userTradeHistoryImports)
+      .where(withUserFilter(userTradeHistoryImports, userId, eq(userTradeHistoryImports.id, id)))
+      .limit(1);
+    return result[0];
+  }
+
+  async updateTradeHistoryImport(userId: string, id: string, updates: Partial<UserTradeHistoryImport>): Promise<UserTradeHistoryImport | undefined> {
+    const result = await db.update(userTradeHistoryImports)
+      .set(updates)
+      .where(withUserFilter(userTradeHistoryImports, userId, eq(userTradeHistoryImports.id, id)))
+      .returning();
+    return result[0];
+  }
+
+  async deleteTradeHistoryImport(userId: string, id: string): Promise<void> {
+    await db.delete(userTradeHistoryImports)
+      .where(withUserFilter(userTradeHistoryImports, userId, eq(userTradeHistoryImports.id, id)));
+  }
+
+  // Trade History Trades methods
+  async createTradeHistoryTrade(userId: string, data: InsertUserTradeHistoryTrade): Promise<UserTradeHistoryTrade> {
+    const result = await db.insert(userTradeHistoryTrades)
+      .values({ ...data, userId })
+      .returning();
+    return result[0];
+  }
+
+  async getTradeHistoryTrades(userId: string, importId: string): Promise<UserTradeHistoryTrade[]> {
+    return await db.select()
+      .from(userTradeHistoryTrades)
+      .where(
+        withUserFilter(userTradeHistoryTrades, userId, eq(userTradeHistoryTrades.importId, importId))
+      )
+      .orderBy(desc(userTradeHistoryTrades.entryTimestamp));
+  }
+
+  async deleteTradeHistoryTradesByImportId(userId: string, importId: string): Promise<void> {
+    await db.delete(userTradeHistoryTrades)
+      .where(
+        withUserFilter(userTradeHistoryTrades, userId, eq(userTradeHistoryTrades.importId, importId))
+      );
+  }
+
+  // Trade Style Profile methods
+  async createTradeStyleProfile(userId: string, data: InsertTradeStyleProfile): Promise<TradeStyleProfile> {
+    const result = await db.insert(tradeStyleProfiles)
+      .values({ ...data, userId })
+      .returning();
+    return result[0];
+  }
+
+  async getTradeStyleProfiles(userId: string, limit: number = 10): Promise<TradeStyleProfile[]> {
+    return await db.select()
+      .from(tradeStyleProfiles)
+      .where(eq(tradeStyleProfiles.userId, userId))
+      .orderBy(desc(tradeStyleProfiles.updatedAt))
+      .limit(limit);
+  }
+
+  async getActiveTradeStyleProfile(userId: string): Promise<TradeStyleProfile | undefined> {
+    const result = await db.select()
+      .from(tradeStyleProfiles)
+      .where(
+        withUserFilter(tradeStyleProfiles, userId, eq(tradeStyleProfiles.isActive, 1))
+      )
+      .orderBy(desc(tradeStyleProfiles.updatedAt))
+      .limit(1);
+    return result[0];
+  }
+
+  async updateTradeStyleProfile(userId: string, id: string, updates: Partial<TradeStyleProfile>): Promise<TradeStyleProfile | undefined> {
+    const result = await db.update(tradeStyleProfiles)
+      .set({ ...updates, updatedAt: sql`now()` })
+      .where(withUserFilter(tradeStyleProfiles, userId, eq(tradeStyleProfiles.id, id)))
+      .returning();
+    return result[0];
+  }
+
+  async deleteTradeStyleProfile(userId: string, id: string): Promise<void> {
+    await db.delete(tradeStyleProfiles)
+      .where(withUserFilter(tradeStyleProfiles, userId, eq(tradeStyleProfiles.id, id)));
   }
 }
 
