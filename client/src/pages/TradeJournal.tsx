@@ -50,19 +50,36 @@ export default function TradeJournal() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [symbolFilter, setSymbolFilter] = useState<string>("all");
 
-  const buildQueryUrl = () => {
-    const params = new URLSearchParams();
-    if (statusFilter !== "all") params.append("status", statusFilter);
-    if (symbolFilter !== "all") params.append("symbol", symbolFilter);
-    const queryString = params.toString();
-    return queryString ? `/api/trade-journal?${queryString}` : "/api/trade-journal";
-  };
-
-  const queryUrl = buildQueryUrl();
-
-  const { data: entriesData, isLoading } = useQuery<{ success: boolean; entries: TradeJournalEntry[] }>({
-    queryKey: [queryUrl]
+  const { data: entriesData, isLoading, error } = useQuery<{ success: boolean; entries: TradeJournalEntry[] }>({
+    queryKey: ["trade-journal", statusFilter, symbolFilter],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (statusFilter !== "all") params.append("status", statusFilter);
+      if (symbolFilter !== "all") params.append("symbol", symbolFilter);
+      const queryString = params.toString();
+      const url = queryString ? `/api/trade-journal?${queryString}` : "/api/trade-journal";
+      
+      const res = await fetch(url, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        credentials: "include"
+      });
+      
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error(`Trade journal fetch error (${res.status}):`, errorText);
+        throw new Error(`${res.status}: ${errorText}`);
+      }
+      
+      return await res.json();
+    }
   });
+
+  if (error) {
+    console.error("Trade journal query error:", error);
+  }
 
   const entries = entriesData?.entries || [];
   const symbols = Array.from(new Set(entries.map(e => e.symbol))).sort();
@@ -109,7 +126,7 @@ export default function TradeJournal() {
           TRADE JOURNAL
         </h1>
         <p className="text-sm uppercase tracking-wide text-muted-foreground mt-2">
-          AI REASONING & TRADE DOCUMENTATION
+          AI REASONING & TRADE DOCUMENTATION SYSTEM
         </p>
       </div>
 
