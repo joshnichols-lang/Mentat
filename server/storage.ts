@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type UpsertUser, type Trade, type InsertTrade, type Position, type InsertPosition, type PortfolioSnapshot, type InsertPortfolioSnapshot, type AiUsageLog, type InsertAiUsageLog, type MonitoringLog, type InsertMonitoringLog, type UserApiCredential, type InsertUserApiCredential, type ApiKey, type InsertApiKey, type ContactMessage, type InsertContactMessage, type ProtectiveOrderEvent, type InsertProtectiveOrderEvent, type UserTradeHistoryImport, type InsertUserTradeHistoryImport, type UserTradeHistoryTrade, type InsertUserTradeHistoryTrade, type TradeStyleProfile, type InsertTradeStyleProfile, users, trades, positions, portfolioSnapshots, aiUsageLog, monitoringLog, userApiCredentials, apiKeys, contactMessages, protectiveOrderEvents, userTradeHistoryImports, userTradeHistoryTrades, tradeStyleProfiles } from "@shared/schema";
+import { type User, type InsertUser, type UpsertUser, type Trade, type InsertTrade, type Position, type InsertPosition, type PortfolioSnapshot, type InsertPortfolioSnapshot, type AiUsageLog, type InsertAiUsageLog, type MonitoringLog, type InsertMonitoringLog, type UserApiCredential, type InsertUserApiCredential, type ApiKey, type InsertApiKey, type ContactMessage, type InsertContactMessage, type ProtectiveOrderEvent, type InsertProtectiveOrderEvent, type UserTradeHistoryImport, type InsertUserTradeHistoryImport, type UserTradeHistoryTrade, type InsertUserTradeHistoryTrade, type TradeStyleProfile, type InsertTradeStyleProfile, type TradeJournalEntry, type InsertTradeJournalEntry, users, trades, positions, portfolioSnapshots, aiUsageLog, monitoringLog, userApiCredentials, apiKeys, contactMessages, protectiveOrderEvents, userTradeHistoryImports, userTradeHistoryTrades, tradeStyleProfiles, tradeJournalEntries } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql, and, type SQL } from "drizzle-orm";
 import session from "express-session";
@@ -121,6 +121,26 @@ export interface IStorage {
   getActiveTradeStyleProfile(userId: string): Promise<TradeStyleProfile | undefined>;
   updateTradeStyleProfile(userId: string, id: string, updates: Partial<TradeStyleProfile>): Promise<TradeStyleProfile | undefined>;
   deleteTradeStyleProfile(userId: string, id: string): Promise<void>;
+  
+  // Trade Journal Entry methods
+  createTradeJournalEntry(userId: string, data: InsertTradeJournalEntry): Promise<TradeJournalEntry>;
+  getTradeJournalEntries(userId: string, filters?: { status?: string; symbol?: string; limit?: number }): Promise<TradeJournalEntry[]>;
+  getTradeJournalEntry(userId: string, id: string): Promise<TradeJournalEntry | undefined>;
+  getTradeJournalEntryByTradeId(userId: string, tradeId: string): Promise<TradeJournalEntry | undefined>;
+  updateTradeJournalEntry(userId: string, id: string, updates: Partial<TradeJournalEntry>): Promise<TradeJournalEntry | undefined>;
+  activateTradeJournalEntry(userId: string, id: string, actualEntryPrice: string): Promise<TradeJournalEntry | undefined>;
+  closeTradeJournalEntry(userId: string, id: string, closeData: {
+    closePrice: string;
+    closePnl: string;
+    closePnlPercent: string;
+    closeReasoning: string;
+    hitTarget: number;
+    hadAdjustments: number;
+    adjustmentDetails?: any;
+    whatWentWrong?: string;
+    lessonsLearned?: string;
+  }): Promise<TradeJournalEntry | undefined>;
+  deleteTradeJournalEntry(userId: string, id: string): Promise<void>;
 }
 
 const PostgresSessionStore = connectPg(session);
@@ -804,6 +824,107 @@ export class DbStorage implements IStorage {
   async deleteTradeStyleProfile(userId: string, id: string): Promise<void> {
     await db.delete(tradeStyleProfiles)
       .where(withUserFilter(tradeStyleProfiles, userId, eq(tradeStyleProfiles.id, id)));
+  }
+
+  // Trade Journal Entry methods
+  async createTradeJournalEntry(userId: string, data: InsertTradeJournalEntry): Promise<TradeJournalEntry> {
+    const result = await db.insert(tradeJournalEntries)
+      .values({ ...data, userId })
+      .returning();
+    return result[0];
+  }
+
+  async getTradeJournalEntries(userId: string, filters?: { status?: string; symbol?: string; limit?: number }): Promise<TradeJournalEntry[]> {
+    const limit = filters?.limit || 100;
+    const conditions: SQL[] = [];
+    
+    if (filters?.status) {
+      conditions.push(eq(tradeJournalEntries.status, filters.status));
+    }
+    if (filters?.symbol) {
+      conditions.push(eq(tradeJournalEntries.symbol, filters.symbol));
+    }
+
+    const whereClause = conditions.length > 0
+      ? withUserFilter(tradeJournalEntries, userId, ...conditions)
+      : withUserFilter(tradeJournalEntries, userId);
+
+    return await db.select()
+      .from(tradeJournalEntries)
+      .where(whereClause)
+      .orderBy(desc(tradeJournalEntries.createdAt))
+      .limit(limit);
+  }
+
+  async getTradeJournalEntry(userId: string, id: string): Promise<TradeJournalEntry | undefined> {
+    const result = await db.select()
+      .from(tradeJournalEntries)
+      .where(withUserFilter(tradeJournalEntries, userId, eq(tradeJournalEntries.id, id)))
+      .limit(1);
+    return result[0];
+  }
+
+  async getTradeJournalEntryByTradeId(userId: string, tradeId: string): Promise<TradeJournalEntry | undefined> {
+    const result = await db.select()
+      .from(tradeJournalEntries)
+      .where(withUserFilter(tradeJournalEntries, userId, eq(tradeJournalEntries.tradeId, tradeId)))
+      .limit(1);
+    return result[0];
+  }
+
+  async updateTradeJournalEntry(userId: string, id: string, updates: Partial<TradeJournalEntry>): Promise<TradeJournalEntry | undefined> {
+    const result = await db.update(tradeJournalEntries)
+      .set(updates)
+      .where(withUserFilter(tradeJournalEntries, userId, eq(tradeJournalEntries.id, id)))
+      .returning();
+    return result[0];
+  }
+
+  async activateTradeJournalEntry(userId: string, id: string, actualEntryPrice: string): Promise<TradeJournalEntry | undefined> {
+    const result = await db.update(tradeJournalEntries)
+      .set({ 
+        status: "active",
+        actualEntryPrice,
+        activatedAt: sql`now()`
+      })
+      .where(withUserFilter(tradeJournalEntries, userId, eq(tradeJournalEntries.id, id)))
+      .returning();
+    return result[0];
+  }
+
+  async closeTradeJournalEntry(userId: string, id: string, closeData: {
+    closePrice: string;
+    closePnl: string;
+    closePnlPercent: string;
+    closeReasoning: string;
+    hitTarget: number;
+    hadAdjustments: number;
+    adjustmentDetails?: any;
+    whatWentWrong?: string;
+    lessonsLearned?: string;
+  }): Promise<TradeJournalEntry | undefined> {
+    const result = await db.update(tradeJournalEntries)
+      .set({
+        status: "closed",
+        closePrice: closeData.closePrice,
+        closePnl: closeData.closePnl,
+        closePnlPercent: closeData.closePnlPercent,
+        closeReasoning: closeData.closeReasoning,
+        hitTarget: closeData.hitTarget,
+        hadAdjustments: closeData.hadAdjustments,
+        adjustmentDetails: closeData.adjustmentDetails,
+        whatWentWrong: closeData.whatWentWrong,
+        lessonsLearned: closeData.lessonsLearned,
+        closedAt: sql`now()`
+      })
+      .where(withUserFilter(tradeJournalEntries, userId, eq(tradeJournalEntries.id, id)))
+      .returning();
+    return result[0];
+  }
+
+  async deleteTradeJournalEntry(userId: string, id: string): Promise<void> {
+    await db.delete(tradeJournalEntries)
+      .where(withUserFilter(tradeJournalEntries, userId, eq(tradeJournalEntries.id, id)));
   }
 }
 
