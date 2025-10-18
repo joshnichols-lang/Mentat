@@ -1,4 +1,4 @@
-import { Wallet, LogOut, UserCheck, Settings, Users, ChevronDown, MessageSquare, History, BookOpen, Target } from "lucide-react";
+import { Wallet, LogOut, UserCheck, Settings, Users, ChevronDown, MessageSquare, History, BookOpen, Target, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -126,6 +126,14 @@ export default function Header() {
             data-testid="button-trading-modes"
           >
             <Target className="h-4 w-4" />
+          </Button>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={() => setLocation("/charts")}
+            data-testid="button-charts"
+          >
+            <TrendingUp className="h-4 w-4" />
           </Button>
           <Button 
             variant="ghost" 

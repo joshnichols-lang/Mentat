@@ -17,6 +17,7 @@ import Settings from "@/pages/Settings";
 import TradeHistory from "@/pages/TradeHistory";
 import TradeJournal from "@/pages/TradeJournal";
 import TradingModes from "@/pages/TradingModes";
+import Charts from "@/pages/Charts";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -32,6 +33,7 @@ function Router() {
       <ProtectedRoute path="/trade-history" component={TradeHistory} />
       <ProtectedRoute path="/trade-journal" component={TradeJournal} />
       <ProtectedRoute path="/trading-modes" component={TradingModes} />
+      <ProtectedRoute path="/charts" component={Charts} />
       <ProtectedRoute path="/" component={Dashboard} />
       <Route component={NotFound} />
     </Switch>
