@@ -28,6 +28,8 @@ Preferred communication style: Simple, everyday language.
 **Trade Performance Evaluation & Learning System:** Enables continuous AI self-improvement via a feedback loop.
 - **Evaluation Process:** Automatic on trade close, including 8 quantitative metrics (e.g., PnL vs expectancy, stop-loss adherence, R:R ratio) and AI-powered qualitative analysis for actionable insights.
 - **Learning Repository:** Utilizes decay-based weighting (30-day half-life) for insights, regime-aware filtering, and evidence accumulation to strengthen learnings.
+- **Safety Guards:** Weight clamping [0.001-1.0], isFinite() validation, future timestamp reset, invalid data logging to prevent edge cases.
+- **Daily Aggregation:** Scheduler runs at 2 AM UTC and on server startup to update decay weights, archive low-confidence learnings, and compute performance metrics.
 - **Integration with AI Trading:** Top 5-10 regime-filtered learnings are provided to the AI for each autonomous trading cycle, influencing trade decisions.
 **Market Data & Indicators:** Dual WebSocket service for real-time market data. Backend provides CVD Calculator and Volume Profile Calculator for AI trading decisions.
 **Core Features:** Autonomous trading engine, order management, configurable monitoring frequency (Disabled, 1 min, 5 min, 30 min, 1 hour), enhanced performance metrics (Sterling, Omega, Max Drawdown, Sharpe, Sortino, Calmar ratios), and trading controls (individual and "Close All" positions).
