@@ -65,7 +65,7 @@ export async function analyzeTradeHistory(
         messages: [
           {
             role: "system",
-            content: "You are a professional trading analyst specializing in identifying trading patterns and style characteristics. Analyze the provided trade history and extract actionable insights. Respond with valid JSON only."
+            content: "You are a professional trading analyst specializing in identifying trading patterns and style characteristics. Analyze the provided trade history and extract actionable insights. You MUST respond with ONLY valid JSON, no markdown formatting, no code blocks, no explanations - just raw JSON."
           },
           {
             role: "user",
@@ -77,7 +77,19 @@ export async function analyzeTradeHistory(
       "perplexity"
     );
 
-    const aiInsights = JSON.parse(aiResponse.content);
+    // Extract JSON from AI response (handle markdown code blocks)
+    let jsonContent = aiResponse.content.trim();
+    
+    // Remove markdown code blocks if present
+    if (jsonContent.includes('```')) {
+      const jsonMatch = jsonContent.match(/```(?:json)?\s*\n?([\s\S]*?)\n?```/);
+      if (jsonMatch) {
+        jsonContent = jsonMatch[1].trim();
+      }
+    }
+    
+    // Try to parse JSON
+    const aiInsights = JSON.parse(jsonContent);
     
     // Combine calculated metrics with AI insights
     const analysisResult: TradeAnalysisResult = {
