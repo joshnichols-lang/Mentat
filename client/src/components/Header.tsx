@@ -1,4 +1,4 @@
-import { Wallet, LogOut, UserCheck, Settings, Users, ChevronDown, MessageSquare, History, BookOpen, Target, TrendingUp } from "lucide-react";
+import { Wallet, LogOut, UserCheck, Settings, Users, ChevronDown, MessageSquare, History, BookOpen, Target, TrendingUp, Home } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -47,6 +47,15 @@ export default function Header() {
         </div>
         
         <div className="flex items-center gap-2">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={() => setLocation("/")}
+            data-testid="button-dashboard"
+          >
+            <Home className="h-4 w-4 mr-2" />
+            Dashboard
+          </Button>
           <AgentModeToggle />
           {user?.role === "admin" && (
             <DropdownMenu>
