@@ -1857,32 +1857,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/trade-journal/:id", requireVerifiedUser, async (req, res) => {
-    try {
-      const userId = getUserId(req);
-      const { id } = req.params;
-
-      const deleted = await storage.deleteTradeJournalEntry(userId, id);
-      if (!deleted) {
-        return res.status(404).json({
-          success: false,
-          error: "Journal entry not found"
-        });
-      }
-
-      res.json({
-        success: true,
-        message: "Journal entry deleted successfully"
-      });
-    } catch (error: any) {
-      console.error("Error deleting journal entry:", error);
-      res.status(500).json({
-        success: false,
-        error: "Failed to delete journal entry"
-      });
-    }
-  });
-
   app.post("/api/trade-journal/:id/activate", requireVerifiedUser, async (req, res) => {
     try {
       const userId = getUserId(req);
@@ -1978,6 +1952,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({
         success: false,
         error: "Failed to delete journal entry"
+      });
+    }
+  });
+
+  app.delete("/api/trade-journal", requireVerifiedUser, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      
+      // Delete all trade journal entries for this user
+      await storage.deleteAllTradeJournalEntries(userId);
+
+      res.json({
+        success: true,
+        message: "All journal entries deleted successfully"
+      });
+    } catch (error: any) {
+      console.error("Error deleting all journal entries:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to delete all journal entries"
       });
     }
   });

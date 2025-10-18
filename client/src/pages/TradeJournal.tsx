@@ -66,6 +66,7 @@ export default function TradeJournal() {
   const [symbolFilter, setSymbolFilter] = useState<string>("all");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [entryToDelete, setEntryToDelete] = useState<string | null>(null);
+  const [deleteAllDialogOpen, setDeleteAllDialogOpen] = useState(false);
   const { toast } = useToast();
 
   const { data: entriesData, isLoading, error } = useQuery<{ success: boolean; entries: TradeJournalEntry[] }>({
@@ -124,6 +125,29 @@ export default function TradeJournal() {
     }
   });
 
+  const deleteAllMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest<{ success: boolean; message: string }>(`/api/trade-journal`, {
+        method: "DELETE"
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["trade-journal"] });
+      toast({
+        title: "All Entries Deleted",
+        description: "All trade journal entries have been deleted successfully.",
+      });
+      setDeleteAllDialogOpen(false);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Delete All Failed",
+        description: error.message || "Failed to delete all journal entries",
+        variant: "destructive",
+      });
+    }
+  });
+
   const handleDeleteClick = (entryId: string) => {
     setEntryToDelete(entryId);
     setDeleteDialogOpen(true);
@@ -133,6 +157,10 @@ export default function TradeJournal() {
     if (entryToDelete) {
       deleteMutation.mutate(entryToDelete);
     }
+  };
+
+  const confirmDeleteAll = () => {
+    deleteAllMutation.mutate();
   };
 
   const entries = entriesData?.entries || [];
@@ -228,11 +256,25 @@ export default function TradeJournal() {
 
       {/* Entries Table */}
       <Card className="rounded-none border-solid">
-        <CardHeader>
-          <CardTitle className="text-xl uppercase tracking-normal">JOURNAL ENTRIES</CardTitle>
-          <CardDescription className="uppercase text-xs tracking-wider">
-            {entries.length} TOTAL ENTRIES
-          </CardDescription>
+        <CardHeader className="flex flex-row items-center justify-between gap-4 space-y-0">
+          <div className="flex-1">
+            <CardTitle className="text-xl uppercase tracking-normal">JOURNAL ENTRIES</CardTitle>
+            <CardDescription className="uppercase text-xs tracking-wider">
+              {entries.length} TOTAL ENTRIES
+            </CardDescription>
+          </div>
+          {entries.length > 0 && (
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => setDeleteAllDialogOpen(true)}
+              data-testid="button-delete-all"
+              className="uppercase text-xs"
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              Delete All
+            </Button>
+          )}
         </CardHeader>
         <CardContent>
           {isLoading ? (
@@ -569,6 +611,29 @@ export default function TradeJournal() {
               data-testid="button-confirm-delete"
             >
               DELETE
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete All Confirmation Dialog */}
+      <AlertDialog open={deleteAllDialogOpen} onOpenChange={setDeleteAllDialogOpen}>
+        <AlertDialogContent className="rounded-none border-solid">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="uppercase tracking-normal">DELETE ALL JOURNAL ENTRIES?</AlertDialogTitle>
+            <AlertDialogDescription className="text-sm">
+              This action cannot be undone. This will permanently delete ALL ({entries.length}) trade journal entries from the database.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="uppercase text-xs" data-testid="button-cancel-delete-all">CANCEL</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDeleteAll}
+              className="uppercase text-xs bg-destructive hover:bg-destructive/90"
+              data-testid="button-confirm-delete-all"
+              disabled={deleteAllMutation.isPending}
+            >
+              {deleteAllMutation.isPending ? "DELETING..." : "DELETE ALL"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
