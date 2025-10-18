@@ -1,8 +1,8 @@
-import { db } from "./db";
-import { trades, tradeEvaluations, strategyLearnings, marketRegimeSnapshots } from "./db/schema";
+import { db } from "../db";
+import { trades, tradeEvaluations, strategyLearnings, marketRegimeSnapshots } from "../db/schema";
 import { eq, and, desc } from "drizzle-orm";
-import { getUserAIRouter } from "./aiRouter";
-import type { Trade, InsertTradeEvaluation, InsertStrategyLearning } from "./db/schema";
+import { getAIRouter } from "./aiRouter";
+import type { Trade, InsertTradeEvaluation, InsertStrategyLearning } from "../db/schema";
 
 interface TradeEvaluationMetrics {
   pnlVsExpectancy: number | null;
@@ -209,7 +209,7 @@ async function generateAIEvaluation(
   metrics: TradeEvaluationMetrics,
   marketContext: any
 ): Promise<AIEvaluationResponse> {
-  const aiRouter = await getUserAIRouter(userId);
+  const aiRouter = await getAIRouter(userId);
 
   const prompt = `Analyze this completed trade and provide insights on what worked and what didn't:
 
@@ -368,22 +368,23 @@ export async function getRecentLearnings(
 ): Promise<Array<{ insight: string; confidence: number; category: string }>> {
   const halfLifeDays = 30; // Learnings decay with 30-day half-life
 
-  let query = db
-    .select()
-    .from(strategyLearnings)
-    .where(
-      and(
-        eq(strategyLearnings.userId, userId),
-        eq(strategyLearnings.isActive, 1)
-      )
-    );
+  // Build conditions
+  const conditions = [
+    eq(strategyLearnings.userId, userId),
+    eq(strategyLearnings.isActive, 1),
+  ];
 
-  // Filter by regime if specified
+  // Add regime filter if specified
   if (marketRegime) {
-    query = query.where(eq(strategyLearnings.marketRegime, marketRegime)) as any;
+    conditions.push(eq(strategyLearnings.marketRegime, marketRegime));
   }
 
-  const learnings = await query.orderBy(desc(strategyLearnings.updatedAt)).limit(limit * 2);
+  const learnings = await db
+    .select()
+    .from(strategyLearnings)
+    .where(and(...conditions))
+    .orderBy(desc(strategyLearnings.updatedAt))
+    .limit(limit * 2);
 
   // Apply decay weighting
   const now = new Date();
