@@ -211,6 +211,10 @@ export async function executeTradeStrategy(
   const hyperliquid = await getUserHyperliquidClient(userId);
   const results: ExecutionResult[] = [];
   
+  // Fetch user's margin mode preference (default: isolated)
+  const user = await storage.getUser(userId);
+  const useIsolatedMargin = !user || user.marginMode !== "cross"; // Default to isolated if not set or if user explicitly chose isolated
+  
   let successCount = 0;
   let failCount = 0;
   let skipCount = 0;
@@ -489,7 +493,7 @@ export async function executeTradeStrategy(
       console.log(`[Trade Executor] ⚠️ DEBUG: Action before execution:`, JSON.stringify(action, null, 2));
       // Get protective actions for this symbol to include in journal entry
       const symbolProtectiveActions = priceValidatedProtectiveGroups.get(action.symbol) || [];
-      const openResult = await executeOpenPosition(hyperliquid, action, userId, symbolProtectiveActions);
+      const openResult = await executeOpenPosition(hyperliquid, action, userId, useIsolatedMargin, symbolProtectiveActions);
       results.push(openResult);
       
       if (openResult.success) {
@@ -780,6 +784,7 @@ async function executeOpenPosition(
   hyperliquid: any,
   action: TradingAction,
   userId: string,
+  useIsolatedMargin: boolean,
   protectiveActions?: TradingAction[] // Optional protective orders for this symbol
 ): Promise<ExecutionResult> {
   try {
@@ -811,10 +816,10 @@ async function executeOpenPosition(
       console.warn(`[Trade Executor] ⚠️ Requested leverage ${requestedLeverage}x exceeds max ${metadata.maxLeverage}x for ${action.symbol}. Capping to ${actualLeverage}x.`);
     }
     
-    console.log(`[Trade Executor] Setting leverage to ${actualLeverage}x for ${action.symbol}...`);
+    console.log(`[Trade Executor] Setting leverage to ${actualLeverage}x for ${action.symbol} (${useIsolatedMargin ? 'isolated' : 'cross'} margin)...`);
     const leverageResult = await hyperliquid.updateLeverage({
       coin: action.symbol,
-      is_cross: true, // Use cross margin (isolated margin not supported by default)
+      is_cross: !useIsolatedMargin, // Use user's margin mode preference (default: isolated)
       leverage: actualLeverage
     });
     

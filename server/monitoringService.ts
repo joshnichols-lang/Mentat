@@ -431,7 +431,7 @@ ${activeTradingMode.parameters.customRules ? `- Custom Rules:\n${activeTradingMo
    - **YOU MUST USE ${activeTradingMode ? activeTradingMode.parameters.preferredLeverage || 5 : 5}x LEVERAGE FOR ALL TRADES**
    - This is the user's configured setting - DO NOT choose a different leverage
    - Higher leverage = tighter stop loss required = less room for price movement
-   - Cross margin mode is enabled (not isolated)
+   - Margin mode: ${user.marginMode || 'isolated'} (user can configure isolated or cross margin)
    
 2. **POSITION SIZE CALCULATION**:
    - Available Balance: $${withdrawable.toFixed(2)}
