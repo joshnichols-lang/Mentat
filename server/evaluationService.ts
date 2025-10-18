@@ -3,6 +3,7 @@ import { trades, tradeEvaluations, strategyLearnings, marketRegimeSnapshots } fr
 import { eq, and, desc } from "drizzle-orm";
 import { makeAIRequest } from "./aiRouter";
 import type { Trade, InsertTradeEvaluation, InsertStrategyLearning } from "@shared/schema";
+import { storage } from "./storage";
 
 interface TradeEvaluationMetrics {
   pnlVsExpectancy: number | null;
@@ -86,9 +87,9 @@ export async function evaluateCompletedTrade(
   // Store evaluation
   const evaluation: InsertTradeEvaluation = {
     tradeId: trade.id,
-    pnlVsExpectancy: metrics.pnlVsExpectancy,
+    pnlVsExpectancy: metrics.pnlVsExpectancy !== null ? metrics.pnlVsExpectancy.toString() : null,
     stopLossAdherence: metrics.stopLossAdherence,
-    riskRewardRatio: metrics.riskRewardRatio,
+    riskRewardRatio: metrics.riskRewardRatio !== null ? metrics.riskRewardRatio.toString() : null,
     entryQuality: metrics.entryQuality.toString(),
     exitQuality: metrics.exitQuality.toString(),
     slippagePercent: metrics.slippagePercent.toString(),
@@ -107,6 +108,59 @@ export async function evaluateCompletedTrade(
   });
 
   console.log(`[Evaluation] Stored evaluation for trade ${tradeId}`);
+
+  // Update journal entry if it exists
+  try {
+    const journalEntry = await storage.getTradeJournalEntryByTradeId(userId, tradeId);
+    
+    if (journalEntry) {
+      // Calculate PnL percentage
+      const entryPrice = parseFloat(trade.entryPrice);
+      const exitPrice = trade.exitPrice ? parseFloat(trade.exitPrice) : 0;
+      const pnl = trade.pnl ? parseFloat(trade.pnl) : 0;
+      const size = parseFloat(trade.size);
+      
+      const pnlPercent = entryPrice > 0 
+        ? ((exitPrice - entryPrice) / entryPrice * 100 * (trade.side === "long" ? 1 : -1))
+        : 0;
+      
+      // Determine if target was hit (1 if profit > 0, 0 otherwise)
+      const hitTarget = pnl > 0 ? 1 : 0;
+      
+      // Check if there were adjustments (based on stop loss adherence metric)
+      const hadAdjustments = metrics.stopLossAdherence < 1 ? 1 : 0;
+      
+      // Extract what went wrong from anomalies if any
+      const whatWentWrong = aiAnalysis.anomalies && aiAnalysis.anomalies.length > 0
+        ? aiAnalysis.anomalies.map(a => `${a.type} (${a.severity}): ${a.description}`).join("; ")
+        : undefined;
+      
+      // Format lessons learned for journal
+      const lessonsLearnedText = aiAnalysis.lessonsLearned
+        ? Object.entries(aiAnalysis.lessonsLearned)
+            .filter(([_, lessons]) => lessons.length > 0)
+            .map(([category, lessons]) => `${category}: ${lessons.join(", ")}`)
+            .join("; ")
+        : undefined;
+      
+      await storage.closeTradeJournalEntry(userId, journalEntry.id, {
+        closePrice: trade.exitPrice || "0",
+        closePnl: trade.pnl || "0",
+        closePnlPercent: pnlPercent.toFixed(2),
+        closeReasoning: aiAnalysis.summary,
+        hitTarget,
+        hadAdjustments,
+        adjustmentDetails: hadAdjustments ? { stopLossAdherence: metrics.stopLossAdherence } : undefined,
+        whatWentWrong,
+        lessonsLearned: lessonsLearnedText,
+      });
+      
+      console.log(`[Evaluation] Closed journal entry ${journalEntry.id} for trade ${tradeId}`);
+    }
+  } catch (error: any) {
+    console.error(`[Evaluation] Failed to close journal entry for trade ${tradeId}:`, error);
+    // Don't fail the evaluation if journal update fails
+  }
 
   // Extract and store strategy learnings
   await extractStrategyLearnings(userId, trade, aiAnalysis);

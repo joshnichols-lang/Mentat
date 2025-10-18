@@ -32,6 +32,7 @@ interface ExecutionResult {
   action: TradingAction;
   orderId?: string;
   executedPrice?: string;
+  journalEntryId?: string;
   error?: string;
 }
 
@@ -41,6 +42,66 @@ interface ExecutionSummary {
   failedExecutions: number;
   skippedActions: number;
   results: ExecutionResult[];
+}
+
+// Helper function to create journal entry for a trade
+async function createJournalEntry(
+  userId: string,
+  action: TradingAction,
+  orderResult: { success: boolean; executedPrice?: string; response?: any }
+): Promise<string | null> {
+  try {
+    // Only create journal entries for buy/sell actions (not protective orders)
+    if (action.action !== "buy" && action.action !== "sell") {
+      return null;
+    }
+
+    // Build expectations object
+    const expectations: any = {
+      entry: action.expectedEntry || "market",
+      size: action.size,
+    };
+
+    if (action.stopLoss) {
+      expectations.stopLoss = action.stopLoss;
+    }
+    if (action.takeProfit) {
+      expectations.takeProfit = action.takeProfit;
+    }
+
+    // Determine entry status based on order result
+    let status: "planned" | "active" = "planned";
+    let actualEntryPrice: string | undefined = undefined;
+
+    // If order was filled immediately, mark as active
+    if (orderResult.response?.status === "filled" && orderResult.executedPrice) {
+      status = "active";
+      actualEntryPrice = orderResult.executedPrice;
+    }
+
+    const entryData = {
+      tradeId: null, // Will be updated later when position is tracked
+      symbol: action.symbol,
+      side: action.side,
+      entryType: "limit" as const,
+      status,
+      entryReasoning: action.reasoning,
+      expectations,
+      plannedEntryPrice: action.expectedEntry || null,
+      actualEntryPrice: actualEntryPrice || null,
+      size: action.size,
+      activatedAt: status === "active" ? new Date() : null,
+    };
+
+    const entry = await storage.createTradeJournalEntry(userId, entryData);
+    console.log(`[Journal] Created ${status} journal entry ${entry.id} for ${action.symbol} ${action.side}`);
+    
+    return entry.id;
+  } catch (error: any) {
+    console.error("[Journal] Failed to create journal entry:", error);
+    // Don't fail the trade execution if journal creation fails
+    return null;
+  }
 }
 
 // Helper function to validate and parse numeric inputs with explicit error messages
@@ -447,7 +508,7 @@ export async function executeTradeStrategy(
       }
 
       // Handle "buy" and "sell" actions (opening new positions)
-      const openResult = await executeOpenPosition(hyperliquid, action);
+      const openResult = await executeOpenPosition(hyperliquid, action, userId);
       results.push(openResult);
       
       if (openResult.success) {
@@ -455,7 +516,7 @@ export async function executeTradeStrategy(
         
         // Log trade to database
         try {
-          await storage.createTrade(userId, {
+          const trade = await storage.createTrade(userId, {
             symbol: action.symbol.replace("-PERP", ""),
             side: action.side,
             type: action.expectedEntry ? "limit" : "market",
@@ -465,6 +526,14 @@ export async function executeTradeStrategy(
             status: "open",
             pnl: "0",
           });
+          
+          // Link journal entry to the trade if journal entry was created
+          if (openResult.journalEntryId && trade.id) {
+            await storage.updateTradeJournalEntry(userId, openResult.journalEntryId, {
+              tradeId: trade.id,
+            });
+            console.log(`[Journal] Linked journal entry ${openResult.journalEntryId} to trade ${trade.id}`);
+          }
         } catch (dbError) {
           console.error("Failed to log trade to database:", dbError);
         }
@@ -728,7 +797,8 @@ export async function executeTradeStrategy(
 
 async function executeOpenPosition(
   hyperliquid: any,
-  action: TradingAction
+  action: TradingAction,
+  userId: string
 ): Promise<ExecutionResult> {
   try {
     // Fetch asset metadata for tick size and size decimals
@@ -803,10 +873,18 @@ async function executeOpenPosition(
 
     console.log(`[Trade Executor] Order succeeded for ${action.symbol}:`, result.response);
     
+    // Create journal entry for the trade
+    const journalEntryId = await createJournalEntry(userId, action, {
+      success: true,
+      executedPrice,
+      response: result.response
+    });
+    
     return {
       success: true,
       action,
       executedPrice,
+      journalEntryId: journalEntryId || undefined,
     };
   } catch (error: any) {
     return {
