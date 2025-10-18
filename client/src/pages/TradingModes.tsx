@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Plus, Edit, Trash2, CheckCircle2, Circle } from "lucide-react";
 import { useState } from "react";
+import Header from "@/components/Header";
 
 type TradingMode = {
   id: string;
@@ -202,8 +203,10 @@ export default function TradingModes() {
   const activeMode = modes.find((m) => m.isActive);
 
   return (
-    <div className="h-full overflow-y-auto">
-      <div className="container mx-auto p-6 max-w-6xl">
+    <div className="flex flex-col h-screen">
+      <Header />
+      <div className="flex-1 overflow-y-auto">
+        <div className="container mx-auto p-6 max-w-6xl">
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-3xl font-bold mb-2" data-testid="text-title">Trading Strategies</h1>
@@ -531,6 +534,7 @@ export default function TradingModes() {
             ))}
           </div>
         )}
+        </div>
       </div>
     </div>
   );

@@ -11,6 +11,7 @@ import { Upload, FileText, TrendingUp, AlertCircle, Trash2 } from "lucide-react"
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import Header from "@/components/Header";
 
 interface TradeHistoryImport {
   id: string;
@@ -164,7 +165,10 @@ export default function TradeHistory() {
   const activeProfile = profilesData?.profiles?.[0];
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div className="flex flex-col h-screen">
+      <Header />
+      <div className="flex-1 overflow-y-auto">
+        <div className="container mx-auto p-6 space-y-6">
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold">Trade History</h1>
@@ -346,6 +350,8 @@ export default function TradeHistory() {
           )}
         </CardContent>
       </Card>
+        </div>
+      </div>
     </div>
   );
 }

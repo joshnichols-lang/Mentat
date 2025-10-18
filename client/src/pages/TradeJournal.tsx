@@ -10,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { BookOpen, TrendingUp, TrendingDown, Circle, CheckCircle2, Clock } from "lucide-react";
+import Header from "@/components/Header";
 
 interface TradeJournalEntry {
   id: string;
@@ -87,7 +88,10 @@ export default function TradeJournal() {
   };
 
   return (
-    <div className="container mx-auto max-w-[1600px] p-6 space-y-6" data-testid="page-trade-journal">
+    <div className="flex flex-col h-screen">
+      <Header />
+      <div className="flex-1 overflow-y-auto">
+        <div className="container mx-auto max-w-[1600px] p-6 space-y-6" data-testid="page-trade-journal">
       {/* Newspaper Header */}
       <div className="border-b-4 border-double border-foreground pb-4">
         <h1 className="text-4xl font-bold uppercase tracking-tight flex items-center gap-3" data-testid="text-page-title">
@@ -433,6 +437,8 @@ export default function TradeJournal() {
           )}
         </DialogContent>
       </Dialog>
+        </div>
+      </div>
     </div>
   );
 }
