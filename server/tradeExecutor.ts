@@ -315,65 +315,162 @@ export async function executeTradeStrategy(
     try {
       console.log(`[Trade Executor] Processing ${protectiveActions.length} protective orders for ${symbol}`);
       
+      // Fetch metadata for price comparison
+      const metadata = await hyperliquid.getAssetMetadata(symbol);
+      if (!metadata) {
+        console.warn(`[Trade Executor] Could not fetch metadata for ${symbol}, placing orders without comparison`);
+      }
+      
       // Cancel ALL existing protective orders for this symbol ONCE
       console.log(`[Trade Executor] Checking for existing protective orders for ${symbol}...`);
       const openOrders = await hyperliquid.getOpenOrders();
       console.log(`[Trade Executor] Total open orders found: ${openOrders?.length || 0}`);
       
-      // Filter for reduceOnly orders on this symbol
-      const existingOrders = openOrders.filter((order: any) => {
+      // Filter for reduceOnly orders on this symbol (protective orders)
+      const existingProtectiveOrders = openOrders.filter((order: any) => {
         const isSameSymbol = order.coin === symbol;
         const isProtectiveOrder = order.reduceOnly === true;
         return isSameSymbol && isProtectiveOrder;
       });
 
-      console.log(`[Trade Executor] Found ${existingOrders.length} existing protective (reduceOnly) orders for ${symbol}`);
-
-      // Cancel all existing protective orders ONCE
-      let allCancellationsSucceeded = true;
-      let cancellationError = "";
+      console.log(`[Trade Executor] Found ${existingProtectiveOrders.length} existing protective (reduceOnly) orders for ${symbol}`);
       
-      for (const existingOrder of existingOrders) {
-        console.log(`[Trade Executor] Auto-canceling existing protective order ${existingOrder.oid} for ${symbol}`);
-        const cancelResult = await hyperliquid.cancelOrder({
-          coin: symbol,
-          oid: existingOrder.oid,
-        });
+      // CRITICAL: If more than 2 protective orders exist, something is wrong - cancel ALL
+      if (existingProtectiveOrders.length > 2) {
+        console.warn(`[Trade Executor] WARNING: Found ${existingProtectiveOrders.length} protective orders for ${symbol} (expected max 2). Cleaning up duplicates...`);
+      }
+      
+      // ANTI-CHURN: Check if new protective orders match existing ones
+      // Only replace if prices have changed significantly (>1% move)
+      let shouldReplaceOrders = false;
+      
+      if (existingProtectiveOrders.length === 2 && protectiveActions.length === 2 && metadata) {
+        // We have exactly 2 existing and 2 new - check if they match
+        const newStopLoss = protectiveActions.find(a => a.action === "stop_loss");
+        const newTakeProfit = protectiveActions.find(a => a.action === "take_profit");
         
-        if (!cancelResult.success) {
-          console.error(`[Trade Executor] Failed to auto-cancel order ${existingOrder.oid}:`, cancelResult.error);
-          allCancellationsSucceeded = false;
-          cancellationError = cancelResult.error || "Unknown cancellation error";
-          break;
-        } else {
-          console.log(`[Trade Executor] Successfully cancelled order ${existingOrder.oid}`);
+        // Get current market price to distinguish SL from TP
+        const positions = await hyperliquid.getPositions();
+        const position = positions.find((p: any) => p.coin === symbol);
+        
+        if (!position) {
+          // No position exists, so no need for protective orders
+          shouldReplaceOrders = false;
+          console.log(`[Trade Executor] No position found for ${symbol}, skipping protective orders`);
+          skipCount += 2;
+          for (const action of protectiveActions) {
+            results.push({
+              success: true,
+              action,
+              error: "No position exists - protective orders not needed",
+            });
+          }
+          continue;
         }
+        
+        const currentPrice = parseFloat(position.entryPx);
+        const isLong = parseFloat(position.szi) > 0;
+        
+        // CRITICAL FIX: Hyperliquid API doesn't return tpsl field, so we must identify SL/TP by price
+        // For LONG positions: Stop Loss < current price, Take Profit > current price
+        // For SHORT positions: Stop Loss > current price, Take Profit < current price
+        const [existingOrder1, existingOrder2] = existingProtectiveOrders;
+        const price1 = parseFloat(existingOrder1.limitPx);
+        const price2 = parseFloat(existingOrder2.limitPx);
+        
+        let existingSL, existingTP;
+        if (isLong) {
+          existingSL = price1 < currentPrice ? existingOrder1 : existingOrder2;
+          existingTP = price1 > currentPrice ? existingOrder1 : existingOrder2;
+        } else {
+          existingSL = price1 > currentPrice ? existingOrder1 : existingOrder2;
+          existingTP = price1 < currentPrice ? existingOrder1 : existingOrder2;
+        }
+        
+        if (newStopLoss && newTakeProfit && existingSL && existingTP) {
+          // Compare prices (allow 1% tolerance to prevent minor adjustments)
+          const newSLPrice = parseFloat(newStopLoss.triggerPrice!);
+          const existingSLPrice = parseFloat(existingSL.limitPx);
+          const slPriceChange = Math.abs((newSLPrice - existingSLPrice) / existingSLPrice);
+          
+          const newTPPrice = parseFloat(newTakeProfit.triggerPrice!);
+          const existingTPPrice = parseFloat(existingTP.limitPx);
+          const tpPriceChange = Math.abs((newTPPrice - existingTPPrice) / existingTPPrice);
+          
+          // Only replace if either changed by more than 1%
+          if (slPriceChange < 0.01 && tpPriceChange < 0.01) {
+            console.log(`[Trade Executor] ✓ Protective orders for ${symbol} are up-to-date (SL: ${existingSLPrice}, TP: ${existingTPPrice}). Skipping replacement.`);
+            skipCount += 2;
+            for (const action of protectiveActions) {
+              results.push({
+                success: true,
+                action,
+                error: "Protective order already exists with same price - skipped to prevent churn",
+              });
+            }
+            continue; // Skip to next symbol
+          } else {
+            shouldReplaceOrders = true;
+            console.log(`[Trade Executor] Protective orders need update - SL changed ${(slPriceChange * 100).toFixed(2)}%, TP changed ${(tpPriceChange * 100).toFixed(2)}%`);
+          }
+        } else {
+          // Missing SL or TP, need to replace
+          shouldReplaceOrders = true;
+          console.log(`[Trade Executor] Could not identify existing SL/TP by price comparison, will replace all protective orders`);
+        }
+      } else {
+        // Not exactly 2 existing and 2 new, or no metadata - replace to ensure correct state
+        shouldReplaceOrders = true;
+        console.log(`[Trade Executor] Protective order count mismatch (existing: ${existingProtectiveOrders.length}, new: ${protectiveActions.length}), will replace`);
       }
-
-      // If cancellation failed, skip ALL protective orders for this symbol
-      if (!allCancellationsSucceeded) {
-        console.error(`[Trade Executor] Skipping all protective orders for ${symbol} - cancellation failed: ${cancellationError}`);
-        for (const action of protectiveActions) {
-          results.push({
-            success: false,
-            action,
-            error: `Cannot place ${action.action}: failed to cancel existing protective order - ${cancellationError}`,
+      
+      // Cancel all existing protective orders if we're replacing them
+      if (shouldReplaceOrders) {
+        let allCancellationsSucceeded = true;
+        let cancellationError = "";
+        
+        for (const existingOrder of existingProtectiveOrders) {
+          console.log(`[Trade Executor] Canceling existing protective order ${existingOrder.oid} for ${symbol}`);
+          const cancelResult = await hyperliquid.cancelOrder({
+            coin: symbol,
+            oid: existingOrder.oid,
           });
-          failCount++;
-          skipCount++;
+          
+          if (!cancelResult.success) {
+            console.error(`[Trade Executor] Failed to cancel order ${existingOrder.oid}:`, cancelResult.error);
+            allCancellationsSucceeded = false;
+            cancellationError = cancelResult.error || "Unknown cancellation error";
+            break;
+          } else {
+            console.log(`[Trade Executor] Successfully cancelled order ${existingOrder.oid}`);
+          }
         }
-        continue;
-      }
 
-      // Now place ALL new protective orders for this symbol (both stop loss and take profit)
-      for (const action of protectiveActions) {
-        console.log(`[Trade Executor] Placing ${action.action} for ${symbol} at trigger price ${action.triggerPrice}`);
-        const triggerResult = await executeTriggerOrder(hyperliquid, action);
-        results.push(triggerResult);
-        if (triggerResult.success) {
-          successCount++;
-        } else {
-          failCount++;
+        // If cancellation failed, skip ALL protective orders for this symbol
+        if (!allCancellationsSucceeded) {
+          console.error(`[Trade Executor] Skipping all protective orders for ${symbol} - cancellation failed: ${cancellationError}`);
+          for (const action of protectiveActions) {
+            results.push({
+              success: false,
+              action,
+              error: `Cannot place ${action.action}: failed to cancel existing protective order - ${cancellationError}`,
+            });
+            failCount++;
+            skipCount++;
+          }
+          continue;
+        }
+
+        // Now place ALL new protective orders for this symbol (both stop loss and take profit)
+        for (const action of protectiveActions) {
+          console.log(`[Trade Executor] Placing ${action.action} for ${symbol} at trigger price ${action.triggerPrice}`);
+          const triggerResult = await executeTriggerOrder(hyperliquid, action);
+          results.push(triggerResult);
+          if (triggerResult.success) {
+            successCount++;
+          } else {
+            failCount++;
+          }
         }
       }
     } catch (error: any) {
