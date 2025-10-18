@@ -1,4 +1,4 @@
-import { Wallet, LogOut, UserCheck, Settings, Users, ChevronDown, MessageSquare } from "lucide-react";
+import { Wallet, LogOut, UserCheck, Settings, Users, ChevronDown, MessageSquare, History } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -102,6 +102,14 @@ export default function Header() {
             data-testid="button-contact-admin"
           >
             <MessageSquare className="h-4 w-4" />
+          </Button>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={() => setLocation("/trade-history")}
+            data-testid="button-trade-history"
+          >
+            <History className="h-4 w-4" />
           </Button>
           <Button 
             variant="ghost" 

@@ -14,6 +14,7 @@ import AdminVerification from "@/pages/AdminVerification";
 import AdminUsers from "@/pages/AdminUsers";
 import AdminMessages from "@/pages/AdminMessages";
 import Settings from "@/pages/Settings";
+import TradeHistory from "@/pages/TradeHistory";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -26,6 +27,7 @@ function Router() {
       <ProtectedRoute path="/admin/users" component={AdminUsers} />
       <ProtectedRoute path="/admin/messages" component={AdminMessages} />
       <ProtectedRoute path="/settings" component={Settings} />
+      <ProtectedRoute path="/trade-history" component={TradeHistory} />
       <ProtectedRoute path="/" component={Dashboard} />
       <Route component={NotFound} />
     </Switch>
