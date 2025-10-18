@@ -243,20 +243,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ success: false, error: "User not found" });
       }
       
-      // Start or stop autonomous trading monitoring based on mode
+      // In both modes, ensure monitoring is running (if frequency is set)
+      // The difference is that passive mode will analyze but not execute trades
+      // Active mode will both analyze and execute trades
+      const intervalMinutes = updatedUser.monitoringFrequencyMinutes || 0;
+      
       if (mode === "active") {
         // Get user's monitoring frequency (default to 5 minutes if 0 or null)
         // Note: 0 means "disabled" so we use default 5 minutes when activating
-        let intervalMinutes = updatedUser.monitoringFrequencyMinutes || 5;
-        if (intervalMinutes === 0) {
-          intervalMinutes = 5;
+        let activeIntervalMinutes = intervalMinutes || 5;
+        if (activeIntervalMinutes === 0) {
+          activeIntervalMinutes = 5;
           // Update user's frequency to 5 minutes (remove the "disabled" setting)
           await storage.updateUserMonitoringFrequency(userId, 5);
         }
         
         try {
-          await startUserMonitoring(userId, intervalMinutes);
-          console.log(`[Agent Mode] Started monitoring for user ${userId} (${intervalMinutes} min interval)`);
+          await startUserMonitoring(userId, activeIntervalMinutes);
+          console.log(`[Agent Mode] Started ACTIVE monitoring for user ${userId} (${activeIntervalMinutes} min interval)`);
         } catch (monitoringError: any) {
           console.error(`[Agent Mode] Failed to start monitoring for user ${userId}:`, monitoringError);
           // Return error if monitoring can't start (e.g., missing credentials)
@@ -266,9 +270,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
       } else {
-        // Stop monitoring when switching to passive mode
-        await stopUserMonitoring(userId);
-        console.log(`[Agent Mode] Stopped monitoring for user ${userId}`);
+        // In passive mode, keep monitoring running if frequency is set (but trades won't execute)
+        // This allows users to see AI analysis without executing trades
+        if (intervalMinutes > 0) {
+          try {
+            await startUserMonitoring(userId, intervalMinutes);
+            console.log(`[Agent Mode] Started PASSIVE monitoring for user ${userId} (${intervalMinutes} min interval) - analysis only, no trades`);
+          } catch (monitoringError: any) {
+            console.error(`[Agent Mode] Failed to start passive monitoring for user ${userId}:`, monitoringError);
+            // Don't fail the mode switch if monitoring can't start in passive mode
+          }
+        } else {
+          // If monitoring frequency is 0 (disabled), stop monitoring entirely
+          await stopUserMonitoring(userId);
+          console.log(`[Agent Mode] Stopped monitoring for user ${userId} (frequency disabled)`);
+        }
       }
       
       res.json({ 
