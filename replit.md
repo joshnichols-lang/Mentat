@@ -61,3 +61,37 @@ Preferred communication style: Simple, everyday language.
 - **Vite:** Frontend build and development.
 - **ESBuild:** Server bundling in production.
 - **TypeScript:** With strict mode.
+
+## Business Model & AI Cost Analysis
+
+### AI Usage Cost Estimates (Perplexity Platform AI)
+Based on actual usage data from admin account over 2 days (Oct 17-18, 2025):
+
+**Average Usage per Autonomous Cycle:**
+- ~7,634 tokens per cycle
+- Cost: ~$0.008 per cycle
+
+**Monthly Cost by Monitoring Frequency:**
+- **30-minute monitoring**: ~$5/month (48 cycles/day)
+- **5-minute monitoring**: ~$70/month (288 cycles/day)
+- **1-minute monitoring**: ~$345/month (1,440 cycles/day) ⚠️ High cost
+- **30-second monitoring**: ~$690/month (2,880 cycles/day) 💸 Very high cost
+- **Passive mode only**: ~$3-15/month (manual prompts only)
+
+**Safe Monthly Estimate Per Active User:**
+- **Conservative**: $20-50/month AI cost (5-minute monitoring)
+- **Moderate**: $70-100/month AI cost (1-5 minute monitoring)
+- **Aggressive**: $300+/month AI cost (sub-minute monitoring)
+
+**Pricing Recommendations:**
+1. **Tiered Usage Limits**: Free tier (passive + 100 requests), Starter ($20/month, 1,000 requests, 30-min monitoring), Pro ($50/month, 5,000 requests, 5-min monitoring), Unlimited ($150/month, 1-min monitoring)
+2. **AI Usage Add-On**: Base subscription $30/month + pay-per-cycle ($0.01/cycle)
+3. **Frequency-Based Pricing**: Charge based on monitoring interval (30-min @ $20, 5-min @ $50, 1-min @ $100)
+
+**Cost Control Strategy:**
+- Default new users to 30-minute monitoring
+- Cap free tier at 5-minute minimum
+- Encourage Personal AI Key for intensive usage
+- Implement request quotas per billing cycle
+
+**Current Risk**: Admin account running at 1-minute monitoring = $345/month AI cost with Monkey Cipher strategy
