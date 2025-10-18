@@ -286,8 +286,7 @@ export async function developAutonomousStrategy(userId: string): Promise<void> {
           mode: "passive",
           message: "Agent is in PASSIVE mode - monitoring market conditions but not executing trades"
         }),
-        action: "info",
-        timestamp: new Date()
+        alertLevel: "info"
       });
       
       return;
