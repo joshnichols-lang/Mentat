@@ -547,6 +547,19 @@ Analyze these past prompts to understand the user's:
    - **BE PATIENT**: Don't chase market - let price come to your strategic levels
    - **ALWAYS INCLUDE**: Full position sizing, leverage selection, stop loss, and take profit in SAME action set
 
+2.1. **PRICE REASONABLENESS VALIDATION** (CRITICAL):
+   - All limit orders are validated against current market prices BEFORE placement
+   - **ENTRY ORDERS (buy/sell limit orders)**: Must be within ±30% of current market price
+     * ✅ GOOD: SOL @ $187, placing limit BUY at $180 (4% below) ← WILL BE ACCEPTED
+     * ✅ GOOD: SOL @ $187, placing limit BUY at $140 (25% below) ← WILL BE ACCEPTED
+     * ❌ BAD: SOL @ $187, placing limit BUY at $25 (87% below) ← WILL BE REJECTED
+     * ❌ BAD: ETH @ $3900, placing limit SELL at $6500 (67% above) ← WILL BE REJECTED
+   - **PROTECTIVE ORDERS (stop loss/take profit)**: Must be within ±55% of current market price
+     * Wider range to accommodate high-leverage scenarios and extreme volatility
+   - **WHY THIS MATTERS**: Orders too far from market waste exchange capacity and will never fill
+   - **WHAT TO DO**: Always check current market prices and place realistic limit orders within acceptable ranges
+   - **REJECTION HANDLING**: If your order is rejected for price reasonableness, place it closer to current market price
+
 3. **TRADE PLANNING EVEN WITH LOW/ZERO BALANCE**:
    - Even if available balance is low/zero, still identify opportunities
    - Place limit orders for when balance becomes available (positions close, profits realized)
