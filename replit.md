@@ -11,7 +11,8 @@ Preferred communication style: Simple, everyday language.
 ### Frontend
 **Technology Stack:** React with TypeScript, Vite, Wouter, TanStack Query, Tailwind CSS, and shadcn/ui.
 **Design System:** "Fantastic Mr. Fox" newspaper aesthetic featuring a grayscale color scheme, "Courier New" monospace typography, newsprint texture, and sharp corners. Dull green/red accents are used for trading elements.
-**Key UI Components:** AI Prompt Panel, Market Overview watchlist (real-time data, drag-and-drop), Portfolio Performance Chart, Positions Grid, and Conversation History. Includes hover tooltips with mini price charts and risk management levels. Chart and order book components are omitted to optimize API request capacity for autonomous trading.
+**Key UI Components:** AI Prompt Panel, Market Overview watchlist (real-time data, drag-and-drop), Portfolio Performance Chart, Positions Grid, and Conversation History. Includes hover tooltips with mini price charts and risk management levels.
+**TradingView Integration:** Dedicated Charts page with Advanced Chart (detailed technical analysis) and Market Overview (multi-asset watchlist) widgets. Charts load via TradingView's embeddable iframe widgets without consuming Hyperliquid API capacity. Maximum grayscale configuration applied (candles, grids, backgrounds, plot lines), but iframe isolation prevents complete override of TradingView's internal colored UI elements (positive/negative price change indicators). Symbol logos disabled, Courier New font, transparent backgrounds maintain newspaper aesthetic where configurable.
 
 ### Backend
 **Server Framework:** Express.js with TypeScript, integrated with Vite middleware.
