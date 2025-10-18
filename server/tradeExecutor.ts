@@ -1,6 +1,6 @@
 import { getUserHyperliquidClient } from "./hyperliquid/client";
 import { storage } from "./storage";
-import { PRICE_VALIDATION } from "./constants";
+import { PRICE_VALIDATION, ORDER_VALIDATION } from "./constants";
 
 // Utility function to round price to tick size
 function roundToTickSize(price: number, tickSize: number): number {
@@ -118,6 +118,19 @@ function validateNumericInput(value: any, fieldName: string): number {
   }
   
   return num;
+}
+
+// Helper function to validate minimum order notional value
+function validateMinimumNotional(size: number, price: number, symbol: string): void {
+  const notionalValue = size * price;
+  
+  if (notionalValue < ORDER_VALIDATION.MIN_NOTIONAL_USD) {
+    throw new Error(
+      `Order rejected: Minimum notional value is $${ORDER_VALIDATION.MIN_NOTIONAL_USD} USD. ` +
+      `Your order for ${symbol} has notional value of $${notionalValue.toFixed(2)} (${size} × $${price.toFixed(2)}). ` +
+      `Please increase order size or choose a different asset.`
+    );
+  }
 }
 
 function validateLeverage(leverage: number): number {
@@ -840,6 +853,9 @@ async function executeOpenPosition(
     limitPrice = roundToTickSize(limitPrice, metadata.tickSize);
     console.log(`[Trade Executor] Rounded price from ${action.expectedEntry} to ${limitPrice} (tick size: ${metadata.tickSize})`);
     
+    // Validate minimum notional value ($10 USD minimum)
+    validateMinimumNotional(size, limitPrice, action.symbol);
+    
     orderParams = {
       coin: action.symbol,  // Use full symbol with -PERP suffix
       is_buy: isBuy,
@@ -1078,6 +1094,9 @@ async function executeTriggerOrder(
     
     // CRITICAL FIX: Use MARKET execution for stop losses (instant fills), LIMIT for take profits (better prices)
     const useMarketExecution = action.action === "stop_loss";
+    
+    // Validate minimum notional value ($10 USD minimum)
+    validateMinimumNotional(positionSize, triggerPrice, action.symbol);
     
     const triggerOrder = {
       coin: action.symbol,

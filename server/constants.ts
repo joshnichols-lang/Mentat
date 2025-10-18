@@ -12,3 +12,10 @@ export const PRICE_VALIDATION = {
   
   // Optional: Future per-symbol or per-regime overrides can be added here
 } as const;
+
+// Hyperliquid Exchange Order Validation
+export const ORDER_VALIDATION = {
+  // Minimum order size in USD notional value (size * price)
+  // Hyperliquid requires $10 minimum notional value per order
+  MIN_NOTIONAL_USD: 10,
+} as const;
