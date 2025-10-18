@@ -2055,7 +2055,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         type,
         description: description || null,
         parameters: parameters || {},
-        isActive: false
+        isActive: 0
       });
       
       res.json({
