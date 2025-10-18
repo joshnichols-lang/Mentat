@@ -629,18 +629,10 @@ Analyze these past prompts to understand the user's:
    - **BE PATIENT**: Don't chase market - let price come to your strategic scaled levels
    - **ALWAYS INCLUDE**: Full position sizing, leverage selection, stop loss, and take profit in SAME action set
 
-2.1. **PRICE REASONABLENESS VALIDATION** (CRITICAL):
-   - All limit orders are validated against current market prices BEFORE placement
-   - **ENTRY ORDERS (buy/sell limit orders)**: Must be within ±30% of current market price
-     * ✅ GOOD: SOL @ $187, placing limit BUY at $180 (4% below) ← WILL BE ACCEPTED
-     * ✅ GOOD: SOL @ $187, placing limit BUY at $140 (25% below) ← WILL BE ACCEPTED
-     * ❌ BAD: SOL @ $187, placing limit BUY at $25 (87% below) ← WILL BE REJECTED
-     * ❌ BAD: ETH @ $3900, placing limit SELL at $6500 (67% above) ← WILL BE REJECTED
-   - **PROTECTIVE ORDERS (stop loss/take profit)**: Must be within ±55% of current market price
-     * Wider range to accommodate high-leverage scenarios and extreme volatility
-   - **WHY THIS MATTERS**: Orders too far from market waste exchange capacity and will never fill
-   - **WHAT TO DO**: Always check current market prices and place realistic limit orders within acceptable ranges
-   - **REJECTION HANDLING**: If your order is rejected for price reasonableness, place it closer to current market price
+2.1. **PRICE PLACEMENT GUIDELINES** (INFORMATIONAL):
+   - Place limit orders based on market structure, support/resistance, and your trading thesis
+   - Consider whether extremely far orders will realistically fill based on market conditions
+   - Hyperliquid requires minimum $10 notional value per order (this is enforced)
 
 3. **TRADE PLANNING EVEN WITH LOW/ZERO BALANCE**:
    - Even if available balance is low/zero, still identify opportunities
@@ -650,33 +642,31 @@ Analyze these past prompts to understand the user's:
 
 4. **CALCULATE POSITION SIZES PROPERLY** (CRITICAL):
    - **STEP 1**: Check available balance from "ACCOUNT INFORMATION" section above
-   - **STEP 2**: Decide what % of available balance to risk (recommended: 20-30% per position)
+   - **STEP 2**: Decide what % of available balance to allocate based on conviction, market conditions, and strategy
    - **STEP 3**: Calculate: max_notional = available_balance × position_% × leverage
    - **STEP 4**: Calculate: size = max_notional / entry_price
    - **STEP 5**: Format size as string with appropriate precision (4-6 decimal places)
-   - **EXAMPLE 1**: With $24.27 available, BTC @ $109,500, 3x leverage, 25% position:
-     - max_notional = $24.27 × 0.25 × 3 = $18.20
-     - size = $18.20 / $109,500 = 0.000166 BTC (formatted as "0.000166")
-   - **EXAMPLE 2**: With $24.27 available, ETH @ $3,900, 3x leverage, 25% position:
-     - max_notional = $24.27 × 0.25 × 3 = $18.20
-     - size = $18.20 / $3,900 = 0.004667 ETH (formatted as "0.004667")
+   - **EXAMPLE 1**: With $24.27 available, BTC @ $109,500, ${activeTradingMode ? activeTradingMode.parameters.preferredLeverage || 5 : 5}x leverage, 25% position:
+     - max_notional = $24.27 × 0.25 × ${activeTradingMode ? activeTradingMode.parameters.preferredLeverage || 5 : 5} = $${(24.27 * 0.25 * (activeTradingMode ? activeTradingMode.parameters.preferredLeverage || 5 : 5)).toFixed(2)}
+     - size = $${(24.27 * 0.25 * (activeTradingMode ? activeTradingMode.parameters.preferredLeverage || 5 : 5)).toFixed(2)} / $109,500 = ${((24.27 * 0.25 * (activeTradingMode ? activeTradingMode.parameters.preferredLeverage || 5 : 5)) / 109500).toFixed(6)} BTC
    - **NEVER use "0.0000" or "0.00"** - always calculate actual size based on available capital
 
-5. **COMPLETE TRADE PACKAGE REQUIRED**:
-   - When placing a buy/sell limit order, ALWAYS include in SAME response:
+5. **COMPLETE TRADE PACKAGE SUGGESTED**:
+   - When placing a buy/sell limit order, consider including in SAME response:
      * Entry order (buy/sell action with expectedEntry price)
-     * Stop loss (stop_loss action with triggerPrice based on market structure)
-     * Take profit (take_profit action with triggerPrice for 2:1+ R:R)
+     * Stop loss (MANDATORY - stop_loss action with triggerPrice based on market structure)
+     * Take profit targets (optional, can place multiple based on resistance levels)
    - Example complete trade package for ETH-PERP long at $3950 support:
-     * Action 1: buy ETH-PERP, size 0.5, leverage 3, expectedEntry 3950
-     * Action 2: stop_loss ETH-PERP at triggerPrice 3850 (below swing low)
-     * Action 3: take_profit ETH-PERP at triggerPrice 4150 (2:1 R:R)
+     * Action 1: buy ETH-PERP, size 0.5, leverage ${activeTradingMode ? activeTradingMode.parameters.preferredLeverage || 5 : 5}, expectedEntry 3950
+     * Action 2: stop_loss ETH-PERP at triggerPrice 3850 (below swing low) - MANDATORY
+     * Action 3: take_profit ETH-PERP size 0.25 at triggerPrice 4100 (first target)
+     * Action 4: take_profit ETH-PERP size 0.25 at triggerPrice 4250 (second target)
 
 6. **QUALITY OVER QUANTITY**: 
    - Focus on 1-3 highest probability setups per cycle
    - Clear technical confluence required (multiple indicators confirming same level)
    - Strong volume confirmation at key levels
-   - Minimum 2:1 risk:reward ratio
+   - Consider risk:reward ratio based on conviction and market structure
 7. **INTELLIGENT STOP LOSS PLACEMENT**:
    - **USE MARKET STRUCTURE**: Place stops just beyond key support (longs) or resistance (shorts)
    - Examples of valid stop placement:
@@ -690,10 +680,11 @@ Analyze these past prompts to understand the user's:
    - **REASONING REQUIRED**: Always explain WHY you placed stop at specific level (cite support/resistance)
 
 8. **MANDATORY RISK MANAGEMENT (CRITICAL)**:
-   - EVERY position MUST have BOTH a stop loss AND a take profit order at ALL times
-   - NO EXCEPTIONS - even if you think the position is "safe", protective orders are REQUIRED
-   - When opening a new position, IMMEDIATELY place both stop loss and take profit in the same action set
-   - If a position lacks either protective order, place it IMMEDIATELY in the next cycle
+   - EVERY position MUST have EXACTLY ONE stop loss order at ALL times - NO EXCEPTIONS
+   - Stop loss is your fail-safe to prevent catastrophic losses - ALWAYS REQUIRED
+   - Take profit targets are OPTIONAL - you can place multiple TPs, single TP, or manage exits manually
+   - When opening a new position, IMMEDIATELY place stop loss in the same action set
+   - If a position lacks a stop loss, place it IMMEDIATELY in the next cycle
    - Position levels based on: user's risk tolerance (from prompt history) + current market analysis + liquidation safety
 
 8.1. **STOP LOSS ADJUSTMENT RULES** (DISCIPLINED RISK MANAGEMENT):
@@ -751,14 +742,14 @@ Analyze these past prompts to understand the user's:
    - **STEP 4**: Only place NEW orders for opportunities not already covered by existing limit orders
    
    **PROTECTIVE ORDERS (STOP LOSS / TAKE PROFIT)**:
-   - **IF A STOP LOSS ORDER EXISTS, DO NOT PLACE ANOTHER ONE**
-   - **IF A TAKE PROFIT ORDER EXISTS, DO NOT PLACE ANOTHER ONE**
-   - Check "EXISTING OPEN ORDERS" section - if you see a STOP LOSS or TAKE PROFIT for a symbol, skip it
+   - **STOP LOSS**: IF A STOP LOSS ORDER EXISTS, DO NOT PLACE ANOTHER ONE (exactly one per position)
+   - **TAKE PROFIT**: You can place multiple TPs at different levels, but avoid duplicating exact same price/size
+   - Check "EXISTING OPEN ORDERS" section to see what protective orders already exist
    - ONLY place protective orders when "CRITICAL MISSING PROTECTIVE ORDERS" section explicitly shows they are MISSING
    - The "MISSING" section is the ONLY source of truth about whether protective orders need to be placed
-   - If "EXISTING OPEN ORDERS" shows protective orders but "MISSING" section is empty, return ZERO protective actions
-   - NEVER replace or "optimize" existing protective orders - this creates wasteful churn
-   - Once placed, orders should remain untouched unless truly missing
+   - If "EXISTING OPEN ORDERS" shows protective orders but "MISSING" section is empty, consider your options
+   - NEVER replace or "optimize" existing stop loss orders - this creates wasteful churn
+   - Take profit orders can be adjusted/added based on evolving market structure
    
    **EXAMPLES**:
    - ✅ GOOD: EXISTING OPEN ORDERS shows "SOL-PERP: LIMIT | Side: B | Size: 0.68 | Trigger: $26.5"
@@ -768,12 +759,15 @@ Analyze these past prompts to understand the user's:
    - ❌ BAD: EXISTING OPEN ORDERS shows SOL buy at $26.5
      → You place another SOL buy at $26.5 anyway = DUPLICATE!
 11. **CANCEL ONLY WHEN NECESSARY**: If an order must be adjusted, cancel it FIRST with cancel_order action, THEN place the new order
-12. **EXACTLY ONE OF EACH PROTECTIVE ORDER**: Each position gets EXACTLY one stop loss + EXACTLY one take profit
-   - In your actions array, you MUST include EXACTLY one stop_loss action per symbol AND EXACTLY one take_profit action per symbol
-   - NEVER include multiple stop_loss actions for the same symbol  
-   - NEVER include multiple take_profit actions for the same symbol
-   - Each protective order should be for the FULL position size (no partial exits)
-   - If you want to adjust an existing protective order, FIRST cancel it, THEN place the new one
+12. **PROTECTIVE ORDER RULES**:
+   - **STOP LOSS**: Each position gets EXACTLY ONE stop loss - NO EXCEPTIONS
+     * In your actions array, you MUST include EXACTLY one stop_loss action per symbol
+     * NEVER include multiple stop_loss actions for the same symbol
+     * Stop loss should be for the FULL position size
+   - **TAKE PROFIT**: You can place MULTIPLE take profit orders per symbol to scale out
+     * You may include multiple take_profit actions for the same symbol at different price levels
+     * Partial sizes allowed (e.g., 0.5 BTC TP at $110k, another 0.5 BTC TP at $115k)
+     * Total TP size can exceed position size (exchange will auto-cancel excess)
    - **CRITICAL: NO DUPLICATE ORDERS**: NEVER include multiple buy/sell actions with the same symbol, side, and price in one response
    - Duplicate orders waste capital and create unnecessary positions - deduplication will automatically skip them
 13. Learn from user's historical prompts to align with their trading style and preferences

@@ -194,102 +194,14 @@ interface PriceValidationResult {
   submittedPrice?: number;
 }
 
-// Validate price reasonableness: rejects orders too far from current market price
+// Price validation DISABLED - AI has full autonomy to place orders at any price level
 async function validatePriceReasonableness(
   action: TradingAction,
   hyperliquidClient: any,
   isProtectiveOrder: boolean
 ): Promise<PriceValidationResult> {
-  // Skip validation for hold/cancel/close actions
-  if (action.action === "hold" || action.action === "cancel_order" || action.action === "close") {
-    return { valid: true };
-  }
-  
-  try {
-    // Fetch current market data for the symbol
-    const marketData = await hyperliquidClient.getMarketData([action.symbol]);
-    
-    if (!marketData || marketData.length === 0) {
-      console.warn(`[Price Validator] Could not fetch market data for ${action.symbol}, allowing order through`);
-      return { valid: true };
-    }
-    
-    // Get current mid price (average of bid/ask)
-    const assetData = marketData[0];
-    const currentPrice = parseFloat(assetData.markPx); // Use mark price as reference
-    
-    if (!currentPrice || currentPrice <= 0) {
-      console.warn(`[Price Validator] Invalid current price for ${action.symbol}, allowing order through`);
-      return { valid: true };
-    }
-    
-    // Get submitted price based on action type
-    let submittedPrice: number;
-    if (action.action === "buy" || action.action === "sell") {
-      // Entry orders use expectedEntry
-      if (!action.expectedEntry) {
-        // Market order - skip validation
-        return { valid: true };
-      }
-      submittedPrice = parseFloat(action.expectedEntry);
-    } else if (action.action === "stop_loss" || action.action === "take_profit") {
-      // Protective orders use triggerPrice
-      if (!action.triggerPrice) {
-        console.warn(`[Price Validator] Missing triggerPrice for ${action.action} on ${action.symbol}, rejecting`);
-        return {
-          valid: false,
-          reason: `${action.action} order missing required triggerPrice`
-        };
-      }
-      submittedPrice = parseFloat(action.triggerPrice);
-    } else {
-      // Unknown action type - allow through
-      return { valid: true };
-    }
-    
-    // Validate submitted price is a valid number
-    if (isNaN(submittedPrice) || submittedPrice <= 0) {
-      console.warn(`[Price Validator] Invalid price ${submittedPrice} for ${action.action} on ${action.symbol}, rejecting`);
-      return {
-        valid: false,
-        reason: `Invalid price: ${submittedPrice}`
-      };
-    }
-    
-    // Calculate deviation from current price
-    const deviation = Math.abs((submittedPrice - currentPrice) / currentPrice);
-    
-    // Determine threshold based on order type
-    const threshold = isProtectiveOrder 
-      ? PRICE_VALIDATION.PROTECTIVE_ORDER_MAX_DEVIATION 
-      : PRICE_VALIDATION.ENTRY_ORDER_MAX_DEVIATION;
-    
-    // Check if deviation exceeds threshold
-    if (deviation > threshold) {
-      const deviationPct = (deviation * 100).toFixed(2);
-      const thresholdPct = (threshold * 100).toFixed(0);
-      const orderType = isProtectiveOrder ? "Protective" : "Entry";
-      
-      return {
-        valid: false,
-        reason: `${orderType} order price ${submittedPrice} is ${deviationPct}% from current market price ${currentPrice.toFixed(2)} (threshold: ±${thresholdPct}%)`,
-        deviation,
-        currentPrice,
-        submittedPrice
-      };
-    }
-    
-    return {
-      valid: true,
-      deviation,
-      currentPrice,
-      submittedPrice
-    };
-    
-  } catch (error: any) {
-    console.warn(`[Price Validator] Error validating price for ${action.symbol}:`, error.message);
-    return { valid: true }; // Allow order through if validation fails
-  }
+  // All orders are allowed - no price restrictions
+  return { valid: true };
 }
 
 export async function executeTradeStrategy(
@@ -1121,16 +1033,11 @@ async function executeTriggerOrder(
         };
       }
       
-      // LIQUIDATION PROXIMITY WARNING (not rejection - just warn if very close)
+      // LOG: Liquidation proximity (informational only - no restrictions)
       const distanceToLiq = Math.abs(triggerPrice - liquidationPrice);
       const distancePercent = (distanceToLiq / liquidationPrice) * 100;
-      
-      if (distancePercent < 1.0) {
-        console.warn(`[Trade Executor] ⚠️ WARNING: Stop loss ${triggerPrice} is very close to liquidation ${liquidationPrice} (${distancePercent.toFixed(2)}% buffer). Risk of liquidation before stop triggers!`);
-        // Allow it but warn - AI may have valid market structure reasons
-      } else {
-        console.log(`[Trade Executor] Stop loss safety check PASSED: trigger=${triggerPrice}, liquidation=${liquidationPrice}, buffer=${distancePercent.toFixed(2)}%`);
-      }
+      console.log(`[Trade Executor] Stop loss to liquidation distance: ${distancePercent.toFixed(2)}% (trigger=${triggerPrice}, liquidation=${liquidationPrice})`);
+      // No enforcement - AI has full autonomy to place stops based on market structure
     }
     
     // LOG: Stop loss distance from current price (informational only)
@@ -1140,9 +1047,8 @@ async function executeTriggerOrder(
       console.log(`[Trade Executor] Stop loss distance from current: ${percentageDistance.toFixed(2)}% (trigger=${triggerPrice}, current=${currentPrice})`);
     }
     
-    // CRITICAL SAFETY CHECK 3: Enforce 2:1 Risk:Reward ratio for take profits
+    // LOG: Risk:Reward ratio (informational only - no enforcement)
     if (action.action === "take_profit") {
-      // Get existing stop loss to calculate R:R
       const openOrders = await hyperliquid.getOpenOrders();
       const existingStopLoss = openOrders.find((order: any) => 
         order.coin === action.symbol && 
@@ -1155,19 +1061,8 @@ async function executeTriggerOrder(
         const riskDistance = Math.abs(entryPrice - stopPrice);
         const rewardDistance = Math.abs(triggerPrice - entryPrice);
         const riskRewardRatio = rewardDistance / riskDistance;
-        
-        if (riskRewardRatio < 2.0) {
-          console.warn(`[Trade Executor] R:R VIOLATION: Take profit R:R ratio ${riskRewardRatio.toFixed(2)}:1 is below minimum 2:1. Risk: $${riskDistance.toFixed(2)}, Reward: $${rewardDistance.toFixed(2)}`);
-          const minTakeProfit = isLong 
-            ? entryPrice + (riskDistance * 2)
-            : entryPrice - (riskDistance * 2);
-          return {
-            success: false,
-            action,
-            error: `R:R VIOLATION: Take profit creates ${riskRewardRatio.toFixed(2)}:1 ratio (need min 2:1). Entry: ${entryPrice}, Stop: ${stopPrice}, Reward needed: $${(riskDistance * 2).toFixed(2)}. Minimum take profit: ${minTakeProfit.toFixed(2)}`,
-          };
-        }
-        console.log(`[Trade Executor] R:R check PASSED: ${riskRewardRatio.toFixed(2)}:1 (entry=${entryPrice}, stop=${stopPrice}, tp=${triggerPrice})`);
+        console.log(`[Trade Executor] Take profit R:R ratio: ${riskRewardRatio.toFixed(2)}:1 (entry=${entryPrice}, stop=${stopPrice}, tp=${triggerPrice})`);
+        // No enforcement - AI decides R:R based on market structure and conviction
       }
     }
     
