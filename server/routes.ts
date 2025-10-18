@@ -2137,14 +2137,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = getUserId(req);
       const { id } = req.params;
       
-      const success = await storage.deleteTradingMode(userId, id);
-      
-      if (!success) {
-        return res.status(404).json({
-          success: false,
-          error: "Trading mode not found"
-        });
-      }
+      await storage.deleteTradingMode(userId, id);
       
       res.json({
         success: true
