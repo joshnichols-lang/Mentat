@@ -391,6 +391,22 @@ export async function developAutonomousStrategy(userId: string): Promise<void> {
       console.error("Failed to fetch trading modes:", modeError);
     }
     
+    // SAFETY CHECK: Block trading if no active strategy configured
+    if (!activeTradingMode) {
+      console.log(`[Autonomous Trading] BLOCKING trade execution - no active trading strategy configured`);
+      
+      // Log to monitoring so users understand why AI isn't trading
+      await storage.createMonitoringLog(userId, {
+        analysis: JSON.stringify({
+          mode: "blocked",
+          message: "No active trading strategy configured. Please create a trading strategy and set it as active to enable autonomous trading."
+        }),
+        alertLevel: "info"
+      });
+      
+      return;
+    }
+    
     const prompt = `You are Mr. Fox, an autonomous AI trader. Develop a complete trade thesis and execute trades based on current market conditions.
 
 ACCOUNT INFORMATION (CRITICAL - READ THIS FIRST):
