@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -9,7 +9,19 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { BookOpen, TrendingUp, TrendingDown, Circle, CheckCircle2, Clock } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { BookOpen, TrendingUp, TrendingDown, Circle, CheckCircle2, Clock, Trash2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { queryClient, apiRequest } from "@/lib/queryClient";
 import Header from "@/components/Header";
 
 interface TradeJournalEntry {
@@ -20,9 +32,12 @@ interface TradeJournalEntry {
   entryType: "limit" | "market";
   status: "planned" | "active" | "closed";
   entryReasoning: string | null;
+  exitCriteria: string | null;
+  expectedRoi: string | null;
   expectations: {
     stopLoss: string | null;
     takeProfit: string | null;
+    expectedRoi: string | null;
     riskRewardRatio: string | null;
     expectedDuration: string | null;
   } | null;
@@ -49,6 +64,9 @@ export default function TradeJournal() {
   const [selectedEntry, setSelectedEntry] = useState<TradeJournalEntry | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [symbolFilter, setSymbolFilter] = useState<string>("all");
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [entryToDelete, setEntryToDelete] = useState<string | null>(null);
+  const { toast } = useToast();
 
   const { data: entriesData, isLoading, error } = useQuery<{ success: boolean; entries: TradeJournalEntry[] }>({
     queryKey: ["trade-journal", statusFilter, symbolFilter],
@@ -80,6 +98,42 @@ export default function TradeJournal() {
   if (error) {
     console.error("Trade journal query error:", error);
   }
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return apiRequest<{ success: boolean; message: string }>(`/api/trade-journal/${id}`, {
+        method: "DELETE"
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["trade-journal"] });
+      toast({
+        title: "Entry Deleted",
+        description: "Trade journal entry has been deleted successfully.",
+      });
+      setSelectedEntry(null);
+      setDeleteDialogOpen(false);
+      setEntryToDelete(null);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Delete Failed",
+        description: error.message || "Failed to delete journal entry",
+        variant: "destructive",
+      });
+    }
+  });
+
+  const handleDeleteClick = (entryId: string) => {
+    setEntryToDelete(entryId);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (entryToDelete) {
+      deleteMutation.mutate(entryToDelete);
+    }
+  };
 
   const entries = entriesData?.entries || [];
   const symbols = Array.from(new Set(entries.map(e => e.symbol))).sort();
@@ -312,6 +366,14 @@ export default function TradeJournal() {
                           <div className="mt-1 font-mono font-bold" data-testid="text-detail-take-profit">{formatPrice(selectedEntry.expectations.takeProfit)}</div>
                         </div>
                       )}
+                      {(selectedEntry.expectedRoi || selectedEntry.expectations.expectedRoi) && (
+                        <div>
+                          <Label className="text-xs uppercase tracking-wider text-muted-foreground">EXPECTED ROI</Label>
+                          <div className="mt-1 font-mono text-lg font-bold text-[hsl(120,25%,35%)] dark:text-[hsl(120,25%,60%)]" data-testid="text-detail-expected-roi">
+                            {selectedEntry.expectedRoi || selectedEntry.expectations.expectedRoi}%
+                          </div>
+                        </div>
+                      )}
                       {selectedEntry.expectations.riskRewardRatio && (
                         <div>
                           <Label className="text-xs uppercase tracking-wider text-muted-foreground">RISK:REWARD RATIO</Label>
@@ -325,6 +387,16 @@ export default function TradeJournal() {
                         </div>
                       )}
                     </div>
+                  </div>
+                )}
+
+                {/* Exit Criteria */}
+                {selectedEntry.exitCriteria && (
+                  <div className="border-solid border p-4 bg-muted/10">
+                    <h3 className="text-lg font-bold uppercase tracking-normal mb-2 border-b border-solid pb-2">
+                      EXIT CRITERIA
+                    </h3>
+                    <p className="text-sm whitespace-pre-wrap" data-testid="text-detail-exit-criteria">{selectedEntry.exitCriteria}</p>
                   </div>
                 )}
 
@@ -460,10 +532,47 @@ export default function TradeJournal() {
                   </div>
                 </div>
               </div>
+
+              {/* Delete Button */}
+              <div className="flex justify-end pt-4 border-t border-solid mt-6">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleDeleteClick(selectedEntry.id)}
+                  className="uppercase text-xs tracking-wide text-destructive border-destructive hover:bg-destructive hover:text-destructive-foreground"
+                  data-testid="button-delete-entry"
+                  disabled={deleteMutation.isPending}
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  {deleteMutation.isPending ? "DELETING..." : "DELETE ENTRY"}
+                </Button>
+              </div>
             </>
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent className="rounded-none border-solid">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="uppercase tracking-normal">DELETE JOURNAL ENTRY?</AlertDialogTitle>
+            <AlertDialogDescription className="text-sm">
+              This action cannot be undone. This will permanently delete this trade journal entry from the database.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="uppercase text-xs" data-testid="button-cancel-delete">CANCEL</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="uppercase text-xs bg-destructive hover:bg-destructive/90"
+              data-testid="button-confirm-delete"
+            >
+              DELETE
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
         </div>
       </div>
     </div>

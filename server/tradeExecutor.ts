@@ -23,6 +23,8 @@ interface TradingAction {
   expectedEntry?: string;
   stopLoss?: string;
   takeProfit?: string;
+  exitCriteria?: string; // Detailed reasoning for stop loss placement based on market structure
+  expectedRoi?: string; // Expected ROI percentage for this trade
   triggerPrice?: string;
   orderId?: number;
 }
@@ -56,7 +58,7 @@ async function createJournalEntry(
       return null;
     }
 
-    // Build expectations object
+    // Build expectations object with detailed trade expectations
     const expectations: any = {
       entry: action.expectedEntry || "market",
       size: action.size,
@@ -67,6 +69,9 @@ async function createJournalEntry(
     }
     if (action.takeProfit) {
       expectations.takeProfit = action.takeProfit;
+    }
+    if (action.expectedRoi) {
+      expectations.expectedRoi = action.expectedRoi;
     }
 
     // Determine entry status based on order result
@@ -86,10 +91,15 @@ async function createJournalEntry(
       entryType: "limit" as const,
       status,
       entryReasoning: action.reasoning,
-      expectations,
+      expectations: JSON.stringify(expectations),
+      exitCriteria: action.exitCriteria || null,
+      expectedRoi: action.expectedRoi || null,
       plannedEntryPrice: action.expectedEntry || null,
       actualEntryPrice: actualEntryPrice || null,
       size: action.size,
+      leverage: action.leverage || 1,
+      stopLoss: action.stopLoss || null,
+      takeProfit: action.takeProfit || null,
       activatedAt: status === "active" ? new Date() : null,
     };
 

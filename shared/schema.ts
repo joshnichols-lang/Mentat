@@ -375,6 +375,8 @@ export const tradeJournalEntries = pgTable("trade_journal_entries", {
   // Entry reasoning and expectations
   entryReasoning: text("entry_reasoning").notNull(), // AI's detailed explanation for why this trade was planned/entered
   expectations: text("expectations").notNull(), // AI's expectations for the trade (targets, timeframe, market conditions)
+  exitCriteria: text("exit_criteria"), // AI's detailed reasoning for stop loss placement based on market structure
+  expectedRoi: decimal("expected_roi", { precision: 10, scale: 6 }), // Expected ROI percentage for this trade
   marketContext: jsonb("market_context"), // Market conditions at entry: { regime, volatility, volume, etc }
   
   // Planned trade details

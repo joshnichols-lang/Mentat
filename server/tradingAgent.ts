@@ -20,6 +20,8 @@ interface TradingAction {
   expectedEntry?: string;
   stopLoss?: string;
   takeProfit?: string;
+  exitCriteria?: string; // Detailed reasoning for stop loss placement based on market structure
+  expectedRoi?: string; // Expected ROI percentage for this trade
   triggerPrice?: string; // For stop_loss and take_profit actions
   orderId?: number; // For cancel_order action
 }
@@ -283,6 +285,10 @@ JSON format:
       "leverage": 1-10,
       "reasoning": "Technical analysis across timeframes, entry trigger, risk management rationale",
       "expectedEntry": "numeric price as string (e.g. '45000.5')" [for buy/sell actions],
+      "stopLoss": "numeric price as string (e.g. '43500')" [REQUIRED for buy/sell - the stop loss price],
+      "takeProfit": "numeric price as string (e.g. '47500')" [REQUIRED for buy/sell - the take profit price],
+      "exitCriteria": "Detailed reasoning for stop loss placement based on market structure (e.g., 'Stop placed below 4H support at $43,500 which aligns with 0.618 Fibonacci retracement. If breached, indicates trend reversal.')" [REQUIRED for buy/sell actions],
+      "expectedRoi": "Expected ROI percentage as string (e.g. '5.8' for 5.8%)" [REQUIRED for buy/sell - calculated from entry to take profit],
       "triggerPrice": "numeric price as string (e.g. '44000')" [REQUIRED for stop_loss/take_profit actions - the price that triggers the order]
     }
   ],

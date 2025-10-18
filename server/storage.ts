@@ -128,6 +128,7 @@ export interface IStorage {
   getTradeJournalEntry(userId: string, id: string): Promise<TradeJournalEntry | undefined>;
   getTradeJournalEntryByTradeId(userId: string, tradeId: string): Promise<TradeJournalEntry | undefined>;
   updateTradeJournalEntry(userId: string, id: string, updates: Partial<TradeJournalEntry>): Promise<TradeJournalEntry | undefined>;
+  deleteTradeJournalEntry(userId: string, id: string): Promise<boolean>;
   activateTradeJournalEntry(userId: string, id: string, actualEntryPrice: string): Promise<TradeJournalEntry | undefined>;
   closeTradeJournalEntry(userId: string, id: string, closeData: {
     closePrice: string;
@@ -900,6 +901,13 @@ export class DbStorage implements IStorage {
       .where(withUserFilter(tradeJournalEntries, userId, eq(tradeJournalEntries.id, id)))
       .returning();
     return result[0];
+  }
+
+  async deleteTradeJournalEntry(userId: string, id: string): Promise<boolean> {
+    const result = await db.delete(tradeJournalEntries)
+      .where(withUserFilter(tradeJournalEntries, userId, eq(tradeJournalEntries.id, id)))
+      .returning();
+    return result.length > 0;
   }
 
   async activateTradeJournalEntry(userId: string, id: string, actualEntryPrice: string): Promise<TradeJournalEntry | undefined> {
