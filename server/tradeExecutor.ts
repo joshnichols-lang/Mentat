@@ -115,6 +115,11 @@ export async function executeTradeStrategy(
     }
   }
 
+  // CROSS-CYCLE DEDUPLICATION: Check against existing open orders on exchange
+  // This prevents placing duplicate orders across monitoring cycles
+  const existingOrders = await hyperliquid.getOpenOrders();
+  console.log(`[Trade Executor] Checking ${nonProtectiveActions.length} actions against ${existingOrders.length} existing orders`);
+  
   // DEDUPLICATION: Remove duplicate buy/sell orders (same symbol, side, price, size)
   // Uses exchange tick size and size decimals to catch post-rounding duplicates
   const deduplicatedActions: TradingAction[] = [];
@@ -149,6 +154,45 @@ export async function executeTradeStrategy(
       // Create unique key: symbol-side-roundedPrice-roundedSize
       const orderKey = `${action.symbol}-${action.side}-${normalizedPrice}-${normalizedSize}`;
       
+      // Check against EXISTING orders on the exchange (cross-cycle deduplication)
+      const isBuyOrder = action.side === "long";
+      const matchingExistingOrder = existingOrders.find(order => {
+        // Only check limit orders (not stop loss or take profit)
+        if (order.reduceOnly || order.orderType?.trigger) return false;
+        
+        // Check if same symbol
+        if (order.coin !== action.symbol) return false;
+        
+        // Check if same side (B = buy/long, A = sell/short)
+        const orderIsBuy = order.side === "B";
+        if (orderIsBuy !== isBuyOrder) return false;
+        
+        // Normalize existing order's price and size
+        const existingPrice = parseFloat(order.limitPx);
+        const existingRoundedPrice = roundToTickSize(existingPrice, metadata.tickSize);
+        
+        const existingSize = parseFloat(order.sz);
+        const existingRoundedSize = roundToSizeDecimals(existingSize, metadata.szDecimals);
+        
+        // Check if price and size match
+        const priceMatches = Math.abs(existingRoundedPrice - parseFloat(normalizedPrice)) < metadata.tickSize * 0.01;
+        const sizeMatches = Math.abs(existingRoundedSize - parseFloat(normalizedSize)) < Math.pow(10, -metadata.szDecimals);
+        
+        return priceMatches && sizeMatches;
+      });
+      
+      if (matchingExistingOrder) {
+        console.warn(`[Trade Executor] EXISTING ORDER DETECTED: Skipping ${action.action} ${action.symbol} ${normalizedSize} @ ${normalizedPrice} - order ${matchingExistingOrder.oid} already exists on exchange`);
+        skipCount++;
+        results.push({
+          success: true,
+          action,
+          error: `Duplicate order skipped - order ${matchingExistingOrder.oid} already exists on exchange`,
+        });
+        continue;
+      }
+      
+      // Check within current batch (in-batch deduplication)
       if (seenOrders.has(orderKey)) {
         console.warn(`[Trade Executor] DUPLICATE DETECTED: Skipping duplicate ${action.action} order for ${action.symbol} ${action.side} ${normalizedSize} @ ${normalizedPrice}`);
         skipCount++;

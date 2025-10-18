@@ -471,15 +471,34 @@ Analyze these past prompts to understand the user's:
    - PRIMARY: Scan market and place 1-3 limit orders at strategic levels across different assets
    - SECONDARY: Only manage existing protective orders if explicitly listed as MISSING
    - Returning empty actions should be RARE - only if truly no setups exist across entire market
-10. **CRITICAL: NEVER CANCEL EXISTING PROTECTIVE ORDERS UNLESS GENUINELY MISSING**: 
-   - **IF A STOP LOSS ORDER EXISTS, DO NOT INCLUDE IT IN YOUR ACTIONS - LEAVE IT ALONE**
-   - **IF A TAKE PROFIT ORDER EXISTS, DO NOT INCLUDE IT IN YOUR ACTIONS - LEAVE IT ALONE**
-   - Check "EXISTING OPEN ORDERS" section - if you see a STOP LOSS or TAKE PROFIT for a symbol, DO NOT place a new one
+10. **CRITICAL: NEVER DUPLICATE ANY EXISTING ORDERS**:
+   ⚠️ **BEFORE PLACING ANY BUY/SELL ORDER, CHECK THE "EXISTING OPEN ORDERS" SECTION ABOVE!**
+   
+   - **STEP 1**: Review ALL orders in "EXISTING OPEN ORDERS" section
+   - **STEP 2**: For each buy/sell action you want to place, check if a similar order already exists:
+     * Same symbol (e.g., SOL-PERP)
+     * Same side (BUY or SELL)
+     * Same or similar price (within 1-2% of your intended entry)
+   - **STEP 3**: If a matching order exists, DO NOT place a duplicate - the order is already working
+   - **STEP 4**: Only place NEW orders for opportunities not already covered by existing limit orders
+   
+   **PROTECTIVE ORDERS (STOP LOSS / TAKE PROFIT)**:
+   - **IF A STOP LOSS ORDER EXISTS, DO NOT PLACE ANOTHER ONE**
+   - **IF A TAKE PROFIT ORDER EXISTS, DO NOT PLACE ANOTHER ONE**
+   - Check "EXISTING OPEN ORDERS" section - if you see a STOP LOSS or TAKE PROFIT for a symbol, skip it
    - ONLY place protective orders when "CRITICAL MISSING PROTECTIVE ORDERS" section explicitly shows they are MISSING
-   - The "MISSING" section is the ONLY source of truth about whether orders need to be placed
-   - If "EXISTING OPEN ORDERS" shows protective orders but "MISSING" section is empty, return ZERO ACTIONS
+   - The "MISSING" section is the ONLY source of truth about whether protective orders need to be placed
+   - If "EXISTING OPEN ORDERS" shows protective orders but "MISSING" section is empty, return ZERO protective actions
    - NEVER replace or "optimize" existing protective orders - this creates wasteful churn
-   - Once placed, protective orders should remain untouched unless truly missing
+   - Once placed, orders should remain untouched unless truly missing
+   
+   **EXAMPLES**:
+   - ✅ GOOD: EXISTING OPEN ORDERS shows "SOL-PERP: LIMIT | Side: B | Size: 0.68 | Trigger: $26.5"
+     → DO NOT place another SOL buy at $26.5 - it already exists!
+   - ✅ GOOD: No SOL orders exist, you identify support at $27.0
+     → Place new SOL buy limit order at $27.0
+   - ❌ BAD: EXISTING OPEN ORDERS shows SOL buy at $26.5
+     → You place another SOL buy at $26.5 anyway = DUPLICATE!
 11. **CANCEL ONLY WHEN NECESSARY**: If an order must be adjusted, cancel it FIRST with cancel_order action, THEN place the new order
 12. **EXACTLY ONE OF EACH PROTECTIVE ORDER**: Each position gets EXACTLY one stop loss + EXACTLY one take profit
    - In your actions array, you MUST include EXACTLY one stop_loss action per symbol AND EXACTLY one take_profit action per symbol
