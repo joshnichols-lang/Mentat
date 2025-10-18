@@ -67,7 +67,32 @@ export const positions = pgTable("positions", {
   leverage: integer("leverage").notNull().default(1),
   pnl: decimal("pnl", { precision: 18, scale: 8 }).notNull().default("0"),
   pnlPercent: decimal("pnl_percent", { precision: 10, scale: 6 }).notNull().default("0"),
+  // Protective order tracking for risk management
+  initialStopLoss: decimal("initial_stop_loss", { precision: 18, scale: 8 }), // Set once when position opens
+  currentStopLoss: decimal("current_stop_loss", { precision: 18, scale: 8 }), // Can move to protect gains (only in favorable direction)
+  currentTakeProfit: decimal("current_take_profit", { precision: 18, scale: 8 }), // Can be adjusted based on market conditions
+  stopLossState: text("stop_loss_state").notNull().default("initial"), // "initial", "locked", "trailing"
+  lastAdjustmentAt: timestamp("last_adjustment_at"), // When protective orders were last adjusted
   lastUpdated: timestamp("last_updated").notNull().defaultNow(),
+});
+
+// Protective order events log - tracks all SL/TP adjustments with reasons
+export const protectiveOrderEvents = pgTable("protective_order_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  positionId: varchar("position_id").references(() => positions.id, { onDelete: "cascade" }),
+  symbol: text("symbol").notNull(),
+  eventType: text("event_type").notNull(), // "set_initial", "adjust_sl", "adjust_tp", "rejected"
+  previousStopLoss: decimal("previous_stop_loss", { precision: 18, scale: 8 }),
+  newStopLoss: decimal("new_stop_loss", { precision: 18, scale: 8 }),
+  previousTakeProfit: decimal("previous_take_profit", { precision: 18, scale: 8 }),
+  newTakeProfit: decimal("new_take_profit", { precision: 18, scale: 8 }),
+  reason: text("reason").notNull(), // AI's reasoning for the adjustment (must reference market structure)
+  currentPnl: decimal("current_pnl", { precision: 18, scale: 8 }), // PnL at time of adjustment
+  currentPrice: decimal("current_price", { precision: 18, scale: 8 }), // Market price at time of adjustment
+  rejected: integer("rejected").notNull().default(0), // 1 if adjustment was rejected by validation
+  rejectionReason: text("rejection_reason"), // Why adjustment was rejected
+  timestamp: timestamp("timestamp").notNull().defaultNow(),
 });
 
 export const portfolioSnapshots = pgTable("portfolio_snapshots", {
