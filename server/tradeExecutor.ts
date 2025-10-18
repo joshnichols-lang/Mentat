@@ -50,12 +50,29 @@ interface ExecutionSummary {
 async function createJournalEntry(
   userId: string,
   action: TradingAction,
-  orderResult: { success: boolean; executedPrice?: string; response?: any }
+  orderResult: { success: boolean; executedPrice?: string; response?: any },
+  protectiveActions?: TradingAction[] // Optional protective orders to extract stop loss/take profit
 ): Promise<string | null> {
   try {
     // Only create journal entries for buy/sell actions (not protective orders)
     if (action.action !== "buy" && action.action !== "sell") {
       return null;
+    }
+
+    // Extract stop loss and take profit from protective actions if provided
+    let stopLossPrice: string | null = action.stopLoss || null;
+    let takeProfitPrice: string | null = action.takeProfit || null;
+    
+    if (protectiveActions && protectiveActions.length > 0) {
+      const stopLossAction = protectiveActions.find(a => a.action === "stop_loss");
+      const takeProfitAction = protectiveActions.find(a => a.action === "take_profit");
+      
+      if (stopLossAction?.triggerPrice) {
+        stopLossPrice = stopLossAction.triggerPrice;
+      }
+      if (takeProfitAction?.triggerPrice) {
+        takeProfitPrice = takeProfitAction.triggerPrice;
+      }
     }
 
     // Build expectations object with detailed trade expectations
@@ -64,14 +81,30 @@ async function createJournalEntry(
       size: action.size,
     };
 
-    if (action.stopLoss) {
-      expectations.stopLoss = action.stopLoss;
+    if (stopLossPrice) {
+      expectations.stopLoss = stopLossPrice;
     }
-    if (action.takeProfit) {
-      expectations.takeProfit = action.takeProfit;
+    if (takeProfitPrice) {
+      expectations.takeProfit = takeProfitPrice;
     }
     if (action.expectedRoi) {
       expectations.expectedRoi = action.expectedRoi;
+    }
+    
+    // Calculate risk:reward ratio if we have both stop loss and take profit
+    if (stopLossPrice && takeProfitPrice && action.expectedEntry) {
+      const entry = parseFloat(action.expectedEntry);
+      const sl = parseFloat(stopLossPrice);
+      const tp = parseFloat(takeProfitPrice);
+      const isLong = action.side === "long";
+      
+      const risk = Math.abs(entry - sl);
+      const reward = Math.abs(tp - entry);
+      
+      if (risk > 0) {
+        const rrRatio = (reward / risk).toFixed(2);
+        expectations.riskRewardRatio = `1:${rrRatio}`;
+      }
     }
 
     // Determine entry status based on order result
@@ -98,13 +131,13 @@ async function createJournalEntry(
       actualEntryPrice: actualEntryPrice || null,
       size: action.size,
       leverage: action.leverage || 1,
-      stopLoss: action.stopLoss || null,
-      takeProfit: action.takeProfit || null,
+      stopLoss: stopLossPrice,
+      takeProfit: takeProfitPrice,
       activatedAt: status === "active" ? new Date() : null,
     };
 
     const entry = await storage.createTradeJournalEntry(userId, entryData);
-    console.log(`[Journal] Created ${status} journal entry ${entry.id} for ${action.symbol} ${action.side}`);
+    console.log(`[Journal] Created ${status} journal entry ${entry.id} for ${action.symbol} ${action.side} (SL: ${stopLossPrice || "none"}, TP: ${takeProfitPrice || "none"})`);
     
     return entry.id;
   } catch (error: any) {
@@ -541,7 +574,9 @@ export async function executeTradeStrategy(
 
       // Handle "buy" and "sell" actions (opening new positions)
       console.log(`[Trade Executor] ⚠️ DEBUG: Action before execution:`, JSON.stringify(action, null, 2));
-      const openResult = await executeOpenPosition(hyperliquid, action, userId);
+      // Get protective actions for this symbol to include in journal entry
+      const symbolProtectiveActions = priceValidatedProtectiveGroups.get(action.symbol) || [];
+      const openResult = await executeOpenPosition(hyperliquid, action, userId, symbolProtectiveActions);
       results.push(openResult);
       
       if (openResult.success) {
@@ -831,7 +866,8 @@ export async function executeTradeStrategy(
 async function executeOpenPosition(
   hyperliquid: any,
   action: TradingAction,
-  userId: string
+  userId: string,
+  protectiveActions?: TradingAction[] // Optional protective orders for this symbol
 ): Promise<ExecutionResult> {
   try {
     // Fetch asset metadata for tick size and size decimals
@@ -936,12 +972,12 @@ async function executeOpenPosition(
 
     console.log(`[Trade Executor] Order succeeded for ${action.symbol}:`, result.response);
     
-    // Create journal entry for the trade
+    // Create journal entry for the trade, including protective order expectations
     const journalEntryId = await createJournalEntry(userId, action, {
       success: true,
       executedPrice,
       response: result.response
-    });
+    }, protectiveActions);
     
     return {
       success: true,
