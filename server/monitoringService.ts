@@ -270,6 +270,18 @@ export async function developAutonomousStrategy(userId: string): Promise<void> {
   try {
     console.log(`[Autonomous Trading] Developing trade thesis for user ${userId}...`);
     
+    // SAFETY CHECK: Verify user's agent mode before executing
+    const user = await storage.getUser(userId);
+    if (!user) {
+      console.log(`[Autonomous Trading] User ${userId} not found`);
+      return;
+    }
+    
+    if (user.agentMode === "passive") {
+      console.log(`[Autonomous Trading] User ${userId} is in PASSIVE mode - skipping trade execution`);
+      return;
+    }
+    
     const hyperliquidClient = await getUserHyperliquidClient(userId);
     if (!hyperliquidClient) {
       console.log(`[Autonomous Trading] Hyperliquid client not initialized for user ${userId}`);
