@@ -279,6 +279,17 @@ export async function developAutonomousStrategy(userId: string): Promise<void> {
     
     if (user.agentMode === "passive") {
       console.log(`[Autonomous Trading] User ${userId} is in PASSIVE mode - skipping trade execution`);
+      
+      // Log to monitoring logs so users can see passive mode is active
+      await storage.createMonitoringLog(userId, {
+        analysis: JSON.stringify({
+          mode: "passive",
+          message: "Agent is in PASSIVE mode - monitoring market conditions but not executing trades"
+        }),
+        action: "info",
+        timestamp: new Date()
+      });
+      
       return;
     }
     
