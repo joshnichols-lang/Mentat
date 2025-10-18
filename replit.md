@@ -1,5 +1,9 @@
 # 1fox
 
+## Recent Changes (October 18, 2025)
+- **✅ Tick Size Validation**: AI now respects exchange tick size rules for all order prices. BTC uses $1 increments ($104500, NOT $104500.50), ETH uses $0.1, SOL uses $0.01. System automatically rounds all entry, stop loss, and take profit prices to valid tick sizes before submission, eliminating order rejection errors.
+- **🔄 Trade Performance Evaluation & Learning System** (IN PROGRESS): AI evaluates completed trades to understand what worked/didn't work, learns from successes and failures, and adjusts strategy to better achieve goals. System tracks entry/exit quality, risk management adherence, and generates insights with decay-based weighting to prevent overfitting while enabling genuine learning.
+
 ## Recent Changes (October 17, 2025)
 - **✅ Proactive Market Scanner & Limit Order System**: AI now actively scans the ENTIRE Hyperliquid market universe every cycle, identifies high-probability trading opportunities, and places limit orders at strategic support/resistance levels to wait for fills. No longer just manages existing positions - now proactively hunts for new setups across all trading pairs.
 - **✅ Complete Trade Planning**: For each identified setup, AI generates full trade package (entry order + stop loss + take profit) with market structure analysis, proper position sizing accounting for leverage and portfolio risk, and 2:1+ risk:reward ratios.

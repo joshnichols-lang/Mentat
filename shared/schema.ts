@@ -202,6 +202,71 @@ export const contactMessages = pgTable("contact_messages", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
+// Trade evaluation and learning system
+export const tradeEvaluations = pgTable("trade_evaluations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  tradeId: varchar("trade_id").notNull().references(() => trades.id, { onDelete: "cascade" }),
+  evaluatedAt: timestamp("evaluated_at").notNull().defaultNow(),
+  // Quantitative metrics
+  pnlVsExpectancy: decimal("pnl_vs_expectancy", { precision: 10, scale: 6 }), // Actual PnL vs expected PnL
+  stopLossAdherence: integer("stop_loss_adherence").notNull().default(1), // 1 = followed, 0 = violated
+  riskRewardRatio: decimal("risk_reward_ratio", { precision: 10, scale: 6 }), // Actual R:R achieved
+  entryQuality: decimal("entry_quality", { precision: 10, scale: 6 }), // 0-100 score based on fill price vs limit
+  exitQuality: decimal("exit_quality", { precision: 10, scale: 6 }), // 0-100 score based on exit timing
+  slippagePercent: decimal("slippage_percent", { precision: 10, scale: 6 }), // Entry/exit slippage
+  holdingPeriodMinutes: integer("holding_period_minutes"), // Time held in minutes
+  // Market context
+  marketRegime: text("market_regime"), // "bullish", "bearish", "volatile", "neutral" at trade time
+  volumeAtEntry: decimal("volume_at_entry", { precision: 18, scale: 8 }), // 24h volume when entered
+  volatilityAtEntry: decimal("volatility_at_entry", { precision: 10, scale: 6 }), // Market volatility %
+  // AI-generated qualitative analysis
+  aiSummary: text("ai_summary"), // AI's reflection on what worked/didn't work
+  lessonsLearned: jsonb("lessons_learned"), // Structured insights: { entry: [], exit: [], sizing: [], timing: [] }
+  anomalyFlags: jsonb("anomaly_flags"), // Detected issues: { type: "premature_exit", severity: "high", description: "..." }
+});
+
+export const strategyLearnings = pgTable("strategy_learnings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  // Categorization
+  category: text("category").notNull(), // "regime", "execution", "sizing", "asset", "timing", "risk_management"
+  subcategory: text("subcategory"), // More specific: "bullish_regime", "limit_orders", "btc_specific", etc
+  marketRegime: text("market_regime"), // Regime-specific insights ("bullish", "bearish", "volatile", "neutral")
+  assetSymbol: text("asset_symbol"), // Asset-specific insights (e.g., "BTC-PERP")
+  // Learning content
+  insight: text("insight").notNull(), // Core lesson learned
+  supportingEvidence: jsonb("supporting_evidence"), // Trades that support this learning: [{ tradeId, pnl, date }, ...]
+  confidenceScore: decimal("confidence_score", { precision: 10, scale: 6 }), // 0-100 based on sample size & consistency
+  // Performance metrics
+  avgPnlWhenApplied: decimal("avg_pnl_when_applied", { precision: 18, scale: 8 }), // Average PnL from trades following this rule
+  sampleSize: integer("sample_size").notNull().default(1), // Number of trades contributing to this learning
+  successRate: decimal("success_rate", { precision: 10, scale: 6 }), // Win rate when applied
+  // Decay and relevance
+  decayWeight: decimal("decay_weight", { precision: 10, scale: 6 }).notNull().default("1.0"), // Exponential decay: base * exp(-days/half_life)
+  lastApplied: timestamp("last_applied"), // When this learning was last used in a trade decision
+  isActive: integer("is_active").notNull().default(1), // 0 = archived, 1 = active
+});
+
+export const marketRegimeSnapshots = pgTable("market_regime_snapshots", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  timestamp: timestamp("timestamp").notNull().defaultNow(),
+  regime: text("regime").notNull(), // "bullish", "bearish", "volatile", "neutral"
+  // Market indicators
+  overallVolatility: decimal("overall_volatility", { precision: 10, scale: 6 }), // Market-wide volatility %
+  btcTrend: text("btc_trend"), // "up", "down", "sideways"
+  ethTrend: text("eth_trend"), // "up", "down", "sideways"
+  dominantVolumeAssets: jsonb("dominant_volume_assets"), // Top 5 by volume: [{ symbol, volume24h, change24h }, ...]
+  // Performance in this regime
+  tradesInRegime: integer("trades_in_regime").notNull().default(0),
+  avgPnlInRegime: decimal("avg_pnl_in_regime", { precision: 18, scale: 8 }),
+  winRateInRegime: decimal("win_rate_in_regime", { precision: 10, scale: 6 }),
+  sharpeInRegime: decimal("sharpe_in_regime", { precision: 10, scale: 6 }),
+});
+
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true, updatedAt: true });
 export const upsertUserSchema = createInsertSchema(users).omit({ createdAt: true, updatedAt: true }).partial();
 export const insertTradeSchema = createInsertSchema(trades).omit({ id: true, userId: true, entryTimestamp: true });
@@ -216,6 +281,9 @@ export const insertPromoCodeSchema = createInsertSchema(promoCodes).omit({ id: t
 export const insertPromoCodeRedemptionSchema = createInsertSchema(promoCodeRedemptions).omit({ id: true, redeemedAt: true });
 export const insertAutomationRunSchema = createInsertSchema(automationRuns).omit({ id: true, timestamp: true });
 export const insertContactMessageSchema = createInsertSchema(contactMessages).omit({ id: true, userId: true, createdAt: true });
+export const insertTradeEvaluationSchema = createInsertSchema(tradeEvaluations).omit({ id: true, userId: true, evaluatedAt: true });
+export const insertStrategyLearningSchema = createInsertSchema(strategyLearnings).omit({ id: true, userId: true, createdAt: true, updatedAt: true });
+export const insertMarketRegimeSnapshotSchema = createInsertSchema(marketRegimeSnapshots).omit({ id: true, userId: true, timestamp: true });
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type UpsertUser = z.infer<typeof upsertUserSchema>;
@@ -244,3 +312,9 @@ export type InsertAutomationRun = z.infer<typeof insertAutomationRunSchema>;
 export type AutomationRun = typeof automationRuns.$inferSelect;
 export type InsertContactMessage = z.infer<typeof insertContactMessageSchema>;
 export type ContactMessage = typeof contactMessages.$inferSelect;
+export type InsertTradeEvaluation = z.infer<typeof insertTradeEvaluationSchema>;
+export type TradeEvaluation = typeof tradeEvaluations.$inferSelect;
+export type InsertStrategyLearning = z.infer<typeof insertStrategyLearningSchema>;
+export type StrategyLearning = typeof strategyLearnings.$inferSelect;
+export type InsertMarketRegimeSnapshot = z.infer<typeof insertMarketRegimeSnapshotSchema>;
+export type MarketRegimeSnapshot = typeof marketRegimeSnapshots.$inferSelect;
