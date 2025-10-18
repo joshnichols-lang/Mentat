@@ -2086,16 +2086,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = getUserId(req);
       const { name, type, description, parameters } = req.body;
       
-      if (!name || !type) {
+      if (!name) {
         return res.status(400).json({
           success: false,
-          error: "name and type are required"
+          error: "name is required"
         });
       }
       
       const mode = await storage.createTradingMode(userId, {
         name,
-        type,
+        type: type || "custom", // Default to "custom" if not provided
         description: description || null,
         parameters: parameters || {},
         isActive: 0
