@@ -679,22 +679,37 @@ CRITICAL - MARKET UNIVERSE:
           await createPortfolioSnapshot(userId, hyperliquidClient);
         }
         
-        // Extract entry actions with their protective orders for the alert
+        // Group entry actions by symbol for cleaner bullet point formatting
         const entryActions = strategy.actions.filter(a => a.action === 'buy' || a.action === 'sell');
-        const alertMessages: string[] = [];
+        const actionsBySymbol = new Map<string, typeof entryActions>();
         
         for (const entry of entryActions) {
-          const stopLoss = strategy.actions.find(a => 
-            a.symbol === entry.symbol && a.action === 'stop_loss'
-          );
-          const takeProfit = strategy.actions.find(a => 
-            a.symbol === entry.symbol && a.action === 'take_profit'
-          );
+          if (!actionsBySymbol.has(entry.symbol)) {
+            actionsBySymbol.set(entry.symbol, []);
+          }
+          actionsBySymbol.get(entry.symbol)!.push(entry);
+        }
+        
+        const alertMessages: string[] = [];
+        
+        // Format each symbol as its own bullet point
+        for (const [symbol, entries] of Array.from(actionsBySymbol.entries())) {
+          const symbolMessages: string[] = [`• **${symbol}**:`];
           
-          const message = `${entry.action.toUpperCase()} ${entry.symbol} ${entry.side.toUpperCase()} ${entry.size} @ $${entry.expectedEntry}
-Stop Loss: $${stopLoss?.triggerPrice || 'N/A'} | Take Profit: $${takeProfit?.triggerPrice || 'N/A'}
-Reason: ${entry.reasoning}`;
-          alertMessages.push(message);
+          for (const entry of entries) {
+            const stopLoss = strategy.actions.find(a => 
+              a.symbol === entry.symbol && a.action === 'stop_loss'
+            );
+            const takeProfit = strategy.actions.find(a => 
+              a.symbol === entry.symbol && a.action === 'take_profit'
+            );
+            
+            symbolMessages.push(`  - ${entry.action.toUpperCase()} ${entry.side.toUpperCase()} ${entry.size} @ $${entry.expectedEntry}`);
+            symbolMessages.push(`    Stop Loss: $${stopLoss?.triggerPrice || 'N/A'} | Take Profit: $${takeProfit?.triggerPrice || 'N/A'}`);
+            symbolMessages.push(`    Reason: ${entry.reasoning}`);
+          }
+          
+          alertMessages.push(symbolMessages.join('\n'));
         }
         
         // Add abnormal conditions to alert
