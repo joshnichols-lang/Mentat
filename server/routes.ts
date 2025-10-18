@@ -1740,6 +1740,205 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Trade Journal routes
+  app.get("/api/trade-journal", requireVerifiedUser, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const { status, symbol, limit } = req.query;
+
+      const filters: { status?: string; symbol?: string; limit?: number } = {};
+      if (status && typeof status === "string") filters.status = status;
+      if (symbol && typeof symbol === "string") filters.symbol = symbol;
+      if (limit && typeof limit === "string") filters.limit = parseInt(limit);
+
+      const entries = await storage.getTradeJournalEntries(userId, filters);
+
+      res.json({
+        success: true,
+        entries
+      });
+    } catch (error: any) {
+      console.error("Error fetching journal entries:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to fetch journal entries"
+      });
+    }
+  });
+
+  app.get("/api/trade-journal/:id", requireVerifiedUser, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const { id } = req.params;
+
+      const entry = await storage.getTradeJournalEntry(userId, id);
+      if (!entry) {
+        return res.status(404).json({
+          success: false,
+          error: "Journal entry not found"
+        });
+      }
+
+      res.json({
+        success: true,
+        entry
+      });
+    } catch (error: any) {
+      console.error("Error fetching journal entry:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to fetch journal entry"
+      });
+    }
+  });
+
+  app.post("/api/trade-journal", requireVerifiedUser, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const entryData = req.body;
+
+      const entry = await storage.createTradeJournalEntry(userId, entryData);
+
+      res.json({
+        success: true,
+        entry
+      });
+    } catch (error: any) {
+      console.error("Error creating journal entry:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to create journal entry",
+        details: error.message
+      });
+    }
+  });
+
+  app.patch("/api/trade-journal/:id", requireVerifiedUser, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const { id } = req.params;
+      const updates = req.body;
+
+      const entry = await storage.updateTradeJournalEntry(userId, id, updates);
+      if (!entry) {
+        return res.status(404).json({
+          success: false,
+          error: "Journal entry not found"
+        });
+      }
+
+      res.json({
+        success: true,
+        entry
+      });
+    } catch (error: any) {
+      console.error("Error updating journal entry:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to update journal entry"
+      });
+    }
+  });
+
+  app.post("/api/trade-journal/:id/activate", requireVerifiedUser, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const { id } = req.params;
+      const { actualEntryPrice } = req.body;
+
+      if (!actualEntryPrice) {
+        return res.status(400).json({
+          success: false,
+          error: "Actual entry price is required"
+        });
+      }
+
+      const entry = await storage.activateTradeJournalEntry(userId, id, actualEntryPrice);
+      if (!entry) {
+        return res.status(404).json({
+          success: false,
+          error: "Journal entry not found"
+        });
+      }
+
+      res.json({
+        success: true,
+        entry
+      });
+    } catch (error: any) {
+      console.error("Error activating journal entry:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to activate journal entry"
+      });
+    }
+  });
+
+  app.post("/api/trade-journal/:id/close", requireVerifiedUser, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const { id } = req.params;
+      const closeData = req.body;
+
+      const requiredFields = ["closePrice", "closePnl", "closePnlPercent", "closeReasoning", "hitTarget", "hadAdjustments"];
+      const missingFields = requiredFields.filter(field => !(field in closeData));
+      
+      if (missingFields.length > 0) {
+        return res.status(400).json({
+          success: false,
+          error: `Missing required fields: ${missingFields.join(", ")}`
+        });
+      }
+
+      const entry = await storage.closeTradeJournalEntry(userId, id, closeData);
+      if (!entry) {
+        return res.status(404).json({
+          success: false,
+          error: "Journal entry not found"
+        });
+      }
+
+      res.json({
+        success: true,
+        entry
+      });
+    } catch (error: any) {
+      console.error("Error closing journal entry:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to close journal entry"
+      });
+    }
+  });
+
+  app.delete("/api/trade-journal/:id", requireVerifiedUser, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const { id } = req.params;
+
+      const entry = await storage.getTradeJournalEntry(userId, id);
+      if (!entry) {
+        return res.status(404).json({
+          success: false,
+          error: "Journal entry not found"
+        });
+      }
+
+      await storage.deleteTradeJournalEntry(userId, id);
+
+      res.json({
+        success: true,
+        message: "Journal entry deleted successfully"
+      });
+    } catch (error: any) {
+      console.error("Error deleting journal entry:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to delete journal entry"
+      });
+    }
+  });
+
   // Testing endpoints for evaluation and aggregation (admin only)
   app.post("/api/admin/trigger-aggregation", requireAdmin, async (req, res) => {
     try {
