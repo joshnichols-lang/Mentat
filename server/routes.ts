@@ -2001,6 +2001,163 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Trading Modes API Routes
+  app.get("/api/trading-modes", requireVerifiedUser, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const modes = await storage.getTradingModes(userId);
+      
+      res.json({
+        success: true,
+        modes
+      });
+    } catch (error: any) {
+      console.error("Error fetching trading modes:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to fetch trading modes"
+      });
+    }
+  });
+
+  app.get("/api/trading-modes/active", requireVerifiedUser, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const activeMode = await storage.getActiveTradingMode(userId);
+      
+      res.json({
+        success: true,
+        mode: activeMode || null
+      });
+    } catch (error: any) {
+      console.error("Error fetching active trading mode:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to fetch active trading mode"
+      });
+    }
+  });
+
+  app.post("/api/trading-modes", requireVerifiedUser, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const { name, type, description, parameters } = req.body;
+      
+      if (!name || !type) {
+        return res.status(400).json({
+          success: false,
+          error: "name and type are required"
+        });
+      }
+      
+      const mode = await storage.createTradingMode(userId, {
+        name,
+        type,
+        description: description || null,
+        parameters: parameters || {},
+        isActive: false
+      });
+      
+      res.json({
+        success: true,
+        mode
+      });
+    } catch (error: any) {
+      console.error("Error creating trading mode:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to create trading mode"
+      });
+    }
+  });
+
+  app.put("/api/trading-modes/:id", requireVerifiedUser, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const { id } = req.params;
+      const { name, type, description, parameters } = req.body;
+      
+      const updates: any = {};
+      if (name !== undefined) updates.name = name;
+      if (type !== undefined) updates.type = type;
+      if (description !== undefined) updates.description = description;
+      if (parameters !== undefined) updates.parameters = parameters;
+      
+      const mode = await storage.updateTradingMode(userId, id, updates);
+      
+      if (!mode) {
+        return res.status(404).json({
+          success: false,
+          error: "Trading mode not found"
+        });
+      }
+      
+      res.json({
+        success: true,
+        mode
+      });
+    } catch (error: any) {
+      console.error("Error updating trading mode:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to update trading mode"
+      });
+    }
+  });
+
+  app.post("/api/trading-modes/:id/activate", requireVerifiedUser, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const { id } = req.params;
+      
+      const mode = await storage.setActiveTradingMode(userId, id);
+      
+      if (!mode) {
+        return res.status(404).json({
+          success: false,
+          error: "Trading mode not found"
+        });
+      }
+      
+      res.json({
+        success: true,
+        mode
+      });
+    } catch (error: any) {
+      console.error("Error activating trading mode:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to activate trading mode"
+      });
+    }
+  });
+
+  app.delete("/api/trading-modes/:id", requireVerifiedUser, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const { id } = req.params;
+      
+      const success = await storage.deleteTradingMode(userId, id);
+      
+      if (!success) {
+        return res.status(404).json({
+          success: false,
+          error: "Trading mode not found"
+        });
+      }
+      
+      res.json({
+        success: true
+      });
+    } catch (error: any) {
+      console.error("Error deleting trading mode:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to delete trading mode"
+      });
+    }
+  });
+
   const httpServer = createServer(app);
 
   // Initialize market data WebSocket service
