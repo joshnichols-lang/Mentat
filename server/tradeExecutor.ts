@@ -83,13 +83,8 @@ async function validatePriceReasonableness(
   hyperliquidClient: any,
   isProtectiveOrder: boolean
 ): Promise<PriceValidationResult> {
-  // Skip validation for market orders and hold/cancel actions
-  if (!action.expectedEntry || action.action === "hold" || action.action === "cancel_order") {
-    return { valid: true };
-  }
-  
-  // Skip validation for close actions (they use market orders)
-  if (action.action === "close") {
+  // Skip validation for hold/cancel/close actions
+  if (action.action === "hold" || action.action === "cancel_order" || action.action === "close") {
     return { valid: true };
   }
   
@@ -111,8 +106,38 @@ async function validatePriceReasonableness(
       return { valid: true };
     }
     
-    // Get submitted price
-    const submittedPrice = parseFloat(action.expectedEntry);
+    // Get submitted price based on action type
+    let submittedPrice: number;
+    if (action.action === "buy" || action.action === "sell") {
+      // Entry orders use expectedEntry
+      if (!action.expectedEntry) {
+        // Market order - skip validation
+        return { valid: true };
+      }
+      submittedPrice = parseFloat(action.expectedEntry);
+    } else if (action.action === "stop_loss" || action.action === "take_profit") {
+      // Protective orders use triggerPrice
+      if (!action.triggerPrice) {
+        console.warn(`[Price Validator] Missing triggerPrice for ${action.action} on ${action.symbol}, rejecting`);
+        return {
+          valid: false,
+          reason: `${action.action} order missing required triggerPrice`
+        };
+      }
+      submittedPrice = parseFloat(action.triggerPrice);
+    } else {
+      // Unknown action type - allow through
+      return { valid: true };
+    }
+    
+    // Validate submitted price is a valid number
+    if (isNaN(submittedPrice) || submittedPrice <= 0) {
+      console.warn(`[Price Validator] Invalid price ${submittedPrice} for ${action.action} on ${action.symbol}, rejecting`);
+      return {
+        valid: false,
+        reason: `Invalid price: ${submittedPrice}`
+      };
+    }
     
     // Calculate deviation from current price
     const deviation = Math.abs((submittedPrice - currentPrice) / currentPrice);
