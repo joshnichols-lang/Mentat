@@ -26,7 +26,6 @@ type TradingMode = {
 
 type ModeFormData = {
   name: string;
-  type: string;
   description: string;
   timeframe: string;
   riskPercentage: string;
@@ -42,7 +41,6 @@ export default function TradingModes() {
   const [editingMode, setEditingMode] = useState<TradingMode | null>(null);
   const [formData, setFormData] = useState<ModeFormData>({
     name: "",
-    type: "scalp",
     description: "",
     timeframe: "5m",
     riskPercentage: "2",
@@ -147,7 +145,6 @@ export default function TradingModes() {
   const resetForm = () => {
     setFormData({
       name: "",
-      type: "scalp",
       description: "",
       timeframe: "5m",
       riskPercentage: "2",
@@ -161,7 +158,6 @@ export default function TradingModes() {
   const loadModeToForm = (mode: TradingMode) => {
     setFormData({
       name: mode.name,
-      type: mode.type,
       description: mode.description || "",
       timeframe: mode.parameters?.timeframe || "5m",
       riskPercentage: mode.parameters?.riskPercentage?.toString() || "2",
@@ -187,7 +183,6 @@ export default function TradingModes() {
 
     const modeData = {
       name: formData.name,
-      type: formData.type,
       description: formData.description || null,
       parameters,
     };
@@ -237,32 +232,16 @@ export default function TradingModes() {
                 </DialogDescription>
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Strategy Name</Label>
-                    <Input
-                      id="name"
-                      value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      placeholder="e.g., Scalp BTC 5m"
-                      required
-                      data-testid="input-name"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="type">Strategy Type</Label>
-                    <Select value={formData.type} onValueChange={(value) => setFormData({ ...formData, type: value })}>
-                      <SelectTrigger id="type" data-testid="select-type">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="scalp">Scalp Trading</SelectItem>
-                        <SelectItem value="swing">Swing Trading</SelectItem>
-                        <SelectItem value="discretionary">Discretionary</SelectItem>
-                        <SelectItem value="custom">Custom</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                <div className="space-y-2">
+                  <Label htmlFor="name">Strategy Name</Label>
+                  <Input
+                    id="name"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    placeholder="e.g., Scalp BTC 5m"
+                    required
+                    data-testid="input-name"
+                  />
                 </div>
 
                 <div className="space-y-2">
@@ -491,9 +470,11 @@ export default function TradingModes() {
                       </Button>
                     </div>
                   </div>
-                  <CardDescription className="capitalize" data-testid={`text-type-${mode.id}`}>
-                    {mode.type} Trading
-                  </CardDescription>
+                  {mode.type && (
+                    <CardDescription className="capitalize" data-testid={`text-type-${mode.id}`}>
+                      {mode.type} Trading
+                    </CardDescription>
+                  )}
                 </CardHeader>
                 <CardContent>
                   {mode.description && (

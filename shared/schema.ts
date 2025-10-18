@@ -407,7 +407,7 @@ export const tradingModes = pgTable("trading_modes", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   name: text("name").notNull(), // User-defined name (e.g., "Aggressive Scalper", "Conservative Swing")
-  type: text("type").notNull(), // "scalp", "swing", "discretionary", "custom"
+  type: text("type").default("custom"), // Optional: "scalp", "swing", "discretionary", "custom"
   description: text("description"), // Optional user description
   
   // Strategy parameters (flexible JSON structure)

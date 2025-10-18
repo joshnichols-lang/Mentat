@@ -262,7 +262,7 @@ export default function AIPromptPanel() {
                 ) : (
                   modes.map((mode: any) => (
                     <SelectItem key={mode.id} value={mode.id} data-testid={`strategy-${mode.id}`}>
-                      {mode.name} ({mode.type})
+                      {mode.name}
                     </SelectItem>
                   ))
                 )}

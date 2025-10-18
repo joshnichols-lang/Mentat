@@ -360,7 +360,7 @@ export async function developAutonomousStrategy(userId: string): Promise<void> {
       const tradingModes = await storage.getTradingModes(userId);
       activeTradingMode = tradingModes.find((m: any) => m.isActive === 1);
       if (activeTradingMode) {
-        console.log(`[Autonomous Trading] Using active trading strategy: ${activeTradingMode.name} (${activeTradingMode.type})`);
+        console.log(`[Autonomous Trading] Using active trading strategy: ${activeTradingMode.name}${activeTradingMode.type ? ` (${activeTradingMode.type})` : ''}`);
       } else {
         console.log(`[Autonomous Trading] No active trading strategy configured`);
       }
@@ -375,17 +375,10 @@ ACCOUNT INFORMATION (CRITICAL - READ THIS FIRST):
 - Available Balance: $${withdrawable.toFixed(2)}
 - Total Margin Used: $${totalMarginUsed.toFixed(2)}
 
-${activeTradingMode ? `🎯 ACTIVE TRADING STRATEGY: "${activeTradingMode.name}" (${activeTradingMode.type})
+${activeTradingMode ? `🎯 ACTIVE TRADING STRATEGY: "${activeTradingMode.name}"
 **YOU MUST FOLLOW THIS STRATEGY - IT IS THE USER'S EXPLICIT INSTRUCTIONS**
 
 Strategy Configuration:
-- Type: ${activeTradingMode.type} (${
-  activeTradingMode.type === 'scalp' ? 'quick entries/exits, tight stops, frequent trades' :
-  activeTradingMode.type === 'swing' ? 'hold for days/weeks, wider stops, fewer trades' :
-  activeTradingMode.type === 'trend' ? 'follow strong trends, trail stops, patient entries' :
-  activeTradingMode.type === 'mean_reversion' ? 'buy dips, sell rallies, counter-trend' :
-  'custom strategy'
-})
 - Timeframe: ${activeTradingMode.parameters.timeframe || 'not specified'}
 - Risk Per Trade: ${activeTradingMode.parameters.riskPercentage || 2}% of account
 - Max Positions: ${activeTradingMode.parameters.maxPositions || 3} concurrent positions
@@ -399,7 +392,7 @@ ${activeTradingMode.parameters.customRules ? `- Custom Rules:\n${activeTradingMo
 2. NEVER exceed the max positions limit
 3. USE the specified leverage (${activeTradingMode.parameters.preferredLeverage || 5}x)
 4. RISK exactly ${activeTradingMode.parameters.riskPercentage || 2}% per trade
-5. FOLLOW the timeframe and trading style for ${activeTradingMode.type}
+5. FOLLOW the timeframe and trading style specified above
 6. RESPECT all custom rules specified above
 
 ` : '⚠️ NO ACTIVE TRADING STRATEGY - Using general conservative approach\n'}
