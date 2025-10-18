@@ -15,6 +15,8 @@ import { VolumeProfileCalculator } from "./volumeProfileCalculator";
 import { encryptCredential } from "./encryption";
 import { z } from "zod";
 import { hashPassword, comparePasswords } from "./auth";
+import multer from "multer";
+import Papa from "papaparse";
 
 // Middleware to check if user is authenticated
 function isAuthenticated(req: any, res: any, next: any) {
@@ -1495,6 +1497,239 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({
         success: false,
         error: "Failed to resolve message"
+      });
+    }
+  });
+
+  // Trade History Import routes
+  // Configure multer for CSV uploads (memory storage, max 10MB)
+  const upload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 10 * 1024 * 1024 },
+    fileFilter: (req, file, cb) => {
+      if (file.mimetype === "text/csv" || file.originalname.endsWith(".csv")) {
+        cb(null, true);
+      } else {
+        cb(new Error("Only CSV files are allowed"));
+      }
+    }
+  });
+
+  app.post("/api/trade-history/upload", requireVerifiedUser, upload.single("file"), async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      
+      if (!req.file) {
+        return res.status(400).json({
+          success: false,
+          error: "No file uploaded"
+        });
+      }
+
+      const fileContent = req.file.buffer.toString("utf-8");
+      const parsedData = Papa.parse(fileContent, {
+        header: true,
+        skipEmptyLines: true,
+        transformHeader: (header) => header.trim().toLowerCase()
+      });
+
+      if (parsedData.errors.length > 0) {
+        return res.status(400).json({
+          success: false,
+          error: "Failed to parse CSV",
+          details: parsedData.errors[0]?.message
+        });
+      }
+
+      const rows = parsedData.data as Record<string, string>[];
+      if (rows.length === 0) {
+        return res.status(400).json({
+          success: false,
+          error: "CSV file is empty"
+        });
+      }
+
+      // Validate required columns
+      const requiredColumns = ["symbol", "side", "entrydate", "entryprice", "exitdate", "exitprice", "size", "pnl"];
+      const headers = Object.keys(rows[0]);
+      const missingColumns = requiredColumns.filter(col => !headers.includes(col));
+      
+      if (missingColumns.length > 0) {
+        return res.status(400).json({
+          success: false,
+          error: `Missing required columns: ${missingColumns.join(", ")}`,
+          hint: `Required columns are: ${requiredColumns.join(", ")}`
+        });
+      }
+
+      // Create import record
+      const importRecord = await storage.createTradeHistoryImport(userId, {
+        sourceType: "csv",
+        fileName: req.file.originalname,
+        totalRows: rows.length,
+        successfulRows: 0,
+        failedRows: 0,
+        status: "processing",
+        errors: {
+          headers,
+          fileSize: req.file.size,
+          uploadedAt: new Date().toISOString()
+        }
+      });
+
+      // Process each row and insert trades
+      let successCount = 0;
+      const errorsList: Array<{ row: number; error: string }> = [];
+
+      for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        try {
+          const entryTimestamp = new Date(row.entrydate);
+          const exitTimestamp = new Date(row.exitdate);
+
+          if (isNaN(entryTimestamp.getTime()) || isNaN(exitTimestamp.getTime())) {
+            errorsList.push({ row: i + 1, error: "Invalid date format" });
+            continue;
+          }
+
+          await storage.createTradeHistoryTrade(userId, {
+            importId: importRecord.id,
+            symbol: row.symbol.trim(),
+            side: row.side.toLowerCase() === "buy" ? "long" : "short",
+            entryTimestamp,
+            entryPrice: row.entryprice,
+            exitTimestamp,
+            exitPrice: row.exitprice,
+            size: row.size,
+            pnl: row.pnl,
+            stopLoss: row.stoploss || null,
+            takeProfit: row.takeprofit || null,
+            notes: row.notes || null,
+            tags: row.tags ? row.tags.split(",").map(t => t.trim()) : null
+          });
+
+          successCount++;
+        } catch (error: any) {
+          errorsList.push({ row: i + 1, error: error.message });
+        }
+      }
+
+      // Update import record with results
+      await storage.updateTradeHistoryImport(userId, importRecord.id, {
+        successfulRows: successCount,
+        failedRows: errorsList.length,
+        status: successCount > 0 ? "completed" : "failed",
+        errors: errorsList.length > 0 ? errorsList : null,
+        completedAt: new Date()
+      });
+
+      res.json({
+        success: true,
+        importId: importRecord.id,
+        totalRows: rows.length,
+        successfulRows: successCount,
+        errors: errorsList.length > 0 ? errorsList.slice(0, 10) : undefined
+      });
+    } catch (error: any) {
+      console.error("Error uploading trade history:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to upload trade history",
+        details: error.message
+      });
+    }
+  });
+
+  app.get("/api/trade-history/imports", requireVerifiedUser, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const imports = await storage.getTradeHistoryImports(userId);
+
+      res.json({
+        success: true,
+        imports
+      });
+    } catch (error: any) {
+      console.error("Error fetching trade history imports:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to fetch imports"
+      });
+    }
+  });
+
+  app.get("/api/trade-history/imports/:id", requireVerifiedUser, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const { id } = req.params;
+
+      const importRecord = await storage.getTradeHistoryImport(userId, id);
+      if (!importRecord) {
+        return res.status(404).json({
+          success: false,
+          error: "Import not found"
+        });
+      }
+
+      const trades = await storage.getTradeHistoryTrades(userId, id);
+
+      res.json({
+        success: true,
+        import: importRecord,
+        trades
+      });
+    } catch (error: any) {
+      console.error("Error fetching import details:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to fetch import details"
+      });
+    }
+  });
+
+  app.delete("/api/trade-history/imports/:id", requireVerifiedUser, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const { id } = req.params;
+
+      const importRecord = await storage.getTradeHistoryImport(userId, id);
+      if (!importRecord) {
+        return res.status(404).json({
+          success: false,
+          error: "Import not found"
+        });
+      }
+
+      await storage.deleteTradeHistoryTradesByImportId(userId, id);
+      await storage.deleteTradeHistoryImport(userId, id);
+
+      res.json({
+        success: true,
+        message: "Import deleted successfully"
+      });
+    } catch (error: any) {
+      console.error("Error deleting import:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to delete import"
+      });
+    }
+  });
+
+  app.get("/api/trade-history/style-profiles", requireVerifiedUser, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const profiles = await storage.getTradeStyleProfiles(userId);
+
+      res.json({
+        success: true,
+        profiles
+      });
+    } catch (error: any) {
+      console.error("Error fetching style profiles:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to fetch style profiles"
       });
     }
   });
