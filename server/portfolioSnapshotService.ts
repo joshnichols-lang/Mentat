@@ -39,12 +39,12 @@ function calculateSharpeRatio(snapshots: any[]): number {
   // Calculate mean return
   const meanReturn = returns.reduce((sum, r) => sum + r, 0) / returns.length;
 
-  // Calculate standard deviation
-  const variance = returns.reduce((sum, r) => sum + Math.pow(r - meanReturn, 2), 0) / returns.length;
+  // Calculate standard deviation using sample variance (n-1)
+  const variance = returns.reduce((sum, r) => sum + Math.pow(r - meanReturn, 2), 0) / (returns.length - 1);
   const stdDev = Math.sqrt(variance);
 
   // Avoid division by zero
-  if (stdDev === 0) return 0;
+  if (stdDev === 0 || !isFinite(stdDev)) return 0;
 
   // Sharpe ratio (annualized assumption: multiply by sqrt of periods per year)
   // For simplicity, we'll use the raw ratio
@@ -85,11 +85,14 @@ function calculateSortinoRatio(snapshots: any[]): number {
     return meanReturn > 0 ? 10 : 0;
   }
 
-  const downsideVariance = negativeReturns.reduce((sum, r) => sum + Math.pow(r, 2), 0) / returns.length;
+  // FIXED: Divide by negativeReturns.length, not returns.length
+  // Use sample variance (n-1) for consistency with Sharpe ratio
+  const denominator = negativeReturns.length > 1 ? negativeReturns.length - 1 : negativeReturns.length;
+  const downsideVariance = negativeReturns.reduce((sum, r) => sum + Math.pow(r, 2), 0) / denominator;
   const downsideDeviation = Math.sqrt(downsideVariance);
 
   // Avoid division by zero
-  if (downsideDeviation === 0) return 0;
+  if (downsideDeviation === 0 || !isFinite(downsideDeviation)) return 0;
 
   const sortinoRatio = meanReturn / downsideDeviation;
 

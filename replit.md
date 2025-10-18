@@ -24,7 +24,7 @@ Preferred communication style: Simple, everyday language.
 - **Multi-Provider AI Router:** Supports Perplexity, OpenAI/ChatGPT, and xAI/Grok. Handles credential decryption, client creation, model validation, and usage tracking, with fallback to the shared platform key.
 - **Prompt Processing:** "Mr. Fox" processes natural language prompts to generate structured trading strategies, including interpretations, trading actions, risk management plans, and required numeric values.
 **Autonomous Trading System:** Multi-tenant system with per-user monitoring loops using encrypted Hyperliquid and AI credentials. Supports Passive (learning-only) and Active (autonomous trading) modes. The trading philosophy emphasizes patience, selectivity, and avoiding forced trades to maximize Sharpe ratio.
-**Order Management System:** Enforces exactly one stop loss and one take profit per position, both at full position size, with server-side validation. Includes quantitative order assessment, an anti-churn policy requiring specific metrics for order adjustments, and a liquidation safety system (2.5% buffer). Mandatory protective orders (stop loss and take profit) are required for every position.
+**Order Management System:** Enforces exactly one stop loss and one take profit per position, both at full position size, with server-side validation. Includes quantitative order assessment, an anti-churn policy requiring specific metrics for order adjustments, and a liquidation safety system (2.5% buffer). Mandatory protective orders (stop loss and take profit) are required for every position. **Duplicate Order Prevention:** Exchange-precision deduplication system prevents identical orders by comparing rounded price (tick size) and size (decimals), allowing ladder strategies while blocking true duplicates within execution batches.
 **Trade Performance Evaluation & Learning System:** Enables continuous AI self-improvement via a feedback loop.
 - **Evaluation Process:** Automatic on trade close, including 8 quantitative metrics (e.g., PnL vs expectancy, stop-loss adherence, R:R ratio) and AI-powered qualitative analysis for actionable insights.
 - **Learning Repository:** Utilizes decay-based weighting (30-day half-life) for insights, regime-aware filtering, and evidence accumulation to strengthen learnings.
@@ -32,7 +32,7 @@ Preferred communication style: Simple, everyday language.
 - **Daily Aggregation:** Scheduler runs at 2 AM UTC and on server startup to update decay weights, archive low-confidence learnings, and compute performance metrics.
 - **Integration with AI Trading:** Top 5-10 regime-filtered learnings are provided to the AI for each autonomous trading cycle, influencing trade decisions.
 **Market Data & Indicators:** Dual WebSocket service for real-time market data. Backend provides CVD Calculator and Volume Profile Calculator for AI trading decisions.
-**Core Features:** Autonomous trading engine, order management, configurable monitoring frequency (Disabled, 1 min, 5 min, 30 min, 1 hour), enhanced performance metrics (Sterling, Omega, Max Drawdown, Sharpe, Sortino, Calmar ratios), and trading controls (individual and "Close All" positions).
+**Core Features:** Autonomous trading engine, order management, configurable monitoring frequency (Disabled, 1 min, 5 min, 30 min, 1 hour), enhanced performance metrics (Sterling, Omega, Max Drawdown, Sharpe, Sortino, Calmar ratios using sample variance for unbiased estimation), and trading controls (individual and "Close All" positions).
 
 ## External Dependencies
 
