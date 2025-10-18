@@ -294,4 +294,60 @@ export function setupAuth(app: Express) {
       next(error);
     }
   });
+
+  // Create user manually (admin only) - for beta testers, etc.
+  app.post("/api/admin/users/create", async (req, res, next) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    try {
+      const currentUser = req.user!;
+      if (currentUser.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const createUserSchema = z.object({
+        username: z.string().min(3).max(50),
+        password: z.string().min(6).max(100),
+        email: z.string().email("Invalid email address").optional(),
+        autoApprove: z.boolean().optional(),
+      });
+
+      const { username, password, email, autoApprove } = createUserSchema.parse(req.body);
+
+      // Check if username already exists
+      const existingUser = await storage.getUserByUsername(username);
+      if (existingUser) {
+        return res.status(400).json({ error: "Username already exists" });
+      }
+
+      // Create the user with hashed password
+      const user = await storage.createUser({
+        username,
+        password: await hashPassword(password),
+        email: email || null,
+      });
+
+      // If autoApprove is true, automatically verify the user
+      let finalUser = user;
+      if (autoApprove) {
+        const approvedUser = await storage.updateUserVerificationStatus(user.id, "approved");
+        if (approvedUser) {
+          finalUser = approvedUser;
+        }
+      }
+
+      // Return sanitized user (no password hash)
+      const { password: _, ...safeUser } = finalUser;
+      res.status(201).json({ 
+        success: true, 
+        user: safeUser,
+        message: `User '${username}' created successfully${autoApprove ? ' and auto-approved' : ''}` 
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid input", details: error.errors });
+      }
+      next(error);
+    }
+  });
 }

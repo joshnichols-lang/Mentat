@@ -4,11 +4,16 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { CheckCircle2, XCircle, Clock, AlertCircle, Trash2, Shield, User } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { CheckCircle2, XCircle, Clock, AlertCircle, Trash2, Shield, User, UserPlus } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import Header from "@/components/Header";
+import { useState } from "react";
 
 interface UserData {
   id: string;
@@ -29,10 +34,40 @@ interface UserData {
 export default function AdminUsers() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [newUserData, setNewUserData] = useState({
+    username: "",
+    password: "",
+    email: "",
+    autoApprove: true,
+  });
 
   const { data: allUsers, isLoading, error } = useQuery<UserData[]>({
     queryKey: ["/api/admin/users"],
     enabled: user?.role === "admin",
+  });
+
+  const createUserMutation = useMutation({
+    mutationFn: async (data: typeof newUserData) => {
+      const response = await apiRequest("POST", "/api/admin/users/create", data);
+      return response.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      setCreateDialogOpen(false);
+      setNewUserData({ username: "", password: "", email: "", autoApprove: true });
+      toast({
+        title: "User Created",
+        description: data.message || "New user created successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create user",
+        variant: "destructive",
+      });
+    },
   });
 
   const deleteUserMutation = useMutation({
@@ -55,6 +90,11 @@ export default function AdminUsers() {
       });
     },
   });
+
+  const handleCreateUser = (e: React.FormEvent) => {
+    e.preventDefault();
+    createUserMutation.mutate(newUserData);
+  };
 
   if (user?.role !== "admin") {
     return (
@@ -103,13 +143,107 @@ export default function AdminUsers() {
       <Header />
       
       <main className="mx-auto max-w-7xl p-4">
-        <div className="mb-6">
-          <h1 className="text-3xl font-mono font-bold" data-testid="text-page-title">
-            User Management
-          </h1>
-          <p className="text-muted-foreground mt-2">
-            View and manage all users on the platform
-          </p>
+        <div className="mb-6 flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-mono font-bold" data-testid="text-page-title">
+              User Management
+            </h1>
+            <p className="text-muted-foreground mt-2">
+              View and manage all users on the platform
+            </p>
+          </div>
+          <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+            <DialogTrigger asChild>
+              <Button data-testid="button-create-user">
+                <UserPlus className="h-4 w-4 mr-2" />
+                Create User
+              </Button>
+            </DialogTrigger>
+            <DialogContent data-testid="dialog-create-user">
+              <DialogHeader>
+                <DialogTitle>Create New User</DialogTitle>
+                <DialogDescription>
+                  Create a new user account manually. Perfect for beta testers or pre-approved users.
+                </DialogDescription>
+              </DialogHeader>
+              <form onSubmit={handleCreateUser} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="username">Username *</Label>
+                  <Input
+                    id="username"
+                    value={newUserData.username}
+                    onChange={(e) => setNewUserData({ ...newUserData, username: e.target.value })}
+                    placeholder="betauser1"
+                    required
+                    minLength={3}
+                    maxLength={50}
+                    data-testid="input-username"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="password">Password *</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    value={newUserData.password}
+                    onChange={(e) => setNewUserData({ ...newUserData, password: e.target.value })}
+                    placeholder="Minimum 6 characters"
+                    required
+                    minLength={6}
+                    maxLength={100}
+                    data-testid="input-password"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Provide this password to the user securely
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email (Optional)</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={newUserData.email}
+                    onChange={(e) => setNewUserData({ ...newUserData, email: e.target.value })}
+                    placeholder="user@example.com"
+                    data-testid="input-email"
+                  />
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="autoApprove"
+                    checked={newUserData.autoApprove}
+                    onCheckedChange={(checked) => 
+                      setNewUserData({ ...newUserData, autoApprove: checked as boolean })
+                    }
+                    data-testid="checkbox-auto-approve"
+                  />
+                  <Label htmlFor="autoApprove" className="text-sm cursor-pointer">
+                    Auto-approve user (skip verification)
+                  </Label>
+                </div>
+                <DialogFooter>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setCreateDialogOpen(false);
+                      setNewUserData({ username: "", password: "", email: "", autoApprove: true });
+                    }}
+                    data-testid="button-cancel"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={createUserMutation.isPending}
+                    data-testid="button-submit"
+                  >
+                    {createUserMutation.isPending ? "Creating..." : "Create User"}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
         </div>
 
         {isLoading && (
