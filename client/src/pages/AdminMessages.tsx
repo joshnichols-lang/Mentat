@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Check, ExternalLink } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
+import Header from "@/components/Header";
 
 interface ContactMessage {
   id: string;
@@ -52,18 +53,24 @@ export default function AdminMessages() {
 
   if (isLoading) {
     return (
-      <div className="p-6">
-        <div className="text-center text-muted-foreground">Loading messages...</div>
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="p-6">
+          <div className="text-center text-muted-foreground">Loading messages...</div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Contact Messages</h1>
-        <p className="text-muted-foreground">View and manage user support requests</p>
-      </div>
+    <div className="min-h-screen bg-background">
+      <Header />
+      
+      <main className="mx-auto max-w-[1920px] p-6 space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold">Contact Messages</h1>
+          <p className="text-muted-foreground">View and manage user support requests</p>
+        </div>
 
       <div className="grid gap-6 md:grid-cols-2">
         {/* Pending Messages */}
@@ -202,6 +209,7 @@ export default function AdminMessages() {
           )}
         </div>
       </div>
+      </main>
     </div>
   );
 }
