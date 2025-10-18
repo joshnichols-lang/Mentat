@@ -1602,10 +1602,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             exitPrice: row.exitprice,
             size: row.size,
             pnl: row.pnl,
-            stopLoss: row.stoploss || null,
-            takeProfit: row.takeprofit || null,
-            notes: row.notes || null,
-            tags: row.tags ? row.tags.split(",").map(t => t.trim()) : null
+            leverage: row.leverage ? parseInt(row.leverage) : 1,
+            notes: row.notes || null
           });
 
           successCount++;
@@ -1622,6 +1620,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         errors: errorsList.length > 0 ? errorsList : null,
         completedAt: new Date()
       });
+
+      // Trigger AI analysis in background if trades were successfully imported
+      if (successCount > 0) {
+        const { analyzeTradeHistory } = await import("./tradeHistoryAnalysisService");
+        analyzeTradeHistory(userId, importRecord.id).catch(err => {
+          console.error(`Failed to analyze import ${importRecord.id}:`, err);
+        });
+      }
 
       res.json({
         success: true,

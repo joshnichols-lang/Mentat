@@ -15,7 +15,7 @@ Preferred communication style: Simple, everyday language.
 
 ### Backend
 **Server Framework:** Express.js with TypeScript, integrated with Vite middleware.
-**Database Strategy:** Drizzle ORM with PostgreSQL for type-safe operations. Schema includes tables for trades, positions, portfolio snapshots, AI usage logs, trade evaluations, strategy learnings, and market regime snapshots.
+**Database Strategy:** Drizzle ORM with PostgreSQL for type-safe operations. Schema includes tables for trades, positions, portfolio snapshots, AI usage logs, trade evaluations, strategy learnings, market regime snapshots, and **trade history imports** (user_trade_history_imports, user_trade_history_trades, trade_style_profiles for analyzing past trading patterns).
 **API Design:** RESTful endpoints (`/api` prefix) for trading prompts, database operations, and Hyperliquid exchange interactions.
 **Authentication & Security:** Multi-tenant architecture with `isAuthenticated` and `requireVerifiedUser` middleware. Passport.js LocalStrategy for authentication (scrypt-hashed passwords) and PostgreSQL session persistence. A tiered onboarding flow supports user registration, AI provider choice (Platform AI or Personal Key), exchange credential setup, and admin verification. Admin users can manage users, view AI usage analytics, and handle contact messages. AES-256-GCM encryption with envelope encryption secures all API keys.
 **Contact Admin System:** Allows users to send messages and optional screenshots (max 5MB, base64) to admins.
@@ -32,6 +32,7 @@ Preferred communication style: Simple, everyday language.
 - **Daily Aggregation:** Scheduler runs at 2 AM UTC and on server startup to update decay weights, archive low-confidence learnings, and compute performance metrics.
 - **Integration with AI Trading:** Top 5-10 regime-filtered learnings are provided to the AI for each autonomous trading cycle, influencing trade decisions.
 **Market Data & Indicators:** Dual WebSocket service for real-time market data. Backend provides CVD Calculator and Volume Profile Calculator for AI trading decisions.
+**Trade History Import & Analysis System:** Enables users to upload past trading history (CSV format) for AI-powered style analysis. System parses trade data, validates required fields (symbol, side, entry/exit dates/prices, size, PnL), stores in dedicated tables for lineage tracking and GDPR compliance, and triggers background AI analysis. Analysis service extracts trading patterns, calculates metrics (win rate, R:R ratio, holding periods, asset preferences), classifies trading style (risk tolerance, frequency, side preference), and generates actionable insights (strengths, weaknesses, recommendations). Results are stored in trade_style_profiles for future integration with autonomous trading to personalize strategies based on the user's proven patterns.
 **Core Features:** Autonomous trading engine, order management, configurable monitoring frequency (Disabled, 1 min, 5 min, 30 min, 1 hour), enhanced performance metrics (Sterling, Omega, Max Drawdown, Sharpe, Sortino, Calmar ratios using sample variance for unbiased estimation), and trading controls (individual and "Close All" positions).
 
 ## External Dependencies
