@@ -193,27 +193,33 @@ function analyzeVolumeProfile(marketData: MarketData[]): VolumeProfile[] {
   const totalVolume = marketData.reduce((sum, m) => sum + parseFloat(m.volume24h || "0"), 0);
   const avgMarketVolume = totalVolume / (marketData.length || 1);
   
-  return marketData.map(m => {
+  // First pass: calculate all ratios
+  const profiles = marketData.map(m => {
     const volume = parseFloat(m.volume24h || "0");
-    // Compare asset volume to market average (relative strength indicator)
     const volumeRatio = avgMarketVolume > 0 ? volume / avgMarketVolume : 1;
+    return { symbol: m.symbol, volumeRatio };
+  });
+  
+  // Calculate percentiles from the data itself (data-driven, not hardcoded)
+  const sortedRatios = profiles.map(p => p.volumeRatio).sort((a, b) => a - b);
+  const p75 = sortedRatios[Math.floor(sortedRatios.length * 0.75)] || 1.0;  // 75th percentile
+  const p25 = sortedRatios[Math.floor(sortedRatios.length * 0.25)] || 1.0;  // 25th percentile
+  
+  // Map with dynamic significance based on percentiles (changes day-to-day with market)
+  return profiles.map(({ symbol, volumeRatio }) => {
+    const volumeTrend: "increasing" | "decreasing" | "stable" = 
+      volumeRatio > 1.0 ? "increasing" : volumeRatio < 1.0 ? "decreasing" : "stable";
     
-    // NO HARDCODED THRESHOLDS - Just report the ratio, let AI decide what's significant
-    let volumeTrend: "increasing" | "decreasing" | "stable" = "stable";
-    let significance: "high" | "medium" | "low" = "low";
-    
-    // Simple trend classification based on ratio relative to 1.0 (market average)
-    if (volumeRatio > 1.0) {
-      volumeTrend = "increasing";
-      // AI will decide if this is significant based on actual ratio value
-      significance = volumeRatio > 1.5 ? "high" : "medium";
-    } else if (volumeRatio < 1.0) {
-      volumeTrend = "decreasing";
-      significance = volumeRatio < 0.7 ? "high" : "medium";
+    // Dynamic significance: top 25% = high, bottom 25% = high (for decreasing), middle = medium/low
+    let significance: "high" | "medium" | "low" = "medium";
+    if (volumeRatio >= p75) {
+      significance = "high";  // Top 25% of volume
+    } else if (volumeRatio <= p25) {
+      significance = volumeTrend === "decreasing" ? "high" : "low";  // Bottom 25%
     }
     
     return {
-      symbol: m.symbol,
+      symbol,
       volumeRatio,
       volumeTrend,
       significance
