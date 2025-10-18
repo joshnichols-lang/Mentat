@@ -445,10 +445,11 @@ export class HyperliquidClient {
 
   async updateLeverage(params: { coin: string; is_cross: boolean; leverage: number }): Promise<{ success: boolean; error?: string }> {
     try {
+      // Hyperliquid SDK signature: updateLeverage(asset, leverage, is_cross)
       await this.sdk.exchange.updateLeverage(
-        params.leverage.toString(),
-        params.coin,
-        params.is_cross ? 1 : 0
+        params.coin,                      // Asset name FIRST
+        params.leverage.toString(),       // Leverage value SECOND  
+        params.is_cross ? 1 : 0           // Cross margin flag THIRD
       );
       return { success: true };
     } catch (error: any) {

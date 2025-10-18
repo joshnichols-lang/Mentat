@@ -370,8 +370,13 @@ export async function developAutonomousStrategy(userId: string): Promise<void> {
     // Get user state for account balance info
     const userState = await hyperliquidClient.getUserState();
     const accountValue = parseFloat(userState?.marginSummary?.accountValue || '0');
-    const withdrawable = parseFloat(userState?.marginSummary?.withdrawable || '0');
     const totalMarginUsed = parseFloat(userState?.marginSummary?.totalMarginUsed || '0');
+    // Calculate available balance: Hyperliquid doesn't have a "withdrawable" field
+    // Available balance = total account value - margin currently locked in positions
+    const withdrawable = accountValue - totalMarginUsed;
+    
+    console.log(`[Balance Debug] RAW margin summary from Hyperliquid:`, JSON.stringify(userState?.marginSummary, null, 2));
+    console.log(`[Balance Debug] Calculated available balance: $${withdrawable.toFixed(2)} (accountValue=$${accountValue} - marginUsed=$${totalMarginUsed})`);
     
     // Fetch recent learnings from past trade evaluations (filtered by current market regime)
     const recentLearnings = await getRecentLearnings(userId, marketRegime.regime, 8);
