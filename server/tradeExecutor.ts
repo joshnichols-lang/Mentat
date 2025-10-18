@@ -1,6 +1,17 @@
 import { getUserHyperliquidClient } from "./hyperliquid/client";
 import { storage } from "./storage";
 
+// Utility function to round price to tick size
+function roundToTickSize(price: number, tickSize: number): number {
+  return Math.round(price / tickSize) * tickSize;
+}
+
+// Utility function to round size to size decimals
+function roundToSizeDecimals(size: number, szDecimals: number): number {
+  const multiplier = Math.pow(10, szDecimals);
+  return Math.round(size * multiplier) / multiplier;
+}
+
 interface TradingAction {
   action: "buy" | "sell" | "hold" | "close" | "stop_loss" | "take_profit" | "cancel_order";
   symbol: string;
@@ -295,8 +306,23 @@ async function executeOpenPosition(
   action: TradingAction
 ): Promise<ExecutionResult> {
   try {
+    // Fetch asset metadata for tick size and size decimals
+    const metadata = await hyperliquid.getAssetMetadata(action.symbol);
+    if (!metadata) {
+      console.error(`[Trade Executor] Failed to fetch metadata for ${action.symbol}`);
+      return {
+        success: false,
+        action,
+        error: `Failed to fetch asset metadata for ${action.symbol}`,
+      };
+    }
+    
     const isBuy = action.side === "long";
-    const size = validateNumericInput(action.size, "size");
+    let size = validateNumericInput(action.size, "size");
+    
+    // Round size to proper decimals
+    size = roundToSizeDecimals(size, metadata.szDecimals);
+    console.log(`[Trade Executor] Rounded size from ${action.size} to ${size} (${metadata.szDecimals} decimals)`);
 
     let orderParams: any;
     
@@ -313,7 +339,11 @@ async function executeOpenPosition(
     }
     
     // Use limit order with specified entry price
-    const limitPrice = validateNumericInput(action.expectedEntry, "expectedEntry");
+    let limitPrice = validateNumericInput(action.expectedEntry, "expectedEntry");
+    
+    // Round price to tick size
+    limitPrice = roundToTickSize(limitPrice, metadata.tickSize);
+    console.log(`[Trade Executor] Rounded price from ${action.expectedEntry} to ${limitPrice} (tick size: ${metadata.tickSize})`);
     
     orderParams = {
       coin: action.symbol,  // Use full symbol with -PERP suffix
@@ -429,8 +459,23 @@ async function executeTriggerOrder(
   action: TradingAction
 ): Promise<ExecutionResult> {
   try {
+    // Fetch asset metadata for tick size
+    const metadata = await hyperliquid.getAssetMetadata(action.symbol);
+    if (!metadata) {
+      console.error(`[Trade Executor] Failed to fetch metadata for ${action.symbol}`);
+      return {
+        success: false,
+        action,
+        error: `Failed to fetch asset metadata for ${action.symbol}`,
+      };
+    }
+    
     // Validate trigger price
-    const triggerPrice = validateNumericInput(action.triggerPrice, "triggerPrice");
+    let triggerPrice = validateNumericInput(action.triggerPrice, "triggerPrice");
+    
+    // Round trigger price to tick size
+    triggerPrice = roundToTickSize(triggerPrice, metadata.tickSize);
+    console.log(`[Trade Executor] Rounded trigger price from ${action.triggerPrice} to ${triggerPrice} (tick size: ${metadata.tickSize})`);
     
     // Get current positions to determine position size
     const positions = await hyperliquid.getPositions();

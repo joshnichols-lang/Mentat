@@ -163,6 +163,35 @@ export class HyperliquidClient {
     }
   }
 
+  async getAssetMetadata(symbol: string): Promise<{ szDecimals: number; tickSize: number } | null> {
+    try {
+      await this.ensureInitialized();
+      const perpMeta = await this.sdk.info.perpetuals.getMeta();
+      
+      const asset = perpMeta.universe.find((a: any) => a.name === symbol);
+      if (!asset) {
+        console.warn(`[Hyperliquid] Asset metadata not found for ${symbol}`);
+        return null;
+      }
+      
+      // szDecimals represents how many decimals the SIZE can have
+      // tickSize is the minimum price increment (typically $0.1 or $1 for major assets)
+      const szDecimals = asset.szDecimals || 0;
+      
+      // Infer tick size from the asset - major assets like BTC use $1, others use $0.1 or smaller
+      // This is a heuristic - ideally we'd get this from metadata, but it's not always available
+      let tickSize = 0.1; // Default
+      if (symbol === 'BTC-PERP') tickSize = 1;
+      else if (symbol === 'ETH-PERP') tickSize = 0.1;
+      else if (symbol === 'SOL-PERP') tickSize = 0.01;
+      
+      return { szDecimals, tickSize };
+    } catch (error) {
+      console.error(`[Hyperliquid] Failed to fetch metadata for ${symbol}:`, error);
+      return null;
+    }
+  }
+
   async getMarkets(): Promise<any> {
     try {
       // Fetch perpetual markets

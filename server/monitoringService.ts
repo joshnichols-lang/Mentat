@@ -482,6 +482,16 @@ Analyze these past prompts to understand the user's:
 
 ⚠️ JSON SYNTAX: NO trailing commas! Every array/object must end without comma before closing bracket/brace.
 
+⚠️ TICK SIZE RULES - CRITICAL FOR ORDER PLACEMENT:
+All order prices MUST respect exchange tick size rules or they will be REJECTED:
+- BTC-PERP: Tick size = $1 (prices must be whole dollars: $104500, NOT $104500.50)
+- ETH-PERP: Tick size = $0.1 (prices: $3760.0, $3760.1, NOT $3760.15)
+- SOL-PERP: Tick size = $0.01 (prices: $27.00, $27.01, NOT $27.005)
+- Most altcoins: Tick size = $0.01 or $0.001 depending on price range
+- When specifying entry/stop/target prices, ALWAYS round to valid tick increments
+- Example VALID: BTC entry $104500, stop $103500, target $107000
+- Example INVALID: BTC entry $104235.5, stop $103421.75 (will be REJECTED)
+
 Respond in JSON format:
 {
   "tradeThesis": "Detailed thesis explaining the current market opportunity and strategy",
