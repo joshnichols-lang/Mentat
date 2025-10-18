@@ -1,5 +1,6 @@
 import { getUserHyperliquidClient } from "./hyperliquid/client";
 import { storage } from "./storage";
+import { PRICE_VALIDATION } from "./constants";
 
 // Utility function to round price to tick size
 function roundToTickSize(price: number, tickSize: number): number {
@@ -68,6 +69,87 @@ function validateLeverage(leverage: number): number {
   return Math.floor(lev); // Ensure integer
 }
 
+interface PriceValidationResult {
+  valid: boolean;
+  reason?: string;
+  deviation?: number;
+  currentPrice?: number;
+  submittedPrice?: number;
+}
+
+// Validate price reasonableness: rejects orders too far from current market price
+async function validatePriceReasonableness(
+  action: TradingAction,
+  hyperliquidClient: any,
+  isProtectiveOrder: boolean
+): Promise<PriceValidationResult> {
+  // Skip validation for market orders and hold/cancel actions
+  if (!action.expectedEntry || action.action === "hold" || action.action === "cancel_order") {
+    return { valid: true };
+  }
+  
+  // Skip validation for close actions (they use market orders)
+  if (action.action === "close") {
+    return { valid: true };
+  }
+  
+  try {
+    // Fetch current market data for the symbol
+    const marketData = await hyperliquidClient.getMarketData([action.symbol]);
+    
+    if (!marketData || marketData.length === 0) {
+      console.warn(`[Price Validator] Could not fetch market data for ${action.symbol}, allowing order through`);
+      return { valid: true };
+    }
+    
+    // Get current mid price (average of bid/ask)
+    const assetData = marketData[0];
+    const currentPrice = parseFloat(assetData.markPx); // Use mark price as reference
+    
+    if (!currentPrice || currentPrice <= 0) {
+      console.warn(`[Price Validator] Invalid current price for ${action.symbol}, allowing order through`);
+      return { valid: true };
+    }
+    
+    // Get submitted price
+    const submittedPrice = parseFloat(action.expectedEntry);
+    
+    // Calculate deviation from current price
+    const deviation = Math.abs((submittedPrice - currentPrice) / currentPrice);
+    
+    // Determine threshold based on order type
+    const threshold = isProtectiveOrder 
+      ? PRICE_VALIDATION.PROTECTIVE_ORDER_MAX_DEVIATION 
+      : PRICE_VALIDATION.ENTRY_ORDER_MAX_DEVIATION;
+    
+    // Check if deviation exceeds threshold
+    if (deviation > threshold) {
+      const deviationPct = (deviation * 100).toFixed(2);
+      const thresholdPct = (threshold * 100).toFixed(0);
+      const orderType = isProtectiveOrder ? "Protective" : "Entry";
+      
+      return {
+        valid: false,
+        reason: `${orderType} order price ${submittedPrice} is ${deviationPct}% from current market price ${currentPrice.toFixed(2)} (threshold: ±${thresholdPct}%)`,
+        deviation,
+        currentPrice,
+        submittedPrice
+      };
+    }
+    
+    return {
+      valid: true,
+      deviation,
+      currentPrice,
+      submittedPrice
+    };
+    
+  } catch (error: any) {
+    console.warn(`[Price Validator] Error validating price for ${action.symbol}:`, error.message);
+    return { valid: true }; // Allow order through if validation fails
+  }
+}
+
 export async function executeTradeStrategy(
   userId: string,
   actions: TradingAction[]
@@ -115,17 +197,83 @@ export async function executeTradeStrategy(
     }
   }
 
+  // PRICE REASONABLENESS VALIDATION: Reject orders too far from current market price
+  // Validate non-protective actions first
+  const priceValidatedActions: TradingAction[] = [];
+  console.log(`[Price Validator] Validating ${nonProtectiveActions.length} entry orders against current market prices...`);
+  
+  for (const action of nonProtectiveActions) {
+    const validation = await validatePriceReasonableness(action, hyperliquid, false);
+    
+    if (!validation.valid) {
+      skipCount++;
+      console.warn(`[Price Validator] ❌ REJECTED ${action.action} ${action.symbol} @ ${validation.submittedPrice}: ${validation.reason}`);
+      results.push({
+        success: false,
+        action,
+        error: `Price validation failed: ${validation.reason}`,
+      });
+    } else {
+      if (validation.deviation !== undefined && action.expectedEntry) {
+        const deviationPct = (validation.deviation * 100).toFixed(2);
+        console.log(`[Price Validator] ✓ Accepted ${action.action} ${action.symbol} @ ${validation.submittedPrice} (${deviationPct}% from market ${validation.currentPrice?.toFixed(2)})`);
+      }
+      priceValidatedActions.push(action);
+    }
+  }
+  
+  console.log(`[Price Validator] Rejected ${nonProtectiveActions.length - priceValidatedActions.length} unrealistic entry orders`);
+
+  // Validate protective orders
+  const priceValidatedProtectiveGroups = new Map<string, TradingAction[]>();
+  let totalProtectiveOrders = 0;
+  for (const [symbol, protectiveActions] of Array.from(protectiveOrderGroups.entries())) {
+    totalProtectiveOrders += protectiveActions.length;
+  }
+  
+  if (totalProtectiveOrders > 0) {
+    console.log(`[Price Validator] Validating ${totalProtectiveOrders} protective orders against current market prices...`);
+  }
+  
+  for (const [symbol, protectiveActions] of Array.from(protectiveOrderGroups.entries())) {
+    const validatedActions: TradingAction[] = [];
+    
+    for (const action of protectiveActions) {
+      const validation = await validatePriceReasonableness(action, hyperliquid, true);
+      
+      if (!validation.valid) {
+        skipCount++;
+        console.warn(`[Price Validator] ❌ REJECTED protective ${action.action} ${action.symbol} @ ${validation.submittedPrice}: ${validation.reason}`);
+        results.push({
+          success: false,
+          action,
+          error: `Price validation failed: ${validation.reason}`,
+        });
+      } else {
+        if (validation.deviation !== undefined && action.triggerPrice) {
+          const deviationPct = (validation.deviation * 100).toFixed(2);
+          console.log(`[Price Validator] ✓ Accepted protective ${action.action} ${action.symbol} @ ${validation.submittedPrice} (${deviationPct}% from market ${validation.currentPrice?.toFixed(2)})`);
+        }
+        validatedActions.push(action);
+      }
+    }
+    
+    if (validatedActions.length > 0) {
+      priceValidatedProtectiveGroups.set(symbol, validatedActions);
+    }
+  }
+
   // CROSS-CYCLE DEDUPLICATION: Check against existing open orders on exchange
   // This prevents placing duplicate orders across monitoring cycles
   const existingOrders = await hyperliquid.getOpenOrders();
-  console.log(`[Trade Executor] Checking ${nonProtectiveActions.length} actions against ${existingOrders.length} existing orders`);
+  console.log(`[Trade Executor] Checking ${priceValidatedActions.length} actions against ${existingOrders.length} existing orders`);
   
   // DEDUPLICATION: Remove duplicate buy/sell orders (same symbol, side, price, size)
   // Uses exchange tick size and size decimals to catch post-rounding duplicates
   const deduplicatedActions: TradingAction[] = [];
   const seenOrders = new Set<string>();
   
-  for (const action of nonProtectiveActions) {
+  for (const action of priceValidatedActions) {
     if (action.action === "buy" || action.action === "sell") {
       // Fetch asset metadata for proper tick size rounding
       const metadata = await hyperliquid.getAssetMetadata(action.symbol);
@@ -210,7 +358,7 @@ export async function executeTradeStrategy(
     deduplicatedActions.push(action);
   }
 
-  console.log(`[Trade Executor] Deduplicated ${nonProtectiveActions.length - deduplicatedActions.length} duplicate orders`);
+  console.log(`[Trade Executor] Deduplicated ${priceValidatedActions.length - deduplicatedActions.length} duplicate orders`);
 
   // Process deduplicated non-protective actions first
   for (const action of deduplicatedActions) {
@@ -311,7 +459,7 @@ export async function executeTradeStrategy(
 
   // Now process protective orders grouped by symbol
   // This ensures both stop loss and take profit can coexist for the same position
-  for (const [symbol, protectiveActions] of Array.from(protectiveOrderGroups.entries())) {
+  for (const [symbol, protectiveActions] of Array.from(priceValidatedProtectiveGroups.entries())) {
     try {
       console.log(`[Trade Executor] Processing ${protectiveActions.length} protective orders for ${symbol}`);
       
