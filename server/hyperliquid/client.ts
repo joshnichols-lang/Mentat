@@ -163,7 +163,7 @@ export class HyperliquidClient {
     }
   }
 
-  async getAssetMetadata(symbol: string): Promise<{ szDecimals: number; tickSize: number } | null> {
+  async getAssetMetadata(symbol: string): Promise<{ szDecimals: number; tickSize: number; maxLeverage: number } | null> {
     try {
       await this.ensureInitialized();
       const perpMeta = await this.sdk.info.perpetuals.getMeta();
@@ -177,6 +177,7 @@ export class HyperliquidClient {
       // szDecimals represents how many decimals the SIZE can have
       // tickSize is the minimum price increment (typically $0.1 or $1 for major assets)
       const szDecimals = asset.szDecimals || 0;
+      const maxLeverage = asset.maxLeverage || 50; // Default to 50x if not specified
       
       // Infer tick size from the asset - major assets like BTC use $1, others use $0.1 or smaller
       // This is a heuristic - ideally we'd get this from metadata, but it's not always available
@@ -185,7 +186,7 @@ export class HyperliquidClient {
       else if (symbol === 'ETH-PERP') tickSize = 0.1;
       else if (symbol === 'SOL-PERP') tickSize = 0.01;
       
-      return { szDecimals, tickSize };
+      return { szDecimals, tickSize, maxLeverage };
     } catch (error) {
       console.error(`[Hyperliquid] Failed to fetch metadata for ${symbol}:`, error);
       return null;

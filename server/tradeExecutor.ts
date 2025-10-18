@@ -843,11 +843,20 @@ async function executeOpenPosition(
     console.log(`[Trade Executor] Rounded size from ${action.size} to ${size} (${metadata.szDecimals} decimals)`);
 
     // Set leverage for this asset BEFORE placing the order
-    console.log(`[Trade Executor] Setting leverage to ${action.leverage}x for ${action.symbol}...`);
+    // Cap leverage to the maximum allowed for this asset
+    const requestedLeverage = action.leverage;
+    let actualLeverage = requestedLeverage;
+    
+    if (metadata.maxLeverage && requestedLeverage > metadata.maxLeverage) {
+      actualLeverage = metadata.maxLeverage;
+      console.warn(`[Trade Executor] ⚠️ Requested leverage ${requestedLeverage}x exceeds max ${metadata.maxLeverage}x for ${action.symbol}. Capping to ${actualLeverage}x.`);
+    }
+    
+    console.log(`[Trade Executor] Setting leverage to ${actualLeverage}x for ${action.symbol}...`);
     const leverageResult = await hyperliquid.updateLeverage({
       coin: action.symbol,
       is_cross: true, // Use cross margin (isolated margin not supported by default)
-      leverage: action.leverage
+      leverage: actualLeverage
     });
     
     if (!leverageResult.success) {
@@ -855,10 +864,10 @@ async function executeOpenPosition(
       return {
         success: false,
         action,
-        error: `Failed to set leverage to ${action.leverage}x: ${leverageResult.error}`,
+        error: `Failed to set leverage to ${actualLeverage}x: ${leverageResult.error}`,
       };
     }
-    console.log(`[Trade Executor] Successfully set leverage to ${action.leverage}x for ${action.symbol}`);
+    console.log(`[Trade Executor] Successfully set leverage to ${actualLeverage}x for ${action.symbol}`);
 
     let orderParams: any;
     
