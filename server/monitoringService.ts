@@ -380,14 +380,23 @@ ACCOUNT INFORMATION (CRITICAL - READ THIS FIRST):
    - At 5x leverage: margin=$30, notional=$150, size=0.005 BTC
    - At 10x leverage: margin=$30, notional=$300, size=0.01 BTC
    
-4. **INTELLIGENT STOP LOSS PLACEMENT** (market structure + risk management):
-   - **PRIMARY**: Base stops on MARKET STRUCTURE (support/resistance, swing lows/highs, volume profile nodes)
-   - **SECONDARY**: Account for LEVERAGE when calculating dollar risk
-   - Risk per trade: 2-5% of account balance (in dollar terms)
-   - Stop distance formula: (desired_dollar_risk / position_notional_value) × entry_price
-   - Example: $100 account, 5% risk ($5), BTC position $150 notional → 3.33% stop from entry
-   - **NEVER use arbitrary percentages** - always find actual support/resistance levels
-   - At high leverage, stops will naturally be tighter (same dollar risk, larger notional)
+4. **INTELLIGENT STOP LOSS PLACEMENT** (LEVERAGE-ADJUSTED + market structure):
+   - **CRITICAL**: Higher leverage = MUCH TIGHTER stop loss required
+   - **FORMULA**: Max stop loss % from entry = (Risk % of account) / Leverage
+     * Example: 3% account risk ÷ 20x leverage = 0.15% max stop from entry price
+     * Example: 3% account risk ÷ 5x leverage = 0.6% max stop from entry price
+     * Example: 3% account risk ÷ 3x leverage = 1.0% max stop from entry price
+   - **PLACEMENT PROCESS**:
+     1. First, calculate maximum stop distance using leverage formula above
+     2. Then, find nearest support/resistance level within that range
+     3. If no strong level exists within range, DON'T TAKE THE TRADE
+   - **CONCRETE EXAMPLES**:
+     * ETH @ $3800, 20x leverage: Max 0.15% stop = $3794.30 stop loss (very tight!)
+     * ETH @ $3800, 10x leverage: Max 0.30% stop = $3788.60 stop loss (tight)
+     * ETH @ $3800, 5x leverage: Max 0.60% stop = $3777.20 stop loss (moderate)
+     * ETH @ $3800, 3x leverage: Max 1.0% stop = $3762.00 stop loss (comfortable)
+   - **NEVER use wide stops with high leverage** - this leads to liquidation
+   - **Position-specific risk**: Calculate based on THIS position's notional value, not total portfolio
    
 5. **CURRENT AVAILABLE: $${withdrawable.toFixed(2)}**:
    - With 3x leverage: max notional = $${((withdrawable * 0.30) * 3).toFixed(2)}
@@ -539,12 +548,18 @@ Analyze these past prompts to understand the user's:
      * Moving average confluence zones
      * Strong momentum with volume confirmation
 
-2. **PLACE LIMIT ORDERS AT STRATEGIC ENTRY LEVELS** (CORE ACTIVITY):
-   - **For LONG setups**: Place BUY limit orders at support levels BELOW current price
-     * Example: If BTC at $107k with strong support at $105k, place limit BUY at $105k
-   - **For SHORT setups**: Place SELL limit orders at resistance levels ABOVE current price
-     * Example: If ETH at $4k with strong resistance at $4.2k, place limit SELL at $4.2k
-   - **BE PATIENT**: Don't chase market - let price come to your strategic levels
+2. **PLACE SCALED LIMIT ORDERS AT STRATEGIC LEVELS** (CRITICAL - DON'T STACK AT SAME PRICE):
+   - **SCALE ORDERS AROUND TARGET PRICE** - If you want to accumulate 1.0 ETH at ~$3750, DON'T place three 0.33 ETH orders at $3750
+   - **CORRECT APPROACH**: Spread orders ±1-3% around target to account for volatility:
+     * 0.3 ETH at $3740 (below target - catches early bounce)
+     * 0.4 ETH at $3750 (at target - main fill)
+     * 0.3 ETH at $3760 (above target - ensures partial fill)
+   - **For LONG setups**: Place scaled BUY limit orders at/below support levels
+     * Example: BTC support at $105k, want 0.1 BTC → 0.03 @ $104k, 0.04 @ $105k, 0.03 @ $106k
+   - **For SHORT setups**: Place scaled SELL limit orders at/above resistance levels
+     * Example: ETH resistance at $4.2k, want 0.5 ETH → 0.15 @ $4.18k, 0.2 @ $4.2k, 0.15 @ $4.22k
+   - **NEVER place multiple orders at the EXACT SAME PRICE** - this provides no advantage
+   - **BE PATIENT**: Don't chase market - let price come to your strategic scaled levels
    - **ALWAYS INCLUDE**: Full position sizing, leverage selection, stop loss, and take profit in SAME action set
 
 2.1. **PRICE REASONABLENESS VALIDATION** (CRITICAL):
