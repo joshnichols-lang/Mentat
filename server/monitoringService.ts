@@ -607,19 +607,37 @@ Analyze these past prompts to understand the user's:
      * Moving average confluence zones
      * Strong momentum with volume confirmation
 
-2. **PLACE SCALED LIMIT ORDERS AT STRATEGIC LEVELS** (CRITICAL - DON'T STACK AT SAME PRICE):
-   - **SCALE ORDERS AROUND TARGET PRICE** - If you want to accumulate 1.0 ETH at ~$3750, DON'T place three 0.33 ETH orders at $3750
-   - **CORRECT APPROACH**: Spread orders ±1-3% around target to account for volatility:
-     * 0.3 ETH at $3740 (below target - catches early bounce)
-     * 0.4 ETH at $3750 (at target - main fill)
-     * 0.3 ETH at $3760 (above target - ensures partial fill)
-   - **For LONG setups**: Place scaled BUY limit orders at/below support levels
-     * Example: BTC support at $105k, want 0.1 BTC → 0.03 @ $104k, 0.04 @ $105k, 0.03 @ $106k
-   - **For SHORT setups**: Place scaled SELL limit orders at/above resistance levels
-     * Example: ETH resistance at $4.2k, want 0.5 ETH → 0.15 @ $4.18k, 0.2 @ $4.2k, 0.15 @ $4.22k
-   - **NEVER place multiple orders at the EXACT SAME PRICE** - this provides no advantage
-   - **BE PATIENT**: Don't chase market - let price come to your strategic scaled levels
-   - **ALWAYS INCLUDE**: Full position sizing, leverage selection, stop loss, and take profit in SAME action set
+2. **LIMIT ORDER PLACEMENT LOGIC** (CRITICAL - READ CAREFULLY):
+   
+   ⚠️ **TWO APPROACHES - CHOOSE ONE:**
+   
+   **A) SINGLE ORDER AT TARGET PRICE:**
+   - Use when you want to enter at ONE specific price level (e.g., exact support/resistance)
+   - Example: Want 0.42 SOL at $185 support → Place ONE order with full size
+   - ✅ CORRECT: One order with total size (buy SOL-PERP, size 0.42, expectedEntry 185)
+   - ❌ WRONG: Multiple orders at same price (e.g., 0.2 @ $185 AND 0.22 @ $185) - this is DUPLICATE
+   
+   **B) SCALED ORDERS AROUND TARGET (for better average entry):**
+   - Use when you want to improve your average entry across a price range
+   - Spread orders ±1-3% around target to account for volatility
+   - Example: Want ~0.42 SOL with average entry ~$185:
+     * 0.14 SOL @ $183 (below target - catches early bounce)
+     * 0.14 SOL @ $185 (at target - main fill)
+     * 0.14 SOL @ $187 (above target - ensures partial fill)
+   - Each order MUST be at a DIFFERENT price - never place two orders at same price
+   
+   **MORE EXAMPLES:**
+   - ✅ CORRECT: SOL target $185, size 0.3 → ONE order at $185 for 0.3
+   - ✅ CORRECT: SOL target $185, size 0.3 → THREE orders (0.1 @ $183, 0.1 @ $185, 0.1 @ $187)
+   - ❌ WRONG: SOL target $185, size 0.3 → TWO orders both at $185 (duplicate!)
+   - ❌ WRONG: SOL target $185 → 0.15 @ $185 in one cycle, then 0.15 @ $185 again next cycle
+   
+   **GOLDEN RULE**: 
+   - ❌ NEVER place multiple orders at the EXACT SAME PRICE - this provides zero advantage
+   - ✅ Either use ONE order at target, OR scale across DIFFERENT prices
+   - ✅ Always check "EXISTING OPEN ORDERS" section - if order already exists at that price, DON'T place another
+   
+   **BE PATIENT**: Don't chase market - let price come to your strategic levels
 
 2.1. **PRICE PLACEMENT GUIDELINES** (INFORMATIONAL):
    - Place limit orders based on market structure, support/resistance, and your trading thesis
