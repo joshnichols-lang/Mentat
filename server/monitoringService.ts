@@ -155,8 +155,8 @@ async function discoverAndTrackExistingPositions(userId: number): Promise<void> 
 
 function detectAbnormalConditions(marketData: MarketData[]): { symbol: string; condition: string; volumeRatio: number }[] {
   const abnormalConditions: { symbol: string; condition: string; volumeRatio: number }[] = [];
-  const VOLUME_SPIKE_THRESHOLD = 3.0; // 3x normal volume is abnormal
   
+  // NO HARDCODED THRESHOLDS - Return volume change data for AI analysis
   for (const asset of marketData) {
     const symbol = asset.symbol;
     const currentVolume = parseFloat(asset.volume24h || '0');
@@ -168,12 +168,12 @@ function detectAbnormalConditions(marketData: MarketData[]): { symbol: string; c
     const volumeMap = previousVolumeData.get('global')!;
     const previousVolume = volumeMap.get(symbol) || currentVolume;
     
-    // Detect volume spikes (current volume is 3x+ previous volume)
-    if (previousVolume > 0 && currentVolume > previousVolume * VOLUME_SPIKE_THRESHOLD) {
+    // Report volume changes - let AI decide what's significant
+    if (previousVolume > 0 && currentVolume !== previousVolume) {
       const volumeRatio = currentVolume / previousVolume;
       abnormalConditions.push({
         symbol,
-        condition: `Volume spike detected: ${volumeRatio.toFixed(2)}x normal volume`,
+        condition: `Volume change: ${volumeRatio.toFixed(2)}x (was $${(previousVolume/1e6).toFixed(1)}M, now $${(currentVolume/1e6).toFixed(1)}M)`,
         volumeRatio
       });
     }
@@ -182,7 +182,10 @@ function detectAbnormalConditions(marketData: MarketData[]): { symbol: string; c
     volumeMap.set(symbol, currentVolume);
   }
   
-  return abnormalConditions;
+  // Sort by volume ratio (biggest changes first) and return top 10 for AI analysis
+  return abnormalConditions
+    .sort((a, b) => Math.abs(b.volumeRatio - 1) - Math.abs(a.volumeRatio - 1))
+    .slice(0, 10);
 }
 
 function analyzeVolumeProfile(marketData: MarketData[]): VolumeProfile[] {
@@ -195,22 +198,18 @@ function analyzeVolumeProfile(marketData: MarketData[]): VolumeProfile[] {
     // Compare asset volume to market average (relative strength indicator)
     const volumeRatio = avgMarketVolume > 0 ? volume / avgMarketVolume : 1;
     
+    // NO HARDCODED THRESHOLDS - Just report the ratio, let AI decide what's significant
     let volumeTrend: "increasing" | "decreasing" | "stable" = "stable";
     let significance: "high" | "medium" | "low" = "low";
     
-    // Assets with significantly above-average volume indicate strong interest/momentum
-    if (volumeRatio > 2.0) {
+    // Simple trend classification based on ratio relative to 1.0 (market average)
+    if (volumeRatio > 1.0) {
       volumeTrend = "increasing";
-      significance = "high";
-    } else if (volumeRatio > 1.5) {
-      volumeTrend = "increasing";
-      significance = "medium";
-    } else if (volumeRatio < 0.5) {
+      // AI will decide if this is significant based on actual ratio value
+      significance = volumeRatio > 1.5 ? "high" : "medium";
+    } else if (volumeRatio < 1.0) {
       volumeTrend = "decreasing";
-      significance = "medium";
-    } else if (volumeRatio < 0.3) {
-      volumeTrend = "decreasing";
-      significance = "high";
+      significance = volumeRatio < 0.7 ? "high" : "medium";
     }
     
     return {
@@ -230,41 +229,22 @@ function identifyMarketRegime(marketData: MarketData[]): { regime: string; confi
   
   const gainers = marketData.filter(m => parseFloat(m.change24h || "0") > 0).length;
   const losers = marketData.filter(m => parseFloat(m.change24h || "0") < 0).length;
+  const neutral = totalAssets - gainers - losers;
   
   const avgChange = marketData.reduce((sum, m) => sum + parseFloat(m.change24h || "0"), 0) / totalAssets;
   const volatility = Math.sqrt(
     marketData.reduce((sum, m) => sum + Math.pow(parseFloat(m.change24h || "0") - avgChange, 2), 0) / totalAssets
   );
   
-  let regime = "neutral";
-  let confidence = 50;
-  let reasoning = "";
+  // NO HARDCODED THRESHOLDS - Provide raw data for AI to analyze
+  const reasoning = `Market Statistics: ${gainers} gainers (${(gainers/totalAssets*100).toFixed(1)}%), ${losers} losers (${(losers/totalAssets*100).toFixed(1)}%), ${neutral} neutral. Average 24h change: ${avgChange >= 0 ? '+' : ''}${avgChange.toFixed(2)}%. Volatility (std dev): ${volatility.toFixed(2)}%. YOU analyze these stats to determine regime - no pre-classification.`;
   
-  if (volatility > 5) {
-    regime = "volatile";
-    confidence = 75;
-    reasoning = `High volatility detected (${volatility.toFixed(2)}%), market is choppy and uncertain`;
-  } else if (gainers > losers * 1.8 && avgChange > 2) {
-    regime = "bullish";
-    confidence = 80;
-    reasoning = `Strong bullish momentum: ${gainers} gainers vs ${losers} losers, avg +${avgChange.toFixed(2)}%`;
-  } else if (losers > gainers * 1.8 && avgChange < -2) {
-    regime = "bearish";
-    confidence = 80;
-    reasoning = `Clear bearish trend: ${losers} losers vs ${gainers} gainers, avg ${avgChange.toFixed(2)}%`;
-  } else if (gainers > losers * 1.3) {
-    regime = "bullish";
-    confidence = 60;
-    reasoning = `Moderate bullish bias: ${gainers} gainers vs ${losers} losers`;
-  } else if (losers > gainers * 1.3) {
-    regime = "bearish";
-    confidence = 60;
-    reasoning = `Moderate bearish bias: ${losers} losers vs ${gainers} gainers`;
-  } else {
-    reasoning = `Balanced market: ${gainers} gainers, ${losers} losers, mixed signals`;
-  }
-  
-  return { regime, confidence, reasoning };
+  // Return neutral with raw data - AI will determine actual regime based on current conditions
+  return { 
+    regime: "neutral",  // AI will classify
+    confidence: 50,      // AI will assess confidence
+    reasoning 
+  };
 }
 
 export async function developAutonomousStrategy(userId: string): Promise<void> {
@@ -469,13 +449,19 @@ ${activeTradingMode.parameters.customRules ? `- Custom Rules:\n${activeTradingMo
    - With ${activeTradingMode ? activeTradingMode.parameters.preferredLeverage || 5 : 5}x leverage: you can access significant notional exposure
    - Risk ${activeTradingMode ? activeTradingMode.parameters.riskPercentage || 2 : 2}% of account per trade as configured in strategy
 
-MARKET REGIME ANALYSIS:
+⚠️ MARKET ANALYSIS (YOU MUST ANALYZE - NO PRE-CLASSIFICATION):
 ${marketRegime.reasoning}
-Regime: ${marketRegime.regime} (confidence: ${marketRegime.confidence}%)
 
-VOLUME PROFILE ANALYSIS:
-High Volume Assets (potential breakout opportunities):
-${highVolumeAssets.map(v => `- ${v.symbol}: ${v.volumeTrend} volume (${v.volumeRatio.toFixed(2)}x ratio)`).join('\n')}
+**YOUR JOB**: Analyze the statistics above and determine:
+1. Current market regime (bullish/bearish/neutral/volatile) based on YOUR analysis
+2. Confidence level based on how clear the signals are
+3. What these numbers mean for trading opportunities TODAY
+
+VOLUME ANALYSIS (RAW DATA - YOU DECIDE WHAT'S SIGNIFICANT):
+Volume vs Market Average (1.0 = average):
+${highVolumeAssets.map(v => `- ${v.symbol}: ${v.volumeRatio.toFixed(2)}x market average volume ($${(parseFloat(marketData.find(m => m.symbol === v.symbol)?.volume24h || '0')/1e6).toFixed(1)}M)`).join('\n')}
+
+**YOUR JOB**: Decide which volume levels are significant based on TODAY'S market conditions, not fixed thresholds
 
 MARKET DATA:
 Top Gainers: ${topGainers.map(m => `${m.symbol} (+${m.change24h}%, Vol: $${(parseFloat(m.volume24h) / 1e6).toFixed(1)}M)`).join(', ')}
