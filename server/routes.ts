@@ -41,6 +41,20 @@ function requireVerifiedUser(req: any, res: any, next: any) {
   return next();
 }
 
+// Middleware to check if user is admin
+function requireAdmin(req: any, res: any, next: any) {
+  if (!req.isAuthenticated()) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+  
+  const user = req.user!;
+  if (user.role !== "admin") {
+    return res.status(403).json({ message: "Admin access required" });
+  }
+  
+  return next();
+}
+
 // Helper to get authenticated user ID
 function getUserId(req: any): string {
   return req.user!.id;
@@ -1481,6 +1495,68 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({
         success: false,
         error: "Failed to resolve message"
+      });
+    }
+  });
+
+  // Testing endpoints for evaluation and aggregation (admin only)
+  app.post("/api/admin/trigger-aggregation", requireAdmin, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const { runDailyAggregation } = await import("./aggregationService");
+      
+      await runDailyAggregation(userId);
+      
+      res.json({
+        success: true,
+        message: "Aggregation completed successfully"
+      });
+    } catch (error: any) {
+      console.error("Error triggering aggregation:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to run aggregation"
+      });
+    }
+  });
+
+  app.post("/api/admin/test-evaluation/:tradeId", requireAdmin, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const { tradeId } = req.params;
+      const { evaluateCompletedTrade } = await import("./evaluationService");
+      
+      await evaluateCompletedTrade(userId, tradeId);
+      
+      res.json({
+        success: true,
+        message: "Trade evaluation completed successfully"
+      });
+    } catch (error: any) {
+      console.error("Error evaluating trade:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to evaluate trade"
+      });
+    }
+  });
+
+  app.get("/api/learnings", requireVerifiedUser, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const { getRecentLearnings } = await import("./evaluationService");
+      
+      const learnings = await getRecentLearnings(userId, undefined, 20);
+      
+      res.json({
+        success: true,
+        learnings
+      });
+    } catch (error: any) {
+      console.error("Error fetching learnings:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to fetch learnings"
       });
     }
   });

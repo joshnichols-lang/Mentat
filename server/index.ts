@@ -7,6 +7,7 @@ import { initHyperliquidClient } from "./hyperliquid/client";
 import { TEST_USER_ID } from "./constants";
 import { startUserMonitoring } from "./userMonitoringManager";
 import { storage } from "./storage";
+import { startScheduler } from "./scheduler";
 
 const app = express();
 app.use(express.json());
@@ -99,6 +100,14 @@ app.use((req, res, next) => {
       log(`[Startup] Autonomous trading initialization complete`);
     } catch (error) {
       log(`[Startup] Error initializing autonomous trading: ${error}`);
+    }
+    
+    // Start daily aggregation scheduler for learning system
+    try {
+      startScheduler();
+      log(`[Startup] Learning aggregation scheduler started`);
+    } catch (error) {
+      log(`[Startup] Error starting aggregation scheduler: ${error}`);
     }
   });
 })();
