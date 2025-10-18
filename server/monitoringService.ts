@@ -659,17 +659,39 @@ Analyze these past prompts to understand the user's:
    - Clear technical confluence required (multiple indicators confirming same level)
    - Strong volume confirmation at key levels
    - Consider risk:reward ratio based on conviction and market structure
-7. **INTELLIGENT STOP LOSS PLACEMENT**:
-   - **USE MARKET STRUCTURE**: Place stops just beyond key support (longs) or resistance (shorts)
-   - Examples of valid stop placement:
-     * Below recent swing low + ATR buffer
-     * Below key volume profile support node
-     * Below major moving average with confluence
-     * Below Fibonacci retracement level with volume
-   - **ACCOUNT FOR LEVERAGE**: Higher leverage = same dollar risk but tighter % stop
-   - **AVOID ARBITRARY %**: Don't use "3% stop" or "5% stop" - find actual market levels
-   - **LIQUIDATION AWARENESS**: Ensure stop will trigger BEFORE liquidation (account for wicks/slippage)
-   - **REASONING REQUIRED**: Always explain WHY you placed stop at specific level (cite support/resistance)
+7. **INTELLIGENT STOP LOSS PLACEMENT - MARKET STRUCTURE INVALIDATION** (CRITICAL):
+   
+   ⚠️ **CORE PRINCIPLE**: A stop loss should be placed at a level where, if hit, the trade thesis is INVALIDATED by market structure.
+   
+   **FOR SHORTS (selling near resistance):**
+   - Identify the resistance level you're shorting from (e.g., $3,910)
+   - Place stop loss just ABOVE that resistance (e.g., $3,920-$3,930)
+   - **WHY**: If price breaks ABOVE resistance, the resistance is broken and the short thesis is WRONG
+   - Add small buffer (0.3-1%) for low timeframe volatility/wicks
+   - **EXAMPLE**: Shorting ETH at $3,890 near resistance at $3,910
+     → Stop Loss: $3,920 (if resistance breaks, exit immediately with small loss)
+   
+   **FOR LONGS (buying near support):**
+   - Identify the support level you're longing from (e.g., $3,750)
+   - Place stop loss just BELOW that support (e.g., $3,720-$3,740)
+   - **WHY**: If price breaks BELOW support, the support is broken and the long thesis is WRONG
+   - Add small buffer (0.3-1%) for low timeframe volatility/wicks
+   - **EXAMPLE**: Longing ETH at $3,775 near support at $3,750
+     → Stop Loss: $3,730 (if support breaks, exit immediately with small loss)
+   
+   **TAKE PROFIT TARGETS** (based on range extremes):
+   - **For longs near support**: Take profit near the RESISTANCE of the range
+     * Example: Long at support $3,750 → TP at resistance $4,100
+   - **For shorts near resistance**: Take profit near the SUPPORT of the range
+     * Example: Short at resistance $3,910 → TP at support $3,650
+   - Can place MULTIPLE take profits at different resistance/support levels to scale out
+   
+   **WHAT THIS MEANS**:
+   - ❌ **NEVER** use arbitrary percentage stops (e.g., "3% below entry")
+   - ❌ **NEVER** place stops far from entry hoping trade "comes back"
+   - ✅ **ALWAYS** base stops on actual support/resistance levels from chart structure
+   - ✅ **ALWAYS** add small buffer (0.3-1%) for volatility, but keep tight to invalidation level
+   - ✅ **REASONING REQUIRED**: Cite the exact support/resistance level and why breaking it invalidates the trade
 
 8. **MANDATORY RISK MANAGEMENT (CRITICAL)**:
    - EVERY position MUST have EXACTLY ONE stop loss order at ALL times - NO EXCEPTIONS
