@@ -447,33 +447,27 @@ ${activeTradingMode.parameters.customRules ? `- Custom Rules:\n${activeTradingMo
    - Higher leverage = tighter stop loss required = less room for price movement
    - Cross margin mode is enabled (not isolated)
    
-2. **POSITION SIZE CALCULATION** (⚠️ LIMITS ARE ON MARGIN, NOT NOTIONAL):
+2. **POSITION SIZE CALCULATION**:
    - Available Balance: $${withdrawable.toFixed(2)}
-   - **MAX MARGIN PER POSITION: 30% of available = $${(withdrawable * 0.30).toFixed(2)}** ⬅️ THIS IS YOUR LIMIT
-   - Notional value = margin × leverage (notional can be larger, but margin limit still applies)
+   - YOU decide position size based on risk tolerance, market conditions, and strategy goals
+   - Notional value = margin × leverage
    - Position size = notional / entry_price
+   - Consider portfolio diversification and correlation when sizing multiple positions
    
-3. **EXAMPLE with $100 available, BTC @ $30,000**:
-   - **MARGIN LIMIT = $30 (30% of $100)** - this never changes regardless of leverage
-   - At 3x leverage: USE $30 margin → notional=$90 → size=0.003 BTC
-   - At 5x leverage: USE $30 margin → notional=$150 → size=0.005 BTC  
-   - At 10x leverage: USE $30 margin → notional=$300 → size=0.01 BTC
-   - ⚠️ DO NOT exceed $30 margin per position even if leverage allows bigger notional
+3. **INTELLIGENT STOP LOSS PLACEMENT** (LEVERAGE-ADJUSTED + market structure):
+   - **CRITICAL**: With ${activeTradingMode ? activeTradingMode.parameters.preferredLeverage || 5 : 5}x leverage, consider tight stops to protect capital
+   - **SUGGESTED FORMULA**: Max stop loss % from entry = (Risk % of account) / Leverage
+     * With ${activeTradingMode ? activeTradingMode.parameters.preferredLeverage || 5 : 5}x leverage and ${activeTradingMode ? activeTradingMode.parameters.riskPercentage || 2 : 2}% risk = ${((activeTradingMode ? activeTradingMode.parameters.riskPercentage || 2 : 2) / (activeTradingMode ? activeTradingMode.parameters.preferredLeverage || 5 : 5)).toFixed(3)}% suggested stop from entry
+   - **PLACEMENT APPROACH**:
+     1. Analyze market structure (support/resistance, trend lines, volume nodes)
+     2. Consider volatility and typical price swings for the asset
+     3. Balance between giving the trade room to breathe vs protecting capital
+     4. Adjust based on conviction level and setup quality
+   - **WARNING**: ${activeTradingMode && activeTradingMode.parameters.preferredLeverage && activeTradingMode.parameters.preferredLeverage > 20 ? 'VERY HIGH LEVERAGE - Consider extremely tight stops. Best to enter on exact support/resistance touches.' : 'Use market structure for stop placement.'}
    
-4. **INTELLIGENT STOP LOSS PLACEMENT** (LEVERAGE-ADJUSTED + market structure):
-   - **CRITICAL**: With ${activeTradingMode ? activeTradingMode.parameters.preferredLeverage || 5 : 5}x leverage, stop losses MUST be VERY TIGHT
-   - **FORMULA**: Max stop loss % from entry = (Risk % of account) / Leverage
-     * With ${activeTradingMode ? activeTradingMode.parameters.preferredLeverage || 5 : 5}x leverage and ${activeTradingMode ? activeTradingMode.parameters.riskPercentage || 2 : 2}% risk = ${((activeTradingMode ? activeTradingMode.parameters.riskPercentage || 2 : 2) / (activeTradingMode ? activeTradingMode.parameters.preferredLeverage || 5 : 5)).toFixed(3)}% max stop from entry
-   - **PLACEMENT PROCESS**:
-     1. Calculate maximum stop distance using formula: ${((activeTradingMode ? activeTradingMode.parameters.riskPercentage || 2 : 2) / (activeTradingMode ? activeTradingMode.parameters.preferredLeverage || 5 : 5)).toFixed(3)}% from entry
-     2. Find nearest support/resistance level within that range
-     3. If no strong level exists within range, use scaled entries to improve average price
-   - **WARNING**: ${activeTradingMode && activeTradingMode.parameters.preferredLeverage && activeTradingMode.parameters.preferredLeverage > 20 ? 'VERY HIGH LEVERAGE - Stops must be EXTREMELY tight. Only enter on exact support/resistance touches.' : 'Use market structure for stop placement within calculated range.'}
-   - **Position-specific risk**: Calculate based on THIS position's margin used, not notional value
-   
-5. **CURRENT AVAILABLE: $${withdrawable.toFixed(2)}**:
-   - **MAX MARGIN PER POSITION: $${(withdrawable * 0.30).toFixed(2)}** (this is the hard limit)
-   - With ${activeTradingMode ? activeTradingMode.parameters.preferredLeverage || 5 : 5}x leverage: max notional = $${((withdrawable * 0.30) * (activeTradingMode ? activeTradingMode.parameters.preferredLeverage || 5 : 5)).toFixed(2)}
+4. **CURRENT AVAILABLE: $${withdrawable.toFixed(2)}**:
+   - With ${activeTradingMode ? activeTradingMode.parameters.preferredLeverage || 5 : 5}x leverage: you can access significant notional exposure
+   - Risk ${activeTradingMode ? activeTradingMode.parameters.riskPercentage || 2 : 2}% of account per trade as configured in strategy
 
 MARKET REGIME ANALYSIS:
 ${marketRegime.reasoning}
