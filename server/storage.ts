@@ -262,6 +262,16 @@ export class DbStorage implements IStorage {
       })
       .where(withUserFilter(trades, userId, eq(trades.id, id)))
       .returning();
+    
+    // Trigger evaluation asynchronously after trade closes
+    if (result[0]) {
+      import("./evaluationService").then(({ evaluateCompletedTrade }) => {
+        evaluateCompletedTrade(userId, id).catch((err) => {
+          console.error(`[Evaluation] Failed to evaluate trade ${id}:`, err);
+        });
+      });
+    }
+    
     return result[0];
   }
 

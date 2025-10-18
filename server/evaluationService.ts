@@ -1,7 +1,7 @@
 import { db } from "../db";
 import { trades, tradeEvaluations, strategyLearnings, marketRegimeSnapshots } from "../db/schema";
 import { eq, and, desc } from "drizzle-orm";
-import { getAIRouter } from "./aiRouter";
+import { makeAIRequest } from "./aiRouter";
 import type { Trade, InsertTradeEvaluation, InsertStrategyLearning } from "../db/schema";
 
 interface TradeEvaluationMetrics {
@@ -209,8 +209,6 @@ async function generateAIEvaluation(
   metrics: TradeEvaluationMetrics,
   marketContext: any
 ): Promise<AIEvaluationResponse> {
-  const aiRouter = await getAIRouter(userId);
-
   const prompt = `Analyze this completed trade and provide insights on what worked and what didn't:
 
 TRADE DETAILS:
@@ -258,13 +256,13 @@ Provide a structured evaluation in JSON format:
 }`;
 
   try {
-    const response = await aiRouter.chat({
+    const response = await makeAIRequest(userId, {
       messages: [{ role: "user", content: prompt }],
       temperature: 0.3,
       max_tokens: 2000,
     });
 
-    const content = response.choices[0]?.message?.content || "{}";
+    const content = response.content || "{}";
     const jsonMatch = content.match(/\{[\s\S]*\}/);
     const parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : {};
 
