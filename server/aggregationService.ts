@@ -26,9 +26,43 @@ export async function updateLearningDecayWeights(userId: string): Promise<void> 
   let archived = 0;
 
   for (const learning of activeLearnings) {
-    const daysSinceUpdate = (now.getTime() - learning.updatedAt.getTime()) / (1000 * 60 * 60 * 24);
+    // Guard against missing/invalid timestamps - treat as just created
+    const updatedAt = learning.updatedAt ? new Date(learning.updatedAt) : now;
+    let daysSinceUpdate = (now.getTime() - updatedAt.getTime()) / (1000 * 60 * 60 * 24);
+    
+    // Guard against negative time (clock skew) - reset timestamp and treat as just updated
+    if (daysSinceUpdate < 0) {
+      console.warn(`[Aggregation] Future timestamp detected for learning ${learning.id}, resetting to now`);
+      await db
+        .update(strategyLearnings)
+        .set({ updatedAt: now, decayWeight: "1.0" })
+        .where(eq(strategyLearnings.id, learning.id));
+      continue;
+    }
+    
     const decay = Math.exp(-daysSinceUpdate / HALF_LIFE_DAYS);
-    const newWeight = parseFloat(learning.decayWeight || "1.0") * decay;
+    
+    // Parse and validate decay weight with strict bounds [0.001, 1.0]
+    const EPS = 0.001; // Minimum weight before archival
+    const MAX_WEIGHT = 1.0;
+    let currentWeight = 1.0;
+    
+    if (learning.decayWeight) {
+      const parsed = parseFloat(learning.decayWeight);
+      if (!isNaN(parsed) && isFinite(parsed) && parsed > 0) {
+        // Clamp to safe range to prevent corrupted data from breaking system
+        currentWeight = Math.min(Math.max(parsed, EPS), MAX_WEIGHT);
+        
+        // Log warning if clamping occurred
+        if (parsed !== currentWeight) {
+          console.warn(`[Aggregation] Clamped weight for learning ${learning.id} from ${parsed} to ${currentWeight}`);
+        }
+      } else {
+        console.warn(`[Aggregation] Invalid weight for learning ${learning.id}: ${learning.decayWeight}, resetting to 1.0`);
+      }
+    }
+    
+    const newWeight = currentWeight * decay;
     const confidence = parseFloat(learning.confidenceScore || "50");
     const effectiveConfidence = confidence * newWeight;
 
@@ -36,13 +70,16 @@ export async function updateLearningDecayWeights(userId: string): Promise<void> 
     if (effectiveConfidence < MIN_CONFIDENCE_THRESHOLD) {
       await db
         .update(strategyLearnings)
-        .set({ isActive: 0 })
+        .set({ isActive: 0, updatedAt: now })
         .where(eq(strategyLearnings.id, learning.id));
       archived++;
     } else {
       await db
         .update(strategyLearnings)
-        .set({ decayWeight: newWeight.toString() })
+        .set({ 
+          decayWeight: newWeight.toString(),
+          updatedAt: now  // Critical: Update timestamp to prevent double-decay
+        })
         .where(eq(strategyLearnings.id, learning.id));
       updated++;
     }

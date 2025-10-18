@@ -1,19 +1,7 @@
 # 1fox
 
-## Recent Changes (October 18, 2025)
-- **✅ Tick Size Validation**: AI now respects exchange tick size rules for all order prices. BTC uses $1 increments ($104500, NOT $104500.50), ETH uses $0.1, SOL uses $0.01. System automatically rounds all entry, stop loss, and take profit prices to valid tick sizes before submission, eliminating order rejection errors.
-- **🔄 Trade Performance Evaluation & Learning System** (IN PROGRESS): AI evaluates completed trades to understand what worked/didn't work, learns from successes and failures, and adjusts strategy to better achieve goals. System tracks entry/exit quality, risk management adherence, and generates insights with decay-based weighting to prevent overfitting while enabling genuine learning.
-
-## Recent Changes (October 17, 2025)
-- **✅ Proactive Market Scanner & Limit Order System**: AI now actively scans the ENTIRE Hyperliquid market universe every cycle, identifies high-probability trading opportunities, and places limit orders at strategic support/resistance levels to wait for fills. No longer just manages existing positions - now proactively hunts for new setups across all trading pairs.
-- **✅ Complete Trade Planning**: For each identified setup, AI generates full trade package (entry order + stop loss + take profit) with market structure analysis, proper position sizing accounting for leverage and portfolio risk, and 2:1+ risk:reward ratios.
-- **✅ Intelligent Market Structure-Based Stops**: AI analyzes support/resistance, swing lows/highs, volume nodes to place optimal stops with cited reasoning. System only enforces directional correctness (stops below current for longs, above for shorts) and warns on liquidation proximity - no rigid percentage rules.
-- **✅ Comprehensive Leverage Education**: AI receives detailed leverage impact guidance with formulas for leverage-aware position sizing and stop placement based on dollar risk rather than arbitrary percentages.
-- **✅ Portfolio-Aware Position Sizing**: Calculates sizes using: `size = (available_balance × position_% × leverage) / entry_price` where position margin ≤ 30% of available balance. Accounts for current margin usage and available capital in real-time.
-- **Smart Alert System**: Monitoring creates logs only when (1) placing new entry orders or (2) detecting abnormal conditions (3x+ volume spikes). Eliminated spam from routine cycles with no actionable opportunities.
-
 ## Overview
-1fox is an AI-powered cryptocurrency trading terminal for the Hyperliquid perpetual futures exchange. It allows users to interact with an AI trading agent, "Mr. Fox," using natural language to execute automated strategies. The application provides a "Fantastic Mr. Fox" newspaper-themed interface, real-time market data, portfolio tracking, and comprehensive trading controls. The project aims to deliver a professional AI trading experience focused on maximizing Sharpe ratio through optimal sizing, entries, exits, and continuous risk management. It functions as a multi-tenant SaaS.
+1fox is an AI-powered cryptocurrency trading terminal designed for the Hyperliquid perpetual futures exchange. It enables users to interact with an AI trading agent, "Mr. Fox," using natural language to execute automated strategies. The application features a "Fantastic Mr. Fox" newspaper-themed interface, real-time market data, portfolio tracking, and comprehensive trading controls. The project's core mission is to deliver a professional AI trading experience focused on maximizing Sharpe ratio through optimal sizing, entries, exits, and continuous risk management, operating as a multi-tenant SaaS.
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
@@ -22,61 +10,27 @@ Preferred communication style: Simple, everyday language.
 
 ### Frontend
 **Technology Stack:** React with TypeScript, Vite, Wouter, TanStack Query, Tailwind CSS, and shadcn/ui.
-**Design System:** "Fantastic Mr. Fox" newspaper aesthetic with a grayscale color scheme, "Courier New" monospace typography, newsprint texture, and sharp corners. Dull green/red accents for trading elements.
-**Key UI Components:** AI Prompt Panel, Market Overview watchlist (real-time data, drag-and-drop), Portfolio Performance Chart, Positions Grid, Conversation History. Includes hover tooltips with mini price charts and risk management levels.
-**UI Optimization:** Chart and order book components removed to optimize API request capacity for autonomous trading operations. Focus is on AI-driven trading rather than manual technical analysis.
+**Design System:** "Fantastic Mr. Fox" newspaper aesthetic featuring a grayscale color scheme, "Courier New" monospace typography, newsprint texture, and sharp corners. Dull green/red accents are used for trading elements.
+**Key UI Components:** AI Prompt Panel, Market Overview watchlist (real-time data, drag-and-drop), Portfolio Performance Chart, Positions Grid, and Conversation History. Includes hover tooltips with mini price charts and risk management levels. Chart and order book components are omitted to optimize API request capacity for autonomous trading.
 
 ### Backend
 **Server Framework:** Express.js with TypeScript, integrated with Vite middleware.
-**Database Strategy:** Drizzle ORM with PostgreSQL for type-safe operations. Schema includes tables for trades, positions, portfolio snapshots, and AI usage logs.
+**Database Strategy:** Drizzle ORM with PostgreSQL for type-safe operations. Schema includes tables for trades, positions, portfolio snapshots, AI usage logs, trade evaluations, strategy learnings, and market regime snapshots.
 **API Design:** RESTful endpoints (`/api` prefix) for trading prompts, database operations, and Hyperliquid exchange interactions.
-**Authentication & Security:**
-- Multi-tenant architecture with `isAuthenticated` and `requireVerifiedUser` middleware.
-- Passport.js LocalStrategy for username/password authentication (scrypt-hashed passwords).
-- PostgreSQL session persistence.
-- **Tiered Onboarding Flow:**
-  1. User Registration (username, password, email)
-  2. AI Provider Choice: Platform AI (shared key, free tier) or Personal Key (premium tier)
-  3. AI Provider Setup (optional - only if Personal Key selected)
-  4. Exchange Credentials (Hyperliquid wallet + private key)
-  5. Admin Verification & Approval
-- Admin user management for user verification, deletion, and AI usage analytics.
-  - Admin page displays per-user AI usage statistics: total requests, total tokens consumed, and estimated total cost.
-  - Statistics aggregated from AI usage logs and displayed in real-time for all users.
-- AES-256-GCM encryption with envelope encryption for storing all API keys (AI and exchange).
-- User schema includes agent mode (passive/active), monitoring frequency, and Zod validation for auth requests.
-- Form accessibility features (autocomplete, test-ids).
-**Contact Admin System:**
-- Users can send messages to admin with optional screenshots (max 5MB, images only).
-- Server-side validation enforces screenshot format (base64 data:image/*) and size limits.
-- Admin page displays pending and resolved messages with resolve functionality.
-- Role-based access: admins see all messages, users see only their own.
-- Screenshots stored as base64 strings in PostgreSQL; consider external storage if volume grows.
+**Authentication & Security:** Multi-tenant architecture with `isAuthenticated` and `requireVerifiedUser` middleware. Passport.js LocalStrategy for authentication (scrypt-hashed passwords) and PostgreSQL session persistence. A tiered onboarding flow supports user registration, AI provider choice (Platform AI or Personal Key), exchange credential setup, and admin verification. Admin users can manage users, view AI usage analytics, and handle contact messages. AES-256-GCM encryption with envelope encryption secures all API keys.
+**Contact Admin System:** Allows users to send messages and optional screenshots (max 5MB, base64) to admins.
 **AI Integration:**
-- **Tiered AI Provider System:**
-  - **Platform AI (Free/Basic Tier):** Users without personal credentials automatically use shared `PERPLEXITY_API_KEY` from environment. Single shared key serves all free-tier users with complete context isolation per user. AI usage statistics hidden from platform users.
-  - **Personal AI Key (Premium Tier):** Users can provide their own Perplexity, OpenAI, or xAI credentials for direct billing control and premium model access. AI usage statistics (cost, tokens, requests) visible only to personal key users.
-  - Settings UI shows current tier: "Using Platform AI" or "Using Personal AI Key" with switching capabilities.
-- **Multi-Provider AI Router:** Supports Perplexity, OpenAI/ChatGPT, and xAI/Grok. Retrieves and decrypts user credentials, creates OpenAI-compatible clients, validates model compatibility, tracks usage, and provides default models. Falls back to shared platform key when users lack personal credentials.
-- **Prompt Processing:** "Mr. Fox" processes natural language prompts to generate structured trading strategies, providing interpretations, trading actions, risk management plans, and expected outcomes with required numeric values for position sizes.
-**Autonomous Trading System:**
-- Multi-tenant system with per-user monitoring loops.
-- Uses per-user encrypted Hyperliquid and AI provider credentials.
-- Server starts monitoring for active users on startup.
-- API controls for agent mode and monitoring frequency.
-- Passive (learning-only) and Active (autonomous trading) modes with user confirmation.
-- **Trading Philosophy:** Emphasizes patience and selectivity. Default behavior is NO ACTION unless genuinely compelling, high-probability setups exist. Cash is considered a valid position. AI instructed to avoid forced trades, focusing instead on quality over quantity to maximize Sharpe ratio. Explicit guidance provided on when to stay out of markets (choppy conditions, weak volume, insufficient conviction, poor risk/reward, FOMO-based entries).
-
-### Market Data & Indicators
-**WebSocket Service:** Dual WebSocket architecture for real-time market data (trades, L2 book, candles) with client-side aggregation and auto-reconnection.
-**Backend Indicators:** CVD Calculator and Volume Profile Calculator available via API for AI trading decisions (not exposed in UI to conserve API requests).
-
-### Core Features
-**Autonomous Trading Engine:** AI develops trade theses, identifies market conditions, analyzes volume profiles, executes trades with proper sizing and risk management, and sets stop losses/take profits.
-**Order Management System:** Enforces EXACTLY ONE stop loss and EXACTLY ONE take profit per position, both at full position size. Server-side validation rejects duplicate protective orders for same symbol. Fetches existing orders for AI context, and auto-cancels `reduceOnly` orders before placing new ones. **Quantitative Order Assessment & Anti-Churn Policy:** AI evaluates existing protective orders against strict thresholds before adjusting: 5% price movement, 2:1 minimum R:R ratio, 3 ATR distance, and regime consistency. **DEFAULT BEHAVIOR: LEAVE PROTECTIVE ORDERS ALONE** - AI must cite specific calculated metrics proving threshold violations to justify any order cancellation (e.g., "Price moved 8.2% from $3950 to $3730 = 5.6% movement >5% threshold"). Vague reasoning like "optimizing exit" or "adjusting target" is forbidden. This prevents wasteful constant order replacement while preserving ability to adjust when genuinely necessary. **Liquidation Safety System:** Stop losses use MARKET execution for guaranteed fills. Server-side validation enforces 2.5% buffer from liquidation price - long positions require stops at least 2.5% above liquidation, shorts require stops at least 2.5% below liquidation. Orders violating safety rules are rejected with clear error messages showing safe stop levels. **Missing Order Detection:** Each autonomous trading cycle explicitly checks for positions lacking protective orders and provides AI with exact safe stop loss levels (calculated with 2.5% buffer) to eliminate rounding errors. **Mandatory Protective Orders:** AI must ALWAYS place both stop loss and take profit orders for every position as part of proper risk management discipline.
-**Configurable Monitoring Frequency:** Users can adjust autonomous trading frequency (Disabled, 1 min, 5 min, 30 min, 1 hour).
-**Enhanced Performance Metrics:** Tracks Sterling, Omega, Max Drawdown, Sharpe, Sortino, and Calmar ratios.
-**Trading Controls:** Individual and "Close All" buttons for positions, executing market closes via IOC limit orders.
+- **Tiered AI Provider System:** Supports Platform AI (shared key for free tier) and Personal AI Key (user-provided Perplexity, OpenAI, or xAI credentials for premium tier).
+- **Multi-Provider AI Router:** Supports Perplexity, OpenAI/ChatGPT, and xAI/Grok. Handles credential decryption, client creation, model validation, and usage tracking, with fallback to the shared platform key.
+- **Prompt Processing:** "Mr. Fox" processes natural language prompts to generate structured trading strategies, including interpretations, trading actions, risk management plans, and required numeric values.
+**Autonomous Trading System:** Multi-tenant system with per-user monitoring loops using encrypted Hyperliquid and AI credentials. Supports Passive (learning-only) and Active (autonomous trading) modes. The trading philosophy emphasizes patience, selectivity, and avoiding forced trades to maximize Sharpe ratio.
+**Order Management System:** Enforces exactly one stop loss and one take profit per position, both at full position size, with server-side validation. Includes quantitative order assessment, an anti-churn policy requiring specific metrics for order adjustments, and a liquidation safety system (2.5% buffer). Mandatory protective orders (stop loss and take profit) are required for every position.
+**Trade Performance Evaluation & Learning System:** Enables continuous AI self-improvement via a feedback loop.
+- **Evaluation Process:** Automatic on trade close, including 8 quantitative metrics (e.g., PnL vs expectancy, stop-loss adherence, R:R ratio) and AI-powered qualitative analysis for actionable insights.
+- **Learning Repository:** Utilizes decay-based weighting (30-day half-life) for insights, regime-aware filtering, and evidence accumulation to strengthen learnings.
+- **Integration with AI Trading:** Top 5-10 regime-filtered learnings are provided to the AI for each autonomous trading cycle, influencing trade decisions.
+**Market Data & Indicators:** Dual WebSocket service for real-time market data. Backend provides CVD Calculator and Volume Profile Calculator for AI trading decisions.
+**Core Features:** Autonomous trading engine, order management, configurable monitoring frequency (Disabled, 1 min, 5 min, 30 min, 1 hour), enhanced performance metrics (Sterling, Omega, Max Drawdown, Sharpe, Sortino, Calmar ratios), and trading controls (individual and "Close All" positions).
 
 ## External Dependencies
 
