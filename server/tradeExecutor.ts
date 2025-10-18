@@ -179,10 +179,11 @@ function validateMinimumNotional(size: number, price: number, symbol: string): v
 function validateLeverage(leverage: number): number {
   const lev = validateNumericInput(leverage, "leverage");
   
-  if (lev < 1 || lev > 50) {
-    throw new Error(`Invalid leverage: must be between 1 and 50`);
+  if (lev < 1) {
+    throw new Error(`Invalid leverage: must be at least 1x`);
   }
   
+  // No upper limit - will be capped to exchange max per asset during execution
   return Math.floor(lev); // Ensure integer
 }
 
