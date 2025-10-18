@@ -292,6 +292,72 @@ export const marketRegimeSnapshots = pgTable("market_regime_snapshots", {
   sharpeInRegime: decimal("sharpe_in_regime", { precision: 10, scale: 6 }),
 });
 
+// Trade history import system - for uploading and analyzing past trades
+export const userTradeHistoryImports = pgTable("user_trade_history_imports", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  sourceType: text("source_type").notNull(), // "csv", "manual"
+  fileName: text("file_name"), // Original filename for CSV uploads
+  status: text("status").notNull().default("processing"), // "processing", "completed", "failed"
+  totalRows: integer("total_rows").notNull().default(0),
+  successfulRows: integer("successful_rows").notNull().default(0),
+  failedRows: integer("failed_rows").notNull().default(0),
+  errors: jsonb("errors"), // Array of error objects: [{ row: 5, field: "symbol", error: "Invalid symbol" }]
+  analysisStatus: text("analysis_status").notNull().default("pending"), // "pending", "analyzing", "completed", "failed"
+  analysisResults: jsonb("analysis_results"), // AI-generated insights from trade history
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  completedAt: timestamp("completed_at"),
+});
+
+export const userTradeHistoryTrades = pgTable("user_trade_history_trades", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  importId: varchar("import_id").notNull().references(() => userTradeHistoryImports.id, { onDelete: "cascade" }),
+  // Trade data
+  symbol: text("symbol").notNull(),
+  side: text("side").notNull(), // "long" or "short"
+  size: decimal("size", { precision: 18, scale: 8 }).notNull(),
+  entryPrice: decimal("entry_price", { precision: 18, scale: 8 }).notNull(),
+  exitPrice: decimal("exit_price", { precision: 18, scale: 8 }),
+  leverage: integer("leverage").notNull().default(1),
+  pnl: decimal("pnl", { precision: 18, scale: 8 }),
+  pnlPercent: decimal("pnl_percent", { precision: 10, scale: 6 }),
+  entryTimestamp: timestamp("entry_timestamp").notNull(),
+  exitTimestamp: timestamp("exit_timestamp"),
+  notes: text("notes"), // User-provided notes about the trade
+  // Metadata
+  isWin: integer("is_win"), // 1 = win, 0 = loss, null = open
+  holdingPeriodMinutes: integer("holding_period_minutes"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const tradeStyleProfiles = pgTable("trade_style_profiles", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  importId: varchar("import_id").references(() => userTradeHistoryImports.id, { onDelete: "cascade" }), // Optional: link to specific import
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  // Trading style factors
+  preferredAssets: jsonb("preferred_assets"), // [{ symbol: "BTC-PERP", frequency: 45, winRate: 0.62 }]
+  avgPositionSize: decimal("avg_position_size", { precision: 18, scale: 8 }),
+  avgLeverage: decimal("avg_leverage", { precision: 10, scale: 2 }),
+  avgHoldingPeriodMinutes: integer("avg_holding_period_minutes"),
+  preferredTimeOfDay: jsonb("preferred_time_of_day"), // [{ hour: 14, frequency: 12, winRate: 0.7 }]
+  riskTolerance: text("risk_tolerance"), // "conservative", "moderate", "aggressive"
+  avgRiskRewardRatio: decimal("avg_risk_reward_ratio", { precision: 10, scale: 6 }),
+  winRate: decimal("win_rate", { precision: 10, scale: 6 }),
+  // Pattern recognition
+  entryPatterns: jsonb("entry_patterns"), // Common entry triggers identified by AI
+  exitPatterns: jsonb("exit_patterns"), // Common exit triggers identified by AI
+  strengthsAnalysis: text("strengths_analysis"), // AI summary of what user does well
+  weaknessesAnalysis: text("weaknesses_analysis"), // AI summary of areas to improve
+  improvementSuggestions: jsonb("improvement_suggestions"), // [{ category: "exit_timing", suggestion: "...", priority: "high" }]
+  // Confidence and sample size
+  sampleSize: integer("sample_size").notNull().default(0), // Number of trades analyzed
+  confidenceScore: decimal("confidence_score", { precision: 10, scale: 6 }), // 0-100 confidence in analysis
+  isActive: integer("is_active").notNull().default(1), // 0 = archived, 1 = active
+});
+
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true, updatedAt: true });
 export const upsertUserSchema = createInsertSchema(users).omit({ createdAt: true, updatedAt: true }).partial();
 export const insertTradeSchema = createInsertSchema(trades).omit({ id: true, userId: true, entryTimestamp: true });
@@ -310,6 +376,9 @@ export const insertTradeEvaluationSchema = createInsertSchema(tradeEvaluations).
 export const insertStrategyLearningSchema = createInsertSchema(strategyLearnings).omit({ id: true, userId: true, createdAt: true, updatedAt: true });
 export const insertMarketRegimeSnapshotSchema = createInsertSchema(marketRegimeSnapshots).omit({ id: true, userId: true, timestamp: true });
 export const insertProtectiveOrderEventSchema = createInsertSchema(protectiveOrderEvents).omit({ id: true, userId: true, timestamp: true });
+export const insertUserTradeHistoryImportSchema = createInsertSchema(userTradeHistoryImports).omit({ id: true, userId: true, createdAt: true });
+export const insertUserTradeHistoryTradeSchema = createInsertSchema(userTradeHistoryTrades).omit({ id: true, userId: true, createdAt: true });
+export const insertTradeStyleProfileSchema = createInsertSchema(tradeStyleProfiles).omit({ id: true, userId: true, createdAt: true, updatedAt: true });
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type UpsertUser = z.infer<typeof upsertUserSchema>;
@@ -346,3 +415,9 @@ export type InsertMarketRegimeSnapshot = z.infer<typeof insertMarketRegimeSnapsh
 export type MarketRegimeSnapshot = typeof marketRegimeSnapshots.$inferSelect;
 export type InsertProtectiveOrderEvent = z.infer<typeof insertProtectiveOrderEventSchema>;
 export type ProtectiveOrderEvent = typeof protectiveOrderEvents.$inferSelect;
+export type InsertUserTradeHistoryImport = z.infer<typeof insertUserTradeHistoryImportSchema>;
+export type UserTradeHistoryImport = typeof userTradeHistoryImports.$inferSelect;
+export type InsertUserTradeHistoryTrade = z.infer<typeof insertUserTradeHistoryTradeSchema>;
+export type UserTradeHistoryTrade = typeof userTradeHistoryTrades.$inferSelect;
+export type InsertTradeStyleProfile = z.infer<typeof insertTradeStyleProfileSchema>;
+export type TradeStyleProfile = typeof tradeStyleProfiles.$inferSelect;
