@@ -401,6 +401,32 @@ export const tradeJournalEntries = pgTable("trade_journal_entries", {
   closedAt: timestamp("closed_at"), // When trade was closed
 });
 
+// Trading modes - user-defined strategies for different trading styles
+export const tradingModes = pgTable("trading_modes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  name: text("name").notNull(), // User-defined name (e.g., "Aggressive Scalper", "Conservative Swing")
+  type: text("type").notNull(), // "scalp", "swing", "discretionary", "custom"
+  description: text("description"), // Optional user description
+  
+  // Strategy parameters (flexible JSON structure)
+  parameters: jsonb("parameters").notNull(), // {
+  //   timeframe: "1m" | "5m" | "15m" | "1h" | "4h" | "1d",
+  //   riskPercentPerTrade: 1-10,
+  //   maxPositions: 1-10,
+  //   maxLeverage: 1-20,
+  //   preferredAssets: ["BTC-PERP", "ETH-PERP"],
+  //   tradingHours: { start: "08:00", end: "16:00", timezone: "UTC" },
+  //   entryStyle: "patient" | "aggressive",
+  //   exitStyle: "target-based" | "trailing",
+  //   customRules: "Any custom AI instructions",
+  // }
+  
+  isActive: integer("is_active").notNull().default(0), // Only one mode can be active at a time per user
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true, updatedAt: true });
 export const upsertUserSchema = createInsertSchema(users).omit({ createdAt: true, updatedAt: true }).partial();
 export const insertTradeSchema = createInsertSchema(trades).omit({ id: true, userId: true, entryTimestamp: true });
@@ -423,6 +449,7 @@ export const insertUserTradeHistoryImportSchema = createInsertSchema(userTradeHi
 export const insertUserTradeHistoryTradeSchema = createInsertSchema(userTradeHistoryTrades).omit({ id: true, userId: true, createdAt: true });
 export const insertTradeStyleProfileSchema = createInsertSchema(tradeStyleProfiles).omit({ id: true, userId: true, createdAt: true, updatedAt: true });
 export const insertTradeJournalEntrySchema = createInsertSchema(tradeJournalEntries).omit({ id: true, userId: true, createdAt: true });
+export const insertTradingModeSchema = createInsertSchema(tradingModes).omit({ id: true, userId: true, createdAt: true, updatedAt: true });
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type UpsertUser = z.infer<typeof upsertUserSchema>;
@@ -467,3 +494,5 @@ export type InsertTradeStyleProfile = z.infer<typeof insertTradeStyleProfileSche
 export type TradeStyleProfile = typeof tradeStyleProfiles.$inferSelect;
 export type InsertTradeJournalEntry = z.infer<typeof insertTradeJournalEntrySchema>;
 export type TradeJournalEntry = typeof tradeJournalEntries.$inferSelect;
+export type InsertTradingMode = z.infer<typeof insertTradingModeSchema>;
+export type TradingMode = typeof tradingModes.$inferSelect;

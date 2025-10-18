@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type UpsertUser, type Trade, type InsertTrade, type Position, type InsertPosition, type PortfolioSnapshot, type InsertPortfolioSnapshot, type AiUsageLog, type InsertAiUsageLog, type MonitoringLog, type InsertMonitoringLog, type UserApiCredential, type InsertUserApiCredential, type ApiKey, type InsertApiKey, type ContactMessage, type InsertContactMessage, type ProtectiveOrderEvent, type InsertProtectiveOrderEvent, type UserTradeHistoryImport, type InsertUserTradeHistoryImport, type UserTradeHistoryTrade, type InsertUserTradeHistoryTrade, type TradeStyleProfile, type InsertTradeStyleProfile, type TradeJournalEntry, type InsertTradeJournalEntry, users, trades, positions, portfolioSnapshots, aiUsageLog, monitoringLog, userApiCredentials, apiKeys, contactMessages, protectiveOrderEvents, userTradeHistoryImports, userTradeHistoryTrades, tradeStyleProfiles, tradeJournalEntries } from "@shared/schema";
+import { type User, type InsertUser, type UpsertUser, type Trade, type InsertTrade, type Position, type InsertPosition, type PortfolioSnapshot, type InsertPortfolioSnapshot, type AiUsageLog, type InsertAiUsageLog, type MonitoringLog, type InsertMonitoringLog, type UserApiCredential, type InsertUserApiCredential, type ApiKey, type InsertApiKey, type ContactMessage, type InsertContactMessage, type ProtectiveOrderEvent, type InsertProtectiveOrderEvent, type UserTradeHistoryImport, type InsertUserTradeHistoryImport, type UserTradeHistoryTrade, type InsertUserTradeHistoryTrade, type TradeStyleProfile, type InsertTradeStyleProfile, type TradeJournalEntry, type InsertTradeJournalEntry, type TradingMode, type InsertTradingMode, users, trades, positions, portfolioSnapshots, aiUsageLog, monitoringLog, userApiCredentials, apiKeys, contactMessages, protectiveOrderEvents, userTradeHistoryImports, userTradeHistoryTrades, tradeStyleProfiles, tradeJournalEntries, tradingModes } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql, and, type SQL } from "drizzle-orm";
 import session from "express-session";
@@ -141,6 +141,15 @@ export interface IStorage {
     lessonsLearned?: string;
   }): Promise<TradeJournalEntry | undefined>;
   deleteTradeJournalEntry(userId: string, id: string): Promise<void>;
+  
+  // Trading Mode methods
+  createTradingMode(userId: string, data: InsertTradingMode): Promise<TradingMode>;
+  getTradingModes(userId: string): Promise<TradingMode[]>;
+  getTradingMode(userId: string, id: string): Promise<TradingMode | undefined>;
+  getActiveTradingMode(userId: string): Promise<TradingMode | undefined>;
+  updateTradingMode(userId: string, id: string, updates: Partial<InsertTradingMode>): Promise<TradingMode | undefined>;
+  setActiveTradingMode(userId: string, modeId: string): Promise<TradingMode | undefined>;
+  deleteTradingMode(userId: string, id: string): Promise<void>;
 }
 
 const PostgresSessionStore = connectPg(session);
@@ -925,6 +934,64 @@ export class DbStorage implements IStorage {
   async deleteTradeJournalEntry(userId: string, id: string): Promise<void> {
     await db.delete(tradeJournalEntries)
       .where(withUserFilter(tradeJournalEntries, userId, eq(tradeJournalEntries.id, id)));
+  }
+
+  // Trading Mode methods
+  async createTradingMode(userId: string, data: InsertTradingMode): Promise<TradingMode> {
+    const result = await db.insert(tradingModes)
+      .values({ ...data, userId })
+      .returning();
+    return result[0];
+  }
+
+  async getTradingModes(userId: string): Promise<TradingMode[]> {
+    return db.select()
+      .from(tradingModes)
+      .where(eq(tradingModes.userId, userId))
+      .orderBy(desc(tradingModes.createdAt));
+  }
+
+  async getTradingMode(userId: string, id: string): Promise<TradingMode | undefined> {
+    const result = await db.select()
+      .from(tradingModes)
+      .where(withUserFilter(tradingModes, userId, eq(tradingModes.id, id)))
+      .limit(1);
+    return result[0];
+  }
+
+  async getActiveTradingMode(userId: string): Promise<TradingMode | undefined> {
+    const result = await db.select()
+      .from(tradingModes)
+      .where(withUserFilter(tradingModes, userId, eq(tradingModes.isActive, 1)))
+      .limit(1);
+    return result[0];
+  }
+
+  async updateTradingMode(userId: string, id: string, updates: Partial<InsertTradingMode>): Promise<TradingMode | undefined> {
+    const result = await db.update(tradingModes)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(withUserFilter(tradingModes, userId, eq(tradingModes.id, id)))
+      .returning();
+    return result[0];
+  }
+
+  async setActiveTradingMode(userId: string, modeId: string): Promise<TradingMode | undefined> {
+    // Deactivate all other modes for this user
+    await db.update(tradingModes)
+      .set({ isActive: 0, updatedAt: new Date() })
+      .where(eq(tradingModes.userId, userId));
+    
+    // Activate the selected mode
+    const result = await db.update(tradingModes)
+      .set({ isActive: 1, updatedAt: new Date() })
+      .where(withUserFilter(tradingModes, userId, eq(tradingModes.id, modeId)))
+      .returning();
+    return result[0];
+  }
+
+  async deleteTradingMode(userId: string, id: string): Promise<void> {
+    await db.delete(tradingModes)
+      .where(withUserFilter(tradingModes, userId, eq(tradingModes.id, id)));
   }
 }
 

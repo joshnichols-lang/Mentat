@@ -83,23 +83,30 @@ export async function processTradingPrompt(
     let classification = { isTrading: true, reason: "default to trading" };
     
     // Simple keyword-based pre-check for obvious non-trading questions
-    const generalKeywords = ['what is', 'who was', 'who is', 'when did', 'how does', 'tell me about', 'explain', 'calculate', 'news today', 'president', 'history of'];
+    const generalKeywords = ['what is', 'who was', 'who is', 'when did', 'tell me about', 'calculate', 'news today', 'president', 'history of'];
     const tradingKeywords = ['buy', 'sell', 'close', 'position', 'portfolio', 'trade', 'market', 'price', 'chart', 'stop loss', 'take profit', 'long', 'short', 'leverage'];
+    // Educational questions about specific technical indicators - treat as general questions
+    const indicatorEducationKeywords = ['market cipher', 'cipher a', 'cipher b', 'what is rsi', 'what is macd', 'what is ema', 'what is sma', 'what is bollinger', 'what is stochastic', 'what is fibonacci', 'what is ichimoku', 'what is adx', 'what is atr', 'explain rsi', 'explain macd', 'explain ema', 'how does rsi', 'how does macd', 'how does bollinger'];
     
     const lowerPrompt = prompt.toLowerCase();
     const hasGeneralKeywords = generalKeywords.some(kw => lowerPrompt.includes(kw));
     const hasTradingKeywords = tradingKeywords.some(kw => lowerPrompt.includes(kw));
+    const hasIndicatorEducationKeywords = indicatorEducationKeywords.some(kw => lowerPrompt.includes(kw));
     
-    // If user attached screenshots, it's almost certainly trading
-    if (screenshots && screenshots.length > 0) {
+    // Priority 1: If asking about specific technical indicators, treat as general (educational)
+    if (hasIndicatorEducationKeywords) {
+      classification = { isTrading: false, reason: "educational question about trading indicators" };
+    }
+    // Priority 2: If user attached screenshots, it's almost certainly trading
+    else if (screenshots && screenshots.length > 0) {
       classification = { isTrading: true, reason: "screenshots attached - likely charts" };
     }
-    // If has trading keywords, it's trading
+    // Priority 3: If has trading keywords, it's trading (even if also has general keywords)
     else if (hasTradingKeywords) {
       classification = { isTrading: true, reason: "trading keywords detected" };
     }
-    // If has general keywords OR has no keywords at all (ambiguous), classify via AI
-    else if (hasGeneralKeywords || (!hasGeneralKeywords && !hasTradingKeywords)) {
+    // Priority 4: If ONLY has general keywords (no trading keywords), classify via AI
+    else if (hasGeneralKeywords) {
       try {
         const classificationMessages: AIMessage[] = [
           {
@@ -125,14 +132,39 @@ export async function processTradingPrompt(
         }
         classification = JSON.parse(cleanContent);
       } catch (e) {
-        // If classification fails, default based on keyword presence
-        if (hasGeneralKeywords) {
-          console.log("Failed to classify, but has general keywords - defaulting to general question");
-          classification = { isTrading: false, reason: "classification failed but general keywords detected" };
-        } else {
-          console.log("Failed to classify with no keywords - defaulting to general question");
-          classification = { isTrading: false, reason: "classification failed - ambiguous question treated as general" };
+        console.log("Failed to classify - defaulting to general question");
+        classification = { isTrading: false, reason: "classification failed - treated as general" };
+      }
+    }
+    // Priority 5: No keywords at all - use AI to classify
+    else {
+      try {
+        const classificationMessages: AIMessage[] = [
+          {
+            role: "system" as const,
+            content: `Determine if this is about trading/markets OR a general question. Respond with JSON: {"isTrading": true/false, "reason": "brief"}`
+          },
+          {
+            role: "user" as const,
+            content: prompt
+          }
+        ];
+
+        const classificationResponse = await makeAIRequest(userId, {
+          messages: classificationMessages,
+          model,
+        }, preferredProvider);
+
+        let cleanContent = classificationResponse.content?.trim() || '{}';
+        if (cleanContent.startsWith('```json')) {
+          cleanContent = cleanContent.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+        } else if (cleanContent.startsWith('```')) {
+          cleanContent = cleanContent.replace(/^```\s*/, '').replace(/\s*```$/, '');
         }
+        classification = JSON.parse(cleanContent);
+      } catch (e) {
+        console.log("Failed to classify no-keyword prompt - defaulting to general question");
+        classification = { isTrading: false, reason: "classification failed - ambiguous prompt treated as general" };
       }
     }
 
