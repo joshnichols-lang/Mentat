@@ -102,9 +102,7 @@ export default function TradeJournal() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      return apiRequest<{ success: boolean; message: string }>(`/api/trade-journal/${id}`, {
-        method: "DELETE"
-      });
+      return apiRequest("DELETE", `/api/trade-journal/${id}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["trade-journal"] });
@@ -127,9 +125,7 @@ export default function TradeJournal() {
 
   const deleteAllMutation = useMutation({
     mutationFn: async () => {
-      return apiRequest<{ success: boolean; message: string }>(`/api/trade-journal`, {
-        method: "DELETE"
-      });
+      return apiRequest("DELETE", `/api/trade-journal`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["trade-journal"] });
