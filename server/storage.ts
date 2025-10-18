@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type UpsertUser, type Trade, type InsertTrade, type Position, type InsertPosition, type PortfolioSnapshot, type InsertPortfolioSnapshot, type AiUsageLog, type InsertAiUsageLog, type MonitoringLog, type InsertMonitoringLog, type UserApiCredential, type InsertUserApiCredential, type ApiKey, type InsertApiKey, type ContactMessage, type InsertContactMessage, users, trades, positions, portfolioSnapshots, aiUsageLog, monitoringLog, userApiCredentials, apiKeys, contactMessages } from "@shared/schema";
+import { type User, type InsertUser, type UpsertUser, type Trade, type InsertTrade, type Position, type InsertPosition, type PortfolioSnapshot, type InsertPortfolioSnapshot, type AiUsageLog, type InsertAiUsageLog, type MonitoringLog, type InsertMonitoringLog, type UserApiCredential, type InsertUserApiCredential, type ApiKey, type InsertApiKey, type ContactMessage, type InsertContactMessage, type ProtectiveOrderEvent, type InsertProtectiveOrderEvent, users, trades, positions, portfolioSnapshots, aiUsageLog, monitoringLog, userApiCredentials, apiKeys, contactMessages, protectiveOrderEvents } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql, and, type SQL } from "drizzle-orm";
 import session from "express-session";
@@ -49,6 +49,13 @@ export interface IStorage {
   createPosition(userId: string, position: InsertPosition): Promise<Position>;
   updatePosition(userId: string, id: string, updates: Partial<Position>): Promise<Position | undefined>;
   deletePosition(userId: string, id: string): Promise<void>;
+  
+  // Protective order tracking methods
+  setInitialProtectiveOrders(userId: string, symbol: string, stopLoss: string, takeProfit: string, reason: string): Promise<void>;
+  updateProtectiveOrders(userId: string, symbol: string, newStopLoss: string | null, newTakeProfit: string | null, reason: string, currentPnl: string, currentPrice: string): Promise<{ success: boolean; error?: string }>;
+  getProtectiveOrderState(userId: string, symbol: string): Promise<{ initialStopLoss: string | null; currentStopLoss: string | null; currentTakeProfit: string | null; stopLossState: string } | null>;
+  logProtectiveOrderEvent(userId: string, event: InsertProtectiveOrderEvent): Promise<ProtectiveOrderEvent>;
+  getProtectiveOrderEvents(userId: string, symbol?: string, limit?: number): Promise<ProtectiveOrderEvent[]>;
   
   // Portfolio snapshot methods (multi-tenant)
   getPortfolioSnapshots(userId: string, limit?: number): Promise<PortfolioSnapshot[]>;
@@ -311,6 +318,134 @@ export class DbStorage implements IStorage {
 
   async deletePosition(userId: string, id: string): Promise<void> {
     await db.delete(positions).where(withUserFilter(positions, userId, eq(positions.id, id)));
+  }
+
+  // Protective order tracking methods
+  async setInitialProtectiveOrders(userId: string, symbol: string, stopLoss: string, takeProfit: string, reason: string): Promise<void> {
+    const position = await this.getPositionBySymbol(userId, symbol);
+    if (!position) {
+      console.log(`[Storage] Position ${symbol} not found for user ${userId}, cannot set protective orders`);
+      return;
+    }
+
+    // Set initial protective orders on the position
+    await this.updatePosition(userId, position.id, {
+      initialStopLoss: stopLoss,
+      currentStopLoss: stopLoss,
+      currentTakeProfit: takeProfit,
+      stopLossState: "initial",
+      lastAdjustmentAt: sql`now()`,
+    });
+
+    // Log the event
+    await this.logProtectiveOrderEvent(userId, {
+      positionId: position.id,
+      symbol,
+      eventType: "set_initial",
+      newStopLoss: stopLoss,
+      newTakeProfit: takeProfit,
+      reason,
+      currentPnl: position.pnl,
+      currentPrice: position.currentPrice,
+    });
+  }
+
+  async updateProtectiveOrders(
+    userId: string,
+    symbol: string,
+    newStopLoss: string | null,
+    newTakeProfit: string | null,
+    reason: string,
+    currentPnl: string,
+    currentPrice: string
+  ): Promise<{ success: boolean; error?: string }> {
+    const position = await this.getPositionBySymbol(userId, symbol);
+    if (!position) {
+      return { success: false, error: "Position not found" };
+    }
+
+    const updates: Partial<Position> = { lastAdjustmentAt: sql`now()` };
+    const event: InsertProtectiveOrderEvent = {
+      positionId: position.id,
+      symbol,
+      eventType: "adjust_sl",
+      previousStopLoss: position.currentStopLoss || undefined,
+      previousTakeProfit: position.currentTakeProfit || undefined,
+      reason,
+      currentPnl,
+      currentPrice,
+    };
+
+    // Validate stop loss movement (only in favorable direction)
+    if (newStopLoss !== null && position.initialStopLoss) {
+      const isBuyLong = position.side === "long";
+      const newSL = parseFloat(newStopLoss);
+      const currentSL = parseFloat(position.currentStopLoss || position.initialStopLoss);
+      
+      // For longs: SL can only move UP (higher). For shorts: SL can only move DOWN (lower)
+      const movingCorrectDirection = isBuyLong ? newSL > currentSL : newSL < currentSL;
+      
+      if (!movingCorrectDirection && newSL !== currentSL) {
+        const rejectionReason = `Cannot move stop loss ${isBuyLong ? "lower" : "higher"} - would increase risk`;
+        await this.logProtectiveOrderEvent(userId, {
+          ...event,
+          eventType: "rejected",
+          newStopLoss,
+          rejected: 1,
+          rejectionReason,
+        });
+        return { success: false, error: rejectionReason };
+      }
+
+      updates.currentStopLoss = newStopLoss;
+      updates.stopLossState = parseFloat(currentPnl) > 0 ? "trailing" : "initial";
+      event.newStopLoss = newStopLoss;
+    }
+
+    if (newTakeProfit !== null) {
+      updates.currentTakeProfit = newTakeProfit;
+      event.newTakeProfit = newTakeProfit;
+      event.eventType = newStopLoss !== null ? "adjust_sl" : "adjust_tp";
+    }
+
+    // Update position with new protective order prices
+    await this.updatePosition(userId, position.id, updates);
+    
+    // Log successful adjustment
+    await this.logProtectiveOrderEvent(userId, event);
+
+    return { success: true };
+  }
+
+  async getProtectiveOrderState(userId: string, symbol: string): Promise<{ initialStopLoss: string | null; currentStopLoss: string | null; currentTakeProfit: string | null; stopLossState: string } | null> {
+    const position = await this.getPositionBySymbol(userId, symbol);
+    if (!position) {
+      return null;
+    }
+
+    return {
+      initialStopLoss: position.initialStopLoss || null,
+      currentStopLoss: position.currentStopLoss || null,
+      currentTakeProfit: position.currentTakeProfit || null,
+      stopLossState: position.stopLossState,
+    };
+  }
+
+  async logProtectiveOrderEvent(userId: string, event: InsertProtectiveOrderEvent): Promise<ProtectiveOrderEvent> {
+    const result = await db.insert(protectiveOrderEvents).values({ userId, ...event }).returning();
+    return result[0];
+  }
+
+  async getProtectiveOrderEvents(userId: string, symbol?: string, limit: number = 100): Promise<ProtectiveOrderEvent[]> {
+    const conditions = symbol 
+      ? withUserFilter(protectiveOrderEvents, userId, eq(protectiveOrderEvents.symbol, symbol))
+      : withUserFilter(protectiveOrderEvents, userId);
+    
+    return await db.select()
+      .from(protectiveOrderEvents)
+      .where(conditions)
+      .orderBy(desc(protectiveOrderEvents.timestamp))
+      .limit(limit);
   }
 
   // Portfolio snapshot methods

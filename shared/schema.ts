@@ -309,6 +309,7 @@ export const insertContactMessageSchema = createInsertSchema(contactMessages).om
 export const insertTradeEvaluationSchema = createInsertSchema(tradeEvaluations).omit({ id: true, userId: true, evaluatedAt: true });
 export const insertStrategyLearningSchema = createInsertSchema(strategyLearnings).omit({ id: true, userId: true, createdAt: true, updatedAt: true });
 export const insertMarketRegimeSnapshotSchema = createInsertSchema(marketRegimeSnapshots).omit({ id: true, userId: true, timestamp: true });
+export const insertProtectiveOrderEventSchema = createInsertSchema(protectiveOrderEvents).omit({ id: true, userId: true, timestamp: true });
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type UpsertUser = z.infer<typeof upsertUserSchema>;
@@ -343,3 +344,5 @@ export type InsertStrategyLearning = z.infer<typeof insertStrategyLearningSchema
 export type StrategyLearning = typeof strategyLearnings.$inferSelect;
 export type InsertMarketRegimeSnapshot = z.infer<typeof insertMarketRegimeSnapshotSchema>;
 export type MarketRegimeSnapshot = typeof marketRegimeSnapshots.$inferSelect;
+export type InsertProtectiveOrderEvent = z.infer<typeof insertProtectiveOrderEventSchema>;
+export type ProtectiveOrderEvent = typeof protectiveOrderEvents.$inferSelect;
