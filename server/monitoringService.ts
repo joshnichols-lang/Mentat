@@ -411,16 +411,18 @@ ${activeTradingMode.parameters.customRules ? `- Custom Rules:\n${activeTradingMo
    - **NEVER USE >10x** - extremely dangerous, liquidation risk too high
    - Higher leverage = tighter stop loss required = less room for price movement
    
-2. **POSITION SIZE CALCULATION** (accounting for leverage):
+2. **POSITION SIZE CALCULATION** (⚠️ LIMITS ARE ON MARGIN, NOT NOTIONAL):
    - Available Balance: $${withdrawable.toFixed(2)}
-   - Max position margin: 30% of available = $${(withdrawable * 0.30).toFixed(2)}
-   - Notional value = margin × leverage
+   - **MAX MARGIN PER POSITION: 30% of available = $${(withdrawable * 0.30).toFixed(2)}** ⬅️ THIS IS YOUR LIMIT
+   - Notional value = margin × leverage (notional can be larger, but margin limit still applies)
    - Position size = notional / entry_price
    
 3. **EXAMPLE with $100 available, BTC @ $30,000**:
-   - At 3x leverage: margin=$30, notional=$90, size=0.003 BTC
-   - At 5x leverage: margin=$30, notional=$150, size=0.005 BTC
-   - At 10x leverage: margin=$30, notional=$300, size=0.01 BTC
+   - **MARGIN LIMIT = $30 (30% of $100)** - this never changes regardless of leverage
+   - At 3x leverage: USE $30 margin → notional=$90 → size=0.003 BTC
+   - At 5x leverage: USE $30 margin → notional=$150 → size=0.005 BTC  
+   - At 10x leverage: USE $30 margin → notional=$300 → size=0.01 BTC
+   - ⚠️ DO NOT exceed $30 margin per position even if leverage allows bigger notional
    
 4. **INTELLIGENT STOP LOSS PLACEMENT** (LEVERAGE-ADJUSTED + market structure):
    - **CRITICAL**: Higher leverage = MUCH TIGHTER stop loss required
@@ -438,11 +440,13 @@ ${activeTradingMode.parameters.customRules ? `- Custom Rules:\n${activeTradingMo
      * ETH @ $3800, 5x leverage: Max 0.60% stop = $3777.20 stop loss (moderate)
      * ETH @ $3800, 3x leverage: Max 1.0% stop = $3762.00 stop loss (comfortable)
    - **NEVER use wide stops with high leverage** - this leads to liquidation
-   - **Position-specific risk**: Calculate based on THIS position's notional value, not total portfolio
+   - **Position-specific risk**: Calculate based on THIS position's margin used, not notional value
    
 5. **CURRENT AVAILABLE: $${withdrawable.toFixed(2)}**:
-   - With 3x leverage: max notional = $${((withdrawable * 0.30) * 3).toFixed(2)}
-   - With 5x leverage: max notional = $${((withdrawable * 0.30) * 5).toFixed(2)}
+   - **MAX MARGIN PER POSITION: $${(withdrawable * 0.30).toFixed(2)}** (this is the hard limit)
+   - This margin allows these notional sizes at different leverages:
+     * 3x leverage: max notional = $${((withdrawable * 0.30) * 3).toFixed(2)}
+     * 5x leverage: max notional = $${((withdrawable * 0.30) * 5).toFixed(2)}
 
 MARKET REGIME ANALYSIS:
 ${marketRegime.reasoning}
