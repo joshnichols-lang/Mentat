@@ -1,8 +1,8 @@
-import { db } from "../db";
-import { trades, tradeEvaluations, strategyLearnings, marketRegimeSnapshots } from "../db/schema";
+import { db } from "./db";
+import { trades, tradeEvaluations, strategyLearnings, marketRegimeSnapshots } from "@shared/schema";
 import { eq, and, desc } from "drizzle-orm";
 import { makeAIRequest } from "./aiRouter";
-import type { Trade, InsertTradeEvaluation, InsertStrategyLearning } from "../db/schema";
+import type { Trade, InsertTradeEvaluation, InsertStrategyLearning } from "@shared/schema";
 
 interface TradeEvaluationMetrics {
   pnlVsExpectancy: number | null;

@@ -3,6 +3,7 @@ import { getUserHyperliquidClient } from "./hyperliquid/client";
 import { executeTradeStrategy } from "./tradeExecutor";
 import { createPortfolioSnapshot } from "./portfolioSnapshotService";
 import { makeAIRequest } from "./aiRouter";
+import { getRecentLearnings } from "./evaluationService";
 
 interface MarketData {
   symbol: string;
@@ -233,6 +234,9 @@ export async function developAutonomousStrategy(userId: string): Promise<void> {
     const withdrawable = parseFloat(userState?.marginSummary?.withdrawable || '0');
     const totalMarginUsed = parseFloat(userState?.marginSummary?.totalMarginUsed || '0');
     
+    // Fetch recent learnings from past trade evaluations (filtered by current market regime)
+    const recentLearnings = await getRecentLearnings(userId, marketRegime.regime, 8);
+    
     const prompt = `You are Mr. Fox, an autonomous AI trader. Develop a complete trade thesis and execute trades based on current market conditions.
 
 ACCOUNT INFORMATION (CRITICAL - READ THIS FIRST):
@@ -365,6 +369,17 @@ ${(() => {
     ? `\n⚠️ CRITICAL MISSING PROTECTIVE ORDERS:\n${missingProtection.join('\n')}\n`
     : '';
 })()}
+
+${recentLearnings.length > 0 ? `📚 STRATEGY LEARNINGS FROM PAST TRADES (AI self-improvement):
+${recentLearnings.map(l => `- [${l.category.toUpperCase()}] ${l.insight} (confidence: ${l.confidence.toFixed(0)}%)`).join('\n')}
+
+⚠️ APPLY THESE LESSONS: These insights are extracted from evaluations of your closed trades.
+- High confidence (>75%): Strongly apply this lesson in current trading decisions
+- Medium confidence (50-75%): Consider this insight when conditions match
+- Learnings decay over time (30-day half-life) to prevent overfitting to outdated patterns
+- Recent + persistent lessons weighted higher than one-off observations
+- Use these to refine entry timing, position sizing, stop placement, and exit strategy
+` : ''}
 
 ${promptHistory.length > 0 ? `LEARNED TRADING PATTERNS (from user prompts):
 ${promptHistory.map(p => `- ${new Date(p.timestamp).toLocaleDateString()}: "${p.prompt}"`).join('\n')}
