@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { Send, CheckCircle2, AlertCircle, Info, Image, X } from "lucide-react";
+import { Send, CheckCircle2, AlertCircle, Info, Image, X, Target } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
@@ -8,6 +8,9 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import logoUrl from "@assets/generated-image-removebg-preview_1760665535887.png";
 
 interface ExecutionResult {
@@ -39,8 +42,15 @@ export default function AIPromptPanel() {
   const [prompt, setPrompt] = useState("");
   const [lastExecution, setLastExecution] = useState<ExecutionSummary | null>(null);
   const [screenshots, setScreenshots] = useState<string[]>([]);
+  const [renameDialogOpen, setRenameDialogOpen] = useState(false);
+  const [newStrategyName, setNewStrategyName] = useState("");
+  const [strategyToRename, setStrategyToRename] = useState<any>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+
+  const { data: tradingModesData } = useQuery<{ modes: any[] }>({
+    queryKey: ["/api/trading-modes"],
+  });
 
   const { data: marketData } = useQuery<any>({
     queryKey: ["/api/hyperliquid/market-data"],
@@ -48,6 +58,48 @@ export default function AIPromptPanel() {
 
   const { data: positions } = useQuery<any>({
     queryKey: ["/api/hyperliquid/positions"],
+  });
+
+  const activateStrategyMutation = useMutation({
+    mutationFn: async (modeId: string) => {
+      return apiRequest("PATCH", `/api/trading-modes/${modeId}/activate`, {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/trading-modes"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/trading-modes/active"] });
+      toast({
+        title: "Strategy Activated",
+        description: "The autonomous trading system will now use this strategy",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "Failed to activate strategy",
+      });
+    },
+  });
+
+  const renameStrategyMutation = useMutation({
+    mutationFn: async ({ id, name }: { id: string; name: string }) => {
+      return apiRequest("PATCH", `/api/trading-modes/${id}`, { name });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/trading-modes"] });
+      setRenameDialogOpen(false);
+      toast({
+        title: "Strategy Renamed",
+        description: "Strategy name updated successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "Failed to rename strategy",
+      });
+    },
   });
 
   const executeTradeMutation = useMutation({
@@ -156,18 +208,71 @@ export default function AIPromptPanel() {
     setScreenshots((prev) => prev.filter((_, i) => i !== index));
   };
 
+  const handleStrategyChange = (value: string) => {
+    if (value === "custom") {
+      const activeModes = tradingModesData?.modes.filter((m: any) => m.isActive);
+      if (activeModes && activeModes.length > 0) {
+        setStrategyToRename(activeModes[0]);
+        setNewStrategyName(activeModes[0].name);
+        setRenameDialogOpen(true);
+      }
+    } else if (value !== "") {
+      activateStrategyMutation.mutate(value);
+    }
+  };
+
+  const handleRenameSubmit = () => {
+    if (strategyToRename && newStrategyName.trim()) {
+      renameStrategyMutation.mutate({ id: strategyToRename.id, name: newStrategyName.trim() });
+    }
+  };
+
+  const modes = tradingModesData?.modes || [];
+  const activeMode = modes.find((m: any) => m.isActive);
+
   return (
     <div className="space-y-3">
       <Card className="p-4">
-        <div className="mb-3 flex items-center gap-2">
-          <img src={logoUrl} alt="Mr. Fox" className="h-5 w-5" />
-          <h2 className="text-sm font-semibold">Mr. Fox</h2>
-          {executeTradeMutation.isPending && (
-            <Badge variant="secondary" className="gap-1.5 text-xs">
-              <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
-              Processing
-            </Badge>
-          )}
+        <div className="mb-3 flex items-center gap-2 justify-between">
+          <div className="flex items-center gap-2">
+            <img src={logoUrl} alt="Mr. Fox" className="h-5 w-5" />
+            <h2 className="text-sm font-semibold">Mr. Fox</h2>
+            {executeTradeMutation.isPending && (
+              <Badge variant="secondary" className="gap-1.5 text-xs">
+                <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
+                Processing
+              </Badge>
+            )}
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <Target className="h-3.5 w-3.5 text-muted-foreground" />
+            <Select 
+              value={activeMode?.id || ""} 
+              onValueChange={handleStrategyChange}
+              disabled={activateStrategyMutation.isPending}
+            >
+              <SelectTrigger className="h-8 w-[200px] text-xs" data-testid="select-strategy">
+                <SelectValue placeholder="No strategy active" />
+              </SelectTrigger>
+              <SelectContent>
+                {modes.length === 0 ? (
+                  <SelectItem value="" disabled>No strategies available</SelectItem>
+                ) : (
+                  modes.map((mode: any) => (
+                    <SelectItem key={mode.id} value={mode.id} data-testid={`strategy-${mode.id}`}>
+                      {mode.name} ({mode.type})
+                    </SelectItem>
+                  ))
+                )}
+                {activeMode && (
+                  <SelectItem value="custom" data-testid="strategy-custom">
+                    Rename Strategy...
+                  </SelectItem>
+                )}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
         
         <div className="space-y-2.5">
@@ -317,6 +422,48 @@ export default function AIPromptPanel() {
           </div>
         </Alert>
       )}
+
+      <Dialog open={renameDialogOpen} onOpenChange={setRenameDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Rename Strategy</DialogTitle>
+            <DialogDescription>
+              Give your strategy a custom name that reflects your trading style
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Input
+                placeholder="Enter new strategy name"
+                value={newStrategyName}
+                onChange={(e) => setNewStrategyName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleRenameSubmit();
+                  }
+                }}
+                data-testid="input-strategy-name"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setRenameDialogOpen(false)}
+              data-testid="button-cancel-rename"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleRenameSubmit}
+              disabled={!newStrategyName.trim() || renameStrategyMutation.isPending}
+              data-testid="button-confirm-rename"
+            >
+              {renameStrategyMutation.isPending ? "Renaming..." : "Rename"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
