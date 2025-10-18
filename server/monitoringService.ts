@@ -45,6 +45,113 @@ interface AutonomousStrategy {
 // Store previous volume data for abnormal condition detection
 const previousVolumeData = new Map<string, Map<string, number>>();
 
+/**
+ * Discover existing positions and track their protective orders if not already tracked
+ * This ensures positions opened manually or during server downtime are tracked
+ */
+async function discoverAndTrackExistingPositions(userId: number): Promise<void> {
+  try {
+    const hyperliquid = await getUserHyperliquidClient(userId);
+    
+    // Get all positions, open orders, and market data
+    const [positions, openOrders, marketData] = await Promise.all([
+      hyperliquid.getPositions(),
+      hyperliquid.getOpenOrders(),
+      hyperliquid.getMarketData()
+    ]);
+    
+    if (!positions || positions.length === 0) {
+      console.log('[Position Discovery] No positions found for user', userId);
+      return;
+    }
+    
+    console.log(`[Position Discovery] Found ${positions.length} positions for user ${userId}`);
+    
+    for (const position of positions) {
+      const symbol = position.coin;
+      
+      // Check if we already have protective order state tracked for this position
+      const existingState = await storage.getProtectiveOrderState(userId, symbol);
+      
+      if (existingState) {
+        console.log(`[Position Discovery] ${symbol} already tracked, skipping`);
+        continue;
+      }
+      
+      // Find protective orders for this position
+      const protectiveOrders = openOrders.filter((order: any) => 
+        order.coin === symbol && order.reduceOnly === true
+      );
+      
+      if (protectiveOrders.length === 0) {
+        console.log(`[Position Discovery] ${symbol} has no protective orders, skipping discovery`);
+        continue;
+      }
+      
+      // Get current market price (more reliable than entry price for classification)
+      const marketPrice = marketData.find(m => m.symbol === symbol)?.price;
+      const currentPrice = marketPrice ? parseFloat(marketPrice) : parseFloat(position.entryPx);
+      const isLong = parseFloat(position.szi) > 0;
+      
+      console.log(`[Position Discovery] ${symbol}: ${protectiveOrders.length} protective orders, ${isLong ? 'LONG' : 'SHORT'} position, current price: ${currentPrice}`);
+      
+      // Classify protective orders based on current market price
+      // For LONGS: Stop Loss < current price, Take Profit > current price
+      // For SHORTS: Stop Loss > current price, Take Profit < current price
+      
+      // First, separate orders by which side of current price they're on
+      const orderPrices = protectiveOrders.map((order: any) => parseFloat(order.limitPx));
+      const ordersAbovePrice = orderPrices.filter(p => p > currentPrice);
+      const ordersBelowPrice = orderPrices.filter(p => p < currentPrice);
+      
+      let stopLossPrice: string | null = null;
+      let takeProfitPrice: string | null = null;
+      
+      if (isLong) {
+        // Long position: SL is below market (highest of orders below), TP is above market (lowest of orders above)
+        if (ordersBelowPrice.length > 0) {
+          stopLossPrice = Math.max(...ordersBelowPrice).toString(); // Highest below = trailed SL
+        }
+        if (ordersAbovePrice.length > 0) {
+          takeProfitPrice = Math.min(...ordersAbovePrice).toString(); // Lowest above = nearest TP
+        }
+      } else {
+        // Short position: SL is above market (lowest of orders above), TP is below market (highest of orders below)
+        if (ordersAbovePrice.length > 0) {
+          stopLossPrice = Math.min(...ordersAbovePrice).toString(); // Lowest above = trailed SL
+        }
+        if (ordersBelowPrice.length > 0) {
+          takeProfitPrice = Math.max(...ordersBelowPrice).toString(); // Highest below = nearest TP
+        }
+      }
+      
+      console.log(`[Position Discovery] ${symbol} classification: Orders above=${ordersAbovePrice.length}, below=${ordersBelowPrice.length}, SL=${stopLossPrice}, TP=${takeProfitPrice}`);
+      
+      // Track protective orders - require at least a stop loss
+      if (stopLossPrice) {
+        // Use a placeholder TP if none exists (will show as missing in monitoring)
+        const tpToStore = takeProfitPrice || (isLong ? (currentPrice * 1.05).toFixed(2) : (currentPrice * 0.95).toFixed(2));
+        
+        await storage.setInitialProtectiveOrders(
+          userId,
+          symbol,
+          stopLossPrice,
+          tpToStore,
+          takeProfitPrice 
+            ? `Discovered existing position with ${protectiveOrders.length} protective order(s)`
+            : `Discovered position with SL only (${protectiveOrders.length} orders) - placeholder TP set`
+        );
+        
+        console.log(`[Position Discovery] ✅ Tracked ${symbol}: SL=${stopLossPrice}, TP=${takeProfitPrice || 'placeholder'}`);
+      } else {
+        console.warn(`[Position Discovery] ⚠️ ${symbol} has ${protectiveOrders.length} protective orders but could not identify stop loss - prices: ${protectiveOrders.map((o: any) => o.limitPx).join(', ')}`);
+      }
+    }
+  } catch (error: any) {
+    console.error('[Position Discovery] Error during position discovery:', error.message);
+  }
+}
+
 function detectAbnormalConditions(marketData: MarketData[]): { symbol: string; condition: string; volumeRatio: number }[] {
   const abnormalConditions: { symbol: string; condition: string; volumeRatio: number }[] = [];
   const VOLUME_SPIKE_THRESHOLD = 3.0; // 3x normal volume is abnormal
@@ -168,6 +275,10 @@ export async function developAutonomousStrategy(userId: string): Promise<void> {
       console.log(`[Autonomous Trading] Hyperliquid client not initialized for user ${userId}`);
       return;
     }
+    
+    // POSITION DISCOVERY: Track existing positions and their protective orders
+    // This ensures positions opened manually or during server downtime are tracked
+    await discoverAndTrackExistingPositions(parseInt(userId));
     
     // Fetch market data, current positions, and open orders
     const marketData = await hyperliquidClient.getMarketData();
