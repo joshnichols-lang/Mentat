@@ -87,9 +87,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         model: z.string().optional(), // Optional model - AI router will use provider default if not specified
         preferredProvider: z.enum(["perplexity", "openai", "xai"]).optional(), // Optional preferred AI provider
         screenshots: z.array(z.string()).optional(), // Optional base64 encoded screenshots
+        strategyId: z.string().nullable().optional(), // Optional strategy ID - null for "general" mode
       });
 
-      const { prompt, marketData, currentPositions = [], autoExecute = true, model, preferredProvider, screenshots } = schema.parse(req.body);
+      const { prompt, marketData, currentPositions = [], autoExecute = true, model, preferredProvider, screenshots, strategyId = null } = schema.parse(req.body);
 
       // Validate screenshots if provided
       if (screenshots && screenshots.length > 0) {
@@ -127,7 +128,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userState = await hyperliquid.getUserState();
       console.log("[Trading Prompt] User state:", JSON.stringify(userState, null, 2));
 
-      const strategy = await processTradingPrompt(userId, prompt, marketData, currentPositions, userState, model, preferredProvider, screenshots);
+      const strategy = await processTradingPrompt(userId, prompt, marketData, currentPositions, userState, model, preferredProvider, screenshots, strategyId);
       
       let executionSummary = null;
       

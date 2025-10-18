@@ -115,6 +115,7 @@ export const portfolioSnapshots = pgTable("portfolio_snapshots", {
 export const aiUsageLog = pgTable("ai_usage_log", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  strategyId: text("strategy_id"), // References trading_modes.id OR null for "general" context
   timestamp: timestamp("timestamp").notNull().defaultNow(),
   provider: text("provider").notNull(), // "openai", "perplexity", "xai"
   model: text("model").notNull(), // e.g., "gpt-5", "sonar-pro", "grok-2"

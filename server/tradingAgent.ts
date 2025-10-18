@@ -74,7 +74,8 @@ export async function processTradingPrompt(
   userState: any,
   model?: string,
   preferredProvider?: string,
-  screenshots?: string[]
+  screenshots?: string[],
+  strategyId?: string | null
 ): Promise<TradingStrategy> {
   
   try {
@@ -201,7 +202,8 @@ You also happen to be an expert crypto trader, but the user is asking you a gene
           estimatedCost: generalResponse.cost.toFixed(6),
           userPrompt: prompt,
           aiResponse: generalResponse.content || '',
-          success: 1
+          success: 1,
+          strategyId: strategyId || null
         });
       } catch (logError) {
         console.error("Failed to log AI usage:", logError);
@@ -216,10 +218,10 @@ You also happen to be an expert crypto trader, but the user is asking you a gene
       };
     }
 
-    // Fetch recent user prompt history (last 5 successful prompts)
+    // Fetch recent user prompt history (last 5 successful prompts) - filtered by strategyId
     let promptHistory: {timestamp: Date, prompt: string}[] = [];
     try {
-      const recentPrompts = await storage.getAiUsageLogs(userId, 5);
+      const recentPrompts = await storage.getAiUsageLogs(userId, 5, strategyId);
       promptHistory = recentPrompts
         .filter(log => log.success === 1 && log.userPrompt)
         .map(log => ({
@@ -419,6 +421,7 @@ Generate a trading strategy that addresses the user's current prompt while consi
         aiResponse: JSON.stringify(strategy),
         success: 1,
         mode: "manual", // or "autonomous" - will be set by the caller
+        strategyId: strategyId || null
       });
     } catch (error) {
       console.error("Failed to log AI usage:", error);
@@ -442,6 +445,7 @@ Generate a trading strategy that addresses the user's current prompt while consi
         userPrompt: prompt,
         success: 0,
         mode: "manual",
+        strategyId: strategyId || null
       });
     } catch (logError) {
       console.error("Failed to log AI usage error:", logError);

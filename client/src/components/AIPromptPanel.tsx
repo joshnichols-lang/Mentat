@@ -110,6 +110,7 @@ export default function AIPromptPanel() {
         currentPositions: positions?.positions || [],
         autoExecute: true,
         screenshots: images.length > 0 ? images : undefined,
+        strategyId: activeMode?.id || null, // null = "general" mode
         // Model is optional - AI router will use provider's default
       });
       return await res.json();
@@ -257,7 +258,7 @@ export default function AIPromptPanel() {
               </SelectTrigger>
               <SelectContent>
                 {modes.length === 0 ? (
-                  <SelectItem value="" disabled>No strategies available</SelectItem>
+                  <SelectItem value="no-strategies" disabled>No strategies available</SelectItem>
                 ) : (
                   modes.map((mode: any) => (
                     <SelectItem key={mode.id} value={mode.id} data-testid={`strategy-${mode.id}`}>

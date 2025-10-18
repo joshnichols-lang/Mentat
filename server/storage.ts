@@ -1,6 +1,6 @@
 import { type User, type InsertUser, type UpsertUser, type Trade, type InsertTrade, type Position, type InsertPosition, type PortfolioSnapshot, type InsertPortfolioSnapshot, type AiUsageLog, type InsertAiUsageLog, type MonitoringLog, type InsertMonitoringLog, type UserApiCredential, type InsertUserApiCredential, type ApiKey, type InsertApiKey, type ContactMessage, type InsertContactMessage, type ProtectiveOrderEvent, type InsertProtectiveOrderEvent, type UserTradeHistoryImport, type InsertUserTradeHistoryImport, type UserTradeHistoryTrade, type InsertUserTradeHistoryTrade, type TradeStyleProfile, type InsertTradeStyleProfile, type TradeJournalEntry, type InsertTradeJournalEntry, type TradingMode, type InsertTradingMode, users, trades, positions, portfolioSnapshots, aiUsageLog, monitoringLog, userApiCredentials, apiKeys, contactMessages, protectiveOrderEvents, userTradeHistoryImports, userTradeHistoryTrades, tradeStyleProfiles, tradeJournalEntries, tradingModes } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, sql, and, type SQL } from "drizzle-orm";
+import { eq, desc, sql, and, isNull, type SQL } from "drizzle-orm";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
 import { pool } from "./db";
@@ -65,7 +65,7 @@ export interface IStorage {
   
   // AI Usage Log methods (multi-tenant)
   logAiUsage(userId: string, log: InsertAiUsageLog): Promise<AiUsageLog>;
-  getAiUsageLogs(userId: string, limit?: number): Promise<AiUsageLog[]>;
+  getAiUsageLogs(userId: string, limit?: number, strategyId?: string | null): Promise<AiUsageLog[]>;
   getTotalAiCost(userId: string): Promise<string>;
   getAiUsageStats(userId: string): Promise<{
     totalRequests: number;
@@ -532,9 +532,22 @@ export class DbStorage implements IStorage {
     return result[0];
   }
 
-  async getAiUsageLogs(userId: string, limit: number = 100): Promise<AiUsageLog[]> {
+  async getAiUsageLogs(userId: string, limit: number = 100, strategyId?: string | null): Promise<AiUsageLog[]> {
+    // Build filter conditions
+    const conditions = [withUserFilter(aiUsageLog, userId)];
+    
+    // If strategyId is provided (including null for "general" mode), filter by it
+    if (strategyId !== undefined) {
+      if (strategyId === null) {
+        conditions.push(isNull(aiUsageLog.strategyId));
+      } else {
+        conditions.push(eq(aiUsageLog.strategyId, strategyId));
+      }
+    }
+    // If strategyId is undefined, return all logs (no strategyId filter)
+    
     return await db.select().from(aiUsageLog)
-      .where(withUserFilter(aiUsageLog, userId))
+      .where(and(...conditions))
       .orderBy(desc(aiUsageLog.timestamp))
       .limit(limit);
   }
