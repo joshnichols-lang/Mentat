@@ -247,8 +247,10 @@ export async function executeTradeStrategy(
     const stopLossCount = protectiveActions.filter((a: TradingAction) => a.action === "stop_loss").length;
     const takeProfitCount = protectiveActions.filter((a: TradingAction) => a.action === "take_profit").length;
     
+    // REMOVED BLOCKER: Don't reject multiple stop losses - let the selection logic handle it
+    // The protective order processing logic will select the most conservative stop loss
     if (stopLossCount > 1) {
-      throw new Error(`VALIDATION ERROR: Multiple stop_loss actions (${stopLossCount}) for ${symbol}. Only ONE stop_loss per symbol is allowed.`);
+      console.log(`[Trade Executor] ${stopLossCount} stop loss orders for ${symbol} - selection logic will choose most conservative`);
     }
     
     // Allow multiple take profit orders for scaling out
@@ -543,11 +545,126 @@ export async function executeTradeStrategy(
     try {
       console.log(`[Trade Executor] Processing ${protectiveActions.length} protective orders for ${symbol}`);
       
-      // Fetch metadata for price comparison
+      // Get current position to validate and calculate sizes
+      const currentPositions = await hyperliquid.getPositions();
+      const currentPosition = currentPositions.find((p: any) => p.coin === symbol);
+      
+      if (!currentPosition) {
+        // No position exists, so no need for protective orders
+        console.log(`[Trade Executor] No position found for ${symbol}, skipping protective orders`);
+        skipCount += protectiveActions.length;
+        for (const action of protectiveActions) {
+          results.push({
+            success: true,
+            action,
+            error: "No position exists - protective orders not needed",
+          });
+        }
+        continue;
+      }
+      
+      const positionSize = Math.abs(parseFloat(currentPosition.szi));
+      const isLong = parseFloat(currentPosition.szi) > 0;
+      const currentPrice = parseFloat((currentPosition as any).markPx || currentPosition.entryPx);
+      
+      // CRITICAL: Validate position size > 0 before attempting protective orders
+      if (positionSize <= 0) {
+        console.log(`[Trade Executor] Position size is zero or negative for ${symbol} (${positionSize}), skipping protective orders`);
+        skipCount += protectiveActions.length;
+        for (const action of protectiveActions) {
+          results.push({
+            success: true,
+            action,
+            error: "Position size is zero - protective orders not needed",
+          });
+        }
+        continue;
+      }
+      
+      // CRITICAL FIX 1: Select only ONE stop loss (most conservative - closest to current price)
+      const stopLosses = protectiveActions.filter(a => a.action === "stop_loss");
+      const takeProfits = protectiveActions.filter(a => a.action === "take_profit");
+      
+      let selectedStopLoss: TradingAction | null = null;
+      if (stopLosses.length > 1) {
+        console.log(`[Trade Executor] Multiple stop losses detected (${stopLosses.length}), selecting most conservative...`);
+        
+        // For LONG: most conservative = highest SL (closest to current price)
+        // For SHORT: most conservative = lowest SL (closest to current price)
+        selectedStopLoss = stopLosses.reduce((best, current) => {
+          const bestPrice = parseFloat(best.triggerPrice!);
+          const currentPrice = parseFloat(current.triggerPrice!);
+          
+          if (isLong) {
+            // For long, higher stop loss is more conservative
+            return currentPrice > bestPrice ? current : best;
+          } else {
+            // For short, lower stop loss is more conservative
+            return currentPrice < bestPrice ? current : best;
+          }
+        });
+        
+        console.log(`[Trade Executor] Selected stop loss at ${selectedStopLoss.triggerPrice} (most conservative of ${stopLosses.length} options)`);
+      } else if (stopLosses.length === 1) {
+        selectedStopLoss = stopLosses[0];
+      }
+      
+      // Fetch metadata EARLY for proper size rounding BEFORE comparison (prevents 0.0006 vs 0.00065 drift)
       const metadata = await hyperliquid.getAssetMetadata(symbol);
       if (!metadata) {
-        console.warn(`[Trade Executor] Could not fetch metadata for ${symbol}, placing orders without comparison`);
+        console.error(`[Trade Executor] Failed to fetch metadata for ${symbol}, skipping protective orders`);
+        skipCount += protectiveActions.length;
+        for (const action of protectiveActions) {
+          results.push({
+            success: false,
+            action,
+            error: `Failed to fetch asset metadata for ${symbol}`,
+          });
+        }
+        continue;
       }
+      
+      console.log(`[Trade Executor] Position: ${symbol} size=${positionSize.toFixed(metadata.szDecimals)}, asset szDecimals=${metadata.szDecimals}, tickSize=${metadata.tickSize}`);
+      
+      // CRITICAL FIX 2: Split take profit sizes proportionally to sum to position size
+      // IMPORTANT: Round IMMEDIATELY using exchange precision to avoid comparison drift
+      const scaledTakeProfits: Array<TradingAction & { calculatedSize: number }> = [];
+      if (takeProfits.length > 0) {
+        // Calculate proportional sizes that sum to position size
+        const totalWeight = takeProfits.length; // Equal weight for now
+        let remainingSize = positionSize;
+        
+        takeProfits.forEach((tp, index) => {
+          let size: number;
+          
+          if (index === takeProfits.length - 1) {
+            // Last TP gets remaining size (handles rounding residuals)
+            size = roundToSizeDecimals(remainingSize, metadata.szDecimals);
+          } else {
+            // Split equally, round to exchange precision IMMEDIATELY
+            const rawSize = positionSize / totalWeight;
+            size = roundToSizeDecimals(rawSize, metadata.szDecimals);
+            remainingSize -= size;
+          }
+          
+          scaledTakeProfits.push({
+            ...tp,
+            calculatedSize: size,
+          });
+          
+          console.log(`[Trade Executor] TP ${index+1}/${takeProfits.length} calculatedSize: ${size.toFixed(metadata.szDecimals)} (rounded immediately)`);
+        });
+        
+        const totalSplit = scaledTakeProfits.reduce((sum, tp) => sum + tp.calculatedSize, 0);
+        console.log(`[Trade Executor] Split ${takeProfits.length} take profits: total=${totalSplit.toFixed(metadata.szDecimals)}, position=${positionSize.toFixed(metadata.szDecimals)}`);
+      }
+      
+      // Rebuild protective actions with only selected SL and scaled TPs
+      const finalProtectiveActions = [];
+      if (selectedStopLoss) {
+        finalProtectiveActions.push(selectedStopLoss);
+      }
+      finalProtectiveActions.push(...scaledTakeProfits);
       
       // Cancel ALL existing protective orders for this symbol ONCE
       console.log(`[Trade Executor] Checking for existing protective orders for ${symbol}...`);
@@ -591,71 +708,84 @@ export async function executeTradeStrategy(
         continue;
       }
       
-      const currentPrice = parseFloat(position.entryPx);
-      const isLong = parseFloat(position.szi) > 0;
+      const entryPrice = parseFloat(position.entryPx);
+      const positionIsLong = parseFloat(position.szi) > 0;
       const currentPnl = parseFloat(position.unrealizedPnl);
       
-      if (existingProtectiveOrders.length === 2 && protectiveActions.length === 2 && metadata) {
-        // We have exactly 2 existing and 2 new - check if they match
-        const newStopLoss = protectiveActions.find(a => a.action === "stop_loss");
-        const newTakeProfit = protectiveActions.find(a => a.action === "take_profit");
+      // CRITICAL FIX 3: Improved order comparison to prevent unnecessary churn
+      // Compare using the FINAL protective actions (after selection and scaling)
+      if (existingProtectiveOrders.length === finalProtectiveActions.length && metadata) {
+        // Deep comparison: check if prices AND sizes match (with tolerance for rounding)
+        let ordersMatch = true;
+        let matchReason = "";
         
-        // CRITICAL FIX: Hyperliquid API doesn't return tpsl field, so we must identify SL/TP by price
-        // For LONG positions: Stop Loss < current price, Take Profit > current price
-        // For SHORT positions: Stop Loss > current price, Take Profit < current price
-        const [existingOrder1, existingOrder2] = existingProtectiveOrders;
-        const price1 = parseFloat(existingOrder1.limitPx);
-        const price2 = parseFloat(existingOrder2.limitPx);
-        
-        let existingSL, existingTP;
-        if (isLong) {
-          existingSL = price1 < currentPrice ? existingOrder1 : existingOrder2;
-          existingTP = price1 > currentPrice ? existingOrder1 : existingOrder2;
-        } else {
-          existingSL = price1 > currentPrice ? existingOrder1 : existingOrder2;
-          existingTP = price1 < currentPrice ? existingOrder1 : existingOrder2;
+        // Create maps of existing orders by rounded price
+        const existingOrderMap = new Map<string, any>();
+        for (const order of existingProtectiveOrders) {
+          const roundedPrice = roundToTickSize(parseFloat(order.limitPx), metadata.tickSize);
+          const roundedSize = roundToSizeDecimals(parseFloat(order.sz), metadata.szDecimals);
+          existingOrderMap.set(`${roundedPrice}_${roundedSize}`, order);
         }
         
-        if (newStopLoss && newTakeProfit && existingSL && existingTP) {
-          // Compare prices (allow 1% tolerance to prevent minor adjustments)
-          const newSLPrice = parseFloat(newStopLoss.triggerPrice!);
-          const existingSLPrice = parseFloat(existingSL.limitPx);
-          const slPriceChange = Math.abs((newSLPrice - existingSLPrice) / existingSLPrice);
+        // Check if all final protective actions exist in the exchange
+        for (const action of finalProtectiveActions) {
+          const triggerPrice = parseFloat(action.triggerPrice!);
+          const roundedPrice = roundToTickSize(triggerPrice, metadata.tickSize);
           
-          const newTPPrice = parseFloat(newTakeProfit.triggerPrice!);
-          const existingTPPrice = parseFloat(existingTP.limitPx);
-          const tpPriceChange = Math.abs((newTPPrice - existingTPPrice) / existingTPPrice);
+          // Get calculated size for this action
+          const actionSize = (action as any).calculatedSize || positionSize;
+          const roundedSize = roundToSizeDecimals(actionSize, metadata.szDecimals);
           
-          // Only replace if either changed by more than 1%
-          if (slPriceChange < 0.01 && tpPriceChange < 0.01) {
-            console.log(`[Trade Executor] ✓ Protective orders for ${symbol} are up-to-date (SL: ${existingSLPrice}, TP: ${existingTPPrice}). Skipping replacement.`);
-            skipCount += 2;
-            for (const action of protectiveActions) {
-              results.push({
-                success: true,
-                action,
-                error: "Protective order already exists with same price - skipped to prevent churn",
-              });
-            }
-            continue; // Skip to next symbol
-          } else {
+          const key = `${roundedPrice}_${roundedSize}`;
+          if (!existingOrderMap.has(key)) {
+            ordersMatch = false;
+            matchReason = `${action.action} at ${roundedPrice} (size: ${roundedSize}) not found in existing orders`;
+            break;
+          }
+        }
+        
+        if (ordersMatch) {
+          console.log(`[Trade Executor] ✓ Protective orders for ${symbol} are up-to-date. Skipping replacement to prevent churn.`);
+          skipCount += finalProtectiveActions.length;
+          for (const action of finalProtectiveActions) {
+            results.push({
+              success: true,
+              action,
+              error: "Protective order already exists with same price and size - skipped to prevent churn",
+            });
+          }
+          continue; // Skip to next symbol
+        } else {
+          console.log(`[Trade Executor] Protective orders need update: ${matchReason}`);
+          
+          // For stop loss changes, validate the adjustment
+          const newStopLoss = selectedStopLoss;
+          const existingSL = existingProtectiveOrders.find((order: any) => {
+            const price = parseFloat(order.limitPx);
+            return positionIsLong ? price < entryPrice : price > entryPrice;
+          });
+          
+          if (newStopLoss && existingSL) {
             // SERVER-SIDE VALIDATION: Check if protective order adjustment is allowed
+            const newSLPrice = parseFloat(newStopLoss.triggerPrice!);
+            const existingSLPrice = parseFloat(existingSL.limitPx);
+            
             console.log(`[Trade Executor] Validating protective order adjustment for ${symbol}...`);
             const validationResult = await storage.updateProtectiveOrders(
               userId,
               symbol,
-              slPriceChange >= 0.01 ? newSLPrice.toString() : null,
-              tpPriceChange >= 0.01 ? newTPPrice.toString() : null,
+              newSLPrice.toString(),
+              null, // We'll update TP through the normal flow
               newStopLoss.reasoning || "AI-generated protective order adjustment",
               currentPnl.toString(),
-              currentPrice.toString()
+              entryPrice.toString()
             );
             
             if (!validationResult.success) {
               // Validation failed - reject the adjustment
               console.error(`[Trade Executor] ❌ Protective order adjustment REJECTED: ${validationResult.error}`);
-              skipCount += 2;
-              for (const action of protectiveActions) {
+              skipCount += finalProtectiveActions.length;
+              for (const action of finalProtectiveActions) {
                 results.push({
                   success: false,
                   action,
@@ -665,45 +795,28 @@ export async function executeTradeStrategy(
               continue; // Skip to next symbol
             } else {
               shouldReplaceOrders = true;
-              console.log(`[Trade Executor] ✅ Validation passed - SL changed ${(slPriceChange * 100).toFixed(2)}%, TP changed ${(tpPriceChange * 100).toFixed(2)}%`);
+              console.log(`[Trade Executor] ✅ Validation passed - replacing protective orders`);
             }
-          }
-        } else {
-          // Missing SL or TP, need to set initial protective orders
-          shouldReplaceOrders = true;
-          console.log(`[Trade Executor] Could not identify existing SL/TP by price comparison, will set initial protective orders`);
-          
-          const newStopLoss = protectiveActions.find(a => a.action === "stop_loss");
-          const newTakeProfit = protectiveActions.find(a => a.action === "take_profit");
-          
-          if (newStopLoss && newTakeProfit) {
-            await storage.setInitialProtectiveOrders(
-              userId,
-              symbol,
-              newStopLoss.triggerPrice!,
-              newTakeProfit.triggerPrice!,
-              newStopLoss.reasoning || "Initial protective orders set by AI"
-            );
-            console.log(`[Trade Executor] Set initial protective orders for ${symbol}`);
+          } else {
+            shouldReplaceOrders = true;
           }
         }
       } else {
-        // Not exactly 2 existing and 2 new, or no metadata - replace to ensure correct state
+        // Order count mismatch or no metadata - replace to ensure correct state
         shouldReplaceOrders = true;
-        console.log(`[Trade Executor] Protective order count mismatch (existing: ${existingProtectiveOrders.length}, new: ${protectiveActions.length}), will replace`);
+        console.log(`[Trade Executor] Protective order count mismatch (existing: ${existingProtectiveOrders.length}, new: ${finalProtectiveActions.length}), will replace`);
         
         // Set initial protective orders if they don't exist yet
-        if (existingProtectiveOrders.length === 0) {
-          const newStopLoss = protectiveActions.find(a => a.action === "stop_loss");
-          const newTakeProfit = protectiveActions.find(a => a.action === "take_profit");
+        if (existingProtectiveOrders.length === 0 && selectedStopLoss) {
+          const firstTP = scaledTakeProfits[0];
           
-          if (newStopLoss && newTakeProfit) {
+          if (firstTP) {
             await storage.setInitialProtectiveOrders(
               userId,
               symbol,
-              newStopLoss.triggerPrice!,
-              newTakeProfit.triggerPrice!,
-              newStopLoss.reasoning || "Initial protective orders set by AI"
+              selectedStopLoss.triggerPrice!,
+              firstTP.triggerPrice!,
+              selectedStopLoss.reasoning || "Initial protective orders set by AI"
             );
             console.log(`[Trade Executor] Set initial protective orders for ${symbol} (first time)`);
           }
@@ -735,7 +848,7 @@ export async function executeTradeStrategy(
         // If cancellation failed, skip ALL protective orders for this symbol
         if (!allCancellationsSucceeded) {
           console.error(`[Trade Executor] Skipping all protective orders for ${symbol} - cancellation failed: ${cancellationError}`);
-          for (const action of protectiveActions) {
+          for (const action of finalProtectiveActions) {
             results.push({
               success: false,
               action,
@@ -747,10 +860,11 @@ export async function executeTradeStrategy(
           continue;
         }
 
-        // Now place ALL new protective orders for this symbol (both stop loss and take profit)
-        for (const action of protectiveActions) {
-          console.log(`[Trade Executor] Placing ${action.action} for ${symbol} at trigger price ${action.triggerPrice}`);
-          const triggerResult = await executeTriggerOrder(hyperliquid, action);
+        // Now place ALL new protective orders for this symbol (both stop loss and scaled take profits)
+        for (const action of finalProtectiveActions) {
+          const actionSize = (action as any).calculatedSize; // Get the calculated size if it exists
+          console.log(`[Trade Executor] Placing ${action.action} for ${symbol} at trigger price ${action.triggerPrice}${actionSize ? ` (size: ${actionSize.toFixed(4)})` : ''}`);
+          const triggerResult = await executeTriggerOrder(hyperliquid, action, actionSize);
           results.push(triggerResult);
           if (triggerResult.success) {
             successCount++;
@@ -761,6 +875,7 @@ export async function executeTradeStrategy(
       }
     } catch (error: any) {
       console.error(`Failed to process protective orders for ${symbol}:`, error);
+      // Fall back to protectiveActions if finalProtectiveActions is not yet defined
       for (const action of protectiveActions) {
         failCount++;
         results.push({
@@ -977,7 +1092,8 @@ async function executeClosePosition(
 
 async function executeTriggerOrder(
   hyperliquid: any,
-  action: TradingAction
+  action: TradingAction,
+  overrideSize?: number // Optional: Override position size for scaled take profits
 ): Promise<ExecutionResult> {
   try {
     // Fetch asset metadata for tick size
@@ -1013,7 +1129,12 @@ async function executeTriggerOrder(
       };
     }
 
-    const positionSize = Math.abs(parseFloat(position.szi));
+    // Use override size if provided (for scaled take profits), otherwise use full position size
+    let orderSize = overrideSize !== undefined ? overrideSize : Math.abs(parseFloat(position.szi));
+    
+    // Round size to proper decimals
+    orderSize = roundToSizeDecimals(orderSize, metadata.szDecimals);
+    
     const isLong = parseFloat(position.szi) > 0;
     const liquidationPrice = position.liquidationPx ? parseFloat(position.liquidationPx) : null;
     const entryPrice = parseFloat(position.entryPx);
@@ -1081,12 +1202,12 @@ async function executeTriggerOrder(
     const useMarketExecution = action.action === "stop_loss";
     
     // Validate minimum notional value ($10 USD minimum)
-    validateMinimumNotional(positionSize, triggerPrice, action.symbol);
+    validateMinimumNotional(orderSize, triggerPrice, action.symbol);
     
     const triggerOrder = {
       coin: action.symbol,
       is_buy: !isLong,  // Opposite of position to close it
-      sz: positionSize,
+      sz: orderSize, // Use calculated size (supports scaled take profits)
       limit_px: triggerPrice,  // The trigger price
       order_type: {
         trigger: {
