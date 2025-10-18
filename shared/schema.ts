@@ -358,6 +358,49 @@ export const tradeStyleProfiles = pgTable("trade_style_profiles", {
   isActive: integer("is_active").notNull().default(1), // 0 = archived, 1 = active
 });
 
+// Trade journal - AI's reasoning and analysis for each trading decision
+export const tradeJournalEntries = pgTable("trade_journal_entries", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  tradeId: varchar("trade_id").references(() => trades.id, { onDelete: "cascade" }), // Null for planned trades not yet executed
+  evaluationId: varchar("evaluation_id").references(() => tradeEvaluations.id, { onDelete: "set null" }), // Link to evaluation when closed
+  
+  // Trade identification
+  symbol: text("symbol").notNull(),
+  side: text("side").notNull(), // "long" or "short"
+  entryType: text("entry_type").notNull(), // "position_opened", "limit_order_placed"
+  status: text("status").notNull().default("planned"), // "planned", "active", "closed"
+  
+  // Entry reasoning and expectations
+  entryReasoning: text("entry_reasoning").notNull(), // AI's detailed explanation for why this trade was planned/entered
+  expectations: text("expectations").notNull(), // AI's expectations for the trade (targets, timeframe, market conditions)
+  marketContext: jsonb("market_context"), // Market conditions at entry: { regime, volatility, volume, etc }
+  
+  // Planned trade details
+  plannedEntryPrice: decimal("planned_entry_price", { precision: 18, scale: 8 }),
+  actualEntryPrice: decimal("actual_entry_price", { precision: 18, scale: 8 }),
+  size: decimal("size", { precision: 18, scale: 8 }).notNull(),
+  leverage: integer("leverage").notNull().default(1),
+  stopLoss: decimal("stop_loss", { precision: 18, scale: 8 }),
+  takeProfit: decimal("take_profit", { precision: 18, scale: 8 }),
+  
+  // Close analysis (populated when trade closes)
+  closePrice: decimal("close_price", { precision: 18, scale: 8 }),
+  closePnl: decimal("close_pnl", { precision: 18, scale: 8 }),
+  closePnlPercent: decimal("close_pnl_percent", { precision: 10, scale: 6 }),
+  closeReasoning: text("close_reasoning"), // AI's analysis of what happened
+  hitTarget: integer("hit_target"), // 1 = hit target, 0 = did not hit target
+  hadAdjustments: integer("had_adjustments").notNull().default(0), // 1 = stop/target were adjusted, 0 = no adjustments
+  adjustmentDetails: jsonb("adjustment_details"), // Details of any adjustments made: [{ timestamp, type, from, to, reason }]
+  whatWentWrong: text("what_went_wrong"), // If loss, AI's analysis of what went wrong
+  lessonsLearned: text("lessons_learned"), // Key takeaways from this trade
+  
+  // Timestamps
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  activatedAt: timestamp("activated_at"), // When limit order filled or position opened
+  closedAt: timestamp("closed_at"), // When trade was closed
+});
+
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true, updatedAt: true });
 export const upsertUserSchema = createInsertSchema(users).omit({ createdAt: true, updatedAt: true }).partial();
 export const insertTradeSchema = createInsertSchema(trades).omit({ id: true, userId: true, entryTimestamp: true });
@@ -379,6 +422,7 @@ export const insertProtectiveOrderEventSchema = createInsertSchema(protectiveOrd
 export const insertUserTradeHistoryImportSchema = createInsertSchema(userTradeHistoryImports).omit({ id: true, userId: true, createdAt: true });
 export const insertUserTradeHistoryTradeSchema = createInsertSchema(userTradeHistoryTrades).omit({ id: true, userId: true, createdAt: true });
 export const insertTradeStyleProfileSchema = createInsertSchema(tradeStyleProfiles).omit({ id: true, userId: true, createdAt: true, updatedAt: true });
+export const insertTradeJournalEntrySchema = createInsertSchema(tradeJournalEntries).omit({ id: true, userId: true, createdAt: true });
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type UpsertUser = z.infer<typeof upsertUserSchema>;
@@ -421,3 +465,5 @@ export type InsertUserTradeHistoryTrade = z.infer<typeof insertUserTradeHistoryT
 export type UserTradeHistoryTrade = typeof userTradeHistoryTrades.$inferSelect;
 export type InsertTradeStyleProfile = z.infer<typeof insertTradeStyleProfileSchema>;
 export type TradeStyleProfile = typeof tradeStyleProfiles.$inferSelect;
+export type InsertTradeJournalEntry = z.infer<typeof insertTradeJournalEntrySchema>;
+export type TradeJournalEntry = typeof tradeJournalEntries.$inferSelect;
