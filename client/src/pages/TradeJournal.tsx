@@ -50,8 +50,18 @@ export default function TradeJournal() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [symbolFilter, setSymbolFilter] = useState<string>("all");
 
+  const buildQueryUrl = () => {
+    const params = new URLSearchParams();
+    if (statusFilter !== "all") params.append("status", statusFilter);
+    if (symbolFilter !== "all") params.append("symbol", symbolFilter);
+    const queryString = params.toString();
+    return queryString ? `/api/trade-journal?${queryString}` : "/api/trade-journal";
+  };
+
+  const queryUrl = buildQueryUrl();
+
   const { data: entriesData, isLoading } = useQuery<{ success: boolean; entries: TradeJournalEntry[] }>({
-    queryKey: ["/api/trade-journal", { status: statusFilter !== "all" ? statusFilter : undefined, symbol: symbolFilter !== "all" ? symbolFilter : undefined }]
+    queryKey: [queryUrl]
   });
 
   const entries = entriesData?.entries || [];
