@@ -344,32 +344,33 @@ export async function executeTradeStrategy(
       // Only replace if prices have changed significantly (>1% move)
       let shouldReplaceOrders = false;
       
+      // Get current position to validate protective order changes
+      const positions = await hyperliquid.getPositions();
+      const position = positions.find((p: any) => p.coin === symbol);
+      
+      if (!position) {
+        // No position exists, so no need for protective orders
+        shouldReplaceOrders = false;
+        console.log(`[Trade Executor] No position found for ${symbol}, skipping protective orders`);
+        skipCount += 2;
+        for (const action of protectiveActions) {
+          results.push({
+            success: true,
+            action,
+            error: "No position exists - protective orders not needed",
+          });
+        }
+        continue;
+      }
+      
+      const currentPrice = parseFloat(position.entryPx);
+      const isLong = parseFloat(position.szi) > 0;
+      const currentPnl = parseFloat(position.unrealizedPnl);
+      
       if (existingProtectiveOrders.length === 2 && protectiveActions.length === 2 && metadata) {
         // We have exactly 2 existing and 2 new - check if they match
         const newStopLoss = protectiveActions.find(a => a.action === "stop_loss");
         const newTakeProfit = protectiveActions.find(a => a.action === "take_profit");
-        
-        // Get current market price to distinguish SL from TP
-        const positions = await hyperliquid.getPositions();
-        const position = positions.find((p: any) => p.coin === symbol);
-        
-        if (!position) {
-          // No position exists, so no need for protective orders
-          shouldReplaceOrders = false;
-          console.log(`[Trade Executor] No position found for ${symbol}, skipping protective orders`);
-          skipCount += 2;
-          for (const action of protectiveActions) {
-            results.push({
-              success: true,
-              action,
-              error: "No position exists - protective orders not needed",
-            });
-          }
-          continue;
-        }
-        
-        const currentPrice = parseFloat(position.entryPx);
-        const isLong = parseFloat(position.szi) > 0;
         
         // CRITICAL FIX: Hyperliquid API doesn't return tpsl field, so we must identify SL/TP by price
         // For LONG positions: Stop Loss < current price, Take Profit > current price
@@ -410,18 +411,75 @@ export async function executeTradeStrategy(
             }
             continue; // Skip to next symbol
           } else {
-            shouldReplaceOrders = true;
-            console.log(`[Trade Executor] Protective orders need update - SL changed ${(slPriceChange * 100).toFixed(2)}%, TP changed ${(tpPriceChange * 100).toFixed(2)}%`);
+            // SERVER-SIDE VALIDATION: Check if protective order adjustment is allowed
+            console.log(`[Trade Executor] Validating protective order adjustment for ${symbol}...`);
+            const validationResult = await storage.updateProtectiveOrders(
+              userId,
+              symbol,
+              slPriceChange >= 0.01 ? newSLPrice.toString() : null,
+              tpPriceChange >= 0.01 ? newTPPrice.toString() : null,
+              newStopLoss.reasoning || "AI-generated protective order adjustment",
+              currentPnl.toString(),
+              currentPrice.toString()
+            );
+            
+            if (!validationResult.success) {
+              // Validation failed - reject the adjustment
+              console.error(`[Trade Executor] ❌ Protective order adjustment REJECTED: ${validationResult.error}`);
+              skipCount += 2;
+              for (const action of protectiveActions) {
+                results.push({
+                  success: false,
+                  action,
+                  error: `Server validation rejected: ${validationResult.error}`,
+                });
+              }
+              continue; // Skip to next symbol
+            } else {
+              shouldReplaceOrders = true;
+              console.log(`[Trade Executor] ✅ Validation passed - SL changed ${(slPriceChange * 100).toFixed(2)}%, TP changed ${(tpPriceChange * 100).toFixed(2)}%`);
+            }
           }
         } else {
-          // Missing SL or TP, need to replace
+          // Missing SL or TP, need to set initial protective orders
           shouldReplaceOrders = true;
-          console.log(`[Trade Executor] Could not identify existing SL/TP by price comparison, will replace all protective orders`);
+          console.log(`[Trade Executor] Could not identify existing SL/TP by price comparison, will set initial protective orders`);
+          
+          const newStopLoss = protectiveActions.find(a => a.action === "stop_loss");
+          const newTakeProfit = protectiveActions.find(a => a.action === "take_profit");
+          
+          if (newStopLoss && newTakeProfit) {
+            await storage.setInitialProtectiveOrders(
+              userId,
+              symbol,
+              newStopLoss.triggerPrice!,
+              newTakeProfit.triggerPrice!,
+              newStopLoss.reasoning || "Initial protective orders set by AI"
+            );
+            console.log(`[Trade Executor] Set initial protective orders for ${symbol}`);
+          }
         }
       } else {
         // Not exactly 2 existing and 2 new, or no metadata - replace to ensure correct state
         shouldReplaceOrders = true;
         console.log(`[Trade Executor] Protective order count mismatch (existing: ${existingProtectiveOrders.length}, new: ${protectiveActions.length}), will replace`);
+        
+        // Set initial protective orders if they don't exist yet
+        if (existingProtectiveOrders.length === 0) {
+          const newStopLoss = protectiveActions.find(a => a.action === "stop_loss");
+          const newTakeProfit = protectiveActions.find(a => a.action === "take_profit");
+          
+          if (newStopLoss && newTakeProfit) {
+            await storage.setInitialProtectiveOrders(
+              userId,
+              symbol,
+              newStopLoss.triggerPrice!,
+              newTakeProfit.triggerPrice!,
+              newStopLoss.reasoning || "Initial protective orders set by AI"
+            );
+            console.log(`[Trade Executor] Set initial protective orders for ${symbol} (first time)`);
+          }
+        }
       }
       
       // Cancel all existing protective orders if we're replacing them
