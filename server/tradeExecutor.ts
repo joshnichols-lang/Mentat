@@ -487,8 +487,17 @@ export async function executeTradeStrategy(
       
       // Validate inputs for actions that will be executed
       if (action.action !== "cancel_order") {
-        validateNumericInput(action.size, "size");
-        validateLeverage(action.leverage);
+        // Log the action details for debugging
+        console.log(`[Trade Executor] Validating action: ${action.action} ${action.symbol}, size="${action.size}", leverage=${action.leverage}`);
+        
+        try {
+          validateNumericInput(action.size, "size");
+          validateLeverage(action.leverage);
+        } catch (validationError: any) {
+          console.error(`[Trade Executor] Validation failed for ${action.symbol}:`, validationError.message);
+          console.error(`[Trade Executor] Full action:`, JSON.stringify(action, null, 2));
+          throw validationError;
+        }
       }
 
       // Handle "cancel_order" actions
@@ -531,6 +540,7 @@ export async function executeTradeStrategy(
       }
 
       // Handle "buy" and "sell" actions (opening new positions)
+      console.log(`[Trade Executor] ⚠️ DEBUG: Action before execution:`, JSON.stringify(action, null, 2));
       const openResult = await executeOpenPosition(hyperliquid, action, userId);
       results.push(openResult);
       
