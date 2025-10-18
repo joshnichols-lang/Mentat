@@ -189,12 +189,15 @@ export async function developAutonomousStrategy(userId: string): Promise<void> {
     // Identify market regime
     const marketRegime = identifyMarketRegime(marketData);
     
-    // Format current positions
-    const currentPositions = hyperliquidPositions.map(pos => {
+    // Format current positions with protective order state
+    const currentPositionsWithState = await Promise.all(hyperliquidPositions.map(async (pos) => {
       const positionValue = parseFloat(pos.positionValue);
       const unrealizedPnl = parseFloat(pos.unrealizedPnl);
       const pnlPercent = positionValue !== 0 ? (unrealizedPnl / positionValue) * 100 : 0;
       const marketPrice = marketData.find(m => m.symbol === pos.coin)?.price || pos.entryPx;
+      
+      // Fetch protective order state
+      const protectiveState = await storage.getProtectiveOrderState(userId, pos.coin);
       
       return {
         symbol: pos.coin,
@@ -204,9 +207,12 @@ export async function developAutonomousStrategy(userId: string): Promise<void> {
         currentPrice: parseFloat(marketPrice),
         leverage: pos.leverage.value,
         pnlPercent: pnlPercent,
+        pnlDollars: unrealizedPnl,
         liquidationPrice: pos.liquidationPx ? parseFloat(pos.liquidationPx) : null,
+        protectiveState,
       };
-    });
+    }));
+    const currentPositions = currentPositionsWithState;
     
     // Fetch user prompt history to learn trading style
     let promptHistory: {timestamp: Date, prompt: string}[] = [];
@@ -293,8 +299,25 @@ ${currentPositions.length > 0 ? currentPositions.map(pos => {
   const distanceToLiq = pos.liquidationPrice 
     ? (Math.abs(pos.currentPrice - pos.liquidationPrice) / pos.currentPrice * 100).toFixed(2)
     : 'N/A';
+  const isProfitable = pos.pnlDollars > 0;
+  
+  let protectiveInfo = '';
+  if (pos.protectiveState) {
+    const state = pos.protectiveState;
+    const slStatus = state.stopLossState === 'initial' ? '🔒 LOCKED AT INITIAL LEVEL' : 
+                     state.stopLossState === 'trailing' ? '📈 TRAILING (protecting gains)' : 
+                     state.stopLossState;
+    
+    protectiveInfo = `\n   🛡️ Protective Orders:
+      - Initial SL: $${state.initialStopLoss || 'NOT SET'} | Current SL: $${state.currentStopLoss || 'NOT SET'} (${slStatus})
+      - Current TP: $${state.currentTakeProfit || 'NOT SET'}
+      - ${isProfitable ? '✅ CAN ADJUST SL (profitable - may move to protect gains)' : '⛔ CANNOT ADJUST SL (not profitable - must stay at initial level)'}`;
+  } else {
+    protectiveInfo = '\n   ⚠️ NO PROTECTIVE ORDER STATE TRACKED';
+  }
+  
   return `- ${pos.symbol}: ${pos.side.toUpperCase()} ${pos.size} @ $${pos.entryPrice} (${pos.leverage}x leverage)
-   Current: $${pos.currentPrice}, P&L: ${pos.pnlPercent.toFixed(2)}%${pos.liquidationPrice ? `, Liquidation: $${pos.liquidationPrice} (${distanceToLiq}% away)` : ''}
+   Current: $${pos.currentPrice}, P&L: ${pos.pnlPercent.toFixed(2)}% ($${pos.pnlDollars.toFixed(2)})${pos.liquidationPrice ? `, Liquidation: $${pos.liquidationPrice} (${distanceToLiq}% away)` : ''}${protectiveInfo}
    ⚠️ HIGH LEVERAGE WARNING: At ${pos.leverage}x, this position moves ${pos.leverage}x faster than the market. A ${(100/pos.leverage).toFixed(2)}% price move = ${((100/pos.leverage)*pos.leverage).toFixed(0)}% position change!`;
 }).join('\n') : 'No open positions'}
 
@@ -466,6 +489,45 @@ Analyze these past prompts to understand the user's:
    - When opening a new position, IMMEDIATELY place both stop loss and take profit in the same action set
    - If a position lacks either protective order, place it IMMEDIATELY in the next cycle
    - Position levels based on: user's risk tolerance (from prompt history) + current market analysis + liquidation safety
+
+8.1. **STOP LOSS ADJUSTMENT RULES** (DISCIPLINED RISK MANAGEMENT):
+   ⚠️ **CRITICAL: Stop losses are set based on market structure and should ONLY move to protect gains!**
+   
+   **WHEN YOU CAN ADJUST STOP LOSS** (only in favorable direction):
+   - ✅ Position is PROFITABLE (check "CAN ADJUST SL" status in CURRENT POSITIONS section above)
+   - ✅ New stop loss is based on clear MARKET STRUCTURE (new support/resistance level that formed)
+   - ✅ For LONGS: New SL is HIGHER than current SL (moving closer to breakeven/profit)
+   - ✅ For SHORTS: New SL is LOWER than current SL (moving closer to breakeven/profit)
+   - ✅ You MUST cite specific market structure reason in "reasoning" field (e.g., "New swing low formed at $3950, moving SL from $3850 to $3950 to lock in profit")
+   
+   **WHEN YOU CANNOT ADJUST STOP LOSS** (must stay at initial level):
+   - ⛔ Position is NOT profitable yet (check "CANNOT ADJUST SL" status in CURRENT POSITIONS section)
+   - ⛔ You want to move SL in unfavorable direction (would INCREASE risk):
+     * For LONGS: NEVER move SL DOWN (farther from entry)
+     * For SHORTS: NEVER move SL UP (farther from entry)
+   - ⛔ No clear market structure reason for the adjustment
+   - ⛔ Trying to "give the trade more room" after it moves against you
+   
+   **EXAMPLES - STOP LOSS ADJUSTMENTS**:
+   ✅ **GOOD (Long Position)**:
+     - Entry: $100, Current: $110 (profitable), Initial SL: $95, Current SL: $95
+     - New support formed at $105 → Move SL to $105 (breakeven) to lock in profits
+     - Reason: "Price broke above resistance at $108 and found support at $105. Moving SL to breakeven to protect capital."
+   
+   ❌ **BAD (Long Position)**:
+     - Entry: $100, Current: $95 (unprofitable), Initial SL: $90
+     - Trying to move SL to $85 → REJECTED! Position is losing, SL must stay at initial level as fail-safe
+     - This would INCREASE risk when trade is already going wrong
+   
+   ✅ **GOOD (Short Position)**:
+     - Entry: $100, Current: $90 (profitable), Initial SL: $105, Current SL: $105
+     - New resistance formed at $95 → Move SL DOWN to $95 to protect gains
+     - Reason: "Price failed to reclaim $95 resistance. Moving SL from $105 to $95 to trail profits."
+   
+   **TAKE PROFIT ADJUSTMENTS** (more flexible):
+   - Take profit can be adjusted anytime based on market conditions and structure
+   - Can move closer or farther based on new resistance/support levels
+   - Still requires market structure reasoning
 
 9. **DEFAULT BEHAVIOR**: 
    - PRIMARY: Scan market and place 1-3 limit orders at strategic levels across different assets

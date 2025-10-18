@@ -334,7 +334,7 @@ export class DbStorage implements IStorage {
       currentStopLoss: stopLoss,
       currentTakeProfit: takeProfit,
       stopLossState: "initial",
-      lastAdjustmentAt: sql`now()`,
+      lastAdjustmentAt: sql`now()` as any,
     });
 
     // Log the event
@@ -364,7 +364,7 @@ export class DbStorage implements IStorage {
       return { success: false, error: "Position not found" };
     }
 
-    const updates: Partial<Position> = { lastAdjustmentAt: sql`now()` };
+    const updates: Partial<Position> = { lastAdjustmentAt: sql`now()` as any };
     const event: InsertProtectiveOrderEvent = {
       positionId: position.id,
       symbol,
