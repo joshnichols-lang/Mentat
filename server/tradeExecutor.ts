@@ -842,6 +842,24 @@ async function executeOpenPosition(
     size = roundToSizeDecimals(size, metadata.szDecimals);
     console.log(`[Trade Executor] Rounded size from ${action.size} to ${size} (${metadata.szDecimals} decimals)`);
 
+    // Set leverage for this asset BEFORE placing the order
+    console.log(`[Trade Executor] Setting leverage to ${action.leverage}x for ${action.symbol}...`);
+    const leverageResult = await hyperliquid.updateLeverage({
+      coin: action.symbol,
+      is_cross: true, // Use cross margin (isolated margin not supported by default)
+      leverage: action.leverage
+    });
+    
+    if (!leverageResult.success) {
+      console.error(`[Trade Executor] Failed to set leverage for ${action.symbol}:`, leverageResult.error);
+      return {
+        success: false,
+        action,
+        error: `Failed to set leverage to ${action.leverage}x: ${leverageResult.error}`,
+      };
+    }
+    console.log(`[Trade Executor] Successfully set leverage to ${action.leverage}x for ${action.symbol}`);
+
     let orderParams: any;
     
     // Hyperliquid doesn't support pure market orders
