@@ -232,12 +232,30 @@ export async function makeAIRequest(
   }
   
   try {
-    const completion = await client.chat.completions.create({
+    // Build request configuration
+    const requestConfig: any = {
       model,
       messages: request.messages as any,
       temperature: request.temperature,
       max_tokens: request.max_tokens,
-    });
+    };
+    
+    // Add Live Search capabilities for Grok 4 Fast via extra_body
+    if (providerName === "xai") {
+      requestConfig.extra_body = {
+        search_parameters: {
+          mode: "auto", // Let AI decide when to search
+          return_citations: true,
+          sources: [
+            { type: "web" },
+            { type: "news" }
+          ]
+        }
+      };
+      console.log("[AI Router] Enabled Grok Live Search with web and news sources");
+    }
+    
+    const completion = await client.chat.completions.create(requestConfig);
     
     const content = completion.choices[0].message.content;
     if (!content) {
