@@ -105,6 +105,7 @@ export default function Settings() {
   const [isAddingAI, setIsAddingAI] = useState(false);
   const [isAddingHyperliquid, setIsAddingHyperliquid] = useState(false);
   const [deleteKeyId, setDeleteKeyId] = useState<string | null>(null);
+  const [pendingFrequency, setPendingFrequency] = useState<string | null>(null);
   const [monitoringFrequency, setMonitoringFrequency] = useState<string>(() => {
     return localStorage.getItem("monitoringFrequency") || "5";
   });
@@ -297,12 +298,21 @@ export default function Settings() {
   };
 
   const handleFrequencyChange = (value: string) => {
+    // Show confirmation dialog before changing
+    setPendingFrequency(value);
+  };
+
+  const confirmFrequencyChange = () => {
+    if (!pendingFrequency) return;
+    
     const previousValue = monitoringFrequency;
+    const newValue = pendingFrequency;
     
-    setMonitoringFrequency(value);
-    localStorage.setItem("monitoringFrequency", value);
+    setMonitoringFrequency(newValue);
+    localStorage.setItem("monitoringFrequency", newValue);
+    setPendingFrequency(null);
     
-    updateFrequencyMutation.mutate(value, {
+    updateFrequencyMutation.mutate(newValue, {
       onError: () => {
         // Rollback if mutation fails
         setMonitoringFrequency(previousValue);
@@ -861,6 +871,49 @@ export default function Settings() {
           </Card>
         </div>
       </div>
+
+      {/* Frequency Change Confirmation Dialog */}
+      <AlertDialog open={!!pendingFrequency} onOpenChange={() => setPendingFrequency(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Change Monitoring Frequency?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingFrequency && (() => {
+                const newConfig = MONITORING_FREQUENCIES.find(f => f.value === pendingFrequency);
+                const currentConfig = MONITORING_FREQUENCIES.find(f => f.value === monitoringFrequency);
+                
+                return (
+                  <div className="space-y-2">
+                    <p>
+                      You're about to change the automated monitoring frequency from{" "}
+                      <strong>{currentConfig?.label}</strong> to <strong>{newConfig?.label}</strong>.
+                    </p>
+                    {newConfig && newConfig.value !== "0" && (
+                      <p className="text-sm">
+                        Estimated cost: <strong>~${newConfig.monthlyCost}/month</strong>
+                      </p>
+                    )}
+                    {newConfig && newConfig.value === "0" && (
+                      <p className="text-sm text-muted-foreground">
+                        The AI agent will only respond to manual prompts when disabled.
+                      </p>
+                    )}
+                  </div>
+                );
+              })()}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-frequency">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmFrequencyChange}
+              data-testid="button-confirm-frequency"
+            >
+              Confirm Change
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={!!deleteKeyId} onOpenChange={() => setDeleteKeyId(null)}>
