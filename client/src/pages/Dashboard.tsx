@@ -6,7 +6,6 @@ import { SymbolProvider } from "@/contexts/SymbolContext";
 import Header from "@/components/Header";
 import AIPromptPanel from "@/components/AIPromptPanel";
 import TradingViewChart from "@/components/TradingViewChart";
-import CustomWatchlist from "@/components/CustomWatchlist";
 import PositionsGrid from "@/components/PositionsGrid";
 import PerformanceMetrics from "@/components/PerformanceMetrics";
 import PortfolioPerformanceChart from "@/components/PortfolioPerformanceChart";
@@ -74,15 +73,8 @@ export default function Dashboard() {
             {/* Automated Monitoring Alerts */}
             <MonitoringAlerts />
 
-            {/* TradingView Chart & Custom Watchlist */}
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-              <div className="lg:col-span-2">
-                <TradingViewChart height={500} />
-              </div>
-              <div>
-                <CustomWatchlist />
-              </div>
-            </div>
+            {/* TradingView Chart */}
+            <TradingViewChart height={500} />
 
             {/* Charts Row */}
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
