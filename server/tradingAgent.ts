@@ -334,16 +334,16 @@ MARGIN ALLOCATION PRIORITY:
 - Available balance does NOT equal free margin - unfilled orders consume margin allocation
 
 RE-EVALUATE EVERY CYCLE:
-1. Do existing orders represent the HIGHEST-PROBABILITY trades right now?
+1. Do existing orders represent the HIGHEST-PROBABILITY trades right now given the active strategy's timeframe and approach?
 2. If you identify a BETTER opportunity on a DIFFERENT symbol but see many existing orders on one symbol, those old orders are blocking you
-3. Are orders far from current price (>3% away) unlikely to fill soon in current market conditions?
+3. Based on the strategy's timeframe (scalp vs swing), assess whether unfilled orders still have reasonable fill probability
 
-WHEN TO CANCEL (Be Aggressive About Margin Optimization):
+WHEN TO CANCEL (Strategy-Aware Margin Optimization):
 Cancel existing orders when ANY of these conditions exist:
-A. **CRITICAL - Over-Concentration Risk**: If >15 unfilled orders exist on ONE symbol, you MUST cancel the orders furthest from current price EVEN IF you don't have a specific alternative trade yet (reduces concentration risk, frees margin for future opportunities)
-B. You identify a higher-conviction trade on a DIFFERENT symbol but have many orders on ONE symbol (diversification benefit)
-C. Existing order is >5% from current price with low fill probability in current momentum  
-D. Market structure has invalidated the original setup (support/resistance broken, regime changed)
+A. **CRITICAL - Over-Concentration Risk**: If >15 unfilled orders exist on ONE symbol, cancel orders with LOWEST probability of filling based on current market conditions (reduces concentration risk, frees margin)
+B. **Better Opportunity Identified**: You identify a higher-conviction trade on a DIFFERENT symbol but have many orders on ONE symbol (diversification benefit)
+C. **Fill Probability Deteriorated**: Market has moved significantly against the order direction, making fill increasingly unlikely given current momentum and the strategy's timeframe expectations
+D. **Market Structure Invalidation**: Key support/resistance levels broken, regime changed, or technical setup no longer valid
 
 ACTION SEQUENCE FOR MARGIN OPTIMIZATION:
 1. First, generate cancel_order action(s) for the LOWEST-CONVICTION orders (furthest from price OR on less preferred assets)
@@ -368,7 +368,7 @@ CANCEL_ORDER FORMAT EXAMPLE (symbol field is MANDATORY):
   "action": "cancel_order",
   "symbol": "HYPE-PERP",
   "orderId": 123456,
-  "reasoning": "Over-concentration: 25 HYPE orders consuming margin. Order at $35.5 (5.3% from current $37.5, fill prob <20%). Freeing margin for BTC long with 3:1 R:R."
+  "reasoning": "Over-concentration: 25 HYPE orders consuming margin. For 5m scalp strategy, order at $35.5 unlikely to fill in current bullish momentum (price $37.5 trending higher). Freeing margin for BTC long with 3:1 R:R and stronger confluence."
 }
 
 CRITICAL RULES:

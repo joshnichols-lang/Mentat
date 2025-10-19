@@ -875,23 +875,23 @@ Analyze these past prompts to understand the user's:
    
    **RE-EVALUATE EVERY CYCLE**:
    - Review "EXISTING OPEN ORDERS" section for unfilled entry orders (non-protective limit orders)
-   - Do existing orders represent the HIGHEST-PROBABILITY trades RIGHT NOW?
+   - Do existing orders represent the HIGHEST-PROBABILITY trades RIGHT NOW given the strategy's timeframe and approach?
    - If you identify a BETTER opportunity on a DIFFERENT symbol but see many existing orders on one symbol, those old orders are BLOCKING you
-   - Are orders far from current price (>3% away) unlikely to fill soon in current market conditions?
+   - Based on the strategy (scalp vs swing), assess whether unfilled orders still align with the trading approach and have reasonable fill probability
    
-   **WHEN TO CANCEL** (Be Aggressive About Margin Optimization - cite specific metrics):
+   **WHEN TO CANCEL** (Strategy-Aware Margin Optimization - cite specific metrics):
    Cancel existing orders when ANY of these conditions exist:
-   - ✅ **CRITICAL - Over-Concentration Risk**: If >15 unfilled orders exist on ONE symbol, you MUST cancel the orders furthest from current price EVEN IF you don't have a specific alternative trade yet
-     * Example: "25 HYPE-PERP orders at $35.5-$38.0. Current price $37.5. Canceling 5 orders furthest from price (orders at $35.5, $35.6, $35.7 = 5-6% away) to free margin for future diversification opportunities. This reduces over-concentration risk and improves portfolio Sharpe ratio."
+   - ✅ **CRITICAL - Over-Concentration Risk**: If >15 unfilled orders exist on ONE symbol, you MUST cancel orders with LOWEST fill probability based on current market conditions EVEN IF you don't have a specific alternative trade yet
+     * Example: "25 HYPE-PERP orders at $35.5-$38.0. Current price $37.5. For 5m scalp strategy, orders at $35.5-$35.7 unlikely to fill in current bullish momentum. Canceling lowest-probability orders to free margin for future diversification. This reduces over-concentration risk and improves portfolio Sharpe ratio."
      * MANDATORY: If strategy has >5 preferred assets but all orders are on 1 symbol, cancel lowest-conviction orders to enable diversification
    - ✅ **Diversification Benefit**: You identify a higher-conviction trade on a DIFFERENT symbol but have >10 orders on ONE symbol  
-     * Example: "25 HYPE-PERP orders blocking margin. Canceling 5 orders furthest from price ($35.5-$36.0, 6-8% away) to free margin for SOL-PERP setup with superior 3:1 R:R"
+     * Example: "25 HYPE-PERP orders blocking margin. Canceling orders with lowest fill probability to free margin for SOL-PERP setup with superior 3:1 R:R and stronger technical confluence"
    - ✅ **Market Structure Invalidation**: Key support/resistance level has been broken, invalidating the setup
      * Example: "SOL buy at $185 support. Price now at $179 - support broken. Canceling to reallocate to BTC long at new support $104k"
    - ✅ **Superior Setup Identified**: New opportunity has significantly better risk/reward or technical confluence
      * Example: "Existing ETH long R:R 2:1. New BTC setup offers 4:1 R:R with triple confluence (support + volume + trend). Canceling ETH to enter BTC"
-   - ✅ **Fill Probability Deterioration**: Order is >5% from current price with low fill probability in current momentum
-     * Example: "DOGE limit buy at $0.28 placed. Current price $0.35 (+25%). Order now 25% away - unlikely to fill. Canceling to free margin"
+   - ✅ **Fill Probability Deteriorated**: Market has moved significantly against order direction, making fill increasingly unlikely given current momentum and the strategy's timeframe expectations
+     * Example: "DOGE limit buy at $0.28 placed for swing entry. Current price $0.35 with strong bullish momentum and volume spike. Order unlikely to fill in this regime shift. Canceling to free margin"
    
    **WHEN NOT TO CANCEL** (preserve working orders):
    - ❌ Time-based reasoning alone (e.g., "order is 5 minutes old") without other factors
@@ -907,7 +907,7 @@ Analyze these past prompts to understand the user's:
      "action": "cancel_order",
      "symbol": "HYPE-PERP",
      "orderId": 123456,
-     "reasoning": "Over-concentration: 25 HYPE orders at $35.5-$38.0. Current $37.5. Canceling order at $35.5 (5.3% away, fill probability <20%). Freeing margin for BTC setup with 3:1 R:R."
+     "reasoning": "Over-concentration: 25 HYPE orders consuming all margin. For 5m scalp strategy, order at $35.5 unlikely to fill in current bullish momentum (price $37.5 trending higher with volume confirmation). Freeing margin for BTC setup with 3:1 R:R and stronger technical confluence."
    }
    
    **EXAMPLE GOOD REASONING**:
@@ -916,7 +916,7 @@ Analyze these past prompts to understand the user's:
    **EXAMPLE BAD REASONING**:
    "Order has been open for 10 minutes" ❌ (time alone is not a threshold)
    "Want to try a different asset" ❌ (no objective metric cited)
-   "Price is 5% away" ❌ (distance alone without context - could retrace)
+   "Price is X% away" ❌ (distance alone without context - swing strategies may intentionally place orders far from current price)
 
 ⚠️ JSON SYNTAX: NO trailing commas! Every array/object must end without comma before closing bracket/brace.
 
