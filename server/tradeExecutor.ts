@@ -1220,11 +1220,11 @@ async function executeOpenPosition(
         entry: orderParams,
         takeProfit: takeProfitAction ? {
           triggerPx: takeProfitAction.triggerPrice!,
-          limitPx: takeProfitAction.triggerPrice, // Use trigger price as limit (can adjust for slippage)
+          limitPx: takeProfitAction.triggerPrice, // Use limit execution for better fill prices
         } : undefined,
         stopLoss: stopLossAction ? {
           triggerPx: stopLossAction.triggerPrice!,
-          limitPx: stopLossAction.triggerPrice, // Use trigger price as limit (can adjust for slippage)
+          // No limitPx → uses market execution for guaranteed fills on stop loss
         } : undefined,
       });
     } else {

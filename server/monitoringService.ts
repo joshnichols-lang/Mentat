@@ -476,7 +476,17 @@ ${highVolumeAssets.map(v => `- ${v.symbol}: ${v.volumeRatio.toFixed(2)}x market 
 
 **YOUR JOB**: Decide which volume levels are significant based on TODAY'S market conditions, not fixed thresholds
 
-MARKET DATA:
+📊 CURRENT MARKET DATA (USE THESE PRICES FOR ALL ORDERS):
+${marketData.slice(0, 30).map(m => {
+  const price = parseFloat(m.price);
+  const change = parseFloat(m.change24h);
+  const volume = parseFloat(m.volume24h) / 1e6;
+  return `- ${m.symbol}: $${price.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: price > 1000 ? 0 : price > 10 ? 2 : 4})} (24h: ${change >= 0 ? '+' : ''}${change.toFixed(2)}%, Vol: $${volume.toFixed(1)}M)`;
+}).join('\n')}
+
+⚠️ CRITICAL: ALWAYS use the prices listed above when placing limit orders. NEVER use prices from memory or historical data.
+
+MARKET HIGHLIGHTS:
 Top Gainers: ${topGainers.map(m => `${m.symbol} (+${m.change24h}%, Vol: $${(parseFloat(m.volume24h) / 1e6).toFixed(1)}M)`).join(', ')}
 Top Losers: ${topLosers.map(m => `${m.symbol} (${m.change24h}%, Vol: $${(parseFloat(m.volume24h) / 1e6).toFixed(1)}M)`).join(', ')}
 
