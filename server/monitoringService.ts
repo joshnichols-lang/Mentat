@@ -1117,9 +1117,9 @@ PRICE VALIDATION CHECKLIST for every limit order:
       strategy.actions = [...filteredEntryActions, ...filteredProtectiveActions, ...otherActions];
     }
 
-    // LIMIT SCALED ENTRIES PER SYMBOL
+    // LIMIT SCALED ENTRIES PER SYMBOL (from strategy settings)
     // Prevent excessive scaling that creates too many orders per symbol
-    const MAX_ENTRY_ORDERS_PER_SYMBOL = 3;
+    const maxEntryOrdersPerSymbol = activeTradingMode?.parameters?.maxEntryOrdersPerSymbol || 3;
     
     entryActions = strategy.actions.filter(a => a.action === 'buy' || a.action === 'sell');
     const entryOrdersBySymbol = new Map<string, typeof entryActions>();
@@ -1134,18 +1134,18 @@ PRICE VALIDATION CHECKLIST for every limit order:
     // Check if any symbol exceeds the limit
     let exceededSymbols: string[] = [];
     for (const [symbol, actions] of Array.from(entryOrdersBySymbol.entries())) {
-      if (actions.length > MAX_ENTRY_ORDERS_PER_SYMBOL) {
+      if (actions.length > maxEntryOrdersPerSymbol) {
         exceededSymbols.push(symbol);
       }
     }
     
     if (exceededSymbols.length > 0) {
-      console.warn(`[Entry Limit] ${exceededSymbols.length} symbol(s) exceed max ${MAX_ENTRY_ORDERS_PER_SYMBOL} entry orders per symbol. Limiting to highest conviction entries.`);
+      console.warn(`[Entry Limit] ${exceededSymbols.length} symbol(s) exceed max ${maxEntryOrdersPerSymbol} entry orders per symbol (strategy setting). Limiting to highest conviction entries.`);
       
       const limitedEntryActions: typeof entryActions = [];
       
       for (const [symbol, actions] of Array.from(entryOrdersBySymbol.entries())) {
-        if (actions.length <= MAX_ENTRY_ORDERS_PER_SYMBOL) {
+        if (actions.length <= maxEntryOrdersPerSymbol) {
           // Symbol is within limit, keep all
           limitedEntryActions.push(...actions);
         } else {
@@ -1153,10 +1153,10 @@ PRICE VALIDATION CHECKLIST for every limit order:
           const sorted = actions.sort((a, b) => 
             (b.reasoning?.length || 0) - (a.reasoning?.length || 0)
           );
-          const kept = sorted.slice(0, MAX_ENTRY_ORDERS_PER_SYMBOL);
+          const kept = sorted.slice(0, maxEntryOrdersPerSymbol);
           limitedEntryActions.push(...kept);
           
-          console.log(`[Entry Limit] ${symbol}: Reduced from ${actions.length} to ${MAX_ENTRY_ORDERS_PER_SYMBOL} entry orders`);
+          console.log(`[Entry Limit] ${symbol}: Reduced from ${actions.length} to ${maxEntryOrdersPerSymbol} entry orders`);
         }
       }
       

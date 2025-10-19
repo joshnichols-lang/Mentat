@@ -421,6 +421,7 @@ export const tradingModes = pgTable("trading_modes", {
   //   riskPercentPerTrade: 1-10,
   //   maxPositions: 1-10,
   //   maxLeverage: 1-20,
+  //   maxEntryOrdersPerSymbol: 1-10, // Max scaled entry orders per symbol
   //   preferredAssets: ["BTC-PERP", "ETH-PERP"],
   //   tradingHours: { start: "08:00", end: "16:00", timezone: "UTC" },
   //   entryStyle: "patient" | "aggressive",
