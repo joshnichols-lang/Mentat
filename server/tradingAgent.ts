@@ -326,22 +326,41 @@ IMPORTANT - SYMBOL SELECTION:
 - Use the exact symbol format as shown in the market data (e.g. "DOGE-PERP", "WIF-PERP", "BONK-PERP")
 
 ADAPTIVE ORDER MANAGEMENT - CRITICAL:
-You will be provided with a list of "Open entry orders" (unfilled buy/sell limit orders).
-Your job is to RE-EVALUATE these orders on every cycle and determine:
-1. Are these orders still the BEST use of available margin given current market conditions?
-2. Have you identified a HIGHER-PROBABILITY trade opportunity that would be a better allocation of capital?
-3. Is the entry price still optimal, or has the market moved making the order unlikely to fill soon?
+You will be provided with a list of "Open entry orders" (unfilled buy/sell limit orders). These orders LOCK UP MARGIN even if unfilled.
 
-If you identify a better trade opportunity but lack margin due to existing unfilled orders:
-- Generate "cancel_order" action(s) with the orderId of the LOWEST-CONVICTION unfilled order(s)
-- In your reasoning, explain: "Canceling order [ID] because [new opportunity] has higher fill probability and better risk/reward"
-- Then generate the new buy/sell action for the higher-conviction trade
+MARGIN ALLOCATION PRIORITY:
+- Each unfilled limit order reserves margin based on order size × leverage
+- If you have many unfilled orders on ONE symbol (e.g., 25 orders on HYPE-PERP) and want to trade OTHER symbols, you MUST cancel low-conviction orders first
+- Available balance does NOT equal free margin - unfilled orders consume margin allocation
+
+RE-EVALUATE EVERY CYCLE:
+1. Do existing orders represent the HIGHEST-PROBABILITY trades right now?
+2. If you identify a BETTER opportunity on a DIFFERENT symbol but see many existing orders on one symbol, those old orders are blocking you
+3. Are orders far from current price (>3% away) unlikely to fill soon in current market conditions?
+
+WHEN TO CANCEL (Be Aggressive About Margin Optimization):
+Cancel existing orders when ANY of these conditions exist:
+A. You identify a higher-conviction trade on a DIFFERENT symbol but have many orders on ONE symbol (diversification benefit)
+B. Existing order is >5% from current price with low fill probability in current momentum
+C. Market structure has invalidated the original setup (support/resistance broken, regime changed)
+D. You see >15 unfilled orders on one symbol - this indicates over-concentration blocking diversification
+
+ACTION SEQUENCE FOR MARGIN OPTIMIZATION:
+1. First, generate cancel_order action(s) for the LOWEST-CONVICTION orders (furthest from price OR on less preferred assets)
+2. Then, generate your NEW buy/sell action for the higher-probability trade
+3. In reasoning, cite: "Canceling order [ID] at $[price] ([X]% from current) to free margin for [NEW SYMBOL] which has [superior catalyst/setup]"
+
+EXAMPLE - Proper Adaptive Management:
+If you see:
+- 25 existing buy orders on HYPE-PERP at various prices
+- You identify a high-conviction setup on SOL-PERP
+- Action: Cancel 3-5 HYPE orders furthest from current price, THEN place SOL order
 
 RULES FOR CANCEL_ORDER:
-- ONLY cancel orders when you have a BETTER trade to replace them with (never cancel based on time/distance alone)
-- Prioritize canceling orders furthest from current price or on lower-conviction setups
-- When canceling, explicitly state the new trade you're prioritizing in the reasoning
-- Use the orderId from the "Open entry orders" list
+- Use specific orderId from the "Open entry orders" list
+- Include the order's price and symbol in reasoning for transparency  
+- State the NEW trade you're prioritizing and why it's superior
+- NEVER cancel protective orders (reduceOnly: true) - only cancel entry orders
 
 CRITICAL RULES:
 1. The 'size' field must ALWAYS contain an actual numeric value (like "0.5" or "10"), NEVER the word "calculated" or any placeholder text.
