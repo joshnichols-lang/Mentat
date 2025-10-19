@@ -74,6 +74,7 @@ export async function processTradingPrompt(
   marketData: MarketData[],
   currentPositions: any[],
   userState: any,
+  openOrders: any[],
   model?: string,
   preferredProvider?: string,
   screenshots?: string[],
@@ -293,7 +294,7 @@ JSON format:
   "interpretation": "Professional analysis of market conditions, regime identification, and alignment with user's trading history",
   "actions": [
     {
-      "action": "buy" | "sell" | "hold" | "close" | "stop_loss" | "take_profit",
+      "action": "buy" | "sell" | "hold" | "close" | "stop_loss" | "take_profit" | "cancel_order",
       "symbol": "<ANY_SYMBOL_FROM_MARKET_DATA>" (e.g. "BTC-PERP", "ETH-PERP", "DOGE-PERP", "WIF-PERP", "PEPE-PERP" - use ANY symbol available in the market data),
       "side": "long" | "short",
       "size": "numeric value as string (e.g. '0.5', '1.25', '10') - MUST be actual number, NOT 'calculated'",
@@ -304,7 +305,8 @@ JSON format:
       "takeProfit": "numeric price as string (e.g. '47500')" [REQUIRED for buy/sell - the take profit price],
       "exitCriteria": "Detailed reasoning for stop loss placement based on market structure (e.g., 'Stop placed below 4H support at $43,500 which aligns with 0.618 Fibonacci retracement. If breached, indicates trend reversal.')" [REQUIRED for buy/sell actions],
       "expectedRoi": "Expected ROI percentage as string (e.g. '5.8' for 5.8%)" [REQUIRED for buy/sell - calculated from entry to take profit],
-      "triggerPrice": "numeric price as string (e.g. '44000')" [REQUIRED for stop_loss/take_profit actions - the price that triggers the order]
+      "triggerPrice": "numeric price as string (e.g. '44000')" [REQUIRED for stop_loss/take_profit actions - the price that triggers the order],
+      "orderId": number [REQUIRED for cancel_order actions - the order ID from open orders list]
     }
   ],
   "riskManagement": "Detailed risk management strategy including position sizing methodology, stop loss placement, and exposure limits",
@@ -316,6 +318,24 @@ IMPORTANT - SYMBOL SELECTION:
 - Don't limit yourself to BTC, ETH, or SOL - explore the full universe of available assets
 - Look at top gainers, high volume assets, and emerging opportunities
 - Use the exact symbol format as shown in the market data (e.g. "DOGE-PERP", "WIF-PERP", "BONK-PERP")
+
+ADAPTIVE ORDER MANAGEMENT - CRITICAL:
+You will be provided with a list of "Open entry orders" (unfilled buy/sell limit orders).
+Your job is to RE-EVALUATE these orders on every cycle and determine:
+1. Are these orders still the BEST use of available margin given current market conditions?
+2. Have you identified a HIGHER-PROBABILITY trade opportunity that would be a better allocation of capital?
+3. Is the entry price still optimal, or has the market moved making the order unlikely to fill soon?
+
+If you identify a better trade opportunity but lack margin due to existing unfilled orders:
+- Generate "cancel_order" action(s) with the orderId of the LOWEST-CONVICTION unfilled order(s)
+- In your reasoning, explain: "Canceling order [ID] because [new opportunity] has higher fill probability and better risk/reward"
+- Then generate the new buy/sell action for the higher-conviction trade
+
+RULES FOR CANCEL_ORDER:
+- ONLY cancel orders when you have a BETTER trade to replace them with (never cancel based on time/distance alone)
+- Prioritize canceling orders furthest from current price or on lower-conviction setups
+- When canceling, explicitly state the new trade you're prioritizing in the reasoning
+- Use the orderId from the "Open entry orders" list
 
 CRITICAL RULES:
 1. The 'size' field must ALWAYS contain an actual numeric value (like "0.5" or "10"), NEVER the word "calculated" or any placeholder text.
@@ -372,6 +392,9 @@ ${marketTrends}
 Current positions:
 ${currentPositions.length > 0 ? JSON.stringify(currentPositions, null, 2) : "No open positions"}
 
+Open entry orders (unfilled buy/sell limit orders):
+${openOrders.length > 0 ? JSON.stringify(openOrders.filter((o: any) => !o.reduceOnly && !o.orderType?.trigger), null, 2) : "No open entry orders"}
+
 ${promptHistory.length > 0 ? `Recent user prompt history (for context on trading style and preferences):
 ${promptHistory.map(p => `- ${new Date(p.timestamp).toLocaleString()}: "${p.prompt}"`).join('\n')}
 
@@ -421,6 +444,9 @@ ${marketTrends}
 
 Current positions:
 ${currentPositions.length > 0 ? JSON.stringify(currentPositions, null, 2) : "No open positions"}
+
+Open entry orders (unfilled buy/sell limit orders):
+${openOrders.length > 0 ? JSON.stringify(openOrders.filter((o: any) => !o.reduceOnly && !o.orderType?.trigger), null, 2) : "No open entry orders"}
 
 ${promptHistory.length > 0 ? `Recent user prompt history (for context on trading style and preferences):
 ${promptHistory.map(p => `- ${new Date(p.timestamp).toLocaleString()}: "${p.prompt}"`).join('\n')}

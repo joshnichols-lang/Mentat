@@ -864,6 +864,46 @@ Analyze these past prompts to understand the user's:
    - Limit orders are patient and disciplined - you're not forcing entries, you're waiting for favorable prices
    - Only return empty actions if truly NO opportunities exist across the entire market
 
+16. **ADAPTIVE ORDER MANAGEMENT - INTELLIGENT ORDER CANCELLATION**:
+   **CRITICAL**: You can cancel existing unfilled entry orders ONLY when you identify HIGHER-PROBABILITY trades that require the locked margin.
+   
+   **EVALUATION PROCESS**:
+   - Review "EXISTING OPEN ORDERS" section for unfilled entry orders (non-protective limit orders)
+   - Compare existing orders against new opportunities you've identified
+   - Only cancel when the NEW setup is demonstrably superior to the EXISTING setup
+   
+   **WHEN TO CANCEL** (cite specific metrics in reasoning):
+   - ✅ **Market Structure Invalidation**: Key support/resistance level has been broken, invalidating the setup
+     * Example: "SOL buy at $185 support. Price now at $179 - support broken. Canceling to reallocate to BTC long at new support $104k"
+   - ✅ **Superior Setup Identified**: New opportunity has significantly better risk/reward or technical confluence
+     * Example: "Existing ETH long R:R 2:1. New BTC setup offers 4:1 R:R with triple confluence (support + volume + trend). Canceling ETH to enter BTC"
+   - ✅ **Volume/Momentum Shift**: Market dynamics have fundamentally changed
+     * Example: "WIF order placed during consolidation. Market now shows strong bearish momentum with 3x volume spike. Canceling to preserve capital"
+   - ✅ **Fill Probability Deterioration**: Price has moved away making fill increasingly unlikely within strategy timeframe
+     * Example: "DOGE limit buy at $0.28 placed yesterday. Current price $0.35 (+25%). Order now 25% away - unlikely to fill. Canceling to free margin"
+   
+   **WHEN NOT TO CANCEL** (preserve working orders):
+   - ❌ Time-based reasoning alone (e.g., "order is 5 minutes old")
+   - ❌ Distance from current price alone without context (price could retrace)
+   - ❌ Vague "better opportunity" without quantifiable metrics
+   - ❌ Personal preference or "feels" without objective analysis
+   - ❌ Protective orders (stop loss/take profit) - NEVER cancel these to "optimize"
+   
+   **CANCELLATION ACTION FORMAT**:
+   {
+     "action": "cancel_order",
+     "orderId": 123456,
+     "reasoning": "CITE SPECIFIC THRESHOLD: [metric that failed]. Current value: [X]. Supporting evidence: [market data]. Reallocating margin to [new setup] with [quantified advantage]"
+   }
+   
+   **EXAMPLE GOOD REASONING**:
+   "MARKET STRUCTURE INVALIDATION: SOL support at $185 broken (current: $179, -3.2% breach). 24h volume spike +180% on breakdown = strong momentum shift. Order fill probability dropped from Medium to Low (<20% per volume profile). Reallocating $500 margin to BTC long at $104k support (R:R 3:1 vs original 2:1)"
+   
+   **EXAMPLE BAD REASONING**:
+   "Order has been open for 10 minutes" ❌ (time alone is not a threshold)
+   "Want to try a different asset" ❌ (no objective metric cited)
+   "Price is 5% away" ❌ (distance alone without context - could retrace)
+
 ⚠️ JSON SYNTAX: NO trailing commas! Every array/object must end without comma before closing bracket/brace.
 
 ⚠️ TICK SIZE RULES - CRITICAL FOR ORDER PLACEMENT:

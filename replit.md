@@ -37,6 +37,7 @@ Preferred communication style: Simple, everyday language.
 - **Scaled Order Entries:** AI distributes limit orders ±1-3% around target entry prices.
 - **Order Management System:** Enforces exactly one stop loss per position (multiple take profits allowed), includes duplicate order prevention, and disciplined stop loss management. Protective order management allows AI to place stops at any distance, filters candidates by direction, and uses a 0.3% price tolerance.
 - **Stop Loss Market Execution:** Stop loss orders use market execution for guaranteed fills, while take profits remain limit orders.
+- **Adaptive Order Management (Oct 19, 2025):** AI intelligently cancels unfilled entry orders only when identifying higher-probability trades requiring locked margin. System evaluates existing orders against new opportunities, canceling based on market structure invalidation, superior setups with quantified advantages, volume/momentum shifts, or fill probability deterioration. Time-based or distance-alone reasoning is prohibited. AI receives open orders context in all prompts (manual and autonomous) and uses `cancel_order` actions with orderId and detailed reasoning citing specific threshold violations.
 **Comprehensive Safety System:**
 - **Liquidation Protection:** Enforces a 1.5% buffer between stop losses and liquidation price, auto-correcting dangerous stops.
 - **Manual Override Protection:** Database flags prevent AI from replacing user's manual stop loss adjustments.
