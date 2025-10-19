@@ -12,10 +12,10 @@ interface MarketData {
 
 interface TradingAction {
   action: "buy" | "sell" | "hold" | "close" | "stop_loss" | "take_profit" | "cancel_order";
-  symbol: string;
-  side: "long" | "short";
-  size: string;
-  leverage: number;
+  symbol: string;  // REQUIRED for all actions - the trading pair (e.g., "HYPE-PERP")
+  side?: "long" | "short";  // Not required for cancel_order
+  size?: string;  // Not required for cancel_order
+  leverage?: number;  // Not required for cancel_order
   reasoning: string;
   expectedEntry?: string;
   stopLoss?: string;
@@ -26,7 +26,7 @@ interface TradingAction {
   takeProfitReasoning?: string; // Why take profit was placed at this specific level
   exitStrategy?: string; // How to manage trade if in profit but unlikely to reach original TP
   triggerPrice?: string; // For stop_loss and take_profit actions
-  orderId?: number; // For cancel_order action
+  orderId?: number; // REQUIRED for cancel_order action - the order ID to cancel
 }
 
 interface TradingStrategy {
@@ -362,6 +362,14 @@ RULES FOR CANCEL_ORDER:
 - Include the order's price in reasoning for transparency (e.g., "order at $35.5, 5% from current")
 - State why canceling and what you're prioritizing instead
 - NEVER cancel protective orders (reduceOnly: true) - only cancel entry orders
+
+CANCEL_ORDER FORMAT EXAMPLE (symbol field is MANDATORY):
+{
+  "action": "cancel_order",
+  "symbol": "HYPE-PERP",
+  "orderId": 123456,
+  "reasoning": "Over-concentration: 25 HYPE orders consuming margin. Order at $35.5 (5.3% from current $37.5, fill prob <20%). Freeing margin for BTC long with 3:1 R:R."
+}
 
 CRITICAL RULES:
 1. The 'size' field must ALWAYS contain an actual numeric value (like "0.5" or "10"), NEVER the word "calculated" or any placeholder text.

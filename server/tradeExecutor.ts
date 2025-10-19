@@ -16,10 +16,10 @@ function roundToSizeDecimals(size: number, szDecimals: number): number {
 
 interface TradingAction {
   action: "buy" | "sell" | "hold" | "close" | "stop_loss" | "take_profit" | "cancel_order";
-  symbol: string;
-  side: "long" | "short";
-  size: string;
-  leverage: number;
+  symbol: string;  // REQUIRED for all actions - the trading pair (e.g., "HYPE-PERP")
+  side?: "long" | "short";  // Not required for cancel_order
+  size?: string;  // Not required for cancel_order
+  leverage?: number;  // Not required for cancel_order
   reasoning: string;
   expectedEntry?: string;
   stopLoss?: string;
@@ -30,7 +30,7 @@ interface TradingAction {
   takeProfitReasoning?: string; // Why take profit was placed at this specific level
   exitStrategy?: string; // How to manage trade if in profit but unlikely to reach original TP
   triggerPrice?: string;
-  orderId?: number;
+  orderId?: number;  // REQUIRED for cancel_order action - the order ID to cancel
 }
 
 interface ExecutionResult {

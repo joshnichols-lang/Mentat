@@ -22,16 +22,16 @@ interface VolumeProfile {
 
 interface TradingAction {
   action: "buy" | "sell" | "hold" | "close" | "stop_loss" | "take_profit" | "cancel_order";
-  symbol: string;
-  side: "long" | "short";
-  size: string;
-  leverage: number;
+  symbol: string;  // REQUIRED for all actions - the trading pair (e.g., "HYPE-PERP")
+  side?: "long" | "short";  // Not required for cancel_order
+  size?: string;  // Not required for cancel_order
+  leverage?: number;  // Not required for cancel_order
   reasoning: string;
   expectedEntry?: string;
   stopLoss?: string;
   takeProfit?: string;
   triggerPrice?: string;
-  orderId?: number; // For cancel_order action
+  orderId?: number; // REQUIRED for cancel_order action - the order ID to cancel
 }
 
 interface AutonomousStrategy {
@@ -902,12 +902,12 @@ Analyze these past prompts to understand the user's:
    2. Then, generate your NEW buy/sell action for the higher-probability trade
    3. In reasoning, cite: "Canceling order [ID] at $[price] ([X]% from current) to free margin for [NEW SYMBOL] which has [superior catalyst/setup]"
    
-   **CANCELLATION ACTION FORMAT**:
+   **CANCELLATION ACTION FORMAT** (symbol field is MANDATORY):
    {
      "action": "cancel_order",
-     "symbol": "HYPE-PERP",  // REQUIRED - must match the symbol from the open order you're canceling
-     "orderId": 123456,  // REQUIRED - from "Open entry orders" list
-     "reasoning": "CITE SPECIFIC THRESHOLD: [metric that failed]. Current value: [X]. Supporting evidence: [market data]. Reallocating margin to [new setup] with [quantified advantage]"
+     "symbol": "HYPE-PERP",
+     "orderId": 123456,
+     "reasoning": "Over-concentration: 25 HYPE orders at $35.5-$38.0. Current $37.5. Canceling order at $35.5 (5.3% away, fill probability <20%). Freeing margin for BTC setup with 3:1 R:R."
    }
    
    **EXAMPLE GOOD REASONING**:
