@@ -422,7 +422,7 @@ export class HyperliquidClient {
       // Check if any order was rejected
       const statuses = response?.response?.data?.statuses;
       if (Array.isArray(statuses)) {
-        const errors = statuses.filter((s: any) => 'error' in s);
+        const errors = statuses.filter((s: any) => typeof s === 'object' && s !== null && 'error' in s);
         if (errors.length > 0) {
           const errorMsg = errors.map((e: any) => e.error).join(', ');
           console.error("One or more bracket orders rejected:", errorMsg);
