@@ -586,27 +586,41 @@ export async function executeTradeStrategy(
       const takeProfits = protectiveActions.filter(a => a.action === "take_profit");
       
       let selectedStopLoss: TradingAction | null = null;
-      if (stopLosses.length > 1) {
-        console.log(`[Trade Executor] Multiple stop losses detected (${stopLosses.length}), selecting most conservative...`);
-        
-        // For LONG: most conservative = highest SL (closest to current price)
-        // For SHORT: most conservative = lowest SL (closest to current price)
-        selectedStopLoss = stopLosses.reduce((best, current) => {
-          const bestPrice = parseFloat(best.triggerPrice!);
-          const currentPrice = parseFloat(current.triggerPrice!);
-          
-          if (isLong) {
-            // For long, higher stop loss is more conservative
-            return currentPrice > bestPrice ? current : best;
-          } else {
-            // For short, lower stop loss is more conservative
-            return currentPrice < bestPrice ? current : best;
-          }
+      if (stopLosses.length > 0) {
+        // CRITICAL: Filter stops by direction BEFORE selecting most conservative
+        // For LONG: stop must be BELOW current price
+        // For SHORT: stop must be ABOVE current price
+        const validStops = stopLosses.filter(sl => {
+          const stopPrice = parseFloat(sl.triggerPrice!);
+          return isLong ? stopPrice < currentPrice : stopPrice > currentPrice;
         });
         
-        console.log(`[Trade Executor] Selected stop loss at ${selectedStopLoss.triggerPrice} (most conservative of ${stopLosses.length} options)`);
-      } else if (stopLosses.length === 1) {
-        selectedStopLoss = stopLosses[0];
+        if (validStops.length === 0) {
+          console.warn(`[Trade Executor] All ${stopLosses.length} stop losses are in wrong direction (current=${currentPrice}, isLong=${isLong}), skipping`);
+          // Skip stop loss - don't place invalid orders
+        } else if (validStops.length === 1) {
+          selectedStopLoss = validStops[0];
+          console.log(`[Trade Executor] Selected only valid stop loss at ${selectedStopLoss.triggerPrice}`);
+        } else {
+          console.log(`[Trade Executor] Multiple valid stops detected (${validStops.length} of ${stopLosses.length} total), selecting most conservative...`);
+          
+          // For LONG: most conservative = highest SL (closest to current price from below)
+          // For SHORT: most conservative = lowest SL (closest to current price from above)
+          selectedStopLoss = validStops.reduce((best, current) => {
+            const bestPrice = parseFloat(best.triggerPrice!);
+            const currentStopPrice = parseFloat(current.triggerPrice!);
+            
+            if (isLong) {
+              // For long, higher stop loss (closer to current from below) is more conservative
+              return currentStopPrice > bestPrice ? current : best;
+            } else {
+              // For short, lower stop loss (closer to current from above) is more conservative
+              return currentStopPrice < bestPrice ? current : best;
+            }
+          });
+          
+          console.log(`[Trade Executor] Selected stop loss at ${selectedStopLoss.triggerPrice} (most conservative of ${validStops.length} valid options)`);
+        }
       }
       
       // Fetch metadata EARLY for proper size rounding BEFORE comparison (prevents 0.0006 vs 0.00065 drift)
@@ -715,19 +729,21 @@ export async function executeTradeStrategy(
       // CRITICAL FIX 3: Improved order comparison to prevent unnecessary churn
       // Compare using the FINAL protective actions (after selection and scaling)
       if (existingProtectiveOrders.length === finalProtectiveActions.length && metadata) {
-        // Deep comparison: check if prices AND sizes match (with tolerance for rounding)
+        // Deep comparison: check if prices AND sizes match (with tolerance for minor variations)
         let ordersMatch = true;
         let matchReason = "";
         
-        // Create maps of existing orders by rounded price
-        const existingOrderMap = new Map<string, any>();
-        for (const order of existingProtectiveOrders) {
-          const roundedPrice = roundToTickSize(parseFloat(order.limitPx), metadata.tickSize);
-          const roundedSize = roundToSizeDecimals(parseFloat(order.sz), metadata.szDecimals);
-          existingOrderMap.set(`${roundedPrice}_${roundedSize}`, order);
-        }
+        // Define tolerance: 0.3% price difference OR 3 tick sizes, whichever is larger
+        const priceTolerance = Math.max(currentPrice * 0.003, metadata.tickSize * 3);
         
-        // Check if all final protective actions exist in the exchange
+        // Create list of existing orders with prices
+        const existingOrders = existingProtectiveOrders.map((order: any) => ({
+          price: roundToTickSize(parseFloat(order.limitPx), metadata.tickSize),
+          size: roundToSizeDecimals(parseFloat(order.sz), metadata.szDecimals),
+          type: parseFloat(order.limitPx) > entryPrice ? (positionIsLong ? 'tp' : 'sl') : (positionIsLong ? 'sl' : 'tp')
+        }));
+        
+        // Check if all final protective actions exist in the exchange (with tolerance)
         for (const action of finalProtectiveActions) {
           const triggerPrice = parseFloat(action.triggerPrice!);
           const roundedPrice = roundToTickSize(triggerPrice, metadata.tickSize);
@@ -736,10 +752,17 @@ export async function executeTradeStrategy(
           const actionSize = (action as any).calculatedSize || positionSize;
           const roundedSize = roundToSizeDecimals(actionSize, metadata.szDecimals);
           
-          const key = `${roundedPrice}_${roundedSize}`;
-          if (!existingOrderMap.has(key)) {
+          // Find matching order within tolerance
+          const matchingOrder = existingOrders.find(order => {
+            const priceDiff = Math.abs(order.price - roundedPrice);
+            const sizesMatch = order.size === roundedSize;
+            const priceWithinTolerance = priceDiff <= priceTolerance;
+            return sizesMatch && priceWithinTolerance;
+          });
+          
+          if (!matchingOrder) {
             ordersMatch = false;
-            matchReason = `${action.action} at ${roundedPrice} (size: ${roundedSize}) not found in existing orders`;
+            matchReason = `${action.action} at ${roundedPrice} (size: ${roundedSize}) not found within ±${priceTolerance.toFixed(2)} tolerance`;
             break;
           }
         }
@@ -1145,14 +1168,15 @@ async function executeTriggerOrder(
     // CRITICAL SAFETY CHECK 1: Stop loss direction and liquidation proximity
     if (action.action === "stop_loss" && liquidationPrice) {
       // DIRECTION CHECK: Stop must be in correct direction relative to current price
-      if (isLong && triggerPrice >= currentPrice * 0.998) {
+      // AI has full autonomy - no hardcoded buffers, just verify direction
+      if (isLong && triggerPrice >= currentPrice) {
         console.warn(`[Trade Executor] DIRECTION VIOLATION: Stop loss ${triggerPrice} is not below current price ${currentPrice} for long position`);
         return {
           success: false,
           action,
           error: `Stop loss must be below current price $${currentPrice.toFixed(2)} for long positions. Your stop: $${triggerPrice}`,
         };
-      } else if (!isLong && triggerPrice <= currentPrice * 1.002) {
+      } else if (!isLong && triggerPrice <= currentPrice) {
         console.warn(`[Trade Executor] DIRECTION VIOLATION: Stop loss ${triggerPrice} is not above current price ${currentPrice} for short position`);
         return {
           success: false,
