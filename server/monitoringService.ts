@@ -1117,6 +1117,56 @@ PRICE VALIDATION CHECKLIST for every limit order:
       strategy.actions = [...filteredEntryActions, ...filteredProtectiveActions, ...otherActions];
     }
 
+    // LIMIT SCALED ENTRIES PER SYMBOL
+    // Prevent excessive scaling that creates too many orders per symbol
+    const MAX_ENTRY_ORDERS_PER_SYMBOL = 3;
+    
+    entryActions = strategy.actions.filter(a => a.action === 'buy' || a.action === 'sell');
+    const entryOrdersBySymbol = new Map<string, typeof entryActions>();
+    
+    for (const action of entryActions) {
+      if (!entryOrdersBySymbol.has(action.symbol)) {
+        entryOrdersBySymbol.set(action.symbol, []);
+      }
+      entryOrdersBySymbol.get(action.symbol)!.push(action);
+    }
+    
+    // Check if any symbol exceeds the limit
+    let exceededSymbols: string[] = [];
+    for (const [symbol, actions] of Array.from(entryOrdersBySymbol.entries())) {
+      if (actions.length > MAX_ENTRY_ORDERS_PER_SYMBOL) {
+        exceededSymbols.push(symbol);
+      }
+    }
+    
+    if (exceededSymbols.length > 0) {
+      console.warn(`[Entry Limit] ${exceededSymbols.length} symbol(s) exceed max ${MAX_ENTRY_ORDERS_PER_SYMBOL} entry orders per symbol. Limiting to highest conviction entries.`);
+      
+      const limitedEntryActions: typeof entryActions = [];
+      
+      for (const [symbol, actions] of Array.from(entryOrdersBySymbol.entries())) {
+        if (actions.length <= MAX_ENTRY_ORDERS_PER_SYMBOL) {
+          // Symbol is within limit, keep all
+          limitedEntryActions.push(...actions);
+        } else {
+          // Symbol exceeds limit, keep only top N by reasoning length (conviction)
+          const sorted = actions.sort((a, b) => 
+            (b.reasoning?.length || 0) - (a.reasoning?.length || 0)
+          );
+          const kept = sorted.slice(0, MAX_ENTRY_ORDERS_PER_SYMBOL);
+          limitedEntryActions.push(...kept);
+          
+          console.log(`[Entry Limit] ${symbol}: Reduced from ${actions.length} to ${MAX_ENTRY_ORDERS_PER_SYMBOL} entry orders`);
+        }
+      }
+      
+      // Rebuild strategy actions with limited entries
+      const otherActionsAfterLimit = strategy.actions.filter(a => a.action !== 'buy' && a.action !== 'sell');
+      strategy.actions = [...limitedEntryActions, ...otherActionsAfterLimit];
+      
+      console.log(`[Entry Limit] Total entry actions after limiting: ${limitedEntryActions.length}`);
+    }
+
     // Detect abnormal market conditions (volume spikes)
     const abnormalConditions = detectAbnormalConditions(marketData);
     
