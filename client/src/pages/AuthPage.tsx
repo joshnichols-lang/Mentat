@@ -154,7 +154,9 @@ export default function AuthPage() {
                             {...field}
                             placeholder="Choose a username"
                             className="font-mono"
-                            autoComplete="username"
+                            autoComplete="off"
+                            disabled={false}
+                            readOnly={false}
                             data-testid="input-register-username"
                           />
                         </FormControl>
@@ -174,7 +176,9 @@ export default function AuthPage() {
                             type="email"
                             placeholder="your@email.com"
                             className="font-mono"
-                            autoComplete="email"
+                            autoComplete="off"
+                            disabled={false}
+                            readOnly={false}
                             data-testid="input-register-email"
                           />
                         </FormControl>
