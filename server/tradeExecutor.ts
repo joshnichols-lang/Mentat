@@ -1,6 +1,7 @@
 import { getUserHyperliquidClient } from "./hyperliquid/client";
 import { storage } from "./storage";
 import { PRICE_VALIDATION, ORDER_VALIDATION } from "./constants";
+import { validateLimitOrder } from "./marketContextAnalyzer";
 
 // Utility function to round price to tick size
 function roundToTickSize(price: number, tickSize: number): number {
@@ -195,14 +196,73 @@ interface PriceValidationResult {
   submittedPrice?: number;
 }
 
-// Price validation DISABLED - AI has full autonomy to place orders at any price level
+// Price validation using market context and volatility analysis
 async function validatePriceReasonableness(
   action: TradingAction,
   hyperliquidClient: any,
-  isProtectiveOrder: boolean
+  isProtectiveOrder: boolean,
+  userId: string,
+  strategyTimeframe: string = "1h"
 ): Promise<PriceValidationResult> {
-  // All orders are allowed - no price restrictions
-  return { valid: true };
+  // Skip validation for protective orders (stop loss/take profit) - they have their own validation
+  if (isProtectiveOrder) {
+    return { valid: true };
+  }
+
+  // Only validate limit orders (not market orders or close actions)
+  if (action.action !== "buy" && action.action !== "sell") {
+    return { valid: true };
+  }
+
+  // Skip if no expected entry price specified (market order)
+  if (!action.expectedEntry) {
+    return { valid: true };
+  }
+
+  const limitPrice = parseFloat(action.expectedEntry);
+  const side = action.action; // "buy" or "sell"
+
+  try {
+    // Validate using market context analyzer
+    const validation = await validateLimitOrder(
+      userId,
+      action.symbol,
+      limitPrice,
+      side,
+      strategyTimeframe,
+      true // Auto-correct unrealistic prices
+    );
+
+    if (!validation.isValid) {
+      return {
+        valid: false,
+        reason: validation.reason,
+        submittedPrice: limitPrice,
+      };
+    }
+
+    // If price was auto-corrected, update the action
+    if (validation.price !== limitPrice) {
+      action.expectedEntry = validation.price.toString();
+      return {
+        valid: true,
+        reason: validation.reason,
+        deviation: Math.abs(validation.price - limitPrice) / limitPrice,
+        currentPrice: validation.price, // Corrected price
+        submittedPrice: limitPrice,
+      };
+    }
+
+    return {
+      valid: true,
+      reason: validation.reason,
+      submittedPrice: limitPrice,
+    };
+  } catch (error: any) {
+    console.error(`[Price Validator] Error validating ${action.symbol}:`, error);
+    // On error, allow the order (fail open rather than blocking trades)
+    return { valid: true };
+  }
 }
 
 export async function executeTradeStrategy(
@@ -265,7 +325,7 @@ export async function executeTradeStrategy(
   console.log(`[Price Validator] Validating ${nonProtectiveActions.length} entry orders against current market prices...`);
   
   for (const action of nonProtectiveActions) {
-    const validation = await validatePriceReasonableness(action, hyperliquid, false);
+    const validation = await validatePriceReasonableness(action, hyperliquid, false, userId, "1h");
     
     if (!validation.valid) {
       skipCount++;
@@ -301,7 +361,7 @@ export async function executeTradeStrategy(
     const validatedActions: TradingAction[] = [];
     
     for (const action of protectiveActions) {
-      const validation = await validatePriceReasonableness(action, hyperliquid, true);
+      const validation = await validatePriceReasonableness(action, hyperliquid, true, userId, "1h");
       
       if (!validation.valid) {
         skipCount++;
@@ -566,6 +626,22 @@ export async function executeTradeStrategy(
       const positionSize = Math.abs(parseFloat(currentPosition.szi));
       const isLong = parseFloat(currentPosition.szi) > 0;
       const currentPrice = parseFloat((currentPosition as any).markPx || currentPosition.entryPx);
+      
+      // CRITICAL SAFETY: Check for manual stop loss override - AI must not override user's manual safety adjustments
+      const dbPosition = await storage.getPositionBySymbol(userId, symbol);
+      if (dbPosition && dbPosition.manualStopLossOverride === 1) {
+        const overrideTime = dbPosition.manualOverrideAt ? new Date(dbPosition.manualOverrideAt).toISOString() : "unknown";
+        console.warn(`[Trade Executor] 🛡️ MANUAL OVERRIDE DETECTED: User manually adjusted stop loss for ${symbol} at ${overrideTime}. AI will NOT replace protective orders.`);
+        skipCount += protectiveActions.length;
+        for (const action of protectiveActions) {
+          results.push({
+            success: true,
+            action,
+            error: `Manual stop loss override active - AI cannot replace user's safety adjustments (set at ${overrideTime})`,
+          });
+        }
+        continue;
+      }
       
       // CRITICAL: Validate position size > 0 before attempting protective orders
       if (positionSize <= 0) {
@@ -1167,7 +1243,6 @@ async function executeTriggerOrder(
     // CRITICAL SAFETY CHECK 1: Stop loss direction and liquidation proximity
     if (action.action === "stop_loss" && liquidationPrice) {
       // DIRECTION CHECK: Stop must be in correct direction relative to current price
-      // AI has full autonomy - no hardcoded buffers, just verify direction
       if (isLong && triggerPrice >= currentPrice) {
         console.warn(`[Trade Executor] DIRECTION VIOLATION: Stop loss ${triggerPrice} is not below current price ${currentPrice} for long position`);
         return {
@@ -1184,11 +1259,36 @@ async function executeTriggerOrder(
         };
       }
       
-      // LOG: Liquidation proximity (informational only - no restrictions)
+      // CRITICAL LIQUIDATION SAFETY CHECK: Stop loss must be on the SAFE side of liquidation
+      // For LONG: stopLoss must be ABOVE liquidationPrice (currentPrice > stopLoss > liquidationPrice)
+      // For SHORT: stopLoss must be BELOW liquidationPrice (currentPrice < stopLoss < liquidationPrice)
+      const LIQUIDATION_BUFFER_PERCENT = 1.5; // Minimum 1.5% buffer from liquidation price
+      
+      if (isLong) {
+        // For longs: liquidation is below entry, stop must be above liquidation with buffer
+        const minSafeStop = liquidationPrice * (1 + LIQUIDATION_BUFFER_PERCENT / 100);
+        if (triggerPrice < minSafeStop) {
+          console.error(`[Trade Executor] 🚨 LIQUIDATION DANGER: Stop loss ${triggerPrice} is below safe minimum ${minSafeStop.toFixed(2)} (liq: ${liquidationPrice}, buffer: ${LIQUIDATION_BUFFER_PERCENT}%)`);
+          // Auto-correct to safe level instead of rejecting
+          const safeTrigger = roundToTickSize(minSafeStop, metadata.szDecimals === 5 ? 1 : 0.01);
+          console.warn(`[Trade Executor] ⚠️ Auto-correcting stop loss from ${triggerPrice} to ${safeTrigger} for safety`);
+          triggerPrice = safeTrigger;
+        }
+      } else {
+        // For shorts: liquidation is above entry, stop must be below liquidation with buffer
+        const maxSafeStop = liquidationPrice * (1 - LIQUIDATION_BUFFER_PERCENT / 100);
+        if (triggerPrice > maxSafeStop) {
+          console.error(`[Trade Executor] 🚨 LIQUIDATION DANGER: Stop loss ${triggerPrice} is above safe maximum ${maxSafeStop.toFixed(2)} (liq: ${liquidationPrice}, buffer: ${LIQUIDATION_BUFFER_PERCENT}%)`);
+          // Auto-correct to safe level instead of rejecting
+          const safeTrigger = roundToTickSize(maxSafeStop, metadata.szDecimals === 5 ? 1 : 0.01);
+          console.warn(`[Trade Executor] ⚠️ Auto-correcting stop loss from ${triggerPrice} to ${safeTrigger} for safety`);
+          triggerPrice = safeTrigger;
+        }
+      }
+      
       const distanceToLiq = Math.abs(triggerPrice - liquidationPrice);
       const distancePercent = (distanceToLiq / liquidationPrice) * 100;
-      console.log(`[Trade Executor] Stop loss to liquidation distance: ${distancePercent.toFixed(2)}% (trigger=${triggerPrice}, liquidation=${liquidationPrice})`);
-      // No enforcement - AI has full autonomy to place stops based on market structure
+      console.log(`[Trade Executor] ✓ Stop loss safely positioned: ${distancePercent.toFixed(2)}% from liquidation (trigger=${triggerPrice}, liq=${liquidationPrice})`);
     }
     
     // LOG: Stop loss distance from current price (informational only)

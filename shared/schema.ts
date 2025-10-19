@@ -73,6 +73,8 @@ export const positions = pgTable("positions", {
   currentStopLoss: decimal("current_stop_loss", { precision: 18, scale: 8 }), // Can move to protect gains (only in favorable direction)
   currentTakeProfit: decimal("current_take_profit", { precision: 18, scale: 8 }), // Can be adjusted based on market conditions
   stopLossState: text("stop_loss_state").notNull().default("initial"), // "initial", "locked", "trailing"
+  manualStopLossOverride: integer("manual_stop_loss_override").notNull().default(0), // 1 = user manually set stop loss, AI must not override
+  manualOverrideAt: timestamp("manual_override_at"), // When user manually adjusted the stop loss
   lastAdjustmentAt: timestamp("last_adjustment_at"), // When protective orders were last adjusted
   lastUpdated: timestamp("last_updated").notNull().defaultNow(),
 });
