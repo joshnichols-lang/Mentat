@@ -22,7 +22,7 @@ const activeMonitoring = new Map<string, UserMonitoring>();
 /**
  * Start autonomous trading monitoring for a specific user
  */
-export async function startUserMonitoring(userId: string, intervalMinutes: number): Promise<void> {
+export async function startUserMonitoring(userId: string, intervalMinutes: number, runImmediately: boolean = true): Promise<void> {
   // Stop existing monitoring if running
   if (activeMonitoring.has(userId)) {
     console.log(`[User Monitoring] User ${userId} already has monitoring active, restarting...`);
@@ -50,11 +50,15 @@ export async function startUserMonitoring(userId: string, intervalMinutes: numbe
     throw error; // Fail fast - don't start monitoring without credentials
   }
 
-  // Run the autonomous strategy immediately
-  try {
-    await developAutonomousStrategy(userId);
-  } catch (error) {
-    console.error(`[User Monitoring] Error in initial autonomous strategy for user ${userId}:`, error);
+  // Run the autonomous strategy immediately (unless skipped for frequency changes)
+  if (runImmediately) {
+    try {
+      await developAutonomousStrategy(userId);
+    } catch (error) {
+      console.error(`[User Monitoring] Error in initial autonomous strategy for user ${userId}:`, error);
+    }
+  } else {
+    console.log(`[User Monitoring] Skipping immediate run for user ${userId} - waiting for next scheduled interval`);
   }
 
   // Set up recurring interval
@@ -99,13 +103,14 @@ export async function stopUserMonitoring(userId: string): Promise<void> {
 /**
  * Restart monitoring for a user with a new interval
  */
-export async function restartUserMonitoring(userId: string, intervalMinutes: number): Promise<void> {
+export async function restartUserMonitoring(userId: string, intervalMinutes: number, runImmediately: boolean = false): Promise<void> {
   console.log(`[User Monitoring] Restarting monitoring for user ${userId} with interval: ${intervalMinutes} minutes`);
   
   await stopUserMonitoring(userId);
   
   if (intervalMinutes > 0) {
-    await startUserMonitoring(userId, intervalMinutes);
+    // When restarting due to frequency change, don't run immediately - wait for next interval
+    await startUserMonitoring(userId, intervalMinutes, runImmediately);
   } else {
     console.log(`[User Monitoring] Monitoring disabled for user ${userId}`);
   }
