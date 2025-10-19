@@ -4,6 +4,7 @@ import { executeTradeStrategy } from "./tradeExecutor";
 import { createPortfolioSnapshot } from "./portfolioSnapshotService";
 import { makeAIRequest } from "./aiRouter";
 import { getRecentLearnings } from "./evaluationService";
+import { reconcilePositions } from "./positionReconciliation";
 
 interface MarketData {
   symbol: string;
@@ -285,7 +286,13 @@ export async function developAutonomousStrategy(userId: string): Promise<void> {
       return;
     }
     
-    // POSITION DISCOVERY: Track existing positions and their protective orders
+    // STEP 1: RECONCILE POSITIONS
+    // Sync database position records with actual exchange positions
+    // This is CRITICAL for protective order validation to work
+    await reconcilePositions(userId, storage, hyperliquidClient);
+    
+    // STEP 2: POSITION DISCOVERY
+    // Track existing positions and their protective orders
     // This ensures positions opened manually or during server downtime are tracked
     await discoverAndTrackExistingPositions(parseInt(userId));
     
