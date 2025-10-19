@@ -22,6 +22,9 @@ interface TradingAction {
   takeProfit?: string;
   exitCriteria?: string; // Detailed reasoning for stop loss placement based on market structure
   expectedRoi?: string; // Expected ROI percentage for this trade
+  stopLossReasoning?: string; // Why stop loss was placed at this specific level
+  takeProfitReasoning?: string; // Why take profit was placed at this specific level
+  exitStrategy?: string; // How to manage trade if in profit but unlikely to reach original TP
   triggerPrice?: string; // For stop_loss and take_profit actions
   orderId?: number; // For cancel_order action
 }
@@ -305,6 +308,9 @@ JSON format:
       "takeProfit": "numeric price as string (e.g. '47500')" [REQUIRED for buy/sell - the take profit price],
       "exitCriteria": "Detailed reasoning for stop loss placement based on market structure (e.g., 'Stop placed below 4H support at $43,500 which aligns with 0.618 Fibonacci retracement. If breached, indicates trend reversal.')" [REQUIRED for buy/sell actions],
       "expectedRoi": "Expected ROI percentage as string (e.g. '5.8' for 5.8%)" [REQUIRED for buy/sell - calculated from entry to take profit],
+      "stopLossReasoning": "Explain WHY you placed the stop loss at this specific level - cite technical levels, market structure, volatility, etc." [REQUIRED for buy/sell actions],
+      "takeProfitReasoning": "Explain WHY you placed the take profit at this specific level - cite resistance/support, Fibonacci targets, R:R ratio, etc." [REQUIRED for buy/sell actions],
+      "exitStrategy": "Describe how you will manage this trade if it's in profit but appears unlikely to reach the original take profit (e.g., 'If price reaches 50% of profit target but shows reversal signals on 1H chart, will close 50% position and trail stop to breakeven for remainder')" [REQUIRED for buy/sell actions],
       "triggerPrice": "numeric price as string (e.g. '44000')" [REQUIRED for stop_loss/take_profit actions - the price that triggers the order],
       "orderId": number [REQUIRED for cancel_order actions - the order ID from open orders list]
     }

@@ -26,6 +26,9 @@ interface TradingAction {
   takeProfit?: string;
   exitCriteria?: string; // Detailed reasoning for stop loss placement based on market structure
   expectedRoi?: string; // Expected ROI percentage for this trade
+  stopLossReasoning?: string; // Why stop loss was placed at this specific level
+  takeProfitReasoning?: string; // Why take profit was placed at this specific level
+  exitStrategy?: string; // How to manage trade if in profit but unlikely to reach original TP
   triggerPrice?: string;
   orderId?: number;
 }
@@ -85,12 +88,24 @@ async function createJournalEntry(
 
     if (stopLossPrice) {
       expectations.stopLoss = stopLossPrice;
+      // Include AI's reasoning for stop loss placement
+      if (action.stopLossReasoning) {
+        expectations.stopLossReasoning = action.stopLossReasoning;
+      }
     }
     if (takeProfitPrice) {
       expectations.takeProfit = takeProfitPrice;
+      // Include AI's reasoning for take profit placement
+      if (action.takeProfitReasoning) {
+        expectations.takeProfitReasoning = action.takeProfitReasoning;
+      }
     }
     if (action.expectedRoi) {
       expectations.expectedRoi = action.expectedRoi;
+    }
+    // Include AI's exit strategy for managing the trade
+    if (action.exitStrategy) {
+      expectations.exitStrategy = action.exitStrategy;
     }
     
     // Calculate risk:reward ratio if we have both stop loss and take profit

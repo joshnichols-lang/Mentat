@@ -930,6 +930,11 @@ Respond in JSON format:
       "leverage": ${activeTradingMode ? activeTradingMode.parameters.preferredLeverage || 5 : 5} (⚠️ CRITICAL: USE EXACTLY THIS VALUE - DO NOT CHOOSE YOUR OWN LEVERAGE),
       "reasoning": "Multi-timeframe analysis, entry trigger, volume confirmation, OR why canceling order",
       "expectedEntry": "numeric price as string" [for buy/sell],
+      "stopLoss": "numeric price as string" [for buy/sell - inline stop loss price],
+      "takeProfit": "numeric price as string" [for buy/sell - inline take profit price],
+      "stopLossReasoning": "Explain WHY you placed the stop loss at this specific level - cite technical levels, market structure, volatility" [REQUIRED for buy/sell],
+      "takeProfitReasoning": "Explain WHY you placed the take profit at this specific level - cite resistance/support, targets, R:R ratio" [REQUIRED for buy/sell],
+      "exitStrategy": "Describe how you will manage this trade if it's in profit but appears unlikely to reach the original take profit" [REQUIRED for buy/sell],
       "triggerPrice": "numeric price as string" [for stop_loss/take_profit],
       "orderId": number [REQUIRED for cancel_order action]
     }
