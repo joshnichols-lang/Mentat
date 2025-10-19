@@ -204,9 +204,92 @@ async function validatePriceReasonableness(
   userId: string,
   strategyTimeframe: string = "1h"
 ): Promise<PriceValidationResult> {
-  // Skip validation for protective orders (stop loss/take profit) - they have their own validation
+  // CRITICAL FIX: Validate protective orders against current price to prevent nonsensical SL/TP
   if (isProtectiveOrder) {
-    return { valid: true };
+    if (!action.triggerPrice) {
+      // FAIL-CLOSED: Reject protective orders without trigger price
+      return {
+        valid: false,
+        reason: "Protective order missing trigger price",
+      };
+    }
+
+    const triggerPrice = parseFloat(action.triggerPrice);
+    
+    try {
+      // Get current market price
+      const marketData = await hyperliquidClient.getMarketData();
+      const assetData = marketData.find((d: any) => d.symbol === action.symbol);
+      
+      if (!assetData) {
+        // FAIL-CLOSED: Reject if we can't get market data to validate
+        console.error(`[Price Validator] No market data for ${action.symbol}, rejecting protective order (fail-closed)`);
+        return {
+          valid: false,
+          reason: `Cannot validate protective order: no market data available for ${action.symbol}`,
+          submittedPrice: triggerPrice,
+        };
+      }
+      
+      const currentPrice = parseFloat(assetData.price);
+      if (!Number.isFinite(currentPrice) || currentPrice <= 0) {
+        // FAIL-CLOSED: Reject if market price is invalid
+        console.error(`[Price Validator] Invalid current price for ${action.symbol}, rejecting protective order (fail-closed)`);
+        return {
+          valid: false,
+          reason: `Cannot validate protective order: invalid market price for ${action.symbol}`,
+          submittedPrice: triggerPrice,
+        };
+      }
+      
+      // Determine position direction from side
+      const isLong = action.side === "long";
+      
+      // Validate protective order makes sense relative to current price
+      if (action.action === "stop_loss") {
+        // For LONG: stop loss must be BELOW current price
+        // For SHORT: stop loss must be ABOVE current price
+        const correctDirection = isLong ? (triggerPrice < currentPrice) : (triggerPrice > currentPrice);
+        
+        if (!correctDirection) {
+          const expectedDirection = isLong ? "below" : "above";
+          return {
+            valid: false,
+            reason: `Stop loss ${triggerPrice.toFixed(2)} is on wrong side of current price ${currentPrice.toFixed(2)} for ${isLong ? 'LONG' : 'SHORT'} position. Stop loss must be ${expectedDirection} current price.`,
+            submittedPrice: triggerPrice,
+            currentPrice,
+          };
+        }
+      } else if (action.action === "take_profit") {
+        // For LONG: take profit must be ABOVE current price
+        // For SHORT: take profit must be BELOW current price
+        const correctDirection = isLong ? (triggerPrice > currentPrice) : (triggerPrice < currentPrice);
+        
+        if (!correctDirection) {
+          const expectedDirection = isLong ? "above" : "below";
+          return {
+            valid: false,
+            reason: `Take profit ${triggerPrice.toFixed(2)} is on wrong side of current price ${currentPrice.toFixed(2)} for ${isLong ? 'LONG' : 'SHORT'} position. Take profit must be ${expectedDirection} current price.`,
+            submittedPrice: triggerPrice,
+            currentPrice,
+          };
+        }
+      }
+      
+      return { 
+        valid: true,
+        submittedPrice: triggerPrice,
+        currentPrice,
+      };
+    } catch (error: any) {
+      console.error(`[Price Validator] Error validating protective order for ${action.symbol}:`, error);
+      // FAIL-CLOSED: Reject protective orders we can't validate
+      return {
+        valid: false,
+        reason: `Protective order validation error: ${error.message || "Unknown error"}`,
+        submittedPrice: triggerPrice,
+      };
+    }
   }
 
   // Only validate limit orders (not market orders or close actions)
