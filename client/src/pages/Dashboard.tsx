@@ -2,10 +2,11 @@ import { useEffect } from "react";
 import { useLocation } from "wouter";
 import { useCredentials } from "@/hooks/useCredentials";
 import { useAuth } from "@/hooks/use-auth";
+import { SymbolProvider } from "@/contexts/SymbolContext";
 import Header from "@/components/Header";
 import AIPromptPanel from "@/components/AIPromptPanel";
 import TradingViewChart from "@/components/TradingViewChart";
-import TradingViewWatchlist from "@/components/TradingViewWatchlist";
+import CustomWatchlist from "@/components/CustomWatchlist";
 import PositionsGrid from "@/components/PositionsGrid";
 import PerformanceMetrics from "@/components/PerformanceMetrics";
 import PortfolioPerformanceChart from "@/components/PortfolioPerformanceChart";
@@ -58,54 +59,56 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
-      
-      <main className="mx-auto max-w-[1920px] p-4">
-        <div className="space-y-4">
-          {/* AI Prompt Section */}
-          <AIPromptPanel />
+    <SymbolProvider>
+      <div className="min-h-screen bg-background">
+        <Header />
+        
+        <main className="mx-auto max-w-[1920px] p-4">
+          <div className="space-y-4">
+            {/* AI Prompt Section */}
+            <AIPromptPanel />
 
-          {/* Conversation History */}
-          <ConversationHistory />
+            {/* Conversation History */}
+            <ConversationHistory />
 
-          {/* Automated Monitoring Alerts */}
-          <MonitoringAlerts />
+            {/* Automated Monitoring Alerts */}
+            <MonitoringAlerts />
 
-          {/* TradingView Chart & Watchlist */}
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-            <div className="lg:col-span-2">
-              <TradingViewChart height={500} />
+            {/* TradingView Chart & Custom Watchlist */}
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+              <div className="lg:col-span-2">
+                <TradingViewChart height={500} />
+              </div>
+              <div>
+                <CustomWatchlist />
+              </div>
             </div>
-            <div>
-              <TradingViewWatchlist height={500} />
+
+            {/* Charts Row */}
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+              <PortfolioPerformanceChart />
+              <SharpeRatioChart />
+            </div>
+
+            {/* Main Grid */}
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+              <div className="space-y-4 lg:col-span-2">
+                {/* Positions */}
+                <PositionsGrid />
+
+                {/* Performance Metrics */}
+                <PerformanceMetrics />
+              </div>
+
+              {/* Sidebar */}
+              <div className="space-y-4">
+                {/* AI Usage Tracker */}
+                <AIUsageTracker />
+              </div>
             </div>
           </div>
-
-          {/* Charts Row */}
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            <PortfolioPerformanceChart />
-            <SharpeRatioChart />
-          </div>
-
-          {/* Main Grid */}
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-            <div className="space-y-4 lg:col-span-2">
-              {/* Positions */}
-              <PositionsGrid />
-
-              {/* Performance Metrics */}
-              <PerformanceMetrics />
-            </div>
-
-            {/* Sidebar */}
-            <div className="space-y-4">
-              {/* AI Usage Tracker */}
-              <AIUsageTracker />
-            </div>
-          </div>
-        </div>
-      </main>
-    </div>
+        </main>
+      </div>
+    </SymbolProvider>
   );
 }

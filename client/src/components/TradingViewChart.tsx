@@ -1,20 +1,20 @@
 import { useEffect, useRef, memo } from "react";
 import { Card } from "@/components/ui/card";
+import { useSymbol } from "@/contexts/SymbolContext";
 
 interface TradingViewChartProps {
-  symbol?: string;
   interval?: string;
   theme?: "light" | "dark";
   height?: number;
 }
 
 function TradingViewChart({ 
-  symbol = "HYPERLIQUID:BTCUSDT.P",
   interval = "15",
   theme = "dark",
   height = 500
 }: TradingViewChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const { selectedSymbol } = useSymbol();
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -26,7 +26,7 @@ function TradingViewChart({
       if (containerRef.current && (window as any).TradingView) {
         new (window as any).TradingView.widget({
           autosize: true,
-          symbol: symbol,
+          symbol: selectedSymbol,
           interval: interval,
           timezone: "Etc/UTC",
           theme: theme,
@@ -59,7 +59,7 @@ function TradingViewChart({
         containerRef.current.innerHTML = "";
       }
     };
-  }, [symbol, interval, theme]);
+  }, [selectedSymbol, interval, theme]);
 
   return (
     <Card className="p-0 overflow-hidden">
