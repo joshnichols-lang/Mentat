@@ -51,6 +51,7 @@ Preferred communication style: Simple, everyday language.
 **Core Features:** Autonomous trading engine, order management, configurable monitoring frequency, enhanced performance metrics (Sharpe, Sortino, Calmar, Sterling, Omega), and trading controls.
 **Performance Metrics (Fixed Oct 19, 2025):** All metrics now calculated using cumulative data from all snapshots (not sliding 6-hour window), and only include realized PnL from closed trades (not unrealized PnL from open positions). This ensures graphs display correctly and match current values shown in the UI.
 **Monitoring Frequency Intelligence (Fixed Oct 19, 2025):** Server startup now checks timestamp of last monitoring run before executing. If last run was within the configured interval (e.g., 30 minutes), startup skips immediate execution and waits for next scheduled interval. Prevents alert spam from frequent server restarts in development mode while preserving monitoring continuity.
+**User Deletion Monitoring Cleanup (Fixed Oct 19, 2025):** Fixed resource leak where monitoring intervals continued running after user deletion. Delete user endpoint now calls `stopUserMonitoring(userId)` before removing user from database, ensuring interval timers are properly cleared and no orphaned background processes remain. Monitoring stops immediately upon user deletion.
 
 ## External Dependencies
 
