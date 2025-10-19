@@ -424,7 +424,7 @@ export default function Settings() {
                 )}
               </div>
               <CardDescription>
-                Choose between Platform AI (shared) or your own API keys from Perplexity, OpenAI, or xAI
+                Choose between Platform AI (shared xAI Grok) or your own API keys from Perplexity, OpenAI, or xAI
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -438,7 +438,7 @@ export default function Settings() {
                           <div>
                             <p className="font-medium">🦊 Using Platform AI</p>
                             <p className="text-sm text-muted-foreground mt-1">
-                              You're using our shared Perplexity AI infrastructure. Usage costs are covered by the platform.
+                              You're using our shared xAI Grok infrastructure. Usage costs are covered by the platform.
                             </p>
                           </div>
                           <Badge variant="outline" className="ml-2">Active</Badge>

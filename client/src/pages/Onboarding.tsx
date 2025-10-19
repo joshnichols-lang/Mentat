@@ -220,12 +220,12 @@ export default function Onboarding() {
                   </CardHeader>
                   <CardContent className="space-y-3">
                     <p className="text-sm">
-                      Use our shared AI infrastructure powered by Perplexity's Sonar model.
+                      Use our shared AI infrastructure powered by xAI's Grok 4 Fast Reasoning.
                     </p>
                     <div className="space-y-1 text-sm text-muted-foreground">
                       <p>✓ No API key required</p>
                       <p>✓ Instant setup</p>
-                      <p>✓ Lower costs</p>
+                      <p>✓ Lower costs (98% cheaper)</p>
                       <p>✓ Usage included in platform</p>
                     </div>
                   </CardContent>
