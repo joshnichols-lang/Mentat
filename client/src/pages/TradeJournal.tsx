@@ -28,7 +28,7 @@ interface TradeJournalEntry {
   id: string;
   tradeId: string | null;
   symbol: string;
-  side: "buy" | "sell";
+  side: "long" | "short";
   entryType: "limit" | "market";
   status: "planned" | "active" | "closed";
   entryReasoning: string | null;
@@ -176,7 +176,7 @@ export default function TradeJournal() {
   };
 
   const getSideBadge = (side: string) => {
-    if (side === "buy") {
+    if (side === "long") {
       return <Badge className="uppercase text-xs bg-[hsl(120,25%,35%)] dark:bg-[hsl(120,25%,60%)] text-white dark:text-black" data-testid={`badge-side-${side}`}><TrendingUp className="w-3 h-3 mr-1" />LONG</Badge>;
     }
     return <Badge className="uppercase text-xs bg-[hsl(0,30%,40%)] dark:bg-[hsl(0,30%,55%)] text-white dark:text-black" data-testid={`badge-side-${side}`}><TrendingDown className="w-3 h-3 mr-1" />SHORT</Badge>;
@@ -335,7 +335,7 @@ export default function TradeJournal() {
             <>
               <DialogHeader>
                 <DialogTitle className="text-2xl uppercase tracking-normal flex items-center gap-2">
-                  {selectedEntry.symbol} - {selectedEntry.side === "buy" ? "LONG" : "SHORT"} POSITION
+                  {selectedEntry.symbol} - {selectedEntry.side === "long" ? "LONG" : "SHORT"} POSITION
                 </DialogTitle>
                 <DialogDescription className="uppercase text-xs tracking-wider">
                   ENTRY ID: {selectedEntry.id}
