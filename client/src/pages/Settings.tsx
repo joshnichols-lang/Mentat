@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Lock, KeyRound, Brain, TrendingUp, Trash2, Plus, AlertCircle } from "lucide-react";
+import { Lock, KeyRound, Brain, TrendingUp, Trash2, Plus, AlertCircle, Clock, DollarSign } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   AlertDialog,
@@ -66,12 +66,48 @@ const AI_PROVIDERS = [
   { value: "xai", label: "xAI (Grok)", description: "Grok models" },
 ];
 
+const MONITORING_FREQUENCIES = [
+  { 
+    value: "0", 
+    label: "Disabled", 
+    monthlyCost: 0,
+    description: "Manual prompts only (~$3-15/month)"
+  },
+  { 
+    value: "60", 
+    label: "1 hour", 
+    monthlyCost: 5,
+    description: "~720 cycles/month, lowest cost"
+  },
+  { 
+    value: "30", 
+    label: "30 minutes", 
+    monthlyCost: 20,
+    description: "~1,440 cycles/month, cost-effective"
+  },
+  { 
+    value: "5", 
+    label: "5 minutes", 
+    monthlyCost: 70,
+    description: "~8,640 cycles/month, responsive"
+  },
+  { 
+    value: "1", 
+    label: "1 minute", 
+    monthlyCost: 345,
+    description: "~43,200 cycles/month, ⚠️ high cost"
+  },
+];
+
 export default function Settings() {
   const { toast } = useToast();
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [isAddingAI, setIsAddingAI] = useState(false);
   const [isAddingHyperliquid, setIsAddingHyperliquid] = useState(false);
   const [deleteKeyId, setDeleteKeyId] = useState<string | null>(null);
+  const [monitoringFrequency, setMonitoringFrequency] = useState<string>(() => {
+    return localStorage.getItem("monitoringFrequency") || "5";
+  });
 
   const { data: apiKeysData } = useQuery<{ success: boolean; apiKeys: ApiKey[] }>({
     queryKey: ['/api/api-keys'],
@@ -210,6 +246,36 @@ export default function Settings() {
     },
   });
 
+  const updateFrequencyMutation = useMutation({
+    mutationFn: async (frequency: string) => {
+      const res = await apiRequest('POST', '/api/monitoring/frequency', { 
+        minutes: parseInt(frequency) 
+      });
+      
+      if (!res.ok) {
+        throw new Error(`Failed to update frequency: ${res.statusText}`);
+      }
+      
+      return await res.json();
+    },
+    onSuccess: (data, frequency) => {
+      const freqConfig = MONITORING_FREQUENCIES.find(f => f.value === frequency);
+      toast({
+        title: "Monitoring Updated",
+        description: frequency === "0" 
+          ? "Automated monitoring disabled" 
+          : `Monitoring every ${freqConfig?.label} (~$${freqConfig?.monthlyCost}/month)`,
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update monitoring frequency",
+        variant: "destructive",
+      });
+    },
+  });
+
   const onSubmitPassword = (data: PasswordChangeForm) => {
     passwordMutation.mutate({
       currentPassword: data.currentPassword,
@@ -230,6 +296,23 @@ export default function Settings() {
     return provider?.label || providerName;
   };
 
+  const handleFrequencyChange = (value: string) => {
+    const previousValue = monitoringFrequency;
+    
+    setMonitoringFrequency(value);
+    localStorage.setItem("monitoringFrequency", value);
+    
+    updateFrequencyMutation.mutate(value, {
+      onError: () => {
+        // Rollback if mutation fails
+        setMonitoringFrequency(previousValue);
+        localStorage.setItem("monitoringFrequency", previousValue);
+      }
+    });
+  };
+
+  const selectedFreqConfig = MONITORING_FREQUENCIES.find(f => f.value === monitoringFrequency);
+
   return (
     <div className="flex flex-col h-screen">
       <Header />
@@ -242,6 +325,73 @@ export default function Settings() {
               <p className="text-muted-foreground">Manage your account settings and API credentials</p>
             </div>
           </div>
+
+          {/* Automated Monitoring Frequency */}
+          <Card data-testid="card-monitoring-frequency">
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Clock className="w-5 h-5" />
+                <CardTitle>Automated Monitoring Frequency</CardTitle>
+              </div>
+              <CardDescription>
+                Control how often the AI agent checks the market and executes trades
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Monitoring Interval</label>
+                <Select value={monitoringFrequency} onValueChange={handleFrequencyChange}>
+                  <SelectTrigger data-testid="select-monitoring-frequency">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {MONITORING_FREQUENCIES.map((freq) => (
+                      <SelectItem key={freq.value} value={freq.value}>
+                        <div className="flex flex-col">
+                          <span className="font-medium">{freq.label}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {freq.description}
+                          </span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {selectedFreqConfig && selectedFreqConfig.value !== "0" && (
+                <Alert>
+                  <DollarSign className="h-4 w-4" />
+                  <AlertDescription>
+                    <div className="space-y-2">
+                      <div>
+                        <strong>Estimated Monthly Cost:</strong> ~${selectedFreqConfig.monthlyCost}/month per user
+                      </div>
+                      <div className="text-xs text-muted-foreground space-y-1">
+                        <p>💡 <strong>Business Planning Tips:</strong></p>
+                        <ul className="list-disc pl-5 space-y-1">
+                          <li><strong>Conservative</strong>: Charge $30-50/month (30-min or 1-hour monitoring)</li>
+                          <li><strong>Standard</strong>: Charge $80-120/month (5-min monitoring)</li>
+                          <li><strong>Premium</strong>: Charge $400+/month (1-min monitoring)</li>
+                          <li><strong>Cost Control</strong>: Encourage personal AI keys for heavy users</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {selectedFreqConfig && selectedFreqConfig.value === "0" && (
+                <Alert>
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    <strong>Monitoring Disabled</strong> - The AI agent will only respond to manual prompts. 
+                    This uses minimal AI resources (~$3-15/month).
+                  </AlertDescription>
+                </Alert>
+              )}
+            </CardContent>
+          </Card>
 
           {/* AI Provider API Keys */}
           <Card data-testid="card-ai-keys">
