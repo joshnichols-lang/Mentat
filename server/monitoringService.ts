@@ -1182,7 +1182,7 @@ PRICE VALIDATION CHECKLIST for every limit order:
     // Execute trades if actions exist
     if (strategy.actions && strategy.actions.length > 0) {
       try {
-        const executionSummary = await executeTradeStrategy(userId, strategy.actions);
+        const executionSummary = await executeTradeStrategy(userId, strategy.actions, activeTradingMode?.id || null);
         
         console.log(`[Autonomous Trading] Executed ${executionSummary.successfulExecutions}/${executionSummary.totalActions} trades`);
         

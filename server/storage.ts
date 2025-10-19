@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type UpsertUser, type Trade, type InsertTrade, type Position, type InsertPosition, type PortfolioSnapshot, type InsertPortfolioSnapshot, type AiUsageLog, type InsertAiUsageLog, type MonitoringLog, type InsertMonitoringLog, type UserApiCredential, type InsertUserApiCredential, type ApiKey, type InsertApiKey, type ContactMessage, type InsertContactMessage, type ProtectiveOrderEvent, type InsertProtectiveOrderEvent, type UserTradeHistoryImport, type InsertUserTradeHistoryImport, type UserTradeHistoryTrade, type InsertUserTradeHistoryTrade, type TradeStyleProfile, type InsertTradeStyleProfile, type TradeJournalEntry, type InsertTradeJournalEntry, type TradingMode, type InsertTradingMode, type BudgetAlert, type InsertBudgetAlert, users, trades, positions, portfolioSnapshots, aiUsageLog, monitoringLog, userApiCredentials, apiKeys, contactMessages, protectiveOrderEvents, userTradeHistoryImports, userTradeHistoryTrades, tradeStyleProfiles, tradeJournalEntries, tradingModes, budgetAlerts } from "@shared/schema";
+import { type User, type InsertUser, type UpsertUser, type Trade, type InsertTrade, type Position, type InsertPosition, type PortfolioSnapshot, type InsertPortfolioSnapshot, type AiUsageLog, type InsertAiUsageLog, type MonitoringLog, type InsertMonitoringLog, type UserApiCredential, type InsertUserApiCredential, type ApiKey, type InsertApiKey, type ContactMessage, type InsertContactMessage, type ProtectiveOrderEvent, type InsertProtectiveOrderEvent, type UserTradeHistoryImport, type InsertUserTradeHistoryImport, type UserTradeHistoryTrade, type InsertUserTradeHistoryTrade, type TradeStyleProfile, type InsertTradeStyleProfile, type TradeJournalEntry, type TradeJournalEntryWithStrategy, type InsertTradeJournalEntry, type TradingMode, type InsertTradingMode, type BudgetAlert, type InsertBudgetAlert, users, trades, positions, portfolioSnapshots, aiUsageLog, monitoringLog, userApiCredentials, apiKeys, contactMessages, protectiveOrderEvents, userTradeHistoryImports, userTradeHistoryTrades, tradeStyleProfiles, tradeJournalEntries, tradingModes, budgetAlerts } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql, and, isNull, type SQL } from "drizzle-orm";
 import session from "express-session";
@@ -876,7 +876,7 @@ export class DbStorage implements IStorage {
     return result[0];
   }
 
-  async getTradeJournalEntries(userId: string, filters?: { status?: string; symbol?: string; limit?: number }): Promise<TradeJournalEntry[]> {
+  async getTradeJournalEntries(userId: string, filters?: { status?: string; symbol?: string; limit?: number }): Promise<TradeJournalEntryWithStrategy[]> {
     const limit = filters?.limit || 100;
     const conditions: SQL[] = [];
     
@@ -891,8 +891,43 @@ export class DbStorage implements IStorage {
       ? withUserFilter(tradeJournalEntries, userId, ...conditions)
       : withUserFilter(tradeJournalEntries, userId);
 
-    return await db.select()
+    return await db.select({
+      id: tradeJournalEntries.id,
+      userId: tradeJournalEntries.userId,
+      tradeId: tradeJournalEntries.tradeId,
+      evaluationId: tradeJournalEntries.evaluationId,
+      tradingModeId: tradeJournalEntries.tradingModeId,
+      tradingModeName: tradingModes.name,
+      symbol: tradeJournalEntries.symbol,
+      side: tradeJournalEntries.side,
+      entryType: tradeJournalEntries.entryType,
+      status: tradeJournalEntries.status,
+      entryReasoning: tradeJournalEntries.entryReasoning,
+      expectations: tradeJournalEntries.expectations,
+      exitCriteria: tradeJournalEntries.exitCriteria,
+      expectedRoi: tradeJournalEntries.expectedRoi,
+      marketContext: tradeJournalEntries.marketContext,
+      plannedEntryPrice: tradeJournalEntries.plannedEntryPrice,
+      actualEntryPrice: tradeJournalEntries.actualEntryPrice,
+      size: tradeJournalEntries.size,
+      leverage: tradeJournalEntries.leverage,
+      stopLoss: tradeJournalEntries.stopLoss,
+      takeProfit: tradeJournalEntries.takeProfit,
+      closePrice: tradeJournalEntries.closePrice,
+      closePnl: tradeJournalEntries.closePnl,
+      closePnlPercent: tradeJournalEntries.closePnlPercent,
+      closeReasoning: tradeJournalEntries.closeReasoning,
+      hitTarget: tradeJournalEntries.hitTarget,
+      hadAdjustments: tradeJournalEntries.hadAdjustments,
+      adjustmentDetails: tradeJournalEntries.adjustmentDetails,
+      whatWentWrong: tradeJournalEntries.whatWentWrong,
+      lessonsLearned: tradeJournalEntries.lessonsLearned,
+      createdAt: tradeJournalEntries.createdAt,
+      activatedAt: tradeJournalEntries.activatedAt,
+      closedAt: tradeJournalEntries.closedAt,
+    })
       .from(tradeJournalEntries)
+      .leftJoin(tradingModes, eq(tradeJournalEntries.tradingModeId, tradingModes.id))
       .where(whereClause)
       .orderBy(desc(tradeJournalEntries.createdAt))
       .limit(limit);

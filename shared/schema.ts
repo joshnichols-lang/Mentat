@@ -368,6 +368,7 @@ export const tradeJournalEntries = pgTable("trade_journal_entries", {
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   tradeId: varchar("trade_id").references(() => trades.id, { onDelete: "cascade" }), // Null for planned trades not yet executed
   evaluationId: varchar("evaluation_id").references(() => tradeEvaluations.id, { onDelete: "set null" }), // Link to evaluation when closed
+  tradingModeId: varchar("trading_mode_id").references(() => tradingModes.id, { onDelete: "set null" }), // Strategy used for this trade
   
   // Trade identification
   symbol: text("symbol").notNull(),
@@ -513,6 +514,7 @@ export type InsertTradeStyleProfile = z.infer<typeof insertTradeStyleProfileSche
 export type TradeStyleProfile = typeof tradeStyleProfiles.$inferSelect;
 export type InsertTradeJournalEntry = z.infer<typeof insertTradeJournalEntrySchema>;
 export type TradeJournalEntry = typeof tradeJournalEntries.$inferSelect;
+export type TradeJournalEntryWithStrategy = TradeJournalEntry & { tradingModeName: string | null };
 export type InsertTradingMode = z.infer<typeof insertTradingModeSchema>;
 export type TradingMode = typeof tradingModes.$inferSelect;
 export type InsertBudgetAlert = z.infer<typeof insertBudgetAlertSchema>;

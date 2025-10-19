@@ -52,7 +52,8 @@ async function createJournalEntry(
   userId: string,
   action: TradingAction,
   orderResult: { success: boolean; executedPrice?: string; response?: any },
-  protectiveActions?: TradingAction[] // Optional protective orders to extract stop loss/take profit
+  protectiveActions?: TradingAction[], // Optional protective orders to extract stop loss/take profit
+  tradingModeId?: string | null // Trading strategy/mode used for this trade
 ): Promise<string | null> {
   try {
     // Only create journal entries for buy/sell actions (not protective orders)
@@ -120,6 +121,7 @@ async function createJournalEntry(
 
     const entryData = {
       tradeId: null, // Will be updated later when position is tracked
+      tradingModeId: tradingModeId || null, // Strategy used for this trade
       symbol: action.symbol,
       side: action.side,
       entryType: "limit" as const,
@@ -354,7 +356,8 @@ async function validatePriceReasonableness(
 
 export async function executeTradeStrategy(
   userId: string,
-  actions: TradingAction[]
+  actions: TradingAction[],
+  tradingModeId?: string | null
 ): Promise<ExecutionSummary> {
   const hyperliquid = await getUserHyperliquidClient(userId);
   const results: ExecutionResult[] = [];
@@ -643,7 +646,7 @@ export async function executeTradeStrategy(
       console.log(`[Trade Executor] ⚠️ DEBUG: Action before execution:`, JSON.stringify(action, null, 2));
       // Get protective actions for this symbol to include in journal entry
       const symbolProtectiveActions = priceValidatedProtectiveGroups.get(action.symbol) || [];
-      const openResult = await executeOpenPosition(hyperliquid, action, userId, useIsolatedMargin, symbolProtectiveActions);
+      const openResult = await executeOpenPosition(hyperliquid, action, userId, useIsolatedMargin, symbolProtectiveActions, tradingModeId);
       results.push(openResult);
       
       if (openResult.success) {
@@ -1087,7 +1090,8 @@ async function executeOpenPosition(
   action: TradingAction,
   userId: string,
   useIsolatedMargin: boolean,
-  protectiveActions?: TradingAction[] // Optional protective orders for this symbol
+  protectiveActions?: TradingAction[], // Optional protective orders for this symbol
+  tradingModeId?: string | null
 ): Promise<ExecutionResult> {
   try {
     // Fetch asset metadata for tick size and size decimals
@@ -1251,7 +1255,7 @@ async function executeOpenPosition(
       success: true,
       executedPrice,
       response: result.response
-    }, protectiveActions);
+    }, protectiveActions, tradingModeId);
     
     return {
       success: true,

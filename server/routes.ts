@@ -139,7 +139,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Only execute trades if in active mode AND autoExecute is enabled
       if (isActiveMode && autoExecute && strategy.actions && strategy.actions.length > 0) {
         try {
-          executionSummary = await executeTradeStrategy(userId, strategy.actions);
+          executionSummary = await executeTradeStrategy(userId, strategy.actions, strategyId || null);
           console.log(`Executed ${executionSummary.successfulExecutions}/${executionSummary.totalActions} trades successfully`);
           
           // Create portfolio snapshot after successful trade execution

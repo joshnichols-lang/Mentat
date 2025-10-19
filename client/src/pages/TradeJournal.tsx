@@ -27,6 +27,8 @@ import Header from "@/components/Header";
 interface TradeJournalEntry {
   id: string;
   tradeId: string | null;
+  tradingModeId: string | null;
+  tradingModeName: string | null;
   symbol: string;
   side: "long" | "short";
   entryType: "limit" | "market";
@@ -288,6 +290,7 @@ export default function TradeJournal() {
                   <TableRow className="border-b-2 border-solid hover:bg-transparent">
                     <TableHead className="uppercase text-xs tracking-wider font-bold">DATE</TableHead>
                     <TableHead className="uppercase text-xs tracking-wider font-bold">SYMBOL</TableHead>
+                    <TableHead className="uppercase text-xs tracking-wider font-bold">STRATEGY</TableHead>
                     <TableHead className="uppercase text-xs tracking-wider font-bold">SIDE</TableHead>
                     <TableHead className="uppercase text-xs tracking-wider font-bold">TYPE</TableHead>
                     <TableHead className="uppercase text-xs tracking-wider font-bold">STATUS</TableHead>
@@ -302,6 +305,7 @@ export default function TradeJournal() {
                         {formatDate(entry.createdAt)}
                       </TableCell>
                       <TableCell className="font-bold" data-testid={`text-symbol-${entry.id}`}>{entry.symbol}</TableCell>
+                      <TableCell className="text-xs" data-testid={`text-strategy-${entry.id}`}>{entry.tradingModeName || "-"}</TableCell>
                       <TableCell>{getSideBadge(entry.side)}</TableCell>
                       <TableCell className="uppercase text-xs" data-testid={`text-type-${entry.id}`}>{entry.entryType}</TableCell>
                       <TableCell>{getStatusBadge(entry.status)}</TableCell>
