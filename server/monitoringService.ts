@@ -1035,6 +1035,88 @@ PRICE VALIDATION CHECKLIST for every limit order:
     console.log(`[Autonomous Trading] Market regime: ${strategy.marketRegime}`);
     console.log(`[Autonomous Trading] Generated ${strategy.actions.length} actions`);
 
+    // ENFORCE MAX POSITIONS CONSTRAINT
+    // Count unique symbols across both filled positions and open entry orders
+    // A symbol with both a position AND entry orders still counts as 1 slot
+    const maxPositions = activeTradingMode.parameters.maxPositions || 3;
+    
+    const occupiedSymbols = new Set<string>();
+    
+    // Add symbols from current positions
+    for (const position of hyperliquidPositions) {
+      const symbol = position.coin.endsWith('-PERP') ? position.coin : `${position.coin}-PERP`;
+      occupiedSymbols.add(symbol);
+    }
+    
+    // Add symbols from open entry orders (buy/sell limit orders that haven't filled yet)
+    for (const order of openOrders) {
+      if ((order.side === 'B' || order.side === 'A') && !order.reduceOnly) {
+        // Normalize symbol to match action format
+        const symbol = order.coin.endsWith('-PERP') ? order.coin : `${order.coin}-PERP`;
+        occupiedSymbols.add(symbol);
+      }
+    }
+    
+    const currentSlotsTaken = occupiedSymbols.size;
+    const availableSlots = Math.max(0, maxPositions - currentSlotsTaken);
+    
+    console.log(`[Position Limit] Max: ${maxPositions}, Occupied symbols: ${Array.from(occupiedSymbols).join(', ')}, Slots taken: ${currentSlotsTaken}, Available: ${availableSlots}`);
+    
+    // Filter entry actions to respect max positions limit
+    let entryActions = strategy.actions.filter(a => a.action === 'buy' || a.action === 'sell');
+    const protectiveActions = strategy.actions.filter(a => a.action === 'stop_loss' || a.action === 'take_profit');
+    const otherActions = strategy.actions.filter(a => 
+      a.action !== 'buy' && a.action !== 'sell' && 
+      a.action !== 'stop_loss' && a.action !== 'take_profit'
+    );
+    
+    // Count unique symbols in entry actions (AI might place multiple scaled orders per symbol)
+    const entrySymbolsMap = new Map<string, typeof entryActions>();
+    for (const action of entryActions) {
+      if (!entrySymbolsMap.has(action.symbol)) {
+        entrySymbolsMap.set(action.symbol, []);
+      }
+      entrySymbolsMap.get(action.symbol)!.push(action);
+    }
+    
+    const uniqueEntrySymbols = Array.from(entrySymbolsMap.keys());
+    
+    if (uniqueEntrySymbols.length > availableSlots) {
+      console.warn(`[Position Limit] AI generated ${uniqueEntrySymbols.length} new position entries, but only ${availableSlots} slots available. Limiting to highest conviction trades.`);
+      
+      // Sort symbols by total reasoning length as proxy for AI conviction
+      // (AI tends to write more detailed reasoning for higher conviction trades)
+      const symbolsByConviction = uniqueEntrySymbols.sort((a, b) => {
+        const aActions = entrySymbolsMap.get(a)!;
+        const bActions = entrySymbolsMap.get(b)!;
+        const aReasoningLength = aActions.reduce((sum, act) => sum + (act.reasoning?.length || 0), 0);
+        const bReasoningLength = bActions.reduce((sum, act) => sum + (act.reasoning?.length || 0), 0);
+        return bReasoningLength - aReasoningLength; // Descending
+      });
+      
+      // Keep only the top N symbols for NEW entries
+      const selectedSymbols = new Set(symbolsByConviction.slice(0, availableSlots));
+      
+      // Filter entry actions to only include selected symbols
+      const filteredEntryActions = entryActions.filter(a => selectedSymbols.has(a.symbol));
+      
+      // CRITICAL: Keep protective actions for:
+      // 1. Selected new entry symbols (being placed now)
+      // 2. Existing position symbols (protective updates for current positions)
+      const allowedProtectiveSymbols = new Set([
+        ...Array.from(selectedSymbols), 
+        ...Array.from(occupiedSymbols)
+      ]);
+      const filteredProtectiveActions = protectiveActions.filter(a => allowedProtectiveSymbols.has(a.symbol));
+      
+      console.log(`[Position Limit] Selected highest conviction symbols for new entries: ${Array.from(selectedSymbols).join(', ')}`);
+      console.log(`[Position Limit] Filtered from ${entryActions.length} to ${filteredEntryActions.length} entry actions`);
+      console.log(`[Position Limit] Keeping protective actions for: new entries + existing positions (${Array.from(allowedProtectiveSymbols).join(', ')})`);
+      
+      // Replace strategy actions with filtered set
+      strategy.actions = [...filteredEntryActions, ...filteredProtectiveActions, ...otherActions];
+    }
+
     // Detect abnormal market conditions (volume spikes)
     const abnormalConditions = detectAbnormalConditions(marketData);
     
