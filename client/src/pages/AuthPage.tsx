@@ -26,7 +26,6 @@ const passwordSchema = z.string()
 const registerSchema = z.object({
   username: z.string().min(3, "Username must be at least 3 characters"),
   password: passwordSchema,
-  email: z.string().email("Invalid email address").or(z.literal("")),
 });
 
 type LoginFormData = z.infer<typeof loginSchema>;
@@ -57,7 +56,6 @@ export default function AuthPage() {
     defaultValues: {
       username: "",
       password: "",
-      email: "",
     },
   });
 
@@ -158,28 +156,6 @@ export default function AuthPage() {
                             disabled={false}
                             readOnly={false}
                             data-testid="input-register-username"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={registerForm.control}
-                    name="email"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="font-mono">Email (optional)</FormLabel>
-                        <FormControl>
-                          <Input
-                            {...field}
-                            type="email"
-                            placeholder="your@email.com"
-                            className="font-mono"
-                            autoComplete="off"
-                            disabled={false}
-                            readOnly={false}
-                            data-testid="input-register-email"
                           />
                         </FormControl>
                         <FormMessage />
