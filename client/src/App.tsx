@@ -13,6 +13,7 @@ import PendingApproval from "@/pages/PendingApproval";
 import AdminVerification from "@/pages/AdminVerification";
 import AdminUsers from "@/pages/AdminUsers";
 import AdminMessages from "@/pages/AdminMessages";
+import Admin from "@/pages/Admin";
 import Settings from "@/pages/Settings";
 import TradeHistory from "@/pages/TradeHistory";
 import TradeJournal from "@/pages/TradeJournal";
@@ -28,6 +29,7 @@ function Router() {
       <ProtectedRoute path="/admin/verification" component={AdminVerification} />
       <ProtectedRoute path="/admin/users" component={AdminUsers} />
       <ProtectedRoute path="/admin/messages" component={AdminMessages} />
+      <ProtectedRoute path="/admin" component={Admin} />
       <ProtectedRoute path="/settings" component={Settings} />
       <ProtectedRoute path="/trade-history" component={TradeHistory} />
       <ProtectedRoute path="/trade-journal" component={TradeJournal} />

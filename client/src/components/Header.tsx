@@ -1,4 +1,4 @@
-import { Wallet, LogOut, UserCheck, Settings, Users, ChevronDown, MessageSquare, History, BookOpen, Target, Home } from "lucide-react";
+import { Wallet, LogOut, UserCheck, Settings, Users, ChevronDown, MessageSquare, History, BookOpen, Target, Home, BarChart3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -71,6 +71,13 @@ export default function Header() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
+                <DropdownMenuItem 
+                  onClick={() => setLocation("/admin")}
+                  data-testid="menu-item-admin-dashboard"
+                >
+                  <BarChart3 className="h-4 w-4 mr-2" />
+                  Dashboard
+                </DropdownMenuItem>
                 <DropdownMenuItem 
                   onClick={() => setLocation("/admin/verification")}
                   data-testid="menu-item-verification"
