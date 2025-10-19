@@ -2188,6 +2188,126 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin routes
+  app.get("/api/admin/usage-stats", requireAdmin, async (req, res) => {
+    try {
+      const stats = await storage.getAdminUsageStats();
+      
+      res.json({
+        success: true,
+        stats
+      });
+    } catch (error: any) {
+      console.error("Error getting admin usage stats:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to get usage statistics"
+      });
+    }
+  });
+
+  app.get("/api/admin/users", requireAdmin, async (req, res) => {
+    try {
+      const users = await storage.getAllUsers();
+      
+      // Remove sensitive data
+      const sanitizedUsers = users.map(user => ({
+        ...user,
+        password: undefined,
+        authProviderId: undefined
+      }));
+      
+      res.json({
+        success: true,
+        users: sanitizedUsers
+      });
+    } catch (error: any) {
+      console.error("Error getting users:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to get users"
+      });
+    }
+  });
+
+  app.patch("/api/admin/users/:userId/role", requireAdmin, async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const { role } = req.body;
+      
+      if (!["user", "admin"].includes(role)) {
+        return res.status(400).json({
+          success: false,
+          error: "Invalid role. Must be 'user' or 'admin'"
+        });
+      }
+      
+      const user = await storage.updateUser(userId, { role });
+      
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          error: "User not found"
+        });
+      }
+      
+      res.json({
+        success: true,
+        user: {
+          ...user,
+          password: undefined,
+          authProviderId: undefined
+        }
+      });
+    } catch (error: any) {
+      console.error("Error updating user role:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to update user role"
+      });
+    }
+  });
+
+  app.get("/api/admin/budget", requireAdmin, async (req, res) => {
+    try {
+      const budget = await storage.getBudgetAlert();
+      
+      res.json({
+        success: true,
+        budget
+      });
+    } catch (error: any) {
+      console.error("Error getting budget alert:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to get budget settings"
+      });
+    }
+  });
+
+  app.post("/api/admin/budget", requireAdmin, async (req, res) => {
+    try {
+      const { monthlyBudget, alertEmail, enableAlerts } = req.body;
+      
+      const budget = await storage.upsertBudgetAlert({
+        monthlyBudget: monthlyBudget ? String(monthlyBudget) : null,
+        alertEmail: alertEmail || null,
+        enableAlerts: enableAlerts ? 1 : 0
+      });
+      
+      res.json({
+        success: true,
+        budget
+      });
+    } catch (error: any) {
+      console.error("Error updating budget alert:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to update budget settings"
+      });
+    }
+  });
+
   const httpServer = createServer(app);
 
   // Initialize market data WebSocket service

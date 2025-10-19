@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type UpsertUser, type Trade, type InsertTrade, type Position, type InsertPosition, type PortfolioSnapshot, type InsertPortfolioSnapshot, type AiUsageLog, type InsertAiUsageLog, type MonitoringLog, type InsertMonitoringLog, type UserApiCredential, type InsertUserApiCredential, type ApiKey, type InsertApiKey, type ContactMessage, type InsertContactMessage, type ProtectiveOrderEvent, type InsertProtectiveOrderEvent, type UserTradeHistoryImport, type InsertUserTradeHistoryImport, type UserTradeHistoryTrade, type InsertUserTradeHistoryTrade, type TradeStyleProfile, type InsertTradeStyleProfile, type TradeJournalEntry, type InsertTradeJournalEntry, type TradingMode, type InsertTradingMode, users, trades, positions, portfolioSnapshots, aiUsageLog, monitoringLog, userApiCredentials, apiKeys, contactMessages, protectiveOrderEvents, userTradeHistoryImports, userTradeHistoryTrades, tradeStyleProfiles, tradeJournalEntries, tradingModes } from "@shared/schema";
+import { type User, type InsertUser, type UpsertUser, type Trade, type InsertTrade, type Position, type InsertPosition, type PortfolioSnapshot, type InsertPortfolioSnapshot, type AiUsageLog, type InsertAiUsageLog, type MonitoringLog, type InsertMonitoringLog, type UserApiCredential, type InsertUserApiCredential, type ApiKey, type InsertApiKey, type ContactMessage, type InsertContactMessage, type ProtectiveOrderEvent, type InsertProtectiveOrderEvent, type UserTradeHistoryImport, type InsertUserTradeHistoryImport, type UserTradeHistoryTrade, type InsertUserTradeHistoryTrade, type TradeStyleProfile, type InsertTradeStyleProfile, type TradeJournalEntry, type InsertTradeJournalEntry, type TradingMode, type InsertTradingMode, type BudgetAlert, type InsertBudgetAlert, users, trades, positions, portfolioSnapshots, aiUsageLog, monitoringLog, userApiCredentials, apiKeys, contactMessages, protectiveOrderEvents, userTradeHistoryImports, userTradeHistoryTrades, tradeStyleProfiles, tradeJournalEntries, tradingModes, budgetAlerts } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql, and, isNull, type SQL } from "drizzle-orm";
 import session from "express-session";
@@ -31,6 +31,7 @@ export interface IStorage {
   updateUserPassword(userId: string, hashedPassword: string): Promise<User | undefined>;
   updateUserWalletAddress(userId: string, walletAddress: string): Promise<User | undefined>;
   updateUserVerificationStatus(userId: string, status: "pending" | "approved" | "rejected"): Promise<User | undefined>;
+  updateUser(userId: string, updates: Partial<User>): Promise<User | undefined>;
   getPendingVerificationUsers(): Promise<User[]>;
   getAllUsers(): Promise<User[]>;
   deleteUser(userId: string): Promise<void>;
@@ -151,6 +152,12 @@ export interface IStorage {
   updateTradingMode(userId: string, id: string, updates: Partial<InsertTradingMode>): Promise<TradingMode | undefined>;
   setActiveTradingMode(userId: string, modeId: string): Promise<TradingMode | undefined>;
   deleteTradingMode(userId: string, id: string): Promise<void>;
+  
+  // Admin methods
+  getAllUsers(): Promise<User[]>;
+  getAdminUsageStats(): Promise<any>;
+  getBudgetAlert(): Promise<BudgetAlert | undefined>;
+  upsertBudgetAlert(data: Partial<InsertBudgetAlert>): Promise<BudgetAlert>;
 }
 
 const PostgresSessionStore = connectPg(session);
@@ -256,6 +263,18 @@ export class DbStorage implements IStorage {
       .set({ 
         verificationStatus: status,
         verifiedAt: status === "approved" ? sql`now()` : null,
+        updatedAt: sql`now()`,
+      })
+      .where(eq(users.id, userId))
+      .returning();
+    return result[0];
+  }
+
+  async updateUser(userId: string, updates: Partial<User>): Promise<User | undefined> {
+    const result = await db
+      .update(users)
+      .set({ 
+        ...updates,
         updatedAt: sql`now()`,
       })
       .where(eq(users.id, userId))
@@ -1011,6 +1030,79 @@ export class DbStorage implements IStorage {
   async deleteTradingMode(userId: string, id: string): Promise<void> {
     await db.delete(tradingModes)
       .where(withUserFilter(tradingModes, userId, eq(tradingModes.id, id)));
+  }
+
+  // Admin methods
+  async getAdminUsageStats(): Promise<any> {
+    // Get counts and aggregations for admin dashboard
+    const totalUsers = await db.select({ count: sql<number>`count(*)::int` })
+      .from(users);
+    
+    const activeUsers = await db.select({ count: sql<number>`count(*)::int` })
+      .from(users)
+      .where(sql`${users.agentMode} = 'active'`);
+    
+    const totalTrades = await db.select({ count: sql<number>`count(*)::int` })
+      .from(trades);
+    
+    const totalAiRequests = await db.select({ count: sql<number>`count(*)::int` })
+      .from(aiUsageLog);
+    
+    const totalMonitoringRuns = await db.select({ count: sql<number>`count(*)::int` })
+      .from(monitoringLog);
+    
+    // Get AI usage by provider in last 30 days
+    const aiUsageByProvider = await db.select({
+      provider: aiUsageLog.provider,
+      count: sql<number>`count(*)::int`,
+      totalTokens: sql<number>`sum(${aiUsageLog.totalTokens})::int`
+    })
+      .from(aiUsageLog)
+      .where(sql`${aiUsageLog.timestamp} > NOW() - INTERVAL '30 days'`)
+      .groupBy(aiUsageLog.provider);
+    
+    // User distribution by monitoring frequency
+    const usersByMonitoringFreq = await db.select({
+      frequency: users.monitoringFrequencyMinutes,
+      count: sql<number>`count(*)::int`
+    })
+      .from(users)
+      .groupBy(users.monitoringFrequencyMinutes);
+    
+    return {
+      totalUsers: totalUsers[0]?.count || 0,
+      activeUsers: activeUsers[0]?.count || 0,
+      totalTrades: totalTrades[0]?.count || 0,
+      totalAiRequests: totalAiRequests[0]?.count || 0,
+      totalMonitoringRuns: totalMonitoringRuns[0]?.count || 0,
+      aiUsageByProvider,
+      usersByMonitoringFreq
+    };
+  }
+
+  async getBudgetAlert(): Promise<BudgetAlert | undefined> {
+    const result = await db.select().from(budgetAlerts).limit(1);
+    return result[0];
+  }
+
+  async upsertBudgetAlert(data: Partial<InsertBudgetAlert>): Promise<BudgetAlert> {
+    // Check if budget alert exists
+    const existing = await this.getBudgetAlert();
+    
+    if (existing) {
+      // Update existing
+      const result = await db.update(budgetAlerts)
+        .set({ ...data, updatedAt: new Date() })
+        .where(eq(budgetAlerts.id, existing.id))
+        .returning();
+      return result[0];
+    } else {
+      // Create new
+      const result = await db.insert(budgetAlerts)
+        .values(data as InsertBudgetAlert)
+        .returning();
+      return result[0];
+    }
   }
 }
 
