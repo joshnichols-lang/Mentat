@@ -50,6 +50,30 @@ export async function comparePasswords(supplied: string, stored: string) {
   return timingSafeEqual(hashedBuf, suppliedBuf);
 }
 
+// Ensure a default admin account exists
+export async function ensureDefaultAdmin() {
+  try {
+    const existingAdmin = await storage.getUserByUsername("admin");
+    if (!existingAdmin) {
+      const defaultPassword = "Admin123!"; // Default password - user should change this
+      const hashedPassword = await hashPassword(defaultPassword);
+      
+      await storage.createUser({
+        username: "admin",
+        password: hashedPassword,
+        email: null,
+        role: "admin",
+        verificationStatus: "approved",
+      });
+      
+      console.log("[Auth] ✓ Created default admin account (username: admin, password: Admin123!)");
+      console.log("[Auth] ⚠️  IMPORTANT: Change the default admin password immediately!");
+    }
+  } catch (error) {
+    console.error("[Auth] Failed to create default admin account:", error);
+  }
+}
+
 export function setupAuth(app: Express) {
   const sessionSettings: session.SessionOptions = {
     secret: process.env.SESSION_SECRET!,
