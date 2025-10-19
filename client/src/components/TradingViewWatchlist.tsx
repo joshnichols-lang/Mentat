@@ -14,20 +14,24 @@ interface TradingViewWatchlistProps {
 function TradingViewWatchlist({ 
   symbols = [
     {
-      proName: "HYPERLIQUID:BTCUSDT.P",
-      title: "BTC/USD"
+      proName: "BINANCE:BTCUSDT.P",
+      title: "BTC/USDT"
     },
     {
-      proName: "HYPERLIQUID:ETHUSDT.P",
-      title: "ETH/USD"
+      proName: "BINANCE:ETHUSDT.P",
+      title: "ETH/USDT"
     },
     {
-      proName: "HYPERLIQUID:SOLUSDT.P",
-      title: "SOL/USD"
+      proName: "BINANCE:SOLUSDT.P",
+      title: "SOL/USDT"
     },
     {
-      proName: "HYPERLIQUID:ARBUSDT.P",
-      title: "ARB/USD"
+      proName: "BINANCE:ARBUSDT.P",
+      title: "ARB/USDT"
+    },
+    {
+      proName: "BINANCE:AVAXUSDT.P",
+      title: "AVAX/USDT"
     }
   ],
   colorTheme = "dark",
@@ -35,9 +39,18 @@ function TradingViewWatchlist({
   height = 400
 }: TradingViewWatchlistProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const widgetInstanceRef = useRef<any>(null);
 
   useEffect(() => {
     if (!containerRef.current) return;
+
+    // Clear any existing content
+    containerRef.current.innerHTML = "";
+
+    // Create widget container
+    const widgetContainer = document.createElement("div");
+    widgetContainer.className = "tradingview-widget-container__widget";
+    containerRef.current.appendChild(widgetContainer);
 
     const script = document.createElement("script");
     script.src = "https://s3.tradingview.com/external-embedding/embed-widget-market-quotes.js";
@@ -48,8 +61,8 @@ function TradingViewWatchlist({
       height: height,
       symbolsGroups: [
         {
-          name: "Hyperliquid Perps",
-          originalName: "Hyperliquid",
+          name: "Crypto Perps",
+          originalName: "Crypto",
           symbols: symbols
         }
       ],
