@@ -646,9 +646,46 @@ Analyze these past prompts to understand the user's:
    
    **BE PATIENT**: Don't chase market - let price come to your strategic levels
 
-2.1. **PRICE PLACEMENT GUIDELINES** (INFORMATIONAL):
-   - Place limit orders based on market structure, support/resistance, and your trading thesis
-   - Consider whether extremely far orders will realistically fill based on market conditions
+2.1. **PRICE PLACEMENT GUIDELINES - CRITICAL REQUIREMENTS**:
+   ⚠️ **MANDATORY PRICE ANCHORING RULES:**
+   
+   **BEFORE placing ANY limit order, you MUST:**
+   1. **Quote the CURRENT MARKET PRICE** for that asset from the "CURRENT MARKET DATA" section above
+   2. **Calculate the % distance** from current price to your intended entry price
+   3. **Justify the distance** using recent price action, ATR, volatility, and market structure
+   4. **Stay within 20% maximum** - Orders beyond 20% from current price will be REJECTED
+   
+   **REQUIRED IN YOUR REASONING:**
+   - Current price: $XXX (from market data)
+   - 24h high/low: $XXX/$XXX
+   - 24h change: +/-X%
+   - Your entry: $XXX (X% from current price)
+   - Justification: "Based on [recent support level / ATR / swing low] at $XXX visible on [1h/4h/daily chart]"
+   
+   **EXAMPLES:**
+   - ✅ GOOD: "SOL current price $190, 24h range $185-$195 (+2.5%). Placing buy @ $184.97 (2.6% below current) near yesterday's low and recent support visible on 4h chart."
+   - ✅ GOOD: "BTC current price $107k, 24h volatility 3.2%. Placing buy @ $105.5k (1.4% below) at swing low from this morning's dip, within 1x ATR."
+   - ❌ BAD: "Placing SOL buy @ $27" (when current price is $190 - this is 85% away!)
+   - ❌ BAD: "Placing BTC buy @ $95k" (when current is $107k - no justification for 11% distance)
+   
+   **PRICE SELECTION DISCIPLINE:**
+   - **Primary method**: Use RECENT price structure (last 1-7 days visible on charts)
+   - **Bias towards current price**: Prefer orders within 1-5% of current price for higher fill probability
+   - **Use volatility as guide**: Higher volatility (>5%) = can go slightly farther, lower volatility (<2%) = stay closer
+   - **Maximum distances** (will be auto-corrected or rejected if exceeded):
+     * Low volatility assets (<2%): Maximum 5-8% from current price
+     * Normal volatility (2-5%): Maximum 8-12% from current price  
+     * High volatility (>5%): Maximum 12-15% from current price
+     * ABSOLUTE HARD LIMIT: 20% (system will REJECT beyond this)
+   
+   **MARKET STRUCTURE ANALYSIS - USE THESE:**
+   - Recent swing highs/lows (visible on 1h, 4h, daily charts)
+   - Previous day's high/low/close  
+   - Round number support/resistance ($100, $1000, etc.)
+   - ATR (Average True Range) - typical daily movement
+   - **DON'T use**: Ancient support from months ago, arbitrary far levels without justification
+   
+   **OTHER REQUIREMENTS:**
    - Hyperliquid requires minimum $10 notional value per order (this is enforced)
 
 3. **TRADE PLANNING EVEN WITH LOW/ZERO BALANCE**:

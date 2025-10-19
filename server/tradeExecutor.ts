@@ -1087,14 +1087,15 @@ async function executeOpenPosition(
         if (Number.isFinite(currentPrice) && currentPrice > 0) {
           const distancePercent = Math.abs((limitPrice - currentPrice) / currentPrice) * 100;
           
-          // HARD LIMIT: Reject orders more than 30% away from current price
+          // HARD LIMIT: Reject orders more than 20% away from current price
           // This is a final safety net to prevent catastrophically bad orders
-          if (distancePercent > 30) {
+          // CRITICAL: Reduced from 30% to 20% to enforce stricter price discipline
+          if (distancePercent > 20) {
             console.error(`[Terminal Guard] 🚨 BLOCKING ORDER: ${action.action} ${action.symbol} @ ${limitPrice} is ${distancePercent.toFixed(1)}% from market price ${currentPrice.toFixed(2)}`);
             return {
               success: false,
               action,
-              error: `Order rejected by terminal safety guard: price ${limitPrice} is ${distancePercent.toFixed(1)}% away from current market price ${currentPrice.toFixed(2)}. This order would have extremely low probability of filling and may indicate a pricing error.`,
+              error: `Order rejected by terminal safety guard: price ${limitPrice} is ${distancePercent.toFixed(1)}% away from current market price ${currentPrice.toFixed(2)}. Maximum allowed distance is 20%. Please use prices closer to current market level based on recent price action, ATR, and market structure.`,
             };
           }
           

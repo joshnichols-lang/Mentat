@@ -246,11 +246,15 @@ export async function analyzeFillProbability(
     // Order is in correct direction (buy below, sell above)
 
     // Base probability on distance from current price
-    // Using volatility-adjusted thresholds (ALL IN PERCENTAGE)
-    const maxRealisticDistance = Math.max(
-      volatilityPercent * 2, // 2x daily volatility (percentage)
-      atrPercent * 3, // 3x ATR as percentage
-      0.5 // Minimum 0.5% for very low volatility assets
+    // Using STRICT volatility-adjusted thresholds (ALL IN PERCENTAGE)
+    // CRITICAL: Reduced thresholds to prevent unrealistic limit orders
+    const maxRealisticDistance = Math.min(
+      Math.max(
+        volatilityPercent * 1.5, // 1.5x daily volatility (reduced from 2x)
+        atrPercent * 2, // 2x ATR as percentage (reduced from 3x)
+        1.0 // Minimum 1.0% for very low volatility assets (increased from 0.5%)
+      ),
+      15.0 // HARD CAP: Never allow more than 15% distance from current price
     );
     
     // CRITICAL: Validate maxRealisticDistance to prevent NaN comparisons
