@@ -433,6 +433,17 @@ export const tradingModes = pgTable("trading_modes", {
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
+// Budget alerts - admin cost monitoring and alerts
+export const budgetAlerts = pgTable("budget_alerts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  monthlyBudget: decimal("monthly_budget", { precision: 10, scale: 2 }), // Alert threshold in dollars
+  alertEmail: text("alert_email"), // Email to send alerts to
+  enableAlerts: integer("enable_alerts").notNull().default(1), // 1 = enabled, 0 = disabled
+  lastAlertSent: timestamp("last_alert_sent"), // When we last sent an alert
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true, updatedAt: true });
 export const upsertUserSchema = createInsertSchema(users).omit({ createdAt: true, updatedAt: true }).partial();
 export const insertTradeSchema = createInsertSchema(trades).omit({ id: true, userId: true, entryTimestamp: true });
@@ -456,6 +467,7 @@ export const insertUserTradeHistoryTradeSchema = createInsertSchema(userTradeHis
 export const insertTradeStyleProfileSchema = createInsertSchema(tradeStyleProfiles).omit({ id: true, userId: true, createdAt: true, updatedAt: true });
 export const insertTradeJournalEntrySchema = createInsertSchema(tradeJournalEntries).omit({ id: true, userId: true, createdAt: true });
 export const insertTradingModeSchema = createInsertSchema(tradingModes).omit({ id: true, userId: true, createdAt: true, updatedAt: true });
+export const insertBudgetAlertSchema = createInsertSchema(budgetAlerts).omit({ id: true, createdAt: true, updatedAt: true });
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type UpsertUser = z.infer<typeof upsertUserSchema>;
@@ -502,3 +514,5 @@ export type InsertTradeJournalEntry = z.infer<typeof insertTradeJournalEntrySche
 export type TradeJournalEntry = typeof tradeJournalEntries.$inferSelect;
 export type InsertTradingMode = z.infer<typeof insertTradingModeSchema>;
 export type TradingMode = typeof tradingModes.$inferSelect;
+export type InsertBudgetAlert = z.infer<typeof insertBudgetAlertSchema>;
+export type BudgetAlert = typeof budgetAlerts.$inferSelect;
