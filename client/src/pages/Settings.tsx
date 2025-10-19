@@ -71,30 +71,30 @@ const MONITORING_FREQUENCIES = [
     value: "0", 
     label: "Disabled", 
     monthlyCost: 0,
-    description: "Manual prompts only (~$0.10-0.30/month)"
+    description: "Manual prompts only (~$0.01-0.05/month)"
   },
   { 
     value: "60", 
     label: "1 hour", 
-    monthlyCost: 0.10,
+    monthlyCost: 0.86,
     description: "~720 cycles/month, ultra-low cost"
   },
   { 
     value: "30", 
     label: "30 minutes", 
-    monthlyCost: 0.40,
+    monthlyCost: 1.73,
     description: "~1,440 cycles/month, very affordable"
   },
   { 
     value: "5", 
     label: "5 minutes", 
-    monthlyCost: 1.40,
+    monthlyCost: 10.37,
     description: "~8,640 cycles/month, cost-effective"
   },
   { 
     value: "1", 
     label: "1 minute", 
-    monthlyCost: 7,
+    monthlyCost: 51.84,
     description: "~43,200 cycles/month, most responsive"
   },
 ];
@@ -378,13 +378,13 @@ export default function Settings() {
                         <strong>Estimated Monthly Cost:</strong> ~${selectedFreqConfig.monthlyCost}/month per user
                       </div>
                       <div className="text-xs text-muted-foreground space-y-1">
-                        <p>💡 <strong>Business Planning Tips (Grok AI - 98% cheaper):</strong></p>
+                        <p>💡 <strong>Business Planning Tips (Grok 4 Fast - 96% cheaper):</strong></p>
                         <ul className="list-disc pl-5 space-y-1">
-                          <li><strong>Starter</strong>: Charge $10-20/month (1-hour monitoring, ~$0.10 cost)</li>
-                          <li><strong>Standard</strong>: Charge $30-50/month (5-min monitoring, ~$1.40 cost)</li>
-                          <li><strong>Premium</strong>: Charge $50-100/month (1-min monitoring, ~$7 cost)</li>
-                          <li><strong>Profit Margins</strong>: 95-99% margins possible with Platform AI</li>
-                          <li><strong>Scale Strategy</strong>: Platform AI now viable for all user tiers</li>
+                          <li><strong>Starter</strong>: Charge $10-20/month (1-hour, ~$0.86 cost = 91-95% margin)</li>
+                          <li><strong>Standard</strong>: Charge $40-60/month (5-min, ~$10.37 cost = 74-83% margin)</li>
+                          <li><strong>Premium</strong>: Charge $100-150/month (1-min, ~$51.84 cost = 48-65% margin)</li>
+                          <li><strong>Scale Economics</strong>: 1,000 Standard users = $10,370 cost, $40k-60k revenue</li>
+                          <li><strong>Profit Strategy</strong>: Push 1-hour/30-min for max margins, upsell to 5-min</li>
                         </ul>
                       </div>
                     </div>
@@ -397,7 +397,7 @@ export default function Settings() {
                   <AlertCircle className="h-4 w-4" />
                   <AlertDescription>
                     <strong>Monitoring Disabled</strong> - The AI agent will only respond to manual prompts. 
-                    This uses minimal AI resources (~$0.10-0.30/month with Grok).
+                    This uses minimal AI resources (~$0.01-0.05/month with Grok).
                   </AlertDescription>
                 </Alert>
               )}
