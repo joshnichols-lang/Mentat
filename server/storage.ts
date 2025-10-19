@@ -151,12 +151,6 @@ export interface IStorage {
   updateTradingMode(userId: string, id: string, updates: Partial<InsertTradingMode>): Promise<TradingMode | undefined>;
   setActiveTradingMode(userId: string, modeId: string): Promise<TradingMode | undefined>;
   deleteTradingMode(userId: string, id: string): Promise<void>;
-  
-  // Watchlist Symbol methods
-  getWatchlistSymbols(userId: string): Promise<WatchlistSymbol[]>;
-  addWatchlistSymbol(userId: string, data: InsertWatchlistSymbol): Promise<WatchlistSymbol>;
-  removeWatchlistSymbol(userId: string, symbol: string): Promise<void>;
-  updateWatchlistSymbolOrder(userId: string, symbol: string, sortOrder: number): Promise<WatchlistSymbol | undefined>;
 }
 
 const PostgresSessionStore = connectPg(session);
@@ -1017,34 +1011,6 @@ export class DbStorage implements IStorage {
   async deleteTradingMode(userId: string, id: string): Promise<void> {
     await db.delete(tradingModes)
       .where(withUserFilter(tradingModes, userId, eq(tradingModes.id, id)));
-  }
-
-  // Watchlist Symbol methods
-  async getWatchlistSymbols(userId: string): Promise<WatchlistSymbol[]> {
-    return db.select()
-      .from(watchlistSymbols)
-      .where(eq(watchlistSymbols.userId, userId))
-      .orderBy(watchlistSymbols.sortOrder);
-  }
-
-  async addWatchlistSymbol(userId: string, data: InsertWatchlistSymbol): Promise<WatchlistSymbol> {
-    const result = await db.insert(watchlistSymbols)
-      .values({ ...data, userId })
-      .returning();
-    return result[0];
-  }
-
-  async removeWatchlistSymbol(userId: string, symbol: string): Promise<void> {
-    await db.delete(watchlistSymbols)
-      .where(withUserFilter(watchlistSymbols, userId, eq(watchlistSymbols.symbol, symbol)));
-  }
-
-  async updateWatchlistSymbolOrder(userId: string, symbol: string, sortOrder: number): Promise<WatchlistSymbol | undefined> {
-    const result = await db.update(watchlistSymbols)
-      .set({ sortOrder })
-      .where(withUserFilter(watchlistSymbols, userId, eq(watchlistSymbols.symbol, symbol)))
-      .returning();
-    return result[0];
   }
 }
 
