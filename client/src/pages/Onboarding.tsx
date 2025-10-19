@@ -484,6 +484,19 @@ export default function Onboarding() {
                   )}
                 />
 
+                <Alert>
+                  <CheckCircle2 className="h-4 w-4" />
+                  <AlertDescription>
+                    <p className="font-medium mb-2">How to get your API wallet address on Hyperliquid:</p>
+                    <ol className="list-decimal list-inside space-y-1 text-sm">
+                      <li>Go to Hyperliquid → Settings → API</li>
+                      <li>Click "Generate" or "Authorize API Wallet"</li>
+                      <li>Copy the API wallet address (starts with "0x")</li>
+                      <li>Paste it above</li>
+                    </ol>
+                  </AlertDescription>
+                </Alert>
+
                 <FormField
                   control={exchangeForm.control}
                   name="confirmedReferral"
@@ -508,19 +521,6 @@ export default function Onboarding() {
                     </FormItem>
                   )}
                 />
-
-                <Alert>
-                  <CheckCircle2 className="h-4 w-4" />
-                  <AlertDescription>
-                    <p className="font-medium mb-2">How to get your API wallet address on Hyperliquid:</p>
-                    <ol className="list-decimal list-inside space-y-1 text-sm">
-                      <li>Go to Hyperliquid → Settings → API</li>
-                      <li>Click "Generate" or "Authorize API Wallet"</li>
-                      <li>Copy the API wallet address (starts with "0x")</li>
-                      <li>Paste it below</li>
-                    </ol>
-                  </AlertDescription>
-                </Alert>
 
                 <div className="flex gap-2 justify-between">
                   <Button
