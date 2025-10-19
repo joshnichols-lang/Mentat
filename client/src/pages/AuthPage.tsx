@@ -1,70 +1,75 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import logoUrl from "@assets/generated-image-removebg-preview_1760665535887.png";
-
-const loginSchema = z.object({
-  username: z.string().min(3, "Username must be at least 3 characters"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
-});
-
-const passwordSchema = z.string()
-  .min(8, "Password must be at least 8 characters long")
-  .max(100, "Password must be less than 100 characters")
-  .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
-  .regex(/[a-z]/, "Password must contain at least one lowercase letter")
-  .regex(/[0-9]/, "Password must contain at least one number")
-  .regex(/[^A-Za-z0-9]/, "Password must contain at least one special character");
-
-const registerSchema = z.object({
-  username: z.string().min(3, "Username must be at least 3 characters"),
-  password: passwordSchema,
-});
-
-type LoginFormData = z.infer<typeof loginSchema>;
-type RegisterFormData = z.infer<typeof registerSchema>;
 
 export default function AuthPage() {
   const [, setLocation] = useLocation();
   const { user, loginMutation, registerMutation } = useAuth();
   const [isLogin, setIsLogin] = useState(true);
+  
+  const [loginUsername, setLoginUsername] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+  
+  const [registerUsername, setRegisterUsername] = useState("");
+  const [registerPassword, setRegisterPassword] = useState("");
+  
+  const [error, setError] = useState("");
 
-  // Redirect if already logged in
   useEffect(() => {
     if (user) {
       setLocation("/");
     }
   }, [user, setLocation]);
 
-  const loginForm = useForm<LoginFormData>({
-    resolver: zodResolver(loginSchema),
-    defaultValues: {
-      username: "",
-      password: "",
-    },
-  });
-
-  const registerForm = useForm<RegisterFormData>({
-    resolver: zodResolver(registerSchema),
-    defaultValues: {
-      username: "",
-      password: "",
-    },
-  });
-
-  const onLogin = async (data: LoginFormData) => {
-    await loginMutation.mutateAsync(data);
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    
+    if (loginUsername.length < 3) {
+      setError("Username must be at least 3 characters");
+      return;
+    }
+    if (loginPassword.length < 6) {
+      setError("Password must be at least 6 characters");
+      return;
+    }
+    
+    try {
+      await loginMutation.mutateAsync({
+        username: loginUsername,
+        password: loginPassword,
+      });
+    } catch (err: any) {
+      setError(err.message || "Login failed");
+    }
   };
 
-  const onRegister = async (data: RegisterFormData) => {
-    await registerMutation.mutateAsync(data);
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    
+    if (registerUsername.length < 3) {
+      setError("Username must be at least 3 characters");
+      return;
+    }
+    
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
+    if (!passwordRegex.test(registerPassword)) {
+      setError("Password must be 8+ chars with uppercase, lowercase, number, and special character");
+      return;
+    }
+    
+    try {
+      await registerMutation.mutateAsync({
+        username: registerUsername,
+        password: registerPassword,
+      });
+    } catch (err: any) {
+      setError(err.message || "Registration failed");
+    }
   };
 
   return (
@@ -87,120 +92,103 @@ export default function AuthPage() {
           </CardHeader>
           <CardContent>
             {isLogin ? (
-              <Form {...loginForm}>
-                <form onSubmit={loginForm.handleSubmit(onLogin)} className="space-y-4">
-                  <FormField
-                    control={loginForm.control}
-                    name="username"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="font-mono">Username</FormLabel>
-                        <FormControl>
-                          <Input
-                            {...field}
-                            placeholder="Enter your username"
-                            className="font-mono"
-                            autoComplete="username"
-                            data-testid="input-login-username"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
+              <form onSubmit={handleLogin} className="space-y-4">
+                <div className="space-y-2">
+                  <label htmlFor="login-username" className="text-sm font-mono">
+                    Username
+                  </label>
+                  <input
+                    id="login-username"
+                    type="text"
+                    value={loginUsername}
+                    onChange={(e) => setLoginUsername(e.target.value)}
+                    placeholder="Enter your username"
+                    className="flex h-9 w-full rounded-none border border-input bg-background px-3 py-2 text-base ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring font-mono"
+                    data-testid="input-login-username"
                   />
-                  <FormField
-                    control={loginForm.control}
-                    name="password"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="font-mono">Password</FormLabel>
-                        <FormControl>
-                          <Input
-                            {...field}
-                            type="password"
-                            placeholder="Enter your password"
-                            className="font-mono"
-                            autoComplete="current-password"
-                            data-testid="input-login-password"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
+                </div>
+                <div className="space-y-2">
+                  <label htmlFor="login-password" className="text-sm font-mono">
+                    Password
+                  </label>
+                  <input
+                    id="login-password"
+                    type="password"
+                    value={loginPassword}
+                    onChange={(e) => setLoginPassword(e.target.value)}
+                    placeholder="Enter your password"
+                    className="flex h-9 w-full rounded-none border border-input bg-background px-3 py-2 text-base ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring font-mono"
+                    data-testid="input-login-password"
                   />
-                  <Button
-                    type="submit"
-                    className="w-full font-mono"
-                    disabled={loginMutation.isPending}
-                    data-testid="button-login"
-                  >
-                    {loginMutation.isPending ? "Signing in..." : "Sign In"}
-                  </Button>
-                </form>
-              </Form>
+                </div>
+                {error && <p className="text-sm text-destructive font-mono">{error}</p>}
+                <Button
+                  type="submit"
+                  className="w-full font-mono"
+                  disabled={loginMutation.isPending}
+                  data-testid="button-login"
+                >
+                  {loginMutation.isPending ? "Signing in..." : "Sign In"}
+                </Button>
+              </form>
             ) : (
-              <Form {...registerForm}>
-                <form onSubmit={registerForm.handleSubmit(onRegister)} className="space-y-4">
-                  <FormField
-                    control={registerForm.control}
-                    name="username"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="font-mono">Username</FormLabel>
-                        <FormControl>
-                          <Input
-                            {...field}
-                            placeholder="Choose a username"
-                            className="font-mono"
-                            autoComplete="off"
-                            disabled={false}
-                            readOnly={false}
-                            data-testid="input-register-username"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
+              <form onSubmit={handleRegister} className="space-y-4">
+                <div className="space-y-2">
+                  <label htmlFor="register-username" className="text-sm font-mono">
+                    Username
+                  </label>
+                  <input
+                    id="register-username"
+                    type="text"
+                    value={registerUsername}
+                    onChange={(e) => setRegisterUsername(e.target.value)}
+                    placeholder="Choose a username"
+                    className="flex h-9 w-full rounded-none border border-input bg-background px-3 py-2 text-base ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring font-mono"
+                    data-testid="input-register-username"
+                    autoComplete="off"
                   />
-                  <FormField
-                    control={registerForm.control}
-                    name="password"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="font-mono">Password</FormLabel>
-                        <FormControl>
-                          <Input
-                            {...field}
-                            type="password"
-                            placeholder="Create a password"
-                            className="font-mono"
-                            autoComplete="new-password"
-                            data-testid="input-register-password"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                        <p className="text-xs text-muted-foreground font-mono mt-1">
-                          Must be 8+ characters with uppercase, lowercase, number, and special character
-                        </p>
-                      </FormItem>
-                    )}
+                </div>
+                <div className="space-y-2">
+                  <label htmlFor="register-password" className="text-sm font-mono">
+                    Password
+                  </label>
+                  <input
+                    id="register-password"
+                    type="password"
+                    value={registerPassword}
+                    onChange={(e) => setRegisterPassword(e.target.value)}
+                    placeholder="Create a password"
+                    className="flex h-9 w-full rounded-none border border-input bg-background px-3 py-2 text-base ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring font-mono"
+                    data-testid="input-register-password"
+                    autoComplete="new-password"
                   />
-                  <Button
-                    type="submit"
-                    className="w-full font-mono"
-                    disabled={registerMutation.isPending}
-                    data-testid="button-register"
-                  >
-                    {registerMutation.isPending ? "Creating account..." : "Create Account"}
-                  </Button>
-                </form>
-              </Form>
+                  <p className="text-xs text-muted-foreground font-mono">
+                    Must be 8+ characters with uppercase, lowercase, number, and special character
+                  </p>
+                </div>
+                {error && <p className="text-sm text-destructive font-mono">{error}</p>}
+                <Button
+                  type="submit"
+                  className="w-full font-mono"
+                  disabled={registerMutation.isPending}
+                  data-testid="button-register"
+                >
+                  {registerMutation.isPending ? "Creating account..." : "Create Account"}
+                </Button>
+              </form>
             )}
 
             <div className="mt-4 text-center">
               <Button
                 variant="ghost"
-                onClick={() => setIsLogin(!isLogin)}
+                onClick={() => {
+                  setIsLogin(!isLogin);
+                  setError("");
+                  setLoginUsername("");
+                  setLoginPassword("");
+                  setRegisterUsername("");
+                  setRegisterPassword("");
+                }}
                 className="font-mono"
                 data-testid="button-toggle-auth"
               >
@@ -227,15 +215,15 @@ export default function AuthPage() {
             </li>
             <li className="flex items-start gap-2">
               <span className="text-primary">▸</span>
-              <span>Multi-exchange trading (Hyperliquid, Binance, Bybit)</span>
+              <span>Autonomous trading with custom strategies</span>
             </li>
             <li className="flex items-start gap-2">
               <span className="text-primary">▸</span>
-              <span>Passive learning mode to teach your AI agent</span>
+              <span>Real-time market analysis and execution</span>
             </li>
             <li className="flex items-start gap-2">
               <span className="text-primary">▸</span>
-              <span>Active autonomous trading when you're ready</span>
+              <span>Advanced risk management and position tracking</span>
             </li>
           </ul>
         </div>
