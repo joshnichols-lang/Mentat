@@ -92,23 +92,42 @@ async function getMarketContext(
     const hyperliquid = await getUserHyperliquidClient(userId);
 
     // Get current market data
-    const marketData = await hyperliquid.getMarketData([symbol]);
+    const allMarketData = await hyperliquid.getMarketData();
     
-    if (!marketData || marketData.length === 0) {
+    if (!allMarketData || allMarketData.length === 0) {
+      console.error(`[Market Context] No market data available`);
+      return null;
+    }
+    
+    // Find data for specific symbol
+    const data = allMarketData.find(d => d.symbol === symbol);
+    
+    if (!data) {
       console.error(`[Market Context] No market data available for ${symbol}`);
       return null;
     }
-
-    const data = marketData[0];
-    const currentPrice = parseFloat(data.price);
+    
+    // CRITICAL: Sanitize all numeric inputs to prevent NaN propagation
+    const rawPrice = parseFloat(data.price);
+    const currentPrice = Number.isFinite(rawPrice) && rawPrice > 0 ? rawPrice : null;
+    
+    if (!currentPrice) {
+      console.error(`[Market Context] Invalid current price for ${symbol}: ${data.price}`);
+      return null;
+    }
     
     // Use 24h stats for volatility estimation
-    const dayChange = parseFloat(data.change24h || "0");
-    const volume24h = parseFloat(data.volume24h || "0");
+    // CRITICAL: Handle NaN from exchange (parseFloat("NaN") === NaN, not 0!)
+    const rawDayChange = parseFloat(data.change24h || "0");
+    const dayChange = Number.isFinite(rawDayChange) ? rawDayChange : 0;
+    
+    const rawVolume = parseFloat(data.volume24h || "0");
+    const volume24h = Number.isFinite(rawVolume) ? rawVolume : 0;
     
     // Estimate volatility from 24h change (simplified)
     // Real volatility would be calculated from candle data
-    const volatilityPercent = Math.abs(dayChange) * 2; // Rough estimate: 2x the 24h move
+    // SAFETY: If dayChange is invalid, assume 5% default volatility
+    const volatilityPercent = dayChange !== 0 ? Math.abs(dayChange) * 2 : 5;
     
     // Estimate ATR as percentage of current price
     // For crypto: typically 2-5% for major assets, higher for altcoins
@@ -121,15 +140,22 @@ async function getMarketContext(
 
     // Estimate spread from current price (typically 0.01-0.1% for liquid pairs)
     const spread = currentPrice * 0.0005; // 0.05% estimate
+    
+    // SAFETY: Validate all outputs
+    const safeVolatility = Number.isFinite(volatilityPercent) && volatilityPercent > 0 
+      ? Math.max(volatilityPercent, 1) 
+      : 5; // Default 5% if invalid
+    
+    const safeATR = Number.isFinite(atr) && atr > 0 ? atr : currentPrice * 0.02; // Default 2% ATR
 
     return {
       currentPrice,
-      volatilityPercent: Math.max(volatilityPercent, 1), // Minimum 1% volatility
-      atr,
+      volatilityPercent: safeVolatility,
+      atr: safeATR,
       spread,
       priceRange24h: {
-        high: high24h,
-        low: low24h,
+        high: Math.max(high24h, currentPrice),
+        low: Math.min(low24h, currentPrice),
       },
     };
   } catch (error) {
@@ -155,14 +181,30 @@ export async function analyzeFillProbability(
   side: "buy" | "sell",
   timeframe: string = "1h"
 ): Promise<FillProbabilityResult> {
-  const context = await getMarketContext(userId, symbol, timeframe);
-
-  if (!context) {
-    // Cannot analyze without context, assume unrealistic
+  // SAFETY: Validate inputs to prevent NaN propagation
+  if (!Number.isFinite(limitPrice) || limitPrice <= 0) {
     return {
       isRealistic: false,
       fillProbability: 0,
-      reason: "Unable to fetch market data for fill probability analysis",
+      reason: `Invalid limit price: ${limitPrice}`,
+      context: {
+        currentPrice: 0,
+        volatilityPercent: 0,
+        atr: 0,
+        spread: 0,
+        priceRange24h: { high: 0, low: 0 },
+      },
+    };
+  }
+  
+  const context = await getMarketContext(userId, symbol, timeframe);
+
+  if (!context) {
+    // FAIL-CLOSED: Cannot analyze without context, reject the order
+    return {
+      isRealistic: false,
+      fillProbability: 0,
+      reason: "Unable to fetch market data for fill probability analysis - order rejected for safety",
       context: {
         currentPrice: limitPrice,
         volatilityPercent: 0,
@@ -210,6 +252,17 @@ export async function analyzeFillProbability(
       atrPercent * 3, // 3x ATR as percentage
       0.5 // Minimum 0.5% for very low volatility assets
     );
+    
+    // CRITICAL: Validate maxRealisticDistance to prevent NaN comparisons
+    if (!Number.isFinite(maxRealisticDistance) || maxRealisticDistance <= 0) {
+      console.error(`[Market Context] Invalid maxRealisticDistance for ${symbol}: ${maxRealisticDistance}`);
+      return {
+        isRealistic: false,
+        fillProbability: 0,
+        reason: `Unable to calculate realistic distance - volatility data may be corrupted`,
+        context,
+      };
+    }
 
     if (distancePercent > maxRealisticDistance) {
       // Order is too far from current price given volatility

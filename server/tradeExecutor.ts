@@ -260,8 +260,12 @@ async function validatePriceReasonableness(
     };
   } catch (error: any) {
     console.error(`[Price Validator] Error validating ${action.symbol}:`, error);
-    // On error, allow the order (fail open rather than blocking trades)
-    return { valid: true };
+    // FAIL-CLOSED: On error, REJECT the order for safety (don't place orders we can't validate)
+    return { 
+      valid: false,
+      reason: `Price validation error: ${error.message || "Unknown error"}`,
+      submittedPrice: limitPrice,
+    };
   }
 }
 
@@ -1070,6 +1074,37 @@ async function executeOpenPosition(
     
     // Validate minimum notional value ($10 USD minimum)
     validateMinimumNotional(size, limitPrice, action.symbol);
+    
+    // TERMINAL GUARD: Final price sanity check before submitting to exchange
+    // This catches any unrealistic prices that made it through earlier validation
+    try {
+      const marketData = await hyperliquid.getMarketData();
+      const assetData = marketData.find((d: any) => d.symbol === action.symbol);
+      
+      if (assetData) {
+        const currentPrice = parseFloat(assetData.price);
+        
+        if (Number.isFinite(currentPrice) && currentPrice > 0) {
+          const distancePercent = Math.abs((limitPrice - currentPrice) / currentPrice) * 100;
+          
+          // HARD LIMIT: Reject orders more than 30% away from current price
+          // This is a final safety net to prevent catastrophically bad orders
+          if (distancePercent > 30) {
+            console.error(`[Terminal Guard] 🚨 BLOCKING ORDER: ${action.action} ${action.symbol} @ ${limitPrice} is ${distancePercent.toFixed(1)}% from market price ${currentPrice.toFixed(2)}`);
+            return {
+              success: false,
+              action,
+              error: `Order rejected by terminal safety guard: price ${limitPrice} is ${distancePercent.toFixed(1)}% away from current market price ${currentPrice.toFixed(2)}. This order would have extremely low probability of filling and may indicate a pricing error.`,
+            };
+          }
+          
+          console.log(`[Terminal Guard] ✓ Price check passed: ${limitPrice} is ${distancePercent.toFixed(2)}% from market ${currentPrice.toFixed(2)}`);
+        }
+      }
+    } catch (error) {
+      console.warn(`[Terminal Guard] Could not perform final price check (continuing):`, error);
+      // Don't block order if we can't check - the earlier validation already passed
+    }
     
     orderParams = {
       coin: action.symbol,  // Use full symbol with -PERP suffix
