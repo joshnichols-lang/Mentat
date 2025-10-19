@@ -11,7 +11,8 @@ Preferred communication style: Simple, everyday language.
 ### Frontend
 **Technology Stack:** React with TypeScript, Vite, Wouter, TanStack Query, Tailwind CSS, and shadcn/ui.
 **Design System:** "Fantastic Mr. Fox" newspaper aesthetic with a grayscale color scheme, "Courier New" typography, newsprint texture, and sharp corners. Dull green/red accents are used for trading elements.
-**Key UI Components:** AI Prompt Panel, TradingView advanced charts, TradingView watchlist widget, Portfolio Performance Chart, Positions Grid, and Conversation History. **Market data is now fully provided by TradingView widgets (no AI API usage)**, eliminating backend API calls for price feeds and reducing overall system load.
+**Key UI Components:** AI Prompt Panel, TradingView advanced charts, Custom Watchlist with Binance price feeds, Portfolio Performance Chart, Positions Grid, and Conversation History.
+**Custom Watchlist System (Oct 19, 2025):** Replaced TradingView's non-interactive watchlist widget with a custom component that fetches real-time prices via Binance WebSocket API. Clicking any symbol in the watchlist instantly updates the TradingView chart through shared React Context (SymbolContext). Features live connection indicator, 10 popular crypto pairs (BTC, ETH, SOL, BNB, ADA, AVAX, DOGE, DOT, MATIC, ARB), and real-time price/change updates. This solution delivers linked watchlist-chart behavior at zero cost, eliminating the need for TradingView's paid Trading Terminal license ($3k-$4k/year).
 
 ### Backend
 **Server Framework:** Express.js with TypeScript, integrated with Vite middleware.
