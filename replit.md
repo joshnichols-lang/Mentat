@@ -17,7 +17,7 @@ Preferred communication style: Simple, everyday language.
 **Server Framework:** Express.js with TypeScript.
 **Database Strategy:** Drizzle ORM with PostgreSQL, including tables for trades, positions, portfolio snapshots, AI usage logs, trade evaluations, strategy learnings, market regime snapshots, and trade history imports.
 **API Design:** RESTful endpoints for trading prompts, database operations, and Hyperliquid exchange interactions.
-**Authentication & Security:** Multi-tenant architecture with Passport.js and PostgreSQL session persistence. AES-256-GCM encryption secures all API keys. Tiered onboarding supports user registration, AI provider choice, and exchange credential setup, with strong password requirements.
+**Authentication & Security:** Multi-tenant architecture with Passport.js and PostgreSQL session persistence. AES-256-GCM encryption secures all API keys. Tiered onboarding supports user registration, AI provider choice, and exchange credential setup, with strong password requirements. **First registered user automatically becomes admin** (for production bootstrap).
 **AI Integration:**
 - **Tiered AI Provider System:** Supports Platform AI (shared key) and Personal AI Key (user-provided Perplexity, OpenAI, or xAI credentials). Platform AI defaults to xAI Grok 4 Fast Reasoning, falling back to Perplexity.
 - **Multi-Provider AI Router:** Supports Perplexity, OpenAI/ChatGPT, and xAI/Grok, handling credential decryption, client creation, and usage tracking.

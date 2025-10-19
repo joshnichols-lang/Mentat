@@ -114,11 +114,19 @@ export function setupAuth(app: Express) {
         return res.status(400).send("Username already exists");
       }
 
+      // Check if this is the first user - if so, make them admin
+      const allUsers = await storage.getAllUsers();
+      const isFirstUser = allUsers.length === 0;
+
       const user = await storage.createUser({
         username: validatedData.username,
         password: await hashPassword(validatedData.password),
         email: validatedData.email || null, // Normalize empty string to null for unique constraint
+        role: isFirstUser ? "admin" : "user", // First user is admin
+        verificationStatus: isFirstUser ? "approved" : "pending", // First user is auto-approved
       });
+
+      console.log(`[Auth] Created ${isFirstUser ? 'FIRST USER (admin)' : 'new user'}: ${user.username}`);
 
       req.login(user, (err) => {
         if (err) return next(err);
