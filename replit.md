@@ -24,6 +24,7 @@ Preferred communication style: Simple, everyday language.
 - **Grok Live Search:** Utilizes Grok's native real-time web browsing capabilities with `mode: "auto"` and `return_citations: true` for market analysis.
 - **Prompt Processing:** "Mr. Fox" processes natural language prompts to generate structured trading strategies, including interpretations, actions, risk management, and numeric values.
 - **Strategy-Scoped Context System:** Each trading strategy maintains independent conversation history and AI context.
+- **Strategy Context Awareness (Oct 19, 2025):** AI prompts now include active trading strategy details (name, description, risk %, max positions, leverage, timeframe, preferred assets, custom rules) when a strategy is selected. This enables the AI to understand and reference strategy constraints when users ask questions about it, ensuring responses align with the active strategy's rules.
 - **AI Price Anchoring:** System prompts require AI to anchor all limit orders to current market prices, quote current price, 24h range, and volatility in reasoning, with maximum 20% distance from current price and bias towards recent price action.
 **Autonomous Trading System:** Multi-tenant system with per-user monitoring loops.
 - **Passive Mode:** Stops automatic monitoring; AI only analyzes market on manual prompts; trades are not executed.
