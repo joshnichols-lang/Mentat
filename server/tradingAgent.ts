@@ -338,12 +338,14 @@ RE-EVALUATE EVERY CYCLE:
 2. If you identify a BETTER opportunity on a DIFFERENT symbol but see many existing orders on one symbol, those old orders are blocking you
 3. Based on the strategy's timeframe (scalp vs swing), assess whether unfilled orders still have reasonable fill probability
 
-WHEN TO CANCEL (Strategy-Aware Margin Optimization):
-Cancel existing orders when ANY of these conditions exist:
-A. **CRITICAL - Over-Concentration Risk**: If >15 unfilled orders exist on ONE symbol, cancel orders with LOWEST probability of filling based on current market conditions (reduces concentration risk, frees margin)
-B. **Better Opportunity Identified**: You identify a higher-conviction trade on a DIFFERENT symbol but have many orders on ONE symbol (diversification benefit)
-C. **Fill Probability Deteriorated**: Market has moved significantly against the order direction, making fill increasingly unlikely given current momentum and the strategy's timeframe expectations
-D. **Market Structure Invalidation**: Key support/resistance levels broken, regime changed, or technical setup no longer valid
+WHEN TO CANCEL (Strategic Margin Reallocation):
+Only cancel existing orders when there's a CLEAR STRATEGIC REASON:
+A. **Better Opportunity Identified**: You've identified a higher-conviction trade on a DIFFERENT symbol, but lack margin. Cancel ONLY enough orders to free margin for the new setup.
+B. **Fill Probability Deteriorated**: Market has moved significantly against the order direction with strong momentum shift, making fill increasingly unlikely given the strategy's timeframe
+C. **Market Structure Invalidation**: Key support/resistance levels broken, regime changed, or technical setup no longer valid
+D. **Margin Needed for Diversification**: Strategy prefers multiple assets but all margin is locked in ONE symbol. Cancel lowest-conviction orders ONLY to enable one new trade, not to clear everything.
+
+CRITICAL: Do NOT cancel orders just because there are "many" orders. If those orders represent valid setups at good price levels per the strategy, KEEP THEM. Only cancel when you need margin for something BETTER.
 
 ACTION SEQUENCE FOR MARGIN OPTIMIZATION:
 1. First, generate cancel_order action(s) for the LOWEST-CONVICTION orders (furthest from price OR on less preferred assets)
