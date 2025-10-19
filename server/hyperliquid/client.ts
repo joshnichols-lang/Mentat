@@ -362,6 +362,91 @@ export class HyperliquidClient {
     }
   }
 
+  async placeBracketOrder(params: {
+    entry: OrderParams;
+    takeProfit?: { triggerPx: string; limitPx?: string };
+    stopLoss?: { triggerPx: string; limitPx?: string };
+  }): Promise<{ success: boolean; response?: any; error?: string }> {
+    try {
+      // Ensure asset maps are initialized before trading
+      await this.ensureInitialized();
+      
+      const orders: any[] = [params.entry];
+      
+      // Add take profit order if provided
+      if (params.takeProfit) {
+        const tpOrder: OrderParams = {
+          coin: params.entry.coin,
+          is_buy: !params.entry.is_buy, // Opposite side to close position
+          sz: params.entry.sz, // Same size as entry
+          limit_px: params.takeProfit.limitPx ? parseFloat(params.takeProfit.limitPx) : parseFloat(params.takeProfit.triggerPx),
+          order_type: {
+            trigger: {
+              triggerPx: params.takeProfit.triggerPx,
+              isMarket: !params.takeProfit.limitPx,
+              tpsl: "tp",
+            },
+          },
+          reduce_only: true,
+        };
+        orders.push(tpOrder);
+      }
+      
+      // Add stop loss order if provided
+      if (params.stopLoss) {
+        const slOrder: OrderParams = {
+          coin: params.entry.coin,
+          is_buy: !params.entry.is_buy, // Opposite side to close position
+          sz: params.entry.sz, // Same size as entry
+          limit_px: params.stopLoss.limitPx ? parseFloat(params.stopLoss.limitPx) : parseFloat(params.stopLoss.triggerPx),
+          order_type: {
+            trigger: {
+              triggerPx: params.stopLoss.triggerPx,
+              isMarket: !params.stopLoss.limitPx,
+              tpsl: "sl",
+            },
+          },
+          reduce_only: true,
+        };
+        orders.push(slOrder);
+      }
+      
+      // Place all orders as a bracket group
+      const response = await this.sdk.exchange.placeOrder({
+        orders,
+        grouping: "normalTpsl",
+      } as any);
+      
+      console.log(`[Hyperliquid] Placed bracket order with ${orders.length} orders (entry + ${params.takeProfit ? 'TP' : ''} ${params.stopLoss ? 'SL' : ''})`);
+      
+      // Check if any order was rejected
+      const statuses = response?.response?.data?.statuses;
+      if (Array.isArray(statuses)) {
+        const errors = statuses.filter((s: any) => 'error' in s);
+        if (errors.length > 0) {
+          const errorMsg = errors.map((e: any) => e.error).join(', ');
+          console.error("One or more bracket orders rejected:", errorMsg);
+          return {
+            success: false,
+            error: errorMsg,
+            response,
+          };
+        }
+      }
+      
+      return {
+        success: true,
+        response,
+      };
+    } catch (error: any) {
+      console.error("Failed to place bracket order:", error);
+      return {
+        success: false,
+        error: error.message || "Failed to place bracket order",
+      };
+    }
+  }
+
   async placeTriggerOrder(params: TriggerOrderParams): Promise<{ success: boolean; response?: any; error?: string }> {
     try {
       // Ensure asset maps are initialized before trading

@@ -1119,7 +1119,30 @@ async function executeOpenPosition(
       reduce_only: false,
     };
 
-    const result = await hyperliquid.placeOrder(orderParams);
+    // Check if we have protective orders to attach (bracket order)
+    let result;
+    const stopLossAction = protectiveActions?.find(a => a.action === "stop_loss");
+    const takeProfitAction = protectiveActions?.find(a => a.action === "take_profit");
+    
+    if (stopLossAction || takeProfitAction) {
+      // Place as bracket order with TP/SL attached
+      console.log(`[Trade Executor] Placing BRACKET ORDER for ${action.symbol} with ${stopLossAction ? 'SL' : ''}${stopLossAction && takeProfitAction ? '+' : ''}${takeProfitAction ? 'TP' : ''}`);
+      
+      result = await hyperliquid.placeBracketOrder({
+        entry: orderParams,
+        takeProfit: takeProfitAction ? {
+          triggerPx: takeProfitAction.triggerPrice!,
+          limitPx: takeProfitAction.triggerPrice, // Use trigger price as limit (can adjust for slippage)
+        } : undefined,
+        stopLoss: stopLossAction ? {
+          triggerPx: stopLossAction.triggerPrice!,
+          limitPx: stopLossAction.triggerPrice, // Use trigger price as limit (can adjust for slippage)
+        } : undefined,
+      });
+    } else {
+      // Place as regular order without TP/SL
+      result = await hyperliquid.placeOrder(orderParams);
+    }
 
     if (!result.success) {
       console.error(`[Trade Executor] Order failed for ${action.symbol}:`, result.error);
