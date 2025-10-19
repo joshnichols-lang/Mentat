@@ -632,8 +632,28 @@ export async function executeTradeStrategy(
 
       // Handle "cancel_order" actions
       if (action.action === "cancel_order") {
+        // Defensive validation: Fail closed if AI omits required fields
+        if (!action.symbol) {
+          const errorMsg = `cancel_order action missing required 'symbol' field. Action: ${JSON.stringify(action)}`;
+          console.error(`[Trade Executor] ${errorMsg}`);
+          results.push({
+            success: false,
+            action,
+            error: errorMsg,
+          });
+          failCount++;
+          continue;
+        }
         if (!action.orderId) {
-          throw new Error("orderId is required for cancel_order action");
+          const errorMsg = `cancel_order action missing required 'orderId' field. Action: ${JSON.stringify(action)}`;
+          console.error(`[Trade Executor] ${errorMsg}`);
+          results.push({
+            success: false,
+            action,
+            error: errorMsg,
+          });
+          failCount++;
+          continue;
         }
         
         const cancelResult = await hyperliquid.cancelOrder({
