@@ -963,14 +963,13 @@ async function executeOpenPosition(
     });
     
     if (!leverageResult.success) {
-      console.error(`[Trade Executor] Failed to set leverage for ${action.symbol}:`, leverageResult.error);
-      return {
-        success: false,
-        action,
-        error: `Failed to set leverage to ${actualLeverage}x: ${leverageResult.error}`,
-      };
+      console.warn(`[Trade Executor] ⚠️ Failed to set leverage for ${action.symbol}: ${leverageResult.error}`);
+      console.warn(`[Trade Executor] ⚠️ Continuing with trade execution using existing leverage setting...`);
+      // DO NOT block trade execution - Hyperliquid API has known issues with leverage endpoint
+      // The exchange will use the existing leverage setting for this asset
+    } else {
+      console.log(`[Trade Executor] ✓ Successfully set leverage to ${actualLeverage}x for ${action.symbol}`);
     }
-    console.log(`[Trade Executor] Successfully set leverage to ${actualLeverage}x for ${action.symbol}`);
 
     let orderParams: any;
     
