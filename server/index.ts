@@ -89,8 +89,19 @@ app.use((req, res, next) => {
             ? user.monitoringFrequencyMinutes 
             : 5;
           
-          await startUserMonitoring(user.id, intervalMinutes);
-          log(`[Startup] ✓ Started monitoring for user ${user.id} (${intervalMinutes} min interval)`);
+          // Check when the last monitoring run was to avoid spamming alerts on server restarts
+          const lastLog = await storage.getLatestMonitoringLog(user.id);
+          const now = new Date();
+          const shouldRunImmediately = !lastLog || 
+            (now.getTime() - new Date(lastLog.timestamp).getTime()) >= (intervalMinutes * 60 * 1000);
+          
+          await startUserMonitoring(user.id, intervalMinutes, shouldRunImmediately);
+          
+          if (shouldRunImmediately) {
+            log(`[Startup] ✓ Started monitoring for user ${user.id} (${intervalMinutes} min interval) - running immediately`);
+          } else {
+            log(`[Startup] ✓ Started monitoring for user ${user.id} (${intervalMinutes} min interval) - waiting for next interval`);
+          }
         } catch (error: any) {
           log(`[Startup] ✗ Failed to start monitoring for user ${user.id}: ${error.message}`);
           // Continue to next user even if one fails
