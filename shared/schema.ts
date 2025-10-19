@@ -433,22 +433,6 @@ export const tradingModes = pgTable("trading_modes", {
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
-// Watchlist symbols - user's customized market watchlist
-export const watchlistSymbols = pgTable(
-  "watchlist_symbols",
-  {
-    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-    userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-    symbol: text("symbol").notNull(), // Symbol code (e.g., "BTC", "ETH", "SOL")
-    displayName: text("display_name").notNull(), // Human-readable name (e.g., "Bitcoin", "Ethereum")
-    binanceSymbol: text("binance_symbol").notNull(), // Binance API symbol (e.g., "btcusdt")
-    tradingViewSymbol: text("trading_view_symbol").notNull(), // TradingView symbol (e.g., "BINANCE:BTCUSDT")
-    sortOrder: integer("sort_order").notNull().default(0), // User-defined order in watchlist
-    createdAt: timestamp("created_at").notNull().defaultNow(),
-  },
-  (table) => [uniqueIndex("unique_user_symbol").on(table.userId, table.symbol)],
-);
-
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true, updatedAt: true });
 export const upsertUserSchema = createInsertSchema(users).omit({ createdAt: true, updatedAt: true }).partial();
 export const insertTradeSchema = createInsertSchema(trades).omit({ id: true, userId: true, entryTimestamp: true });
@@ -472,7 +456,6 @@ export const insertUserTradeHistoryTradeSchema = createInsertSchema(userTradeHis
 export const insertTradeStyleProfileSchema = createInsertSchema(tradeStyleProfiles).omit({ id: true, userId: true, createdAt: true, updatedAt: true });
 export const insertTradeJournalEntrySchema = createInsertSchema(tradeJournalEntries).omit({ id: true, userId: true, createdAt: true });
 export const insertTradingModeSchema = createInsertSchema(tradingModes).omit({ id: true, userId: true, createdAt: true, updatedAt: true });
-export const insertWatchlistSymbolSchema = createInsertSchema(watchlistSymbols).omit({ id: true, userId: true, createdAt: true });
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type UpsertUser = z.infer<typeof upsertUserSchema>;
@@ -519,5 +502,3 @@ export type InsertTradeJournalEntry = z.infer<typeof insertTradeJournalEntrySche
 export type TradeJournalEntry = typeof tradeJournalEntries.$inferSelect;
 export type InsertTradingMode = z.infer<typeof insertTradingModeSchema>;
 export type TradingMode = typeof tradingModes.$inferSelect;
-export type InsertWatchlistSymbol = z.infer<typeof insertWatchlistSymbolSchema>;
-export type WatchlistSymbol = typeof watchlistSymbols.$inferSelect;
