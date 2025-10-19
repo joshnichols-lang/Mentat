@@ -307,28 +307,30 @@ export async function createPortfolioSnapshot(userId: string, hyperliquid: Hyper
     // Calculate total value (account value from user state)
     const totalValue = userState.marginSummary?.accountValue || "0";
 
-    // Calculate total PnL from positions
-    let totalPnl = 0;
-    for (const position of positions) {
-      const pnl = parseFloat(position.unrealizedPnl || "0");
-      totalPnl += pnl;
-    }
-
-    // Get trade statistics from database
+    // Calculate REALIZED PnL from closed trades ONLY (not unrealized PnL from open positions)
+    // This ensures metrics only reflect completed trades
     const trades = await storage.getTrades(userId);
     const closedTrades = trades.filter(t => t.status === 'closed');
+    
+    // Sum realized PnL from closed trades only
+    let totalPnl = 0;
+    for (const trade of closedTrades) {
+      const pnl = parseFloat(trade.pnl || "0");
+      totalPnl += pnl;
+    }
+    
     const numTrades = closedTrades.length;
     const numWins = closedTrades.filter(t => {
       const pnl = parseFloat(t.pnl || "0");
       return pnl > 0;
     }).length;
 
-    // Calculate risk ratios from recent snapshots INCLUDING current value
-    // Use time-based query (6 hours) to ensure we have enough data for Calmar ratio (requires 1+ hour)
-    const recentSnapshots = await storage.getPortfolioSnapshotsSince(userId, 6); // Last 6 hours
+    // Calculate risk ratios from ALL snapshots (cumulative), not just recent ones
+    // This ensures the graph shows true cumulative performance over the entire trading history
+    const allSnapshots = await storage.getPortfolioSnapshots(userId, 10000); // Get all snapshots (up to 10k)
     
     // Add current snapshot to the end (it's the newest) for accurate ratio calculation
-    const snapshotsWithCurrent = [...recentSnapshots, {
+    const snapshotsWithCurrent = [...allSnapshots, {
       totalValue,
       totalPnl: totalPnl.toFixed(8),
       timestamp: new Date(),

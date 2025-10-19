@@ -39,7 +39,8 @@ Preferred communication style: Simple, everyday language.
 **Trade History Import & Analysis System:** Allows users to upload CSV trade history for AI-powered style analysis, extracting patterns, calculating metrics, classifying trading style, and generating insights.
 **Trade Journal System:** Automatically documents trade entries with AI reasoning, expectations (SL, TP, R:R), and metadata. Updates journal entries on trade close with AI-generated analysis, providing a dedicated UI page for review and pattern recognition.
 **Trading Modes (Strategies):** User-defined strategies with customizable parameters (name, description, timeframe, risk %, max positions, leverage, preferred assets, custom rules). Only one strategy can be active at a time.
-**Core Features:** Autonomous trading engine, order management, configurable monitoring frequency, enhanced performance metrics (Sharpe, Sortino, Calmar, etc.), and trading controls.
+**Core Features:** Autonomous trading engine, order management, configurable monitoring frequency, enhanced performance metrics (Sharpe, Sortino, Calmar, Sterling, Omega), and trading controls.
+**Performance Metrics (Fixed Oct 19, 2025):** All metrics now calculated using cumulative data from all snapshots (not sliding 6-hour window), and only include realized PnL from closed trades (not unrealized PnL from open positions). This ensures graphs display correctly and match current values shown in the UI.
 
 ## External Dependencies
 
