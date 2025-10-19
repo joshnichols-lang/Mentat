@@ -7,6 +7,7 @@ import { promisify } from "util";
 import { storage } from "./storage";
 import { User as SelectUser } from "@shared/schema";
 import { z } from "zod";
+import { stopUserMonitoring } from "./userMonitoringManager";
 
 // Validation schemas for auth requests
 const loginSchema = z.object({
@@ -287,6 +288,10 @@ export function setupAuth(app: Express) {
       if (userId === currentUser.id) {
         return res.status(400).json({ error: "Cannot delete your own account" });
       }
+      
+      // Stop any active monitoring for this user BEFORE deleting
+      console.log(`[User Deletion] Stopping monitoring for user ${userId} before deletion...`);
+      await stopUserMonitoring(userId);
       
       await storage.deleteUser(userId);
       res.json({ success: true, message: "User deleted successfully" });
