@@ -340,10 +340,10 @@ RE-EVALUATE EVERY CYCLE:
 
 WHEN TO CANCEL (Be Aggressive About Margin Optimization):
 Cancel existing orders when ANY of these conditions exist:
-A. You identify a higher-conviction trade on a DIFFERENT symbol but have many orders on ONE symbol (diversification benefit)
-B. Existing order is >5% from current price with low fill probability in current momentum
-C. Market structure has invalidated the original setup (support/resistance broken, regime changed)
-D. You see >15 unfilled orders on one symbol - this indicates over-concentration blocking diversification
+A. **CRITICAL - Over-Concentration Risk**: If >15 unfilled orders exist on ONE symbol, you MUST cancel the orders furthest from current price EVEN IF you don't have a specific alternative trade yet (reduces concentration risk, frees margin for future opportunities)
+B. You identify a higher-conviction trade on a DIFFERENT symbol but have many orders on ONE symbol (diversification benefit)
+C. Existing order is >5% from current price with low fill probability in current momentum  
+D. Market structure has invalidated the original setup (support/resistance broken, regime changed)
 
 ACTION SEQUENCE FOR MARGIN OPTIMIZATION:
 1. First, generate cancel_order action(s) for the LOWEST-CONVICTION orders (furthest from price OR on less preferred assets)
@@ -357,9 +357,10 @@ If you see:
 - Action: Cancel 3-5 HYPE orders furthest from current price, THEN place SOL order
 
 RULES FOR CANCEL_ORDER:
-- Use specific orderId from the "Open entry orders" list
-- Include the order's price and symbol in reasoning for transparency  
-- State the NEW trade you're prioritizing and why it's superior
+- **REQUIRED FIELDS**: symbol (e.g., "HYPE-PERP"), orderId (from open orders list), reasoning
+- The "symbol" field MUST match the symbol from the order you're canceling (check "Open entry orders" list)
+- Include the order's price in reasoning for transparency (e.g., "order at $35.5, 5% from current")
+- State why canceling and what you're prioritizing instead
 - NEVER cancel protective orders (reduceOnly: true) - only cancel entry orders
 
 CRITICAL RULES:

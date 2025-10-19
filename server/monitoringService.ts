@@ -865,34 +865,48 @@ Analyze these past prompts to understand the user's:
    - Only return empty actions if truly NO opportunities exist across the entire market
 
 16. **ADAPTIVE ORDER MANAGEMENT - INTELLIGENT ORDER CANCELLATION**:
-   **CRITICAL**: You can cancel existing unfilled entry orders ONLY when you identify HIGHER-PROBABILITY trades that require the locked margin.
+   **CRITICAL**: Unfilled entry orders LOCK UP MARGIN even if not filled. You MUST actively manage margin allocation for optimal diversification and opportunity capture.
    
-   **EVALUATION PROCESS**:
+   **MARGIN ALLOCATION PRIORITY**:
+   - Each unfilled limit order reserves margin based on order size × leverage
+   - If you have many unfilled orders on ONE symbol (e.g., 25 orders on HYPE-PERP) and want to trade OTHER symbols, you MUST cancel low-conviction orders first
+   - Available balance does NOT equal free margin - unfilled orders consume margin allocation
+   - Over-concentration on one symbol blocks diversification and reduces Sharpe ratio
+   
+   **RE-EVALUATE EVERY CYCLE**:
    - Review "EXISTING OPEN ORDERS" section for unfilled entry orders (non-protective limit orders)
-   - Compare existing orders against new opportunities you've identified
-   - Only cancel when the NEW setup is demonstrably superior to the EXISTING setup
+   - Do existing orders represent the HIGHEST-PROBABILITY trades RIGHT NOW?
+   - If you identify a BETTER opportunity on a DIFFERENT symbol but see many existing orders on one symbol, those old orders are BLOCKING you
+   - Are orders far from current price (>3% away) unlikely to fill soon in current market conditions?
    
-   **WHEN TO CANCEL** (cite specific metrics in reasoning):
+   **WHEN TO CANCEL** (Be Aggressive About Margin Optimization - cite specific metrics):
+   Cancel existing orders when ANY of these conditions exist:
+   - ✅ **CRITICAL - Over-Concentration Risk**: If >15 unfilled orders exist on ONE symbol, you MUST cancel the orders furthest from current price EVEN IF you don't have a specific alternative trade yet
+     * Example: "25 HYPE-PERP orders at $35.5-$38.0. Current price $37.5. Canceling 5 orders furthest from price (orders at $35.5, $35.6, $35.7 = 5-6% away) to free margin for future diversification opportunities. This reduces over-concentration risk and improves portfolio Sharpe ratio."
+     * MANDATORY: If strategy has >5 preferred assets but all orders are on 1 symbol, cancel lowest-conviction orders to enable diversification
+   - ✅ **Diversification Benefit**: You identify a higher-conviction trade on a DIFFERENT symbol but have >10 orders on ONE symbol  
+     * Example: "25 HYPE-PERP orders blocking margin. Canceling 5 orders furthest from price ($35.5-$36.0, 6-8% away) to free margin for SOL-PERP setup with superior 3:1 R:R"
    - ✅ **Market Structure Invalidation**: Key support/resistance level has been broken, invalidating the setup
      * Example: "SOL buy at $185 support. Price now at $179 - support broken. Canceling to reallocate to BTC long at new support $104k"
    - ✅ **Superior Setup Identified**: New opportunity has significantly better risk/reward or technical confluence
      * Example: "Existing ETH long R:R 2:1. New BTC setup offers 4:1 R:R with triple confluence (support + volume + trend). Canceling ETH to enter BTC"
-   - ✅ **Volume/Momentum Shift**: Market dynamics have fundamentally changed
-     * Example: "WIF order placed during consolidation. Market now shows strong bearish momentum with 3x volume spike. Canceling to preserve capital"
-   - ✅ **Fill Probability Deterioration**: Price has moved away making fill increasingly unlikely within strategy timeframe
-     * Example: "DOGE limit buy at $0.28 placed yesterday. Current price $0.35 (+25%). Order now 25% away - unlikely to fill. Canceling to free margin"
+   - ✅ **Fill Probability Deterioration**: Order is >5% from current price with low fill probability in current momentum
+     * Example: "DOGE limit buy at $0.28 placed. Current price $0.35 (+25%). Order now 25% away - unlikely to fill. Canceling to free margin"
    
    **WHEN NOT TO CANCEL** (preserve working orders):
-   - ❌ Time-based reasoning alone (e.g., "order is 5 minutes old")
-   - ❌ Distance from current price alone without context (price could retrace)
-   - ❌ Vague "better opportunity" without quantifiable metrics
-   - ❌ Personal preference or "feels" without objective analysis
+   - ❌ Time-based reasoning alone (e.g., "order is 5 minutes old") without other factors
    - ❌ Protective orders (stop loss/take profit) - NEVER cancel these to "optimize"
+   
+   **ACTION SEQUENCE FOR MARGIN OPTIMIZATION**:
+   1. First, generate cancel_order action(s) for the LOWEST-CONVICTION orders (furthest from price OR on over-represented symbols)
+   2. Then, generate your NEW buy/sell action for the higher-probability trade
+   3. In reasoning, cite: "Canceling order [ID] at $[price] ([X]% from current) to free margin for [NEW SYMBOL] which has [superior catalyst/setup]"
    
    **CANCELLATION ACTION FORMAT**:
    {
      "action": "cancel_order",
-     "orderId": 123456,
+     "symbol": "HYPE-PERP",  // REQUIRED - must match the symbol from the open order you're canceling
+     "orderId": 123456,  // REQUIRED - from "Open entry orders" list
      "reasoning": "CITE SPECIFIC THRESHOLD: [metric that failed]. Current value: [X]. Supporting evidence: [market data]. Reallocating margin to [new setup] with [quantified advantage]"
    }
    
