@@ -9,15 +9,24 @@ import { User as SelectUser } from "@shared/schema";
 import { z } from "zod";
 import { stopUserMonitoring } from "./userMonitoringManager";
 
+// Strong password validation schema
+const passwordSchema = z.string()
+  .min(8, "Password must be at least 8 characters long")
+  .max(100, "Password must be less than 100 characters")
+  .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
+  .regex(/[a-z]/, "Password must contain at least one lowercase letter")
+  .regex(/[0-9]/, "Password must contain at least one number")
+  .regex(/[^A-Za-z0-9]/, "Password must contain at least one special character");
+
 // Validation schemas for auth requests
 const loginSchema = z.object({
   username: z.string().min(3).max(50),
-  password: z.string().min(6).max(100),
+  password: z.string().min(6).max(100), // Login accepts any password to check against stored hash
 });
 
 const registerSchema = z.object({
   username: z.string().min(3).max(50),
-  password: z.string().min(6).max(100),
+  password: passwordSchema,
   email: z.string().email("Invalid email address").or(z.literal("")),
 });
 
@@ -312,7 +321,7 @@ export function setupAuth(app: Express) {
 
       const createUserSchema = z.object({
         username: z.string().min(3).max(50),
-        password: z.string().min(6).max(100),
+        password: passwordSchema,
         email: z.string().email("Invalid email address").optional(),
         autoApprove: z.boolean().optional(),
       });

@@ -15,7 +15,17 @@ const loginSchema = z.object({
   password: z.string().min(6, "Password must be at least 6 characters"),
 });
 
-const registerSchema = loginSchema.extend({
+const passwordSchema = z.string()
+  .min(8, "Password must be at least 8 characters long")
+  .max(100, "Password must be less than 100 characters")
+  .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
+  .regex(/[a-z]/, "Password must contain at least one lowercase letter")
+  .regex(/[0-9]/, "Password must contain at least one number")
+  .regex(/[^A-Za-z0-9]/, "Password must contain at least one special character");
+
+const registerSchema = z.object({
+  username: z.string().min(3, "Username must be at least 3 characters"),
+  password: passwordSchema,
   email: z.string().email("Invalid email address").or(z.literal("")),
 });
 
@@ -189,6 +199,9 @@ export default function AuthPage() {
                           />
                         </FormControl>
                         <FormMessage />
+                        <p className="text-xs text-muted-foreground font-mono mt-1">
+                          Must be 8+ characters with uppercase, lowercase, number, and special character
+                        </p>
                       </FormItem>
                     )}
                   />

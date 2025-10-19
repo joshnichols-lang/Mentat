@@ -8,10 +8,14 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { CheckCircle2, XCircle, Clock, AlertCircle, Trash2, Shield, User, UserPlus } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import Header from "@/components/Header";
 import { useState } from "react";
 
@@ -31,15 +35,36 @@ interface UserData {
   };
 }
 
+const passwordSchema = z.string()
+  .min(8, "Password must be at least 8 characters long")
+  .max(100, "Password must be less than 100 characters")
+  .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
+  .regex(/[a-z]/, "Password must contain at least one lowercase letter")
+  .regex(/[0-9]/, "Password must contain at least one number")
+  .regex(/[^A-Za-z0-9]/, "Password must contain at least one special character");
+
+const createUserSchema = z.object({
+  username: z.string().min(3, "Username must be at least 3 characters").max(50),
+  password: passwordSchema,
+  email: z.string().email("Invalid email address").or(z.literal("")),
+  autoApprove: z.boolean(),
+});
+
+type CreateUserFormData = z.infer<typeof createUserSchema>;
+
 export default function AdminUsers() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
-  const [newUserData, setNewUserData] = useState({
-    username: "",
-    password: "",
-    email: "",
-    autoApprove: true,
+
+  const createUserForm = useForm<CreateUserFormData>({
+    resolver: zodResolver(createUserSchema),
+    defaultValues: {
+      username: "",
+      password: "",
+      email: "",
+      autoApprove: true,
+    },
   });
 
   const { data: allUsers, isLoading, error } = useQuery<UserData[]>({
@@ -48,14 +73,14 @@ export default function AdminUsers() {
   });
 
   const createUserMutation = useMutation({
-    mutationFn: async (data: typeof newUserData) => {
+    mutationFn: async (data: CreateUserFormData) => {
       const response = await apiRequest("POST", "/api/admin/users/create", data);
       return response.json();
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
       setCreateDialogOpen(false);
-      setNewUserData({ username: "", password: "", email: "", autoApprove: true });
+      createUserForm.reset();
       toast({
         title: "User Created",
         description: data.message || "New user created successfully",
@@ -91,9 +116,8 @@ export default function AdminUsers() {
     },
   });
 
-  const handleCreateUser = (e: React.FormEvent) => {
-    e.preventDefault();
-    createUserMutation.mutate(newUserData);
+  const onCreateUser = async (data: CreateUserFormData) => {
+    await createUserMutation.mutateAsync(data);
   };
 
   if (user?.role !== "admin") {
@@ -166,82 +190,104 @@ export default function AdminUsers() {
                   Create a new user account manually. Perfect for beta testers or pre-approved users.
                 </DialogDescription>
               </DialogHeader>
-              <form onSubmit={handleCreateUser} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="username">Username *</Label>
-                  <Input
-                    id="username"
-                    value={newUserData.username}
-                    onChange={(e) => setNewUserData({ ...newUserData, username: e.target.value })}
-                    placeholder="betauser1"
-                    required
-                    minLength={3}
-                    maxLength={50}
-                    data-testid="input-username"
+              <Form {...createUserForm}>
+                <form onSubmit={createUserForm.handleSubmit(onCreateUser)} className="space-y-4">
+                  <FormField
+                    control={createUserForm.control}
+                    name="username"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Username *</FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            placeholder="betauser1"
+                            data-testid="input-username"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
                   />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="password">Password *</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    value={newUserData.password}
-                    onChange={(e) => setNewUserData({ ...newUserData, password: e.target.value })}
-                    placeholder="Minimum 6 characters"
-                    required
-                    minLength={6}
-                    maxLength={100}
-                    data-testid="input-password"
+                  <FormField
+                    control={createUserForm.control}
+                    name="password"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Password *</FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            type="password"
+                            placeholder="Create a strong password"
+                            data-testid="input-password"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                        <p className="text-xs text-muted-foreground">
+                          Must be 8+ characters with uppercase, lowercase, number, and special character. Provide this password to the user securely.
+                        </p>
+                      </FormItem>
+                    )}
                   />
-                  <p className="text-xs text-muted-foreground">
-                    Provide this password to the user securely
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email (Optional)</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={newUserData.email}
-                    onChange={(e) => setNewUserData({ ...newUserData, email: e.target.value })}
-                    placeholder="user@example.com"
-                    data-testid="input-email"
+                  <FormField
+                    control={createUserForm.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Email (Optional)</FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            type="email"
+                            placeholder="user@example.com"
+                            data-testid="input-email"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
                   />
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="autoApprove"
-                    checked={newUserData.autoApprove}
-                    onCheckedChange={(checked) => 
-                      setNewUserData({ ...newUserData, autoApprove: checked as boolean })
-                    }
-                    data-testid="checkbox-auto-approve"
+                  <FormField
+                    control={createUserForm.control}
+                    name="autoApprove"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center space-x-2">
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                            data-testid="checkbox-auto-approve"
+                          />
+                        </FormControl>
+                        <FormLabel className="text-sm cursor-pointer !mt-0">
+                          Auto-approve user (skip verification)
+                        </FormLabel>
+                      </FormItem>
+                    )}
                   />
-                  <Label htmlFor="autoApprove" className="text-sm cursor-pointer">
-                    Auto-approve user (skip verification)
-                  </Label>
-                </div>
-                <DialogFooter>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => {
-                      setCreateDialogOpen(false);
-                      setNewUserData({ username: "", password: "", email: "", autoApprove: true });
-                    }}
-                    data-testid="button-cancel"
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    type="submit"
-                    disabled={createUserMutation.isPending}
-                    data-testid="button-submit"
-                  >
-                    {createUserMutation.isPending ? "Creating..." : "Create User"}
-                  </Button>
-                </DialogFooter>
-              </form>
+                  <DialogFooter>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        setCreateDialogOpen(false);
+                        createUserForm.reset();
+                      }}
+                      data-testid="button-cancel"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="submit"
+                      disabled={createUserMutation.isPending}
+                      data-testid="button-submit"
+                    >
+                      {createUserMutation.isPending ? "Creating..." : "Create User"}
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </Form>
             </DialogContent>
           </Dialog>
         </div>
