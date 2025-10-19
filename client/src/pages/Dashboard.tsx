@@ -12,7 +12,6 @@ import PortfolioPerformanceChart from "@/components/PortfolioPerformanceChart";
 import SharpeRatioChart from "@/components/SharpeRatioChart";
 import { AIUsageTracker } from "@/components/AIUsageTracker";
 import ConversationHistory from "@/components/ConversationHistory";
-import { MonitoringAlerts } from "@/components/MonitoringAlerts";
 
 export default function Dashboard() {
   const [, setLocation] = useLocation();
@@ -69,9 +68,6 @@ export default function Dashboard() {
 
             {/* Conversation History */}
             <ConversationHistory />
-
-            {/* Automated Monitoring Alerts */}
-            <MonitoringAlerts />
 
             {/* TradingView Chart */}
             <TradingViewChart height={500} />
