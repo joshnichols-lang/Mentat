@@ -220,6 +220,17 @@ You also happen to be an expert crypto trader, but the user is asking you a gene
       };
     }
 
+    // Fetch the trading strategy details if strategyId is provided
+    let strategyDetails: any = null;
+    if (strategyId) {
+      try {
+        strategyDetails = await storage.getTradingMode(userId, strategyId);
+      } catch (strategyError) {
+        console.error("Failed to fetch strategy details:", strategyError);
+        // Continue without strategy details
+      }
+    }
+
     // Fetch recent user prompt history (last 5 successful prompts) - filtered by strategyId
     let promptHistory: {timestamp: Date, prompt: string}[] = [];
     try {
@@ -325,7 +336,25 @@ Output real-time executed trades with professional precision and risk-adjusted o
                 type: "text" as const,
                 text: `User prompt: "${prompt}"
 
-Account Information:
+${strategyDetails ? `ACTIVE TRADING STRATEGY:
+You are operating under the "${strategyDetails.name}" trading strategy with the following rules and constraints:
+- Description: ${strategyDetails.description || 'No description provided'}
+- Risk per trade: ${strategyDetails.riskPercentage || 1}% of portfolio
+- Maximum positions: ${strategyDetails.maxPositions || 5}
+- Maximum leverage: ${strategyDetails.maxLeverage || 10}x
+- Timeframe: ${strategyDetails.timeframe || 'Not specified'}
+- Preferred assets: ${strategyDetails.preferredAssets || 'All assets'}
+- Custom rules: ${strategyDetails.customRules || 'No custom rules'}
+
+IMPORTANT: You MUST follow these strategy constraints. When generating trades:
+1. Respect the risk percentage per trade (${strategyDetails.riskPercentage || 1}%)
+2. Do not exceed the maximum number of positions (${strategyDetails.maxPositions || 5})
+3. Do not use leverage higher than ${strategyDetails.maxLeverage || 10}x
+4. Focus on the specified timeframe: ${strategyDetails.timeframe || 'any timeframe'}
+5. ${strategyDetails.preferredAssets && strategyDetails.preferredAssets !== 'All assets' ? `Prioritize these assets: ${strategyDetails.preferredAssets}` : 'Consider all available assets'}
+6. ${strategyDetails.customRules ? `Follow these custom rules: ${strategyDetails.customRules}` : ''}
+
+` : ''}Account Information:
 - Total Portfolio Value: $${userState?.marginSummary?.accountValue || '0'}
 - Available Balance: $${userState?.marginSummary?.withdrawable || '0'}
 - Total Margin Used: $${userState?.marginSummary?.totalMarginUsed || '0'}
@@ -346,7 +375,7 @@ Consider the user's historical prompts to understand their trading style, risk t
 
 The user has attached ${screenshots.length} screenshot(s) showing price charts or market structure. Analyze these images along with the prompt and market data to generate your trading strategy.
 
-Generate a trading strategy that addresses the user's current prompt while considering their historical preferences and maximizing risk-adjusted returns based on current market conditions. Remember to respond with ONLY the JSON object, no other text.`
+Generate a trading strategy that addresses the user's current prompt while considering their historical preferences${strategyDetails ? ' and adhering to the ACTIVE TRADING STRATEGY constraints' : ''} and maximizing risk-adjusted returns based on current market conditions. Remember to respond with ONLY the JSON object, no other text.`
               },
               ...screenshots.map(screenshot => ({
                 type: "image_url" as const,
@@ -357,7 +386,25 @@ Generate a trading strategy that addresses the user's current prompt while consi
             ]
           : `User prompt: "${prompt}"
 
-Account Information:
+${strategyDetails ? `ACTIVE TRADING STRATEGY:
+You are operating under the "${strategyDetails.name}" trading strategy with the following rules and constraints:
+- Description: ${strategyDetails.description || 'No description provided'}
+- Risk per trade: ${strategyDetails.riskPercentage || 1}% of portfolio
+- Maximum positions: ${strategyDetails.maxPositions || 5}
+- Maximum leverage: ${strategyDetails.maxLeverage || 10}x
+- Timeframe: ${strategyDetails.timeframe || 'Not specified'}
+- Preferred assets: ${strategyDetails.preferredAssets || 'All assets'}
+- Custom rules: ${strategyDetails.customRules || 'No custom rules'}
+
+IMPORTANT: You MUST follow these strategy constraints. When generating trades:
+1. Respect the risk percentage per trade (${strategyDetails.riskPercentage || 1}%)
+2. Do not exceed the maximum number of positions (${strategyDetails.maxPositions || 5})
+3. Do not use leverage higher than ${strategyDetails.maxLeverage || 10}x
+4. Focus on the specified timeframe: ${strategyDetails.timeframe || 'any timeframe'}
+5. ${strategyDetails.preferredAssets && strategyDetails.preferredAssets !== 'All assets' ? `Prioritize these assets: ${strategyDetails.preferredAssets}` : 'Consider all available assets'}
+6. ${strategyDetails.customRules ? `Follow these custom rules: ${strategyDetails.customRules}` : ''}
+
+` : ''}Account Information:
 - Total Portfolio Value: $${userState?.marginSummary?.accountValue || '0'}
 - Available Balance: $${userState?.marginSummary?.withdrawable || '0'}
 - Total Margin Used: $${userState?.marginSummary?.totalMarginUsed || '0'}
@@ -376,7 +423,7 @@ ${promptHistory.map(p => `- ${new Date(p.timestamp).toLocaleString()}: "${p.prom
 
 Consider the user's historical prompts to understand their trading style, risk tolerance, and strategic preferences. Build upon previous strategies and refine suggestions based on learned patterns.` : ''}
 
-Generate a trading strategy that addresses the user's current prompt while considering their historical preferences and maximizing risk-adjusted returns based on current market conditions. Remember to respond with ONLY the JSON object, no other text.`
+Generate a trading strategy that addresses the user's current prompt while considering their historical preferences${strategyDetails ? ' and adhering to the ACTIVE TRADING STRATEGY constraints' : ''} and maximizing risk-adjusted returns based on current market conditions. Remember to respond with ONLY the JSON object, no other text.`
       }
     ];
 
