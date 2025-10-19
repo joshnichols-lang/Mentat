@@ -392,9 +392,21 @@ export async function executeTradeStrategy(
 
   // First pass: separate protective orders from other actions
   for (const action of actions) {
-    // Normalize symbol
-    if (!action.symbol.endsWith("-PERP") && !action.symbol.endsWith("-SPOT")) {
-      action.symbol = `${action.symbol}-PERP`;
+    // Normalize symbol (safety check for undefined/null)
+    if (action.symbol && typeof action.symbol === 'string') {
+      if (!action.symbol.endsWith("-PERP") && !action.symbol.endsWith("-SPOT")) {
+        action.symbol = `${action.symbol}-PERP`;
+      }
+    } else if (action.action !== "cancel_order") {
+      // Skip actions with invalid symbols (except cancel_order which may get symbol from order lookup)
+      console.error(`[Trade Executor] Invalid symbol for ${action.action} action:`, action.symbol);
+      results.push({
+        success: false,
+        action,
+        error: `Invalid or missing symbol: ${action.symbol}`,
+      });
+      failCount++;
+      continue;
     }
 
     if (action.action === "stop_loss" || action.action === "take_profit") {
