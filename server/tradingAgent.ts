@@ -222,13 +222,17 @@ You also happen to be an expert crypto trader, but the user is asking you a gene
 
     // Fetch the trading strategy details if strategyId is provided
     let strategyDetails: any = null;
+    console.log(`[Trading Prompt] Received strategyId: ${strategyId}`);
     if (strategyId) {
       try {
         strategyDetails = await storage.getTradingMode(userId, strategyId);
+        console.log(`[Trading Prompt] Fetched strategy details: ${JSON.stringify({name: strategyDetails?.name, riskPercentage: strategyDetails?.riskPercentage, maxPositions: strategyDetails?.maxPositions})}`);
       } catch (strategyError) {
         console.error("Failed to fetch strategy details:", strategyError);
         // Continue without strategy details
       }
+    } else {
+      console.log(`[Trading Prompt] No strategyId provided - proceeding without strategy context`);
     }
 
     // Fetch recent user prompt history (last 5 successful prompts) - filtered by strategyId
