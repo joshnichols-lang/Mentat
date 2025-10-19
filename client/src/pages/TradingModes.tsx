@@ -31,6 +31,7 @@ type ModeFormData = {
   riskPercentage: string;
   maxPositions: string;
   preferredLeverage: string;
+  maxEntryOrdersPerSymbol: string;
   preferredAssets: string;
   customRules: string;
 };
@@ -46,6 +47,7 @@ export default function TradingModes() {
     riskPercentage: "2",
     maxPositions: "3",
     preferredLeverage: "10",
+    maxEntryOrdersPerSymbol: "3",
     preferredAssets: "",
     customRules: "",
   });
@@ -150,6 +152,7 @@ export default function TradingModes() {
       riskPercentage: "2",
       maxPositions: "3",
       preferredLeverage: "10",
+      maxEntryOrdersPerSymbol: "3",
       preferredAssets: "",
       customRules: "",
     });
@@ -163,6 +166,7 @@ export default function TradingModes() {
       riskPercentage: mode.parameters?.riskPercentage?.toString() || "2",
       maxPositions: mode.parameters?.maxPositions?.toString() || "3",
       preferredLeverage: mode.parameters?.preferredLeverage?.toString() || "10",
+      maxEntryOrdersPerSymbol: mode.parameters?.maxEntryOrdersPerSymbol?.toString() || "3",
       preferredAssets: mode.parameters?.preferredAssets || "",
       customRules: mode.parameters?.customRules || "",
     });
@@ -177,6 +181,7 @@ export default function TradingModes() {
       riskPercentage: parseFloat(formData.riskPercentage),
       maxPositions: parseInt(formData.maxPositions),
       preferredLeverage: parseFloat(formData.preferredLeverage),
+      maxEntryOrdersPerSymbol: parseInt(formData.maxEntryOrdersPerSymbol),
       preferredAssets: formData.preferredAssets,
       customRules: formData.customRules,
     };
@@ -308,6 +313,20 @@ export default function TradingModes() {
                         placeholder="10"
                         data-testid="input-leverage"
                       />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="maxEntryOrdersPerSymbol">Max Entry Orders Per Symbol</Label>
+                      <Input
+                        id="maxEntryOrdersPerSymbol"
+                        type="number"
+                        min="1"
+                        max="10"
+                        value={formData.maxEntryOrdersPerSymbol}
+                        onChange={(e) => setFormData({ ...formData, maxEntryOrdersPerSymbol: e.target.value })}
+                        placeholder="3"
+                        data-testid="input-max-entry-orders"
+                      />
+                      <p className="text-xs text-muted-foreground">Limits scaled entry orders per symbol (e.g., 3 allows scaling into positions with up to 3 orders)</p>
                     </div>
                   </div>
                 </div>
