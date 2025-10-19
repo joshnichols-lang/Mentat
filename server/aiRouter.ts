@@ -49,6 +49,8 @@ const PRICING: Record<string, { input: number; output: number }> = {
   // xAI Grok models
   "grok-beta": { input: 5.0, output: 15.0 },
   "grok-vision-beta": { input: 5.0, output: 15.0 },
+  "grok-4-fast-reasoning": { input: 0.20, output: 0.50 }, // < 128K tokens
+  "grok-4-fast-non-reasoning": { input: 0.20, output: 0.50 }, // < 128K tokens
 };
 
 function calculateCost(model: string, promptTokens: number, completionTokens: number): number {
@@ -78,23 +80,37 @@ async function getAIClient(userId: string, preferredProvider?: string): Promise<
   
   // If user has no personal AI credentials, use shared platform key
   if (!apiKey) {
+    // Try xAI (Grok) first, then fall back to Perplexity
+    const sharedXaiKey = process.env.XAI_API_KEY;
     const sharedPerplexityKey = process.env.PERPLEXITY_API_KEY;
     
-    if (!sharedPerplexityKey) {
-      throw new Error("No AI provider configured. Please add an AI provider in settings or contact admin.");
+    if (sharedXaiKey) {
+      // Use shared xAI/Grok key
+      const client = new OpenAI({
+        apiKey: sharedXaiKey,
+        baseURL: "https://api.x.ai/v1",
+      });
+      
+      return {
+        client,
+        providerName: "xai",
+        apiKeyId: "shared-platform-key", // Special ID to indicate shared key usage
+      };
+    } else if (sharedPerplexityKey) {
+      // Fall back to shared Perplexity key
+      const client = new OpenAI({
+        apiKey: sharedPerplexityKey,
+        baseURL: "https://api.perplexity.ai",
+      });
+      
+      return {
+        client,
+        providerName: "perplexity",
+        apiKeyId: "shared-platform-key", // Special ID to indicate shared key usage
+      };
     }
     
-    // Use shared Perplexity key
-    const client = new OpenAI({
-      apiKey: sharedPerplexityKey,
-      baseURL: "https://api.perplexity.ai",
-    });
-    
-    return {
-      client,
-      providerName: "perplexity",
-      apiKeyId: "shared-platform-key", // Special ID to indicate shared key usage
-    };
+    throw new Error("No AI provider configured. Please add an AI provider in settings or contact admin.");
   }
   
   // User has personal credentials - decrypt and use them
@@ -144,7 +160,7 @@ function getDefaultModel(providerName: string): string {
     case "openai":
       return "gpt-4o-mini";
     case "xai":
-      return "grok-beta";
+      return "grok-4-fast-reasoning";
     default:
       return "sonar";
   }
