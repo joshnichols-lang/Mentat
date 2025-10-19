@@ -4,7 +4,8 @@ import { useCredentials } from "@/hooks/useCredentials";
 import { useAuth } from "@/hooks/use-auth";
 import Header from "@/components/Header";
 import AIPromptPanel from "@/components/AIPromptPanel";
-import MarketOverview from "@/components/MarketOverview";
+import TradingViewChart from "@/components/TradingViewChart";
+import TradingViewWatchlist from "@/components/TradingViewWatchlist";
 import PositionsGrid from "@/components/PositionsGrid";
 import PerformanceMetrics from "@/components/PerformanceMetrics";
 import PortfolioPerformanceChart from "@/components/PortfolioPerformanceChart";
@@ -71,8 +72,15 @@ export default function Dashboard() {
           {/* Automated Monitoring Alerts */}
           <MonitoringAlerts />
 
-          {/* Market Overview */}
-          <MarketOverview />
+          {/* TradingView Chart & Watchlist */}
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+            <div className="lg:col-span-2">
+              <TradingViewChart height={500} />
+            </div>
+            <div>
+              <TradingViewWatchlist height={500} />
+            </div>
+          </div>
 
           {/* Charts Row */}
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
