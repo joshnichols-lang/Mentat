@@ -33,6 +33,7 @@ type ModeFormData = {
   preferredLeverage: string;
   maxEntryOrdersPerSymbol: string;
   preferredAssets: string;
+  restrictedAssets: string;
   customRules: string;
 };
 
@@ -49,6 +50,7 @@ export default function TradingModes() {
     preferredLeverage: "10",
     maxEntryOrdersPerSymbol: "3",
     preferredAssets: "",
+    restrictedAssets: "",
     customRules: "",
   });
 
@@ -154,6 +156,7 @@ export default function TradingModes() {
       preferredLeverage: "10",
       maxEntryOrdersPerSymbol: "3",
       preferredAssets: "",
+      restrictedAssets: "",
       customRules: "",
     });
   };
@@ -168,6 +171,7 @@ export default function TradingModes() {
       preferredLeverage: mode.parameters?.preferredLeverage?.toString() || "10",
       maxEntryOrdersPerSymbol: mode.parameters?.maxEntryOrdersPerSymbol?.toString() || "3",
       preferredAssets: mode.parameters?.preferredAssets || "",
+      restrictedAssets: mode.parameters?.restrictedAssets || "",
       customRules: mode.parameters?.customRules || "",
     });
     setEditingMode(mode);
@@ -183,6 +187,7 @@ export default function TradingModes() {
       preferredLeverage: parseFloat(formData.preferredLeverage),
       maxEntryOrdersPerSymbol: parseInt(formData.maxEntryOrdersPerSymbol),
       preferredAssets: formData.preferredAssets,
+      restrictedAssets: formData.restrictedAssets,
       customRules: formData.customRules,
     };
 
@@ -343,6 +348,18 @@ export default function TradingModes() {
                         placeholder="BTC, ETH, SOL"
                         data-testid="input-assets"
                       />
+                      <p className="text-xs text-muted-foreground">Suggestion for AI - not a hard restriction</p>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="restrictedAssets">Restrict Trading To (comma-separated)</Label>
+                      <Input
+                        id="restrictedAssets"
+                        value={formData.restrictedAssets}
+                        onChange={(e) => setFormData({ ...formData, restrictedAssets: e.target.value })}
+                        placeholder="BTC (leave empty for no restriction)"
+                        data-testid="input-restricted-assets"
+                      />
+                      <p className="text-xs text-muted-foreground">HARD limit - AI can ONLY trade these assets if set</p>
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="customRules">Custom Rules (Optional)</Label>
