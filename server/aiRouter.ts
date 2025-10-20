@@ -48,7 +48,7 @@ const PRICING: Record<string, { input: number; output: number }> = {
   
   // xAI Grok models
   "grok-beta": { input: 5.0, output: 15.0 },
-  "grok-vision-beta": { input: 5.0, output: 15.0 },
+  "grok-2-vision-1212": { input: 2.0, output: 10.0 }, // Grok 2 vision model
   "grok-4-fast-reasoning": { input: 0.20, output: 0.50 }, // < 128K tokens
   "grok-4-fast-non-reasoning": { input: 0.20, output: 0.50 }, // < 128K tokens
 };
@@ -192,7 +192,7 @@ function getVisionModel(providerName: string): string {
     case "openai":
       return "gpt-4o"; // Supports vision
     case "xai":
-      return "grok-vision-beta"; // Supports vision
+      return "grok-2-vision-1212"; // Grok 2 with vision (Dec 2024)
     case "perplexity":
       return "sonar-pro"; // Use best available
     default:
