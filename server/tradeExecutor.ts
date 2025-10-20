@@ -486,6 +486,52 @@ export async function executeTradeStrategy(
   
   console.log(`[Trade Executor] ✓ SAFETY CHECK PASSED: All ${positionSymbols.size} position(s) have stop loss orders`);
   
+  // ============================================================================
+  // CRITICAL SAFETY VALIDATION: NEW ENTRY ORDERS MUST HAVE PROTECTIVE BRACKETS
+  // ============================================================================
+  // Validate that every new entry order (buy/sell) has protective orders attached
+  const entryActions = actions.filter(a => a.action === "buy" || a.action === "sell");
+  const entriesWithoutProtection: string[] = [];
+  
+  for (const entryAction of entryActions) {
+    const hasStopLoss = actions.some(a => 
+      a.symbol === entryAction.symbol && a.action === "stop_loss"
+    );
+    const hasTakeProfit = actions.some(a => 
+      a.symbol === entryAction.symbol && a.action === "take_profit"
+    );
+    
+    if (!hasStopLoss || !hasTakeProfit) {
+      entriesWithoutProtection.push(`${entryAction.symbol} (${entryAction.action}) - missing ${!hasStopLoss ? 'SL' : ''}${!hasStopLoss && !hasTakeProfit ? '+' : ''}${!hasTakeProfit ? 'TP' : ''}`);
+    }
+  }
+  
+  // REJECT the entire strategy if ANY new entry lacks protective brackets
+  if (entriesWithoutProtection.length > 0) {
+    const errorMsg = `CRITICAL SAFETY VIOLATION: ${entriesWithoutProtection.length} new entry order(s) WITHOUT protective brackets: ${entriesWithoutProtection.join(', ')}. ALL new positions MUST have both stop loss AND take profit orders attached as bracket orders.`;
+    console.error(`[Trade Executor] ${errorMsg}`);
+    
+    return {
+      totalActions: actions.length,
+      successfulExecutions: 0,
+      failedExecutions: actions.length,
+      skippedExecutions: 0,
+      results: [{
+        success: false,
+        action: actions.length > 0 ? actions[0] : {
+          action: "hold",
+          symbol: entriesWithoutProtection[0]?.split(' ')[0] || "UNKNOWN",
+          reasoning: "Safety validation failed - entry orders missing protective brackets",
+        },
+        error: errorMsg,
+      }],
+    };
+  }
+  
+  if (entryActions.length > 0) {
+    console.log(`[Trade Executor] ✓ ENTRY SAFETY CHECK PASSED: All ${entryActions.length} new entry order(s) have protective brackets (SL+TP)`);
+  }
+  
   // VALIDATION: Ensure at most ONE stop_loss per symbol (take profits can be multiple)
   for (const [symbol, protectiveActions] of Array.from(protectiveOrderGroups.entries())) {
     const stopLossCount = protectiveActions.filter((a: TradingAction) => a.action === "stop_loss").length;
