@@ -265,6 +265,7 @@ export class HyperliquidClient {
         entryPx: pos.position.entryPx,
         positionValue: pos.position.positionValue,
         unrealizedPnl: pos.position.unrealizedPnl,
+        returnOnEquity: pos.position.returnOnEquity || "0", // ROE as decimal (e.g., 0.0195 for 1.95%)
         liquidationPx: pos.position.liquidationPx || null,
         leverage: pos.position.leverage,
       }));
