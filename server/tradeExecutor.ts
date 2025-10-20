@@ -519,6 +519,71 @@ export async function executeTradeStrategy(
   const user = await storage.getUser(userId);
   const useIsolatedMargin = !user || user.marginMode !== "cross"; // Default to isolated if not set or if user explicitly chose isolated
   
+  // ============================================================================
+  // CRITICAL ASSET RESTRICTION VALIDATION
+  // ============================================================================
+  // If the trading mode has restrictedAssets set, validate ALL actions are for allowed symbols only
+  if (tradingModeId) {
+    const tradingMode = await storage.getTradingMode(userId, tradingModeId);
+    const restrictedAssets = (tradingMode?.parameters as any)?.restrictedAssets;
+    
+    if (restrictedAssets && restrictedAssets.trim() !== "") {
+      // Parse the comma-separated list and normalize (add -PERP suffix if missing)
+      const allowedSymbols = restrictedAssets
+        .split(',')
+        .map((asset: string) => asset.trim().toUpperCase())
+        .filter((asset: string) => asset.length > 0)
+        .map((asset: string) => asset.endsWith("-PERP") || asset.endsWith("-SPOT") ? asset : `${asset}-PERP`);
+      
+      console.log(`[Trade Executor] RESTRICTION CHECK: Trading restricted to assets: ${allowedSymbols.join(', ')}`);
+      
+      // Check each action's symbol against the allowed list
+      const violatingActions: string[] = [];
+      for (const action of actions) {
+        // Skip actions that don't have symbols (like hold)
+        if (!action.symbol || action.action === "hold") continue;
+        
+        // Normalize the action's symbol
+        let normalizedSymbol = action.symbol.toUpperCase();
+        if (!normalizedSymbol.endsWith("-PERP") && !normalizedSymbol.endsWith("-SPOT")) {
+          normalizedSymbol = `${normalizedSymbol}-PERP`;
+        }
+        
+        // Check if this symbol is allowed
+        if (!allowedSymbols.includes(normalizedSymbol)) {
+          violatingActions.push(`${action.action} ${action.symbol}`);
+        }
+      }
+      
+      // REJECT the entire strategy if ANY action violates the restriction
+      if (violatingActions.length > 0) {
+        const errorMsg = `ASSET RESTRICTION VIOLATION: Strategy attempted to trade ${violatingActions.length} action(s) on restricted assets: ${violatingActions.join(', ')}. This strategy is configured to ONLY trade: ${allowedSymbols.join(', ')}`;
+        console.error(`[Trade Executor] ${errorMsg}`);
+        
+        const errorAction: TradingAction = {
+          action: "hold",
+          symbol: actions[0]?.symbol || "UNKNOWN",
+          reasoning: "Asset restriction validation failed",
+        };
+        
+        // Return immediately with error - DO NOT EXECUTE ANY PART OF THIS STRATEGY
+        return {
+          totalActions: actions.length,
+          successfulExecutions: 0,
+          failedExecutions: actions.length,
+          skippedExecutions: 0,
+          results: [{
+            success: false,
+            action: actions.length > 0 ? actions[0] : errorAction,
+            error: errorMsg,
+          }],
+        };
+      }
+      
+      console.log(`[Trade Executor] ✓ RESTRICTION CHECK PASSED: All actions comply with asset restrictions`);
+    }
+  }
+  
   let successCount = 0;
   let failCount = 0;
   let skipCount = 0;
