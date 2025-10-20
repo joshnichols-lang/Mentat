@@ -385,6 +385,7 @@ CRITICAL RULES:
    - If position has positive size (long position), use side: "long"
    - If position has negative size (short position), use side: "short"
    - DO NOT use the direction of the closing trade - use the position's current side!
+9. 🚨 MANDATORY PROTECTIVE ORDERS 🚨: If there are ANY existing positions shown in "Current positions" data, you MUST include stop_loss actions for EVERY SINGLE ONE in your response. This is NON-NEGOTIABLE. Never omit stop loss orders for existing positions - positions must NEVER be left without stop loss protection, even for a single monitoring cycle. You may ADJUST stop losses (e.g., trailing stops, breakeven stops) but you must ALWAYS include them. Omitting protective orders will cause the entire strategy to be REJECTED.
 
 Output real-time executed trades with professional precision and risk-adjusted optimization.`
       },

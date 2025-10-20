@@ -437,6 +437,55 @@ export async function executeTradeStrategy(
     }
   }
 
+  // ============================================================================
+  // CRITICAL SAFETY VALIDATION: Positions MUST have stop losses
+  // ============================================================================
+  // Fetch current positions to ensure every position has protective orders
+  const currentPositions = await hyperliquid.getPositions();
+  const positionSymbols = new Set(currentPositions.map(p => p.coin));
+  
+  console.log(`[Trade Executor] SAFETY CHECK: Validating protective orders for ${positionSymbols.size} existing position(s)`);
+  
+  // Check if any existing position would be left without a stop loss
+  const positionsWithoutStopLoss: string[] = [];
+  for (const symbol of positionSymbols) {
+    const hasStopLossAction = actions.some(a => 
+      a.symbol === symbol && a.action === "stop_loss"
+    );
+    
+    if (!hasStopLossAction) {
+      positionsWithoutStopLoss.push(symbol);
+    }
+  }
+  
+  // REJECT the entire strategy if ANY position would be left unprotected
+  if (positionsWithoutStopLoss.length > 0) {
+    const errorMsg = `CRITICAL SAFETY VIOLATION: Strategy would leave ${positionsWithoutStopLoss.length} position(s) WITHOUT stop loss orders: ${positionsWithoutStopLoss.join(', ')}. ALL existing positions MUST have stop loss protection in EVERY strategy response.`;
+    console.error(`[Trade Executor] ${errorMsg}`);
+    
+    // Create a dummy action for error reporting (guard against empty actions array)
+    const errorAction: TradingAction = {
+      action: "hold",
+      symbol: positionsWithoutStopLoss[0] || "UNKNOWN",
+      reasoning: "Safety validation failed - missing protective orders",
+    };
+    
+    // Return immediately with error - DO NOT EXECUTE ANY PART OF THIS STRATEGY
+    return {
+      totalActions: actions.length,
+      successfulExecutions: 0,
+      failedExecutions: actions.length,
+      skippedExecutions: 0,
+      results: [{
+        success: false,
+        action: actions.length > 0 ? actions[0] : errorAction,
+        error: errorMsg,
+      }],
+    };
+  }
+  
+  console.log(`[Trade Executor] ✓ SAFETY CHECK PASSED: All ${positionSymbols.size} position(s) have stop loss orders`);
+  
   // VALIDATION: Ensure at most ONE stop_loss per symbol (take profits can be multiple)
   for (const [symbol, protectiveActions] of Array.from(protectiveOrderGroups.entries())) {
     const stopLossCount = protectiveActions.filter((a: TradingAction) => a.action === "stop_loss").length;
