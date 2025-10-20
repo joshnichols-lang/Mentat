@@ -411,6 +411,12 @@ RULES FOR CANCEL_ORDER:
 - Include the order's price in reasoning for transparency (e.g., "order at $35.5, 5% from current")
 - State why canceling and what you're prioritizing instead
 - NEVER cancel protective orders (reduceOnly: true) - only cancel entry orders
+- 🚨 CRITICAL ANTI-CHURN RULE: NEVER cancel an entry order if you plan to immediately place a NEW order on the SAME SYMBOL at the SAME or nearly identical price (within 1% difference). This wastes fees and creates infinite loops. Only cancel when:
+  1. Price is significantly stale (>5% from current price for volatile assets, >2% for stable)
+  2. You're switching to a completely different asset
+  3. Direction changed (long→short or vice versa)
+  4. Size needs to change dramatically (>20% difference)
+- If an existing order is still valid for your current analysis (good price, right direction), LEAVE IT ALONE and generate NO actions for that symbol
 
 CANCEL_ORDER FORMAT EXAMPLE (symbol field is MANDATORY):
 {

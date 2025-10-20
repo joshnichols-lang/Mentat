@@ -571,7 +571,7 @@ export async function executeTradeStrategy(
           totalActions: actions.length,
           successfulExecutions: 0,
           failedExecutions: actions.length,
-          skippedExecutions: 0,
+          skippedActions: 0,
           results: [{
             success: false,
             action: actions.length > 0 ? actions[0] : errorAction,
@@ -633,7 +633,7 @@ export async function executeTradeStrategy(
   
   // Check if any existing position would be left without a stop loss
   const positionsWithoutStopLoss: string[] = [];
-  for (const symbol of positionSymbols) {
+  for (const symbol of Array.from(positionSymbols)) {
     const hasStopLossAction = actions.some(a => 
       a.symbol === symbol && a.action === "stop_loss"
     );
@@ -660,7 +660,7 @@ export async function executeTradeStrategy(
       totalActions: actions.length,
       successfulExecutions: 0,
       failedExecutions: actions.length,
-      skippedExecutions: 0,
+      skippedActions: 0,
       results: [{
         success: false,
         action: actions.length > 0 ? actions[0] : errorAction,
@@ -700,7 +700,7 @@ export async function executeTradeStrategy(
       totalActions: actions.length,
       successfulExecutions: 0,
       failedExecutions: actions.length,
-      skippedExecutions: 0,
+      skippedActions: 0,
       results: [{
         success: false,
         action: actions.length > 0 ? actions[0] : {
@@ -738,7 +738,7 @@ export async function executeTradeStrategy(
         totalActions: actions.length,
         successfulExecutions: 0,
         failedExecutions: actions.length,
-        skippedExecutions: 0,
+        skippedActions: 0,
         results: [{
           success: false,
           action: entryAction,
@@ -835,9 +835,79 @@ export async function executeTradeStrategy(
     }
   }
 
-  // CROSS-CYCLE DEDUPLICATION: Check against existing open orders on exchange
-  // This prevents placing duplicate orders across monitoring cycles
+  // ============================================================================
+  // ANTI-CHURN VALIDATION: Detect cancel+replace loops
+  // ============================================================================
+  // If we're canceling an order and immediately placing an identical one, skip both
+  const cancelActions = priceValidatedActions.filter(a => a.action === "cancel_order");
+  const buyActions = priceValidatedActions.filter(a => a.action === "buy");
+  const sellActions = priceValidatedActions.filter(a => a.action === "sell");
+  
+  // Build map of orders we're canceling (orderId -> order details)
   const existingOrders = await hyperliquid.getOpenOrders();
+  const canceledOrderMap = new Map<number, any>();
+  
+  for (const cancelAction of cancelActions) {
+    const orderId = (cancelAction as any).orderId;
+    if (orderId) {
+      const existingOrder = existingOrders.find(o => o.oid === orderId);
+      if (existingOrder && !existingOrder.reduceOnly && !existingOrder.orderType?.trigger) {
+        // This is an entry order being canceled
+        canceledOrderMap.set(orderId, existingOrder);
+      }
+    }
+  }
+  
+  // Check if any new buy/sell actions are identical to canceled orders
+  const churningActions: string[] = [];
+  for (const newAction of [...buyActions, ...sellActions]) {
+    for (const [orderId, canceledOrder] of Array.from(canceledOrderMap.entries())) {
+      // Check if same symbol
+      if (canceledOrder.coin !== newAction.symbol) continue;
+      
+      // Check if same side
+      const orderIsBuy = canceledOrder.side === "B";
+      const newIsBuy = newAction.side === "long";
+      if (orderIsBuy !== newIsBuy) continue;
+      
+      // Check if same price (within 1% tolerance)
+      const canceledPrice = parseFloat(canceledOrder.limitPx);
+      const newPrice = parseFloat(newAction.expectedEntry || "0");
+      
+      // Skip if no expected entry (market order)
+      if (!newAction.expectedEntry || newPrice === 0) continue;
+      
+      const priceDiff = Math.abs(canceledPrice - newPrice) / canceledPrice;
+      
+      // Check if same size (within 5% tolerance)
+      const canceledSize = parseFloat(canceledOrder.sz);
+      const newSize = parseFloat(newAction.size);
+      const sizeDiff = Math.abs(canceledSize - newSize) / canceledSize;
+      
+      if (priceDiff < 0.01 && sizeDiff < 0.05) {
+        // This is a churn - canceling and immediately replacing with nearly identical order
+        churningActions.push(`${newAction.action} ${newAction.symbol} @ ${newPrice} (order ${orderId})`);
+        console.warn(`[Trade Executor] 🚨 ANTI-CHURN: Detected cancel+replace loop for ${newAction.symbol}: canceling order ${orderId} @ ${canceledPrice} and replacing with @ ${newPrice} (${(priceDiff*100).toFixed(2)}% diff)`);
+      }
+    }
+  }
+  
+  if (churningActions.length > 0) {
+    console.error(`[Trade Executor] 🚨 ANTI-CHURN VIOLATION: Detected ${churningActions.length} cancel+replace loop(s): ${churningActions.join(', ')}. This wastes fees and creates infinite loops. REJECTING entire strategy.`);
+    
+    return {
+      totalActions: actions.length,
+      successfulExecutions: 0,
+      failedExecutions: actions.length,
+      skippedActions: 0,
+      results: [{
+        success: false,
+        action: actions[0] || { action: "hold", symbol: "UNKNOWN", reasoning: "Anti-churn validation failed" },
+        error: `ANTI-CHURN VIOLATION: Strategy attempted to cancel and immediately replace ${churningActions.length} order(s) with identical orders: ${churningActions.join(', ')}. This wastes fees. Only cancel orders when price is stale (>2-5% from market) or switching assets/direction. If existing orders are still valid, leave them alone.`,
+      }],
+    };
+  }
+  
   console.log(`[Trade Executor] Checking ${priceValidatedActions.length} actions against ${existingOrders.length} existing orders`);
   
   // DEDUPLICATION: Remove duplicate buy/sell orders (same symbol, side, price, size)
