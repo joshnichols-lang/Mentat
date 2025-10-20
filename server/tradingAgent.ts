@@ -99,11 +99,7 @@ export async function processTradingPrompt(
           console.log(`[Trading Prompt] Strategy details: ${JSON.stringify({
             name: strategyDetails.name,
             description: strategyDetails.description,
-            riskPercentage: strategyDetails.riskPercentage,
-            maxPositions: strategyDetails.maxPositions,
-            maxLeverage: strategyDetails.maxLeverage,
-            timeframe: strategyDetails.timeframe,
-            preferredAssets: strategyDetails.preferredAssets
+            parameters: strategyDetails.parameters
           }, null, 2)}`);
         } else {
           console.warn(`[Trading Prompt] ❌ STRATEGY NOT FOUND: strategyId="${strategyId}" returned null/undefined`);
@@ -217,15 +213,17 @@ export async function processTradingPrompt(
       // Build strategy context string if available
       let strategyContext = "";
       if (strategyDetails) {
+        const params = strategyDetails.parameters || {};
         strategyContext = `\n\nCURRENT ACTIVE TRADING STRATEGY:
 - Name: "${strategyDetails.name}"
 - Description: ${strategyDetails.description || "No description"}
-- Risk per trade: ${strategyDetails.riskPercentage}%
-- Max positions: ${strategyDetails.maxPositions}
-- Max leverage: ${strategyDetails.maxLeverage}x
-- Timeframe: ${strategyDetails.timeframe}
-- Preferred assets: ${strategyDetails.preferredAssets?.join(', ') || 'Any'}
-${strategyDetails.customRules ? `- Custom rules: ${strategyDetails.customRules}` : ''}
+- Risk per trade: ${params.riskPercentPerTrade || 'Undefined'}%
+- Max positions: ${params.maxPositions || 'Undefined'}
+- Max leverage: ${params.maxLeverage || 'Undefined'}x
+- Timeframe: ${params.timeframe || 'Undefined'}
+- Preferred assets: ${params.preferredAssets?.join(', ') || 'Any'}
+- Max entry orders per symbol: ${params.maxEntryOrdersPerSymbol || 3}
+${params.customRules ? `- Custom rules: ${params.customRules}` : ''}
 
 This is the strategy you're currently using for autonomous trading. If the user asks about it, reference these details.`;
       }
@@ -436,20 +434,20 @@ Output real-time executed trades with professional precision and risk-adjusted o
 ${strategyDetails ? `ACTIVE TRADING STRATEGY:
 You are operating under the "${strategyDetails.name}" trading strategy with the following rules and constraints:
 - Description: ${strategyDetails.description || 'No description provided'}
-- Risk per trade: ${strategyDetails.riskPercentage || 1}% of portfolio
-- Maximum positions: ${strategyDetails.maxPositions || 5}
-- Maximum leverage: ${strategyDetails.maxLeverage || 10}x
-- Timeframe: ${strategyDetails.timeframe || 'Not specified'}
-- Preferred assets: ${strategyDetails.preferredAssets || 'All assets'}
-- Custom rules: ${strategyDetails.customRules || 'No custom rules'}
+- Risk per trade: ${strategyDetails.parameters?.riskPercentPerTrade || 1}% of portfolio
+- Maximum positions: ${strategyDetails.parameters?.maxPositions || 5}
+- Maximum leverage: ${strategyDetails.parameters?.maxLeverage || 10}x
+- Timeframe: ${strategyDetails.parameters?.timeframe || 'Not specified'}
+- Preferred assets: ${strategyDetails.parameters?.preferredAssets?.join(', ') || 'All assets'}
+- Custom rules: ${strategyDetails.parameters?.customRules || 'No custom rules'}
 
 IMPORTANT: You MUST follow these strategy constraints. When generating trades:
-1. Respect the risk percentage per trade (${strategyDetails.riskPercentage || 1}%)
-2. Do not exceed the maximum number of positions (${strategyDetails.maxPositions || 5})
-3. Do not use leverage higher than ${strategyDetails.maxLeverage || 10}x
-4. Focus on the specified timeframe: ${strategyDetails.timeframe || 'any timeframe'}
-5. ${strategyDetails.preferredAssets && strategyDetails.preferredAssets !== 'All assets' ? `Prioritize these assets: ${strategyDetails.preferredAssets}` : 'Consider all available assets'}
-6. ${strategyDetails.customRules ? `Follow these custom rules: ${strategyDetails.customRules}` : ''}
+1. Respect the risk percentage per trade (${strategyDetails.parameters?.riskPercentPerTrade || 1}%)
+2. Do not exceed the maximum number of positions (${strategyDetails.parameters?.maxPositions || 5})
+3. Do not use leverage higher than ${strategyDetails.parameters?.maxLeverage || 10}x
+4. Focus on the specified timeframe: ${strategyDetails.parameters?.timeframe || 'any timeframe'}
+5. ${strategyDetails.parameters?.preferredAssets?.length > 0 ? `Prioritize these assets: ${strategyDetails.parameters.preferredAssets.join(', ')}` : 'Consider all available assets'}
+6. ${strategyDetails.parameters?.customRules ? `Follow these custom rules: ${strategyDetails.parameters.customRules}` : ''}
 
 ` : ''}Account Information:
 - Total Portfolio Value: $${userState?.marginSummary?.accountValue || '0'}
@@ -489,20 +487,20 @@ Generate a trading strategy that addresses the user's current prompt while consi
 ${strategyDetails ? `ACTIVE TRADING STRATEGY:
 You are operating under the "${strategyDetails.name}" trading strategy with the following rules and constraints:
 - Description: ${strategyDetails.description || 'No description provided'}
-- Risk per trade: ${strategyDetails.riskPercentage || 1}% of portfolio
-- Maximum positions: ${strategyDetails.maxPositions || 5}
-- Maximum leverage: ${strategyDetails.maxLeverage || 10}x
-- Timeframe: ${strategyDetails.timeframe || 'Not specified'}
-- Preferred assets: ${strategyDetails.preferredAssets || 'All assets'}
-- Custom rules: ${strategyDetails.customRules || 'No custom rules'}
+- Risk per trade: ${strategyDetails.parameters?.riskPercentPerTrade || 1}% of portfolio
+- Maximum positions: ${strategyDetails.parameters?.maxPositions || 5}
+- Maximum leverage: ${strategyDetails.parameters?.maxLeverage || 10}x
+- Timeframe: ${strategyDetails.parameters?.timeframe || 'Not specified'}
+- Preferred assets: ${strategyDetails.parameters?.preferredAssets?.join(', ') || 'All assets'}
+- Custom rules: ${strategyDetails.parameters?.customRules || 'No custom rules'}
 
 IMPORTANT: You MUST follow these strategy constraints. When generating trades:
-1. Respect the risk percentage per trade (${strategyDetails.riskPercentage || 1}%)
-2. Do not exceed the maximum number of positions (${strategyDetails.maxPositions || 5})
-3. Do not use leverage higher than ${strategyDetails.maxLeverage || 10}x
-4. Focus on the specified timeframe: ${strategyDetails.timeframe || 'any timeframe'}
-5. ${strategyDetails.preferredAssets && strategyDetails.preferredAssets !== 'All assets' ? `Prioritize these assets: ${strategyDetails.preferredAssets}` : 'Consider all available assets'}
-6. ${strategyDetails.customRules ? `Follow these custom rules: ${strategyDetails.customRules}` : ''}
+1. Respect the risk percentage per trade (${strategyDetails.parameters?.riskPercentPerTrade || 1}%)
+2. Do not exceed the maximum number of positions (${strategyDetails.parameters?.maxPositions || 5})
+3. Do not use leverage higher than ${strategyDetails.parameters?.maxLeverage || 10}x
+4. Focus on the specified timeframe: ${strategyDetails.parameters?.timeframe || 'any timeframe'}
+5. ${strategyDetails.parameters?.preferredAssets?.length > 0 ? `Prioritize these assets: ${strategyDetails.parameters.preferredAssets.join(', ')}` : 'Consider all available assets'}
+6. ${strategyDetails.parameters?.customRules ? `Follow these custom rules: ${strategyDetails.parameters.customRules}` : ''}
 
 ` : ''}Account Information:
 - Total Portfolio Value: $${userState?.marginSummary?.accountValue || '0'}
