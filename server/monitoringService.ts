@@ -1,5 +1,5 @@
 import { storage } from "./storage";
-import { getUserHyperliquidClient } from "./hyperliquid/client";
+import { getUserHyperliquidClient, type HyperliquidClient } from "./hyperliquid/client";
 import { executeTradeStrategy } from "./tradeExecutor";
 import { createPortfolioSnapshot } from "./portfolioSnapshotService";
 import { makeAIRequest } from "./aiRouter";
@@ -255,6 +255,8 @@ function identifyMarketRegime(marketData: MarketData[]): { regime: string; confi
 }
 
 export async function developAutonomousStrategy(userId: string): Promise<void> {
+  let hyperliquidClient: HyperliquidClient | null = null;
+  
   try {
     console.log(`[Autonomous Trading] Developing trade thesis for user ${userId}...`);
     
@@ -262,6 +264,13 @@ export async function developAutonomousStrategy(userId: string): Promise<void> {
     const user = await storage.getUser(userId);
     if (!user) {
       console.log(`[Autonomous Trading] User ${userId} not found`);
+      return;
+    }
+    
+    // Get Hyperliquid client early so we can use it in finally block for snapshot
+    hyperliquidClient = await getUserHyperliquidClient(userId);
+    if (!hyperliquidClient) {
+      console.log(`[Autonomous Trading] Hyperliquid client not initialized for user ${userId}`);
       return;
     }
     
@@ -277,12 +286,7 @@ export async function developAutonomousStrategy(userId: string): Promise<void> {
         alertLevel: "info"
       });
       
-      return;
-    }
-    
-    const hyperliquidClient = await getUserHyperliquidClient(userId);
-    if (!hyperliquidClient) {
-      console.log(`[Autonomous Trading] Hyperliquid client not initialized for user ${userId}`);
+      // Still create snapshot in passive mode - portfolio value changes over time
       return;
     }
     
@@ -1257,11 +1261,6 @@ PRICE VALIDATION CHECKLIST for every limit order:
         
         console.log(`[Autonomous Trading] Executed ${executionSummary.successfulExecutions}/${executionSummary.totalActions} trades`);
         
-        // Create portfolio snapshot after successful trades
-        if (executionSummary.successfulExecutions > 0) {
-          await createPortfolioSnapshot(userId, hyperliquidClient);
-        }
-        
         // Group entry actions by symbol for cleaner bullet point formatting
         const entryActions = strategy.actions.filter(a => a.action === 'buy' || a.action === 'sell');
         const actionsBySymbol = new Map<string, typeof entryActions>();
@@ -1358,6 +1357,20 @@ PRICE VALIDATION CHECKLIST for every limit order:
     
   } catch (error) {
     console.error("[Autonomous Trading] Error during autonomous trading:", error);
+  } finally {
+    // ALWAYS create portfolio snapshot at the end of each monitoring cycle
+    // This ensures Sharpe/Sortino/Calmar ratios reflect current portfolio value (including unrealized PnL)
+    // Snapshots are created at the user's configured monitoring frequency
+    // Runs even on early returns (passive mode, no market data, etc.)
+    if (hyperliquidClient) {
+      try {
+        await createPortfolioSnapshot(userId, hyperliquidClient);
+        console.log("[Autonomous Trading] Portfolio snapshot created");
+      } catch (snapshotError) {
+        console.error("[Autonomous Trading] Failed to create portfolio snapshot:", snapshotError);
+        // Don't fail the monitoring cycle if snapshot fails
+      }
+    }
   }
 }
 
