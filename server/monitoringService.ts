@@ -5,6 +5,7 @@ import { createPortfolioSnapshot } from "./portfolioSnapshotService";
 import { makeAIRequest } from "./aiRouter";
 import { getRecentLearnings } from "./evaluationService";
 import { reconcilePositions } from "./positionReconciliation";
+import { reconcileJournalEntries } from "./journalReconciliation";
 
 interface MarketData {
   symbol: string;
@@ -295,6 +296,10 @@ export async function developAutonomousStrategy(userId: string): Promise<void> {
     // This is CRITICAL for protective order validation to work
     await reconcilePositions(userId, storage, hyperliquidClient);
     
+    // STEP 1.5: RECONCILE JOURNAL ENTRIES
+    // Update journal entry statuses based on order fills and position closes
+    await reconcileJournalEntries(userId, storage, hyperliquidClient);
+    
     // STEP 2: POSITION DISCOVERY
     // Track existing positions and their protective orders
     // This ensures positions opened manually or during server downtime are tracked
@@ -369,12 +374,15 @@ export async function developAutonomousStrategy(userId: string): Promise<void> {
     const userState = await hyperliquidClient.getUserState();
     const accountValue = parseFloat(userState?.marginSummary?.accountValue || '0');
     const totalMarginUsed = parseFloat(userState?.marginSummary?.totalMarginUsed || '0');
-    // Calculate available balance: Hyperliquid doesn't have a "withdrawable" field
-    // Available balance = total account value - margin currently locked in positions
-    const withdrawable = accountValue - totalMarginUsed;
+    // Use Hyperliquid's actual withdrawable field (cross margin balance + available isolated margin)
+    const withdrawable = parseFloat(userState?.withdrawable || '0');
     
-    console.log(`[Balance Debug] RAW margin summary from Hyperliquid:`, JSON.stringify(userState?.marginSummary, null, 2));
-    console.log(`[Balance Debug] Calculated available balance: $${withdrawable.toFixed(2)} (accountValue=$${accountValue} - marginUsed=$${totalMarginUsed})`);
+    console.log(`[Balance Debug] RAW user state from Hyperliquid:`, JSON.stringify({
+      marginSummary: userState?.marginSummary,
+      withdrawable: userState?.withdrawable,
+      crossMarginSummary: userState?.crossMarginSummary
+    }, null, 2));
+    console.log(`[Balance Debug] Available balance: $${withdrawable.toFixed(2)} (from Hyperliquid withdrawable field)`);
     
     // Fetch recent learnings from past trade evaluations (filtered by current market regime)
     const recentLearnings = await getRecentLearnings(userId, marketRegime.regime, 8);
