@@ -20,16 +20,20 @@ export default function Dashboard() {
 
   // Check verification status and redirect if not approved
   useEffect(() => {
-    if (user && user.verificationStatus !== "approved") {
+    if (user && user.verificationStatus !== "approved" && user.role !== "admin") {
       setLocation("/pending-approval");
     }
   }, [user, setLocation]);
 
   useEffect(() => {
+    // Admin users can access dashboard without credentials
+    if (user?.role === "admin") {
+      return;
+    }
     if (isSuccess && !hasCredentials) {
       setLocation("/onboarding");
     }
-  }, [hasCredentials, isSuccess, setLocation]);
+  }, [hasCredentials, isSuccess, setLocation, user?.role]);
 
   if (isLoading) {
     return (
@@ -48,7 +52,8 @@ export default function Dashboard() {
     );
   }
 
-  if (!hasCredentials) {
+  // Admin users can access dashboard without credentials
+  if (!hasCredentials && user?.role !== "admin") {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <p className="text-muted-foreground" data-testid="text-onboarding-redirect">Redirecting to onboarding...</p>
