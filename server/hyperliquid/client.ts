@@ -235,17 +235,20 @@ export class HyperliquidClient {
   }
 
   async getUserState(address?: string): Promise<any> {
+    const userAddress = address || this.config.walletAddress;
+    if (!userAddress) {
+      throw new Error("No wallet address provided");
+    }
+    
+    console.log(`[Hyperliquid] Fetching user state for address: ${userAddress}`);
+    
     try {
-      const userAddress = address || this.config.walletAddress;
-      if (!userAddress) {
-        throw new Error("No wallet address provided");
-      }
-      
       const state = await this.sdk.info.perpetuals.getClearinghouseState(userAddress);
+      console.log(`[Hyperliquid] Successfully fetched user state for ${userAddress}`);
       return state;
     } catch (error) {
-      console.error("Failed to fetch user state:", error);
-      return null;
+      console.error(`[Hyperliquid] Failed to fetch user state for ${userAddress}:`, error);
+      throw error; // Throw instead of returning null so we can see the error
     }
   }
 

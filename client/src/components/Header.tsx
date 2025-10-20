@@ -21,12 +21,14 @@ export default function Header() {
   const [, setLocation] = useLocation();
   const [contactDialogOpen, setContactDialogOpen] = useState(false);
   
-  const { data: userState } = useQuery<any>({
+  const { data: userState, error: userStateError, isLoading: userStateLoading } = useQuery<any>({
     queryKey: ['/api/hyperliquid/user-state'],
     refetchInterval: 30000,
+    retry: 1, // Only retry once
   });
 
   const accountValue = (userState?.userState?.marginSummary?.accountValue as number) || 0;
+  const hasError = userStateError || (userState && !userState.success);
 
   return (
     <header className="border-b px-6 py-3">
@@ -105,7 +107,13 @@ export default function Header() {
           <div className="text-right border-l pl-3">
             <div className="text-xs text-muted-foreground">Balance</div>
             <div className="font-mono text-sm font-semibold" data-testid="text-balance">
-              ${accountValue.toFixed(2)}
+              {userStateLoading ? (
+                <span className="text-muted-foreground">Loading...</span>
+              ) : hasError ? (
+                <span className="text-destructive" title="Failed to fetch balance">Error</span>
+              ) : (
+                `$${accountValue.toFixed(2)}`
+              )}
             </div>
           </div>
           <Button 
