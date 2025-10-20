@@ -1049,7 +1049,7 @@ export async function executeTradeStrategy(
           const type = parseFloat(order.limitPx) > entryPrice ? (positionIsLong ? 'tp' : 'sl') : (positionIsLong ? 'sl' : 'tp');
           console.log(`[Trade Executor] 🔍 Existing order: price=${price}, size=${size}, type=${type}, oid=${order.oid}`);
           return { price, size, type, oid: order.oid };
-        }));
+        });
         
         // Check if all final protective actions exist in the exchange (with tolerance)
         for (const action of finalProtectiveActions) {
