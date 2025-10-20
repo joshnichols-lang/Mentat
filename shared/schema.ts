@@ -375,6 +375,7 @@ export const tradeJournalEntries = pgTable("trade_journal_entries", {
   side: text("side").notNull(), // "long" or "short"
   entryType: text("entry_type").notNull(), // "position_opened", "limit_order_placed"
   status: text("status").notNull().default("planned"), // "planned", "active", "closed"
+  orderId: text("order_id"), // Hyperliquid order ID (oid) for linking to specific orders
   
   // Entry reasoning and expectations
   entryReasoning: text("entry_reasoning").notNull(), // AI's detailed explanation for why this trade was planned/entered

@@ -131,7 +131,7 @@ export interface IStorage {
   updateTradeJournalEntry(userId: string, id: string, updates: Partial<TradeJournalEntry>): Promise<TradeJournalEntry | undefined>;
   deleteTradeJournalEntry(userId: string, id: string): Promise<void>;
   deleteAllTradeJournalEntries(userId: string): Promise<void>;
-  deletePlannedJournalEntriesBySymbol(userId: string, symbol: string): Promise<number>;
+  deletePlannedJournalEntryByOrderId(userId: string, symbol: string, orderId: string): Promise<number>;
   activateTradeJournalEntry(userId: string, id: string, actualEntryPrice: string): Promise<TradeJournalEntry | undefined>;
   closeTradeJournalEntry(userId: string, id: string, closeData: {
     closePrice: string;
@@ -903,6 +903,7 @@ export class DbStorage implements IStorage {
       side: tradeJournalEntries.side,
       entryType: tradeJournalEntries.entryType,
       status: tradeJournalEntries.status,
+      orderId: tradeJournalEntries.orderId,
       entryReasoning: tradeJournalEntries.entryReasoning,
       expectations: tradeJournalEntries.expectations,
       exitCriteria: tradeJournalEntries.exitCriteria,
@@ -1010,13 +1011,14 @@ export class DbStorage implements IStorage {
       .where(eq(tradeJournalEntries.userId, userId));
   }
 
-  async deletePlannedJournalEntriesBySymbol(userId: string, symbol: string): Promise<number> {
+  async deletePlannedJournalEntryByOrderId(userId: string, symbol: string, orderId: string): Promise<number> {
     const result = await db.delete(tradeJournalEntries)
       .where(
         withUserFilter(
           tradeJournalEntries, 
           userId, 
           eq(tradeJournalEntries.symbol, symbol),
+          eq(tradeJournalEntries.orderId, orderId),
           eq(tradeJournalEntries.status, "planned")
         )
       )

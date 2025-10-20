@@ -63,6 +63,17 @@ async function createJournalEntry(
     if (action.action !== "buy" && action.action !== "sell") {
       return null;
     }
+    
+    // Validate required fields
+    if (!action.side) {
+      console.error("[Journal] Cannot create entry without side (long/short)");
+      return null;
+    }
+    
+    if (!action.size) {
+      console.error("[Journal] Cannot create entry without size");
+      return null;
+    }
 
     // Extract stop loss and take profit from protective actions if provided
     let stopLossPrice: string | null = action.stopLoss || null;
@@ -134,6 +145,12 @@ async function createJournalEntry(
       actualEntryPrice = orderResult.executedPrice;
     }
 
+    // Extract order ID from response if available
+    let orderId: string | null = null;
+    if (orderResult.response?.response?.data?.statuses?.[0]?.resting?.oid) {
+      orderId = String(orderResult.response.response.data.statuses[0].resting.oid);
+    }
+    
     const entryData = {
       tradeId: null, // Will be updated later when position is tracked
       tradingModeId: tradingModeId || null, // Strategy used for this trade
@@ -141,6 +158,7 @@ async function createJournalEntry(
       side: action.side,
       entryType: "limit" as const,
       status,
+      orderId, // Link to Hyperliquid order ID for tracking
       entryReasoning: action.reasoning,
       expectations: JSON.stringify(expectations),
       exitCriteria: action.exitCriteria || null,
@@ -670,6 +688,28 @@ export async function executeTradeStrategy(
         if (cancelResult.success) {
           successCount++;
           console.log(`[Trade Executor] Cancelled order ${action.orderId} for ${action.symbol}`);
+          
+          // Clean up the specific planned journal entry for this order
+          // Skip cleanup if orderId is missing (shouldn't happen, but defensive check)
+          if (!action.orderId) {
+            console.log(`[Journal] No orderId provided for canceled order ${action.symbol}, skipping journal cleanup`);
+          } else {
+            try {
+              const deletedCount = await storage.deletePlannedJournalEntryByOrderId(
+                userId, 
+                action.symbol, 
+                String(action.orderId)
+              );
+              if (deletedCount > 0) {
+                console.log(`[Journal] Cleaned up ${deletedCount} planned journal ${deletedCount === 1 ? 'entry' : 'entries'} for order ${action.orderId}`);
+              } else {
+                console.log(`[Journal] No planned journal entry found for order ${action.orderId} (may have been filled or already removed)`);
+              }
+            } catch (journalError) {
+              console.error(`[Journal] Failed to clean up planned entry for order ${action.orderId}:`, journalError);
+              // Don't fail the order cancellation if journal cleanup fails
+            }
+          }
         } else {
           failCount++;
           console.error(`[Trade Executor] Failed to cancel order ${action.orderId}:`, cancelResult.error);
