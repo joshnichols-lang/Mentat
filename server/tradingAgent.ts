@@ -85,6 +85,41 @@ export async function processTradingPrompt(
 ): Promise<TradingStrategy> {
   
   try {
+    // Fetch the trading strategy details if strategyId is provided (BEFORE classification)
+    let strategyDetails: any = null;
+    console.log(`[Trading Prompt] ========================================`);
+    console.log(`[Trading Prompt] Received strategyId: ${strategyId} (type: ${typeof strategyId})`);
+    
+    if (strategyId) {
+      try {
+        strategyDetails = await storage.getTradingMode(userId, strategyId);
+        
+        if (strategyDetails) {
+          console.log(`[Trading Prompt] ✓ STRATEGY CONTEXT LOADED: "${strategyDetails.name}"`);
+          console.log(`[Trading Prompt] Strategy details: ${JSON.stringify({
+            name: strategyDetails.name,
+            description: strategyDetails.description,
+            riskPercentage: strategyDetails.riskPercentage,
+            maxPositions: strategyDetails.maxPositions,
+            maxLeverage: strategyDetails.maxLeverage,
+            timeframe: strategyDetails.timeframe,
+            preferredAssets: strategyDetails.preferredAssets
+          }, null, 2)}`);
+        } else {
+          console.warn(`[Trading Prompt] ❌ STRATEGY NOT FOUND: strategyId="${strategyId}" returned null/undefined`);
+          console.warn(`[Trading Prompt] AI will proceed WITHOUT strategy context`);
+        }
+      } catch (strategyError) {
+        console.error(`[Trading Prompt] ❌ ERROR FETCHING STRATEGY: ${strategyError}`);
+        console.error(strategyError);
+        // Continue without strategy details
+      }
+    } else {
+      console.log(`[Trading Prompt] ℹ️ No strategyId provided (null/undefined) - proceeding in GENERAL mode without strategy constraints`);
+    }
+    console.log(`[Trading Prompt] Strategy context will ${strategyDetails ? 'BE' : 'NOT be'} included in AI prompt`);
+    console.log(`[Trading Prompt] ========================================`);
+    
     // First, classify if this is a trading question or general question
     // If screenshots are attached, strongly bias towards trading
     let classification = { isTrading: true, reason: "default to trading" };
@@ -179,12 +214,28 @@ export async function processTradingPrompt(
 
     // If it's a general question, respond naturally without trading JSON format
     if (!classification.isTrading) {
+      // Build strategy context string if available
+      let strategyContext = "";
+      if (strategyDetails) {
+        strategyContext = `\n\nCURRENT ACTIVE TRADING STRATEGY:
+- Name: "${strategyDetails.name}"
+- Description: ${strategyDetails.description || "No description"}
+- Risk per trade: ${strategyDetails.riskPercentage}%
+- Max positions: ${strategyDetails.maxPositions}
+- Max leverage: ${strategyDetails.maxLeverage}x
+- Timeframe: ${strategyDetails.timeframe}
+- Preferred assets: ${strategyDetails.preferredAssets?.join(', ') || 'Any'}
+${strategyDetails.customRules ? `- Custom rules: ${strategyDetails.customRules}` : ''}
+
+This is the strategy you're currently using for autonomous trading. If the user asks about it, reference these details.`;
+      }
+      
       const generalMessages: AIMessage[] = [
         {
           role: "system" as const,
           content: `You are Mr. Fox, a helpful and knowledgeable AI assistant. You can answer questions on any topic - math, science, history, current events, general knowledge, and more. Be friendly, accurate, and conversational.
 
-You also happen to be an expert crypto trader, but the user is asking you a general question right now, so respond naturally without any trading jargon unless relevant.`
+You also happen to be an expert crypto trader, but the user is asking you a general question right now, so respond naturally without any trading jargon unless relevant.${strategyContext}`
         },
         {
           role: "user" as const,
@@ -223,41 +274,6 @@ You also happen to be an expert crypto trader, but the user is asking you a gene
         expectedOutcome: "Not applicable - general question"
       };
     }
-
-    // Fetch the trading strategy details if strategyId is provided
-    let strategyDetails: any = null;
-    console.log(`[Trading Prompt] ========================================`);
-    console.log(`[Trading Prompt] Received strategyId: ${strategyId} (type: ${typeof strategyId})`);
-    
-    if (strategyId) {
-      try {
-        strategyDetails = await storage.getTradingMode(userId, strategyId);
-        
-        if (strategyDetails) {
-          console.log(`[Trading Prompt] ✓ STRATEGY CONTEXT LOADED: "${strategyDetails.name}"`);
-          console.log(`[Trading Prompt] Strategy details: ${JSON.stringify({
-            name: strategyDetails.name,
-            description: strategyDetails.description,
-            riskPercentage: strategyDetails.riskPercentage,
-            maxPositions: strategyDetails.maxPositions,
-            maxLeverage: strategyDetails.maxLeverage,
-            timeframe: strategyDetails.timeframe,
-            preferredAssets: strategyDetails.preferredAssets
-          }, null, 2)}`);
-        } else {
-          console.warn(`[Trading Prompt] ❌ STRATEGY NOT FOUND: strategyId="${strategyId}" returned null/undefined`);
-          console.warn(`[Trading Prompt] AI will proceed WITHOUT strategy context`);
-        }
-      } catch (strategyError) {
-        console.error(`[Trading Prompt] ❌ ERROR FETCHING STRATEGY: ${strategyError}`);
-        console.error(strategyError);
-        // Continue without strategy details
-      }
-    } else {
-      console.log(`[Trading Prompt] ℹ️ No strategyId provided (null/undefined) - proceeding in GENERAL mode without strategy constraints`);
-    }
-    console.log(`[Trading Prompt] Strategy context will ${strategyDetails ? 'BE' : 'NOT be'} included in AI prompt`);
-    console.log(`[Trading Prompt] ========================================`);
 
     // Fetch recent user prompt history (last 5 successful prompts) - filtered by strategyId
     let promptHistory: {timestamp: Date, prompt: string}[] = [];
