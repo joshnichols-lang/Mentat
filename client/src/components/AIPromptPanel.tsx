@@ -155,9 +155,26 @@ export default function AIPromptPanel() {
     },
     onError: (error: any) => {
       console.error("Trade execution error:", error);
+      console.error("Error details:", {
+        message: error.message,
+        response: error.response,
+        data: error.data,
+        stack: error.stack
+      });
+      
+      // Try to extract the actual error message from the response
+      let errorMessage = "Failed to process trading prompt";
+      if (error.data?.error) {
+        errorMessage = error.data.error;
+      } else if (error.response?.data?.error) {
+        errorMessage = error.response.data.error;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
       toast({
         title: "Error",
-        description: error.message || "Failed to process trading prompt",
+        description: errorMessage,
         variant: "destructive",
       });
     },
