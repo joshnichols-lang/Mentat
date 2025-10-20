@@ -131,6 +131,7 @@ export interface IStorage {
   updateTradeJournalEntry(userId: string, id: string, updates: Partial<TradeJournalEntry>): Promise<TradeJournalEntry | undefined>;
   deleteTradeJournalEntry(userId: string, id: string): Promise<void>;
   deleteAllTradeJournalEntries(userId: string): Promise<void>;
+  deletePlannedJournalEntriesBySymbol(userId: string, symbol: string): Promise<number>;
   activateTradeJournalEntry(userId: string, id: string, actualEntryPrice: string): Promise<TradeJournalEntry | undefined>;
   closeTradeJournalEntry(userId: string, id: string, closeData: {
     closePrice: string;
@@ -1007,6 +1008,20 @@ export class DbStorage implements IStorage {
   async deleteAllTradeJournalEntries(userId: string): Promise<void> {
     await db.delete(tradeJournalEntries)
       .where(eq(tradeJournalEntries.userId, userId));
+  }
+
+  async deletePlannedJournalEntriesBySymbol(userId: string, symbol: string): Promise<number> {
+    const result = await db.delete(tradeJournalEntries)
+      .where(
+        withUserFilter(
+          tradeJournalEntries, 
+          userId, 
+          eq(tradeJournalEntries.symbol, symbol),
+          eq(tradeJournalEntries.status, "planned")
+        )
+      )
+      .returning();
+    return result.length;
   }
 
   // Trading Mode methods
