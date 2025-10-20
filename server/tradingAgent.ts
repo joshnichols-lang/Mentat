@@ -214,14 +214,17 @@ export async function processTradingPrompt(
       let strategyContext = "";
       if (strategyDetails) {
         const params = strategyDetails.parameters || {};
+        const preferredAssets = Array.isArray(params.preferredAssets) 
+          ? params.preferredAssets.join(', ')
+          : params.preferredAssets || 'Any';
         strategyContext = `\n\nCURRENT ACTIVE TRADING STRATEGY:
 - Name: "${strategyDetails.name}"
 - Description: ${strategyDetails.description || "No description"}
-- Risk per trade: ${params.riskPercentPerTrade || 'Undefined'}%
+- Risk per trade: ${params.riskPercentage || params.riskPercentPerTrade || 'Undefined'}%
 - Max positions: ${params.maxPositions || 'Undefined'}
-- Max leverage: ${params.maxLeverage || 'Undefined'}x
+- Max leverage: ${params.preferredLeverage || params.maxLeverage || 'Undefined'}x
 - Timeframe: ${params.timeframe || 'Undefined'}
-- Preferred assets: ${params.preferredAssets?.join(', ') || 'Any'}
+- Preferred assets: ${preferredAssets}
 - Max entry orders per symbol: ${params.maxEntryOrdersPerSymbol || 3}
 ${params.customRules ? `- Custom rules: ${params.customRules}` : ''}
 
@@ -434,19 +437,19 @@ Output real-time executed trades with professional precision and risk-adjusted o
 ${strategyDetails ? `ACTIVE TRADING STRATEGY:
 You are operating under the "${strategyDetails.name}" trading strategy with the following rules and constraints:
 - Description: ${strategyDetails.description || 'No description provided'}
-- Risk per trade: ${strategyDetails.parameters?.riskPercentPerTrade || 1}% of portfolio
+- Risk per trade: ${strategyDetails.parameters?.riskPercentage || strategyDetails.parameters?.riskPercentPerTrade || 1}% of portfolio
 - Maximum positions: ${strategyDetails.parameters?.maxPositions || 5}
-- Maximum leverage: ${strategyDetails.parameters?.maxLeverage || 10}x
+- Maximum leverage: ${strategyDetails.parameters?.preferredLeverage || strategyDetails.parameters?.maxLeverage || 10}x
 - Timeframe: ${strategyDetails.parameters?.timeframe || 'Not specified'}
-- Preferred assets: ${strategyDetails.parameters?.preferredAssets?.join(', ') || 'All assets'}
+- Preferred assets: ${Array.isArray(strategyDetails.parameters?.preferredAssets) ? strategyDetails.parameters.preferredAssets.join(', ') : strategyDetails.parameters?.preferredAssets || 'All assets'}
 - Custom rules: ${strategyDetails.parameters?.customRules || 'No custom rules'}
 
 IMPORTANT: You MUST follow these strategy constraints. When generating trades:
-1. Respect the risk percentage per trade (${strategyDetails.parameters?.riskPercentPerTrade || 1}%)
+1. Respect the risk percentage per trade (${strategyDetails.parameters?.riskPercentage || strategyDetails.parameters?.riskPercentPerTrade || 1}%)
 2. Do not exceed the maximum number of positions (${strategyDetails.parameters?.maxPositions || 5})
-3. Do not use leverage higher than ${strategyDetails.parameters?.maxLeverage || 10}x
+3. Do not use leverage higher than ${strategyDetails.parameters?.preferredLeverage || strategyDetails.parameters?.maxLeverage || 10}x
 4. Focus on the specified timeframe: ${strategyDetails.parameters?.timeframe || 'any timeframe'}
-5. ${strategyDetails.parameters?.preferredAssets?.length > 0 ? `Prioritize these assets: ${strategyDetails.parameters.preferredAssets.join(', ')}` : 'Consider all available assets'}
+5. ${(Array.isArray(strategyDetails.parameters?.preferredAssets) && strategyDetails.parameters.preferredAssets.length > 0) || (typeof strategyDetails.parameters?.preferredAssets === 'string' && strategyDetails.parameters?.preferredAssets !== 'All assets') ? `Prioritize these assets: ${Array.isArray(strategyDetails.parameters.preferredAssets) ? strategyDetails.parameters.preferredAssets.join(', ') : strategyDetails.parameters.preferredAssets}` : 'Consider all available assets'}
 6. ${strategyDetails.parameters?.customRules ? `Follow these custom rules: ${strategyDetails.parameters.customRules}` : ''}
 
 ` : ''}Account Information:
@@ -487,19 +490,19 @@ Generate a trading strategy that addresses the user's current prompt while consi
 ${strategyDetails ? `ACTIVE TRADING STRATEGY:
 You are operating under the "${strategyDetails.name}" trading strategy with the following rules and constraints:
 - Description: ${strategyDetails.description || 'No description provided'}
-- Risk per trade: ${strategyDetails.parameters?.riskPercentPerTrade || 1}% of portfolio
+- Risk per trade: ${strategyDetails.parameters?.riskPercentage || strategyDetails.parameters?.riskPercentPerTrade || 1}% of portfolio
 - Maximum positions: ${strategyDetails.parameters?.maxPositions || 5}
-- Maximum leverage: ${strategyDetails.parameters?.maxLeverage || 10}x
+- Maximum leverage: ${strategyDetails.parameters?.preferredLeverage || strategyDetails.parameters?.maxLeverage || 10}x
 - Timeframe: ${strategyDetails.parameters?.timeframe || 'Not specified'}
-- Preferred assets: ${strategyDetails.parameters?.preferredAssets?.join(', ') || 'All assets'}
+- Preferred assets: ${Array.isArray(strategyDetails.parameters?.preferredAssets) ? strategyDetails.parameters.preferredAssets.join(', ') : strategyDetails.parameters?.preferredAssets || 'All assets'}
 - Custom rules: ${strategyDetails.parameters?.customRules || 'No custom rules'}
 
 IMPORTANT: You MUST follow these strategy constraints. When generating trades:
-1. Respect the risk percentage per trade (${strategyDetails.parameters?.riskPercentPerTrade || 1}%)
+1. Respect the risk percentage per trade (${strategyDetails.parameters?.riskPercentage || strategyDetails.parameters?.riskPercentPerTrade || 1}%)
 2. Do not exceed the maximum number of positions (${strategyDetails.parameters?.maxPositions || 5})
-3. Do not use leverage higher than ${strategyDetails.parameters?.maxLeverage || 10}x
+3. Do not use leverage higher than ${strategyDetails.parameters?.preferredLeverage || strategyDetails.parameters?.maxLeverage || 10}x
 4. Focus on the specified timeframe: ${strategyDetails.parameters?.timeframe || 'any timeframe'}
-5. ${strategyDetails.parameters?.preferredAssets?.length > 0 ? `Prioritize these assets: ${strategyDetails.parameters.preferredAssets.join(', ')}` : 'Consider all available assets'}
+5. ${(Array.isArray(strategyDetails.parameters?.preferredAssets) && strategyDetails.parameters.preferredAssets.length > 0) || (typeof strategyDetails.parameters?.preferredAssets === 'string' && strategyDetails.parameters?.preferredAssets !== 'All assets') ? `Prioritize these assets: ${Array.isArray(strategyDetails.parameters.preferredAssets) ? strategyDetails.parameters.preferredAssets.join(', ') : strategyDetails.parameters.preferredAssets}` : 'Consider all available assets'}
 6. ${strategyDetails.parameters?.customRules ? `Follow these custom rules: ${strategyDetails.parameters.customRules}` : ''}
 
 ` : ''}Account Information:
