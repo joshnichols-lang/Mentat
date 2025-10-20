@@ -192,7 +192,7 @@ function getVisionModel(providerName: string): string {
     case "openai":
       return "gpt-4o"; // Supports vision
     case "xai":
-      return "grok-2-vision-1212"; // Grok 2 with vision (Dec 2024)
+      return "grok-4-fast-reasoning"; // Vision-enabled reasoning model (10x cheaper than Grok 2)
     case "perplexity":
       return "sonar-pro"; // Use best available
     default:
