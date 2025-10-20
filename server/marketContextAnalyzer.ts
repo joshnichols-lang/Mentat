@@ -254,7 +254,7 @@ export async function analyzeFillProbability(
         atrPercent * 2, // 2x ATR as percentage (reduced from 3x)
         1.0 // Minimum 1.0% for very low volatility assets (increased from 0.5%)
       ),
-      15.0 // HARD CAP: Never allow more than 15% distance from current price
+      40.0 // HARD CAP: Allow up to 40% distance for user-requested limit orders (increased from 15%)
     );
     
     // CRITICAL: Validate maxRealisticDistance to prevent NaN comparisons
