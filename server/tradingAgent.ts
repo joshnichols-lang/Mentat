@@ -96,6 +96,9 @@ export async function processTradingPrompt(
         
         if (strategyDetails) {
           console.log(`[Trading Prompt] ✓ STRATEGY CONTEXT LOADED: "${strategyDetails.name}"`);
+          console.log(`[Trading Prompt] Full strategy object keys: ${Object.keys(strategyDetails).join(', ')}`);
+          console.log(`[Trading Prompt] Strategy parameters type: ${typeof strategyDetails.parameters}`);
+          console.log(`[Trading Prompt] Strategy parameters value: ${JSON.stringify(strategyDetails.parameters)}`);
           console.log(`[Trading Prompt] Strategy details: ${JSON.stringify({
             name: strategyDetails.name,
             description: strategyDetails.description,
