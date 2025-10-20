@@ -104,13 +104,19 @@ export default function AIPromptPanel() {
 
   const executeTradeMutation = useMutation({
     mutationFn: async ({ promptText, images }: { promptText: string; images: string[] }) => {
+      const strategyId = activeMode?.id || null;
+      console.log("=== TRADING PROMPT REQUEST ===");
+      console.log("Active Mode:", activeMode ? { id: activeMode.id, name: activeMode.name, isActive: activeMode.isActive } : null);
+      console.log("Sending strategyId:", strategyId);
+      console.log("=============================");
+      
       const res = await apiRequest("POST", "/api/trading/prompt", {
         prompt: promptText,
         marketData: marketData?.marketData || [],
         currentPositions: positions?.positions || [],
         autoExecute: true,
         screenshots: images.length > 0 ? images : undefined,
-        strategyId: activeMode?.id || null, // null = "general" mode
+        strategyId: strategyId, // null = "general" mode
         // Model is optional - AI router will use provider's default
       });
       return await res.json();

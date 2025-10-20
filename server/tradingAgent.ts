@@ -226,18 +226,38 @@ You also happen to be an expert crypto trader, but the user is asking you a gene
 
     // Fetch the trading strategy details if strategyId is provided
     let strategyDetails: any = null;
-    console.log(`[Trading Prompt] Received strategyId: ${strategyId}`);
+    console.log(`[Trading Prompt] ========================================`);
+    console.log(`[Trading Prompt] Received strategyId: ${strategyId} (type: ${typeof strategyId})`);
+    
     if (strategyId) {
       try {
         strategyDetails = await storage.getTradingMode(userId, strategyId);
-        console.log(`[Trading Prompt] Fetched strategy details: ${JSON.stringify({name: strategyDetails?.name, riskPercentage: strategyDetails?.riskPercentage, maxPositions: strategyDetails?.maxPositions})}`);
+        
+        if (strategyDetails) {
+          console.log(`[Trading Prompt] ✓ STRATEGY CONTEXT LOADED: "${strategyDetails.name}"`);
+          console.log(`[Trading Prompt] Strategy details: ${JSON.stringify({
+            name: strategyDetails.name,
+            description: strategyDetails.description,
+            riskPercentage: strategyDetails.riskPercentage,
+            maxPositions: strategyDetails.maxPositions,
+            maxLeverage: strategyDetails.maxLeverage,
+            timeframe: strategyDetails.timeframe,
+            preferredAssets: strategyDetails.preferredAssets
+          }, null, 2)}`);
+        } else {
+          console.warn(`[Trading Prompt] ❌ STRATEGY NOT FOUND: strategyId="${strategyId}" returned null/undefined`);
+          console.warn(`[Trading Prompt] AI will proceed WITHOUT strategy context`);
+        }
       } catch (strategyError) {
-        console.error("Failed to fetch strategy details:", strategyError);
+        console.error(`[Trading Prompt] ❌ ERROR FETCHING STRATEGY: ${strategyError}`);
+        console.error(strategyError);
         // Continue without strategy details
       }
     } else {
-      console.log(`[Trading Prompt] No strategyId provided - proceeding without strategy context`);
+      console.log(`[Trading Prompt] ℹ️ No strategyId provided (null/undefined) - proceeding in GENERAL mode without strategy constraints`);
     }
+    console.log(`[Trading Prompt] Strategy context will ${strategyDetails ? 'BE' : 'NOT be'} included in AI prompt`);
+    console.log(`[Trading Prompt] ========================================`);
 
     // Fetch recent user prompt history (last 5 successful prompts) - filtered by strategyId
     let promptHistory: {timestamp: Date, prompt: string}[] = [];
