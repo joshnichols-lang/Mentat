@@ -352,6 +352,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update user wallet address
+  app.patch("/api/user/wallet-address", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      
+      const schema = z.object({
+        walletAddress: z.string()
+          .regex(/^0x[a-fA-F0-9]{40}$/, "Invalid Ethereum wallet address"),
+      });
+      
+      const { walletAddress } = schema.parse(req.body);
+      
+      await storage.updateUserWalletAddress(userId, walletAddress);
+      
+      res.json({ 
+        success: true, 
+        message: "Wallet address updated successfully" 
+      });
+    } catch (error: any) {
+      console.error("Error updating wallet address:", error);
+      
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({
+          success: false,
+          error: "Invalid request data",
+          details: error.errors
+        });
+      }
+      
+      res.status(500).json({ 
+        success: false, 
+        error: "Failed to update wallet address" 
+      });
+    }
+  });
+
   // Get all trades
   app.get("/api/trades", isAuthenticated, async (req, res) => {
     try {

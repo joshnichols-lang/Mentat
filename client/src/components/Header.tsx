@@ -1,4 +1,4 @@
-import { Wallet, LogOut, UserCheck, Settings, Users, ChevronDown, MessageSquare, History, BookOpen, Target, Home, BarChart3 } from "lucide-react";
+import { LogOut, UserCheck, Settings, Users, ChevronDown, MessageSquare, History, BookOpen, Target, Home, BarChart3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -108,9 +108,6 @@ export default function Header() {
               ${accountValue.toFixed(2)}
             </div>
           </div>
-          <Button variant="ghost" size="icon" data-testid="button-wallet">
-            <Wallet className="h-4 w-4" />
-          </Button>
           <Button 
             variant="ghost" 
             size="icon" 

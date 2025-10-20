@@ -99,16 +99,19 @@ export default function Onboarding() {
 
   const exchangeMutation = useMutation({
     mutationFn: async (data: ExchangeFormData) => {
-      // First save the exchange credentials
+      // Save the exchange credentials with wallet address in metadata
       const response = await apiRequest("POST", "/api/api-keys", {
         providerType: "exchange",
         providerName: data.provider,
         label: data.label,
         apiKey: data.apiKey,
+        metadata: {
+          mainWalletAddress: data.walletAddress,
+        },
       });
       
-      // Then update the user's wallet address
-      await apiRequest("POST", "/api/user/wallet-address", {
+      // Also update the user's wallet address for verification purposes
+      await apiRequest("PATCH", "/api/user/wallet-address", {
         walletAddress: data.walletAddress,
       });
       
