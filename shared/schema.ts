@@ -424,7 +424,8 @@ export const tradingModes = pgTable("trading_modes", {
   //   maxPositions: 1-10,
   //   maxLeverage: 1-20,
   //   maxEntryOrdersPerSymbol: 1-10, // Max scaled entry orders per symbol
-  //   preferredAssets: ["BTC-PERP", "ETH-PERP"],
+  //   preferredAssets: ["BTC-PERP", "ETH-PERP"], // AI preference hint
+  //   restrictedAssets: ["BTC-PERP"], // HARD restriction - can ONLY trade these symbols if set
   //   tradingHours: { start: "08:00", end: "16:00", timezone: "UTC" },
   //   entryStyle: "patient" | "aggressive",
   //   exitStyle: "target-based" | "trailing",
