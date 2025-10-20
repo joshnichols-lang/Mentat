@@ -18,22 +18,23 @@ export default function Dashboard() {
   const { user } = useAuth();
   const { hasCredentials, isLoading, error, isSuccess } = useCredentials();
 
-  // Check verification status and redirect if not approved
   useEffect(() => {
-    if (user && user.verificationStatus !== "approved" && user.role !== "admin") {
-      setLocation("/pending-approval");
-    }
-  }, [user, setLocation]);
-
-  useEffect(() => {
-    // Admin users can access dashboard without credentials
+    // Admin users can access dashboard without credentials or approval
     if (user?.role === "admin") {
       return;
     }
+    
+    // First priority: redirect to onboarding if no credentials set up
     if (isSuccess && !hasCredentials) {
       setLocation("/onboarding");
+      return;
     }
-  }, [hasCredentials, isSuccess, setLocation, user?.role]);
+    
+    // Second priority: redirect to pending approval if credentials exist but not approved
+    if (user && hasCredentials && user.verificationStatus !== "approved") {
+      setLocation("/pending-approval");
+    }
+  }, [user, hasCredentials, isSuccess, setLocation]);
 
   if (isLoading) {
     return (

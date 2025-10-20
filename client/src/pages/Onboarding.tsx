@@ -492,7 +492,7 @@ export default function Onboarding() {
                   <AlertDescription>
                     <p className="font-medium mb-2">How to get your API wallet address on Hyperliquid:</p>
                     <ol className="list-decimal list-inside space-y-1 text-sm">
-                      <li>Go to Hyperliquid → Settings → API</li>
+                      <li>Go to Hyperliquid → More → API</li>
                       <li>Click "Generate" or "Authorize API Wallet"</li>
                       <li>Copy the API wallet address (starts with "0x")</li>
                       <li>Paste it above</li>
