@@ -13,7 +13,7 @@ import { ContactAdmin } from "./ContactAdmin";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import logoUrl from "@assets/generated-image-removebg-preview_1760665535887.png";
 
 export default function Header() {
@@ -29,6 +29,19 @@ export default function Header() {
 
   const accountValue = (userState?.userState?.marginSummary?.accountValue as number) || 0;
   const hasError = userStateError || (userState && !userState.success);
+  
+  // Log balance info for debugging
+  useEffect(() => {
+    if (userStateError) {
+      console.error('[Balance] Failed to fetch user state:', userStateError);
+    } else if (userState) {
+      console.log('[Balance] User state response:', userState);
+      if (!userState.success) {
+        console.error('[Balance] API returned error:', userState.error);
+      }
+      console.log('[Balance] Account value:', accountValue, 'Has error:', hasError);
+    }
+  }, [userState, userStateError, accountValue, hasError]);
 
   return (
     <header className="border-b px-6 py-3">
