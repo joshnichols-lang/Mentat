@@ -538,19 +538,35 @@ ${openOrders.length > 0 ? openOrders.map(order => {
 
 ${(() => {
   // Check for missing protective orders
+  // NOTE: Hyperliquid's openOrders API doesn't return orderType.trigger metadata
+  // We can only see reduceOnly flag and need to infer SL/TP from price position
   const missingProtection: string[] = [];
   for (const pos of currentPositions) {
     const posSymbol = pos.symbol;
-    const hasStopLoss = openOrders.some(order => 
-      order.coin === posSymbol && 
-      order.orderType?.trigger?.tpsl === 'sl' && 
-      order.reduceOnly
+    const currentPrice = parseFloat(pos.currentPrice);
+    const isLong = pos.side === 'long';
+    
+    // Find all reduce-only orders for this position
+    const protectiveOrders = openOrders.filter(order => 
+      order.coin === posSymbol && order.reduceOnly === true
     );
-    const hasTakeProfit = openOrders.some(order => 
-      order.coin === posSymbol && 
-      order.orderType?.trigger?.tpsl === 'tp' && 
-      order.reduceOnly
-    );
+    
+    // Classify orders based on price position relative to current market price
+    // For LONG: SL below price, TP above price
+    // For SHORT: SL above price, TP below price
+    let hasStopLoss = false;
+    let hasTakeProfit = false;
+    
+    for (const order of protectiveOrders) {
+      const orderPrice = parseFloat(order.limitPx);
+      if (isLong) {
+        if (orderPrice < currentPrice) hasStopLoss = true;  // Below = SL for longs
+        if (orderPrice > currentPrice) hasTakeProfit = true; // Above = TP for longs
+      } else {
+        if (orderPrice > currentPrice) hasStopLoss = true;  // Above = SL for shorts
+        if (orderPrice < currentPrice) hasTakeProfit = true; // Below = TP for shorts
+      }
+    }
     
     if (!hasStopLoss) {
       const liq = pos.liquidationPrice;
@@ -574,16 +590,21 @@ ${(() => {
       missingProtection.push(`${posSymbol}: MISSING STOP LOSS - ${reasoning}`);
     }
     if (!hasTakeProfit) {
-      const currentPrice = pos.currentPrice;
       const entryPrice = pos.entryPrice;
-      // Calculate minimum take profit for 2:1 R:R
-      const existingStopLoss = openOrders.find(order => 
-        order.coin === posSymbol && 
-        order.orderType?.trigger?.tpsl === 'sl' && 
-        order.reduceOnly
-      );
-      if (existingStopLoss) {
-        const stopPrice = parseFloat(existingStopLoss.orderType?.trigger?.triggerPx || '0');
+      
+      // Calculate minimum take profit for 2:1 R:R based on existing stop loss
+      // Find the stop loss order (reduce-only order on the correct side of current price)
+      const stopLossOrders = protectiveOrders.filter(order => {
+        const orderPrice = parseFloat(order.limitPx);
+        return isLong ? (orderPrice < currentPrice) : (orderPrice > currentPrice);
+      });
+      
+      if (stopLossOrders.length > 0) {
+        // Use the closest stop loss to current price (most conservative)
+        const stopPrice = isLong 
+          ? Math.max(...stopLossOrders.map(o => parseFloat(o.limitPx)))
+          : Math.min(...stopLossOrders.map(o => parseFloat(o.limitPx)));
+        
         const riskDistance = Math.abs(entryPrice - stopPrice);
         const minRewardDistance = riskDistance * 2; // 2:1 R:R
         const minTakeProfit = pos.side === 'long' 
