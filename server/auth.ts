@@ -7,7 +7,7 @@ import { promisify } from "util";
 import { storage } from "./storage";
 import { User as SelectUser } from "@shared/schema";
 import { z } from "zod";
-import { stopUserMonitoring } from "./userMonitoringManager";
+import { stopUserMonitoring, startUserMonitoring, restartUserMonitoring } from "./userMonitoringManager";
 
 // Strong password validation schema
 const passwordSchema = z.string()
@@ -391,6 +391,107 @@ export function setupAuth(app: Express) {
     } catch (error) {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ error: "Invalid input", details: error.errors });
+      }
+      next(error);
+    }
+  });
+
+  // Update user monitoring frequency (admin only)
+  app.patch("/api/admin/users/:userId/monitoring-frequency", async (req, res, next) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    try {
+      const currentUser = req.user!;
+      if (currentUser.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const schema = z.object({
+        minutes: z.number().int().min(0).max(1440), // 0 to 24 hours
+      });
+
+      const { minutes } = schema.parse(req.body);
+      const { userId } = req.params;
+      
+      // Update monitoring frequency in database
+      await storage.updateUserMonitoringFrequency(userId, minutes);
+      
+      // Get user to check if they're in active mode
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      
+      if (user.agentMode === "active") {
+        // Restart monitoring with new interval (or stop if minutes = 0)
+        await restartUserMonitoring(userId, minutes);
+        console.log(`[Admin] Updated monitoring frequency for user ${userId} to ${minutes} minutes`);
+      }
+      
+      res.json({ 
+        success: true, 
+        message: minutes === 0 
+          ? "Monitoring disabled for user" 
+          : `Monitoring frequency updated to ${minutes} minutes` 
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid request", details: error.errors });
+      }
+      next(error);
+    }
+  });
+
+  // Update user agent mode (admin only)
+  app.patch("/api/admin/users/:userId/agent-mode", async (req, res, next) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    try {
+      const currentUser = req.user!;
+      if (currentUser.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const schema = z.object({
+        mode: z.enum(["passive", "active"]),
+      });
+
+      const { mode } = schema.parse(req.body);
+      const { userId } = req.params;
+      
+      // Update agent mode in database
+      await storage.updateUserAgentMode(userId, mode);
+      
+      // Get user's current monitoring frequency
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      
+      if (mode === "active") {
+        // Start monitoring if active mode is enabled and frequency > 0
+        if (user.monitoringFrequencyMinutes > 0) {
+          await startUserMonitoring(userId, user.monitoringFrequencyMinutes);
+          console.log(`[Admin] Started monitoring for user ${userId} at ${user.monitoringFrequencyMinutes} minute intervals`);
+        }
+      } else {
+        // Stop monitoring when switching to passive mode
+        await stopUserMonitoring(userId);
+        console.log(`[Admin] Stopped monitoring for user ${userId} (switched to passive mode)`);
+      }
+      
+      res.json({ 
+        success: true, 
+        agentMode: mode,
+        message: mode === "active" 
+          ? "User switched to active mode - AI will autonomously trade" 
+          : "User switched to passive mode - AI will learn without trading"
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid request", details: error.errors });
       }
       next(error);
     }

@@ -8,6 +8,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { CheckCircle2, XCircle, Clock, AlertCircle, Trash2, Shield, User, UserPlus } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -19,6 +21,14 @@ import { z } from "zod";
 import Header from "@/components/Header";
 import { useState } from "react";
 
+const MONITORING_FREQUENCIES = [
+  { value: "0", label: "Disabled" },
+  { value: "1", label: "1 minute" },
+  { value: "5", label: "5 minutes" },
+  { value: "30", label: "30 minutes" },
+  { value: "60", label: "1 hour" },
+];
+
 interface UserData {
   id: string;
   username: string;
@@ -27,6 +37,7 @@ interface UserData {
   verificationStatus: "pending" | "approved" | "rejected";
   role: string;
   agentMode: "passive" | "active";
+  monitoringFrequencyMinutes: number;
   createdAt: string;
   aiUsage?: {
     totalRequests: number;
@@ -111,6 +122,49 @@ export default function AdminUsers() {
       toast({
         title: "Error",
         description: error.message || "Failed to delete user",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateMonitoringFrequencyMutation = useMutation({
+    mutationFn: async ({ userId, minutes }: { userId: string; minutes: number }) => {
+      const response = await apiRequest("PATCH", `/api/admin/users/${userId}/monitoring-frequency`, { minutes });
+      return response.json();
+    },
+    onSuccess: (data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      const label = MONITORING_FREQUENCIES.find(f => f.value === String(variables.minutes))?.label || `${variables.minutes} minutes`;
+      toast({
+        title: "Monitoring Frequency Updated",
+        description: data.message || `Monitoring set to ${label}`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update monitoring frequency",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateAgentModeMutation = useMutation({
+    mutationFn: async ({ userId, mode }: { userId: string; mode: "passive" | "active" }) => {
+      const response = await apiRequest("PATCH", `/api/admin/users/${userId}/agent-mode`, { mode });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      toast({
+        title: "Agent Mode Updated",
+        description: data.message || `Agent mode set to ${data.agentMode}`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update agent mode",
         variant: "destructive",
       });
     },
@@ -358,11 +412,54 @@ export default function AdminUsers() {
                     </div>
 
                     <div className="space-y-2">
-                      <p className="text-sm font-medium">Agent Mode:</p>
-                      <p className="text-sm bg-muted p-3 rounded-md">
-                        {userData.agentMode === "active" ? "Active (Trading)" : "Passive (Learning)"}
-                      </p>
+                      <Label htmlFor={`agent-mode-${userData.id}`} className="text-sm font-medium">
+                        Agent Mode
+                      </Label>
+                      <div className="flex items-center justify-between bg-muted p-3 rounded-md">
+                        <span className="text-sm">
+                          {userData.agentMode === "active" ? "Active (Trading)" : "Passive (Learning)"}
+                        </span>
+                        <Switch
+                          id={`agent-mode-${userData.id}`}
+                          checked={userData.agentMode === "active"}
+                          onCheckedChange={(checked) => {
+                            updateAgentModeMutation.mutate({
+                              userId: userData.id,
+                              mode: checked ? "active" : "passive",
+                            });
+                          }}
+                          disabled={updateAgentModeMutation.isPending}
+                          data-testid={`switch-agent-mode-${userData.id}`}
+                        />
+                      </div>
                     </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor={`monitoring-${userData.id}`} className="text-sm font-medium">
+                      Monitoring Frequency
+                    </Label>
+                    <Select
+                      value={String(userData.monitoringFrequencyMinutes)}
+                      onValueChange={(value) => {
+                        updateMonitoringFrequencyMutation.mutate({
+                          userId: userData.id,
+                          minutes: parseInt(value),
+                        });
+                      }}
+                      disabled={updateMonitoringFrequencyMutation.isPending}
+                    >
+                      <SelectTrigger id={`monitoring-${userData.id}`} data-testid={`select-monitoring-${userData.id}`}>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {MONITORING_FREQUENCIES.map((freq) => (
+                          <SelectItem key={freq.value} value={freq.value}>
+                            {freq.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   {userData.aiUsage && (
