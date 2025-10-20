@@ -11,8 +11,8 @@ import { startScheduler } from "./scheduler";
 import { ensureDefaultAdmin } from "./auth";
 
 const app = express();
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
+app.use(express.json({ limit: '50mb' })); // Support large images in AI prompts
+app.use(express.urlencoded({ extended: false, limit: '50mb' }));
 
 app.use((req, res, next) => {
   const start = Date.now();
