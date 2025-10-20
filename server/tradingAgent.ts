@@ -452,6 +452,7 @@ You are operating under the "${strategyDetails.name}" trading strategy with the 
 - Maximum leverage: ${strategyDetails.parameters?.preferredLeverage || strategyDetails.parameters?.maxLeverage || 10}x
 - Timeframe: ${strategyDetails.parameters?.timeframe || 'Not specified'}
 - Preferred assets: ${Array.isArray(strategyDetails.parameters?.preferredAssets) ? strategyDetails.parameters.preferredAssets.join(', ') : strategyDetails.parameters?.preferredAssets || 'All assets'}
+- Restricted assets (HARD LIMIT): ${strategyDetails.parameters?.restrictedAssets && strategyDetails.parameters.restrictedAssets.trim() !== '' ? strategyDetails.parameters.restrictedAssets : 'None - can trade any asset'}
 - Custom rules: ${strategyDetails.parameters?.customRules || 'No custom rules'}
 
 IMPORTANT: You MUST follow these strategy constraints. When generating trades:
@@ -459,7 +460,7 @@ IMPORTANT: You MUST follow these strategy constraints. When generating trades:
 2. Do not exceed the maximum number of positions (${strategyDetails.parameters?.maxPositions || 5})
 3. Do not use leverage higher than ${strategyDetails.parameters?.preferredLeverage || strategyDetails.parameters?.maxLeverage || 10}x
 4. Focus on the specified timeframe: ${strategyDetails.parameters?.timeframe || 'any timeframe'}
-5. ${(Array.isArray(strategyDetails.parameters?.preferredAssets) && strategyDetails.parameters.preferredAssets.length > 0) || (typeof strategyDetails.parameters?.preferredAssets === 'string' && strategyDetails.parameters?.preferredAssets !== 'All assets') ? `Prioritize these assets: ${Array.isArray(strategyDetails.parameters.preferredAssets) ? strategyDetails.parameters.preferredAssets.join(', ') : strategyDetails.parameters.preferredAssets}` : 'Consider all available assets'}
+5. ${strategyDetails.parameters?.restrictedAssets && strategyDetails.parameters.restrictedAssets.trim() !== '' ? `CRITICAL: You can ONLY trade these assets: ${strategyDetails.parameters.restrictedAssets}. Trading ANY other asset will be REJECTED by the system.` : (Array.isArray(strategyDetails.parameters?.preferredAssets) && strategyDetails.parameters.preferredAssets.length > 0) || (typeof strategyDetails.parameters?.preferredAssets === 'string' && strategyDetails.parameters?.preferredAssets !== 'All assets') ? `Prioritize these assets: ${Array.isArray(strategyDetails.parameters.preferredAssets) ? strategyDetails.parameters.preferredAssets.join(', ') : strategyDetails.parameters.preferredAssets}` : 'Consider all available assets'}
 6. ${strategyDetails.parameters?.customRules ? `Follow these custom rules: ${strategyDetails.parameters.customRules}` : ''}
 
 ` : ''}Account Information:
@@ -505,6 +506,7 @@ You are operating under the "${strategyDetails.name}" trading strategy with the 
 - Maximum leverage: ${strategyDetails.parameters?.preferredLeverage || strategyDetails.parameters?.maxLeverage || 10}x
 - Timeframe: ${strategyDetails.parameters?.timeframe || 'Not specified'}
 - Preferred assets: ${Array.isArray(strategyDetails.parameters?.preferredAssets) ? strategyDetails.parameters.preferredAssets.join(', ') : strategyDetails.parameters?.preferredAssets || 'All assets'}
+- Restricted assets (HARD LIMIT): ${strategyDetails.parameters?.restrictedAssets && strategyDetails.parameters.restrictedAssets.trim() !== '' ? strategyDetails.parameters.restrictedAssets : 'None - can trade any asset'}
 - Custom rules: ${strategyDetails.parameters?.customRules || 'No custom rules'}
 
 IMPORTANT: You MUST follow these strategy constraints. When generating trades:
@@ -512,7 +514,7 @@ IMPORTANT: You MUST follow these strategy constraints. When generating trades:
 2. Do not exceed the maximum number of positions (${strategyDetails.parameters?.maxPositions || 5})
 3. Do not use leverage higher than ${strategyDetails.parameters?.preferredLeverage || strategyDetails.parameters?.maxLeverage || 10}x
 4. Focus on the specified timeframe: ${strategyDetails.parameters?.timeframe || 'any timeframe'}
-5. ${(Array.isArray(strategyDetails.parameters?.preferredAssets) && strategyDetails.parameters.preferredAssets.length > 0) || (typeof strategyDetails.parameters?.preferredAssets === 'string' && strategyDetails.parameters?.preferredAssets !== 'All assets') ? `Prioritize these assets: ${Array.isArray(strategyDetails.parameters.preferredAssets) ? strategyDetails.parameters.preferredAssets.join(', ') : strategyDetails.parameters.preferredAssets}` : 'Consider all available assets'}
+5. ${strategyDetails.parameters?.restrictedAssets && strategyDetails.parameters.restrictedAssets.trim() !== '' ? `CRITICAL: You can ONLY trade these assets: ${strategyDetails.parameters.restrictedAssets}. Trading ANY other asset will be REJECTED by the system.` : (Array.isArray(strategyDetails.parameters?.preferredAssets) && strategyDetails.parameters.preferredAssets.length > 0) || (typeof strategyDetails.parameters?.preferredAssets === 'string' && strategyDetails.parameters?.preferredAssets !== 'All assets') ? `Prioritize these assets: ${Array.isArray(strategyDetails.parameters.preferredAssets) ? strategyDetails.parameters.preferredAssets.join(', ') : strategyDetails.parameters.preferredAssets}` : 'Consider all available assets'}
 6. ${strategyDetails.parameters?.customRules ? `Follow these custom rules: ${strategyDetails.parameters.customRules}` : ''}
 
 ` : ''}Account Information:
