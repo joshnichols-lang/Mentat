@@ -31,17 +31,61 @@ export async function reconcileJournalEntries(
 
     // Get current positions from exchange
     const exchangePositions = await hyperliquid.getPositions();
-    const exchangePositionSymbols = new Set(exchangePositions?.map(p => p.coin) || []);
+    const exchangePositionsBySymbol = new Map(
+      exchangePositions?.map(p => [p.coin, p]) || []
+    );
+
+    // Get open orders to check if planned entries' orders are still active
+    const openOrders = await hyperliquid.getOpenOrders();
+    const openOrderIds = new Set(openOrders?.map(o => String(o.oid)) || []);
 
     // Get "planned" journal entries (limit orders waiting to fill)
     const plannedEntries = await storage.getTradeJournalEntries(userId, { status: "planned" });
     
     for (const entry of plannedEntries) {
-      // Check if position now exists for this entry (order filled)
-      if (exchangePositionSymbols.has(entry.symbol)) {
-        const position = exchangePositions?.find(p => p.coin === entry.symbol);
-        if (position) {
-          console.log(`[Journal Reconciliation] Activating ${entry.symbol} entry - order filled at ${position.entryPx}`);
+      // Check if this entry has an orderId
+      if (entry.orderId) {
+        // PRECISE MATCHING: Check if the specific order is still open
+        const orderStillOpen = openOrderIds.has(entry.orderId);
+        
+        if (!orderStillOpen && exchangePositionsBySymbol.has(entry.symbol)) {
+          // Order filled! Activate this specific entry
+          const position = exchangePositionsBySymbol.get(entry.symbol)!;
+          console.log(`[Journal Reconciliation] Activating ${entry.symbol} entry (orderId: ${entry.orderId}) - order filled at ${position.entryPx}`);
+          await storage.activateTradeJournalEntry(userId, entry.id, position.entryPx);
+          result.activated++;
+        } else if (!orderStillOpen && !exchangePositionsBySymbol.has(entry.symbol)) {
+          // FAST FILL-AND-CLOSE: Order filled and position already closed
+          // This happens when an order fills and closes between reconciliation cycles
+          console.log(`[Journal Reconciliation] Fast fill-and-close detected for ${entry.symbol} (orderId: ${entry.orderId})`);
+          
+          try {
+            // Activate first (required before closing)
+            const estimatedFillPrice = entry.plannedEntryPrice || "0";
+            await storage.activateTradeJournalEntry(userId, entry.id, estimatedFillPrice);
+            
+            // Then immediately close with best-effort data
+            await storage.closeTradeJournalEntry(userId, entry.id, {
+              closePrice: estimatedFillPrice, // Approximation
+              closePnl: "0", // Unknown without fill history
+              closePnlPercent: "0",
+              closeReasoning: "Position filled and closed between monitoring cycles (auto-detected)",
+              hitTarget: 0, // Unknown
+              hadAdjustments: 0,
+            });
+            result.activated++;
+            result.closed++;
+          } catch (error) {
+            const errorMsg = `Failed to handle fast fill-and-close for ${entry.id}: ${error}`;
+            console.error(`[Journal Reconciliation] ❌ ${errorMsg}`);
+            result.errors.push(errorMsg);
+          }
+        }
+      } else {
+        // FALLBACK: No orderId, match by symbol only (less precise)
+        if (exchangePositionsBySymbol.has(entry.symbol)) {
+          const position = exchangePositionsBySymbol.get(entry.symbol)!;
+          console.log(`[Journal Reconciliation] ⚠️  Activating ${entry.symbol} entry WITHOUT orderId - using symbol-only match at ${position.entryPx}`);
           await storage.activateTradeJournalEntry(userId, entry.id, position.entryPx);
           result.activated++;
         }
@@ -53,7 +97,7 @@ export async function reconcileJournalEntries(
     
     for (const entry of activeEntries) {
       // Check if position no longer exists (closed)
-      if (!exchangePositionSymbols.has(entry.symbol)) {
+      if (!exchangePositionsBySymbol.has(entry.symbol)) {
         console.log(`[Journal Reconciliation] Closing ${entry.symbol} entry - position no longer exists`);
         
         // Try to get close info from fill history if available
