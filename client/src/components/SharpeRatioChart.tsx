@@ -29,7 +29,8 @@ export default function SharpeRatioChart() {
   
   const hasData = data.length > 0;
   // Get latest values from allData, not filtered data - current values should always show most recent
-  const latestSnapshot = allData.length > 0 ? allData[allData.length - 1] : null;
+  // Note: API returns snapshots in DESC order, so latest is at index 0
+  const latestSnapshot = allData.length > 0 ? allData[0] : null;
   const currentSharpe = latestSnapshot ? Number(latestSnapshot.sharpeRatio || 0) : 0;
   const currentSortino = latestSnapshot ? Number(latestSnapshot.sortinoRatio || 0) : 0;
   const currentCalmar = latestSnapshot ? Number(latestSnapshot.calmarRatio || 0) : 0;
