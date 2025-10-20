@@ -273,6 +273,76 @@ function validateLeverage(leverage: number): number {
   return Math.floor(lev); // Ensure integer
 }
 
+// Helper function to validate minimum risk/reward ratio
+function validateRiskRewardRatio(
+  action: TradingAction,
+  protectiveActions?: TradingAction[]
+): void {
+  // Only validate for buy/sell actions (new entries)
+  if (action.action !== "buy" && action.action !== "sell") {
+    return;
+  }
+
+  if (!action.expectedEntry || !action.side) {
+    throw new Error(`Risk/Reward validation requires expectedEntry and side fields`);
+  }
+
+  const entry = parseFloat(action.expectedEntry);
+
+  // Extract stop loss and take profit from action or protective actions
+  let stopLoss: number | null = null;
+  let takeProfit: number | null = null;
+
+  if (action.stopLoss) {
+    stopLoss = parseFloat(action.stopLoss);
+  }
+  if (action.takeProfit) {
+    takeProfit = parseFloat(action.takeProfit);
+  }
+
+  // Check protective actions if not in main action
+  if (protectiveActions) {
+    const slAction = protectiveActions.find(a => a.action === "stop_loss" && a.symbol === action.symbol);
+    const tpAction = protectiveActions.find(a => a.action === "take_profit" && a.symbol === action.symbol);
+    
+    if (slAction?.triggerPrice && !stopLoss) {
+      stopLoss = parseFloat(slAction.triggerPrice);
+    }
+    if (tpAction?.triggerPrice && !takeProfit) {
+      takeProfit = parseFloat(tpAction.triggerPrice);
+    }
+  }
+
+  if (!stopLoss || !takeProfit) {
+    throw new Error(`REJECTED: All trades must have both stop loss and take profit defined for risk management`);
+  }
+
+  const isLong = action.side === "long";
+  
+  // Calculate risk and reward
+  const risk = Math.abs(entry - stopLoss);
+  const reward = Math.abs(takeProfit - entry);
+
+  if (risk <= 0 || reward <= 0) {
+    throw new Error(`REJECTED: Invalid risk/reward calculation - Risk: $${risk.toFixed(2)}, Reward: $${reward.toFixed(2)}`);
+  }
+
+  // Calculate reward:risk ratio
+  const rewardRiskRatio = reward / risk;
+  const MINIMUM_RR_RATIO = 1.5; // Require at least 1.5:1 reward:risk
+
+  if (rewardRiskRatio < MINIMUM_RR_RATIO) {
+    throw new Error(
+      `REJECTED: Poor risk/reward ratio ${rewardRiskRatio.toFixed(2)}:1 (Reward: $${reward.toFixed(2)}, Risk: $${risk.toFixed(2)}). ` +
+      `Minimum required is ${MINIMUM_RR_RATIO}:1. For ${isLong ? 'LONG' : 'SHORT'} ${action.symbol}: ` +
+      `Entry $${entry.toFixed(2)}, SL $${stopLoss.toFixed(2)}, TP $${takeProfit.toFixed(2)}. ` +
+      `Adjust your stop loss tighter or take profit wider to achieve better risk/reward.`
+    );
+  }
+
+  console.log(`[Risk/Reward Validation] ✓ PASSED for ${action.symbol}: ${rewardRiskRatio.toFixed(2)}:1 (Reward: $${reward.toFixed(2)}, Risk: $${risk.toFixed(2)})`);
+}
+
 interface PriceValidationResult {
   valid: boolean;
   reason?: string;
@@ -580,6 +650,41 @@ export async function executeTradeStrategy(
   
   if (entryActions.length > 0) {
     console.log(`[Trade Executor] ✓ ENTRY SAFETY CHECK PASSED: All ${entryActions.length} new entry order(s) have protective brackets (SL+TP)`);
+  }
+
+  // ============================================================================
+  // RISK/REWARD RATIO VALIDATION: Reject trades with poor risk/reward
+  // ============================================================================
+  console.log(`[Trade Executor] Validating risk/reward ratios for ${entryActions.length} entry order(s)...`);
+  
+  for (const entryAction of entryActions) {
+    try {
+      // Get protective actions for this symbol
+      const symbolProtectiveActions = actions.filter(a => 
+        a.symbol === entryAction.symbol && (a.action === "stop_loss" || a.action === "take_profit")
+      );
+      
+      validateRiskRewardRatio(entryAction, symbolProtectiveActions);
+    } catch (error: any) {
+      const errorMsg = error.message || "Risk/Reward validation failed";
+      console.error(`[Trade Executor] ${errorMsg}`);
+      
+      return {
+        totalActions: actions.length,
+        successfulExecutions: 0,
+        failedExecutions: actions.length,
+        skippedExecutions: 0,
+        results: [{
+          success: false,
+          action: entryAction,
+          error: errorMsg,
+        }],
+      };
+    }
+  }
+  
+  if (entryActions.length > 0) {
+    console.log(`[Trade Executor] ✓ RISK/REWARD VALIDATION PASSED: All ${entryActions.length} entry order(s) meet minimum 1.5:1 reward:risk ratio`);
   }
   
   // VALIDATION: Ensure at most ONE stop_loss per symbol (take profits can be multiple)

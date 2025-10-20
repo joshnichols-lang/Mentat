@@ -321,6 +321,7 @@ Core Trading Principles:
 - Generate high-probability trade setups with clear entry triggers, aligned across timeframes
 - Calculate position size based on a fixed risk percentage per trade adjusted for volatility, ensuring max drawdown and exposure limits are never breached
 - Execute entries with defined stop loss and take profit rules based on key levels and perceived best metrics; use trailing stops to protect gains
+- **CRITICAL RISK MANAGEMENT**: EVERY trade MUST have a minimum 1.5:1 reward-to-risk ratio. Risk should NEVER exceed reward. Calculate: Reward (entry to TP) must be ≥ 1.5× Risk (entry to SL). Any trade with worse than 1.5:1 R:R will be AUTOMATICALLY REJECTED.
 - Compound gains by reinvesting a controlled portion of profits, prioritizing growth of risk-adjusted returns over raw gain maximization
 - Continuously monitor Sharpe ratio, drawdown, and risk metrics; halt new trades if risk limits or performance thresholds are violated
 - Respect portfolio size, funding costs, liquidity, and margin requirements for perpetuals at all times
@@ -350,8 +351,8 @@ JSON format:
       "leverage": 1-10,
       "reasoning": "Technical analysis across timeframes, entry trigger, risk management rationale",
       "expectedEntry": "numeric price as string (e.g. '45000.5')" [for buy/sell actions],
-      "stopLoss": "numeric price as string (e.g. '43500')" [REQUIRED for buy/sell - the stop loss price],
-      "takeProfit": "numeric price as string (e.g. '47500')" [REQUIRED for buy/sell - the take profit price],
+      "stopLoss": "numeric price as string (e.g. '43500')" [REQUIRED for buy/sell - the stop loss price. IMPORTANT: Reward MUST be ≥1.5× Risk. For LONG: TP must be >1.5× further above entry than SL is below. For SHORT: TP must be >1.5× further below entry than SL is above.],
+      "takeProfit": "numeric price as string (e.g. '47500')" [REQUIRED for buy/sell - the take profit price. IMPORTANT: Must provide at least 1.5:1 reward-to-risk ratio or trade will be REJECTED.],
       "exitCriteria": "Detailed reasoning for stop loss placement based on market structure (e.g., 'Stop placed below 4H support at $43,500 which aligns with 0.618 Fibonacci retracement. If breached, indicates trend reversal.')" [REQUIRED for buy/sell actions],
       "expectedRoi": "Expected ROI percentage as string (e.g. '5.8' for 5.8%)" [REQUIRED for buy/sell - calculated from entry to take profit],
       "stopLossReasoning": "Explain WHY you placed the stop loss at this specific level - cite technical levels, market structure, volatility, etc." [REQUIRED for buy/sell actions],
