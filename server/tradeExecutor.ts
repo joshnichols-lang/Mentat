@@ -1038,11 +1038,17 @@ export async function executeTradeStrategy(
         // Define tolerance: 0.3% price difference OR 3 tick sizes, whichever is larger
         const priceTolerance = Math.max(currentPrice * 0.003, metadata.tickSize * 3);
         
+        console.log(`[Trade Executor] 🔍 ANTI-CHURN DEBUG: Comparing ${existingProtectiveOrders.length} existing orders with ${finalProtectiveActions.length} new actions`);
+        console.log(`[Trade Executor] 🔍 Price tolerance: ${priceTolerance.toFixed(4)} (${(priceTolerance/currentPrice*100).toFixed(2)}%)`);
+        console.log(`[Trade Executor] 🔍 Current price: ${currentPrice}, Entry: ${entryPrice}, isLong: ${positionIsLong}`);
+        
         // Create list of existing orders with prices
-        const existingOrders = existingProtectiveOrders.map((order: any) => ({
-          price: roundToTickSize(parseFloat(order.limitPx), metadata.tickSize),
-          size: roundToSizeDecimals(parseFloat(order.sz), metadata.szDecimals),
-          type: parseFloat(order.limitPx) > entryPrice ? (positionIsLong ? 'tp' : 'sl') : (positionIsLong ? 'sl' : 'tp')
+        const existingOrders = existingProtectiveOrders.map((order: any) => {
+          const price = roundToTickSize(parseFloat(order.limitPx), metadata.tickSize);
+          const size = roundToSizeDecimals(parseFloat(order.sz), metadata.szDecimals);
+          const type = parseFloat(order.limitPx) > entryPrice ? (positionIsLong ? 'tp' : 'sl') : (positionIsLong ? 'sl' : 'tp');
+          console.log(`[Trade Executor] 🔍 Existing order: price=${price}, size=${size}, type=${type}, oid=${order.oid}`);
+          return { price, size, type, oid: order.oid };
         }));
         
         // Check if all final protective actions exist in the exchange (with tolerance)
@@ -1054,18 +1060,27 @@ export async function executeTradeStrategy(
           const actionSize = (action as any).calculatedSize || positionSize;
           const roundedSize = roundToSizeDecimals(actionSize, metadata.szDecimals);
           
+          console.log(`[Trade Executor] 🔍 New action: ${action.action} at price=${roundedPrice} (raw: ${triggerPrice}), size=${roundedSize} (raw: ${actionSize})`);
+          
           // Find matching order within tolerance
           const matchingOrder = existingOrders.find(order => {
             const priceDiff = Math.abs(order.price - roundedPrice);
             const sizesMatch = order.size === roundedSize;
             const priceWithinTolerance = priceDiff <= priceTolerance;
+            
+            console.log(`[Trade Executor] 🔍   Comparing with existing: price=${order.price}, size=${order.size}`);
+            console.log(`[Trade Executor] 🔍   priceDiff=${priceDiff.toFixed(4)}, sizesMatch=${sizesMatch}, withinTolerance=${priceWithinTolerance}`);
+            
             return sizesMatch && priceWithinTolerance;
           });
           
           if (!matchingOrder) {
             ordersMatch = false;
             matchReason = `${action.action} at ${roundedPrice} (size: ${roundedSize}) not found within ±${priceTolerance.toFixed(2)} tolerance`;
+            console.log(`[Trade Executor] 🔍 ❌ NO MATCH: ${matchReason}`);
             break;
+          } else {
+            console.log(`[Trade Executor] 🔍 ✅ MATCH found for ${action.action} at ${roundedPrice}`);
           }
         }
         
