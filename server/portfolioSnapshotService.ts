@@ -305,10 +305,11 @@ export async function createPortfolioSnapshot(userId: string, hyperliquid: Hyper
     const positions = await hyperliquid.getPositions();
 
     // Calculate total value (account value from user state)
+    // NOTE: accountValue INCLUDES unrealized PnL from open positions, which is correct for Sharpe ratio
     const totalValue = userState.marginSummary?.accountValue || "0";
 
-    // Calculate REALIZED PnL from closed trades ONLY (not unrealized PnL from open positions)
-    // This ensures metrics only reflect completed trades
+    // Calculate REALIZED PnL from closed trades for the totalPnl field
+    // (This is separate from totalValue, which already includes unrealized PnL)
     const trades = await storage.getTrades(userId);
     const closedTrades = trades.filter(t => t.status === 'closed');
     
@@ -327,10 +328,12 @@ export async function createPortfolioSnapshot(userId: string, hyperliquid: Hyper
 
     // Calculate risk ratios from ALL snapshots (cumulative), not just recent ones
     // This ensures the graph shows true cumulative performance over the entire trading history
-    const allSnapshots = await storage.getPortfolioSnapshots(userId, 10000); // Get all snapshots (up to 10k)
+    const allSnapshots = await storage.getPortfolioSnapshots(userId, 10000); // Get all snapshots (up to 10k) in DESC order (newest first)
     
-    // Add current snapshot to the end (it's the newest) for accurate ratio calculation
-    const snapshotsWithCurrent = [...allSnapshots, {
+    // CRITICAL: Reverse to oldest→newest order for correct return calculation
+    // Storage returns DESC (newest first), but ratio calculations need ASC (oldest first)
+    // Then append current snapshot as the newest
+    const snapshotsWithCurrent = [...allSnapshots.reverse(), {
       totalValue,
       totalPnl: totalPnl.toFixed(8),
       timestamp: new Date(),
