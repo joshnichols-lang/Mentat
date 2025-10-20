@@ -1,4 +1,4 @@
-import { LogOut, UserCheck, Settings, Users, ChevronDown, MessageSquare, History, BookOpen, Target, Home, BarChart3 } from "lucide-react";
+import { LogOut, UserCheck, Settings, Users, ChevronDown, MessageSquare, History, BookOpen, Target, Home, BarChart3, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -7,6 +7,12 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import ThemeToggle from "./ThemeToggle";
 import AgentModeToggle from "./AgentModeToggle";
 import { ContactAdmin } from "./ContactAdmin";
@@ -28,7 +34,12 @@ export default function Header() {
   });
 
   const accountValue = (userState?.userState?.marginSummary?.accountValue as number) || 0;
+  const withdrawable = (userState?.userState?.withdrawable as number) || 0;
   const hasError = userStateError || (userState && !userState.success);
+  
+  // Calculate if free margin is critically low
+  const freeMarginThreshold = Math.max(5, accountValue * 0.01); // $5 or 1% of portfolio
+  const isLowFreeMargin = withdrawable < freeMarginThreshold && accountValue > 0;
   
   // Log balance info for debugging
   useEffect(() => {
@@ -39,9 +50,9 @@ export default function Header() {
       if (!userState.success) {
         console.error('[Balance] API returned error:', userState.error);
       }
-      console.log('[Balance] Account value:', accountValue, 'Has error:', hasError);
+      console.log('[Balance] Portfolio:', accountValue, 'Free Margin:', withdrawable, 'Has error:', hasError);
     }
-  }, [userState, userStateError, accountValue, hasError]);
+  }, [userState, userStateError, accountValue, withdrawable, hasError]);
 
   return (
     <header className="border-b px-6 py-3">
@@ -117,18 +128,60 @@ export default function Header() {
               </DropdownMenuContent>
             </DropdownMenu>
           )}
-          <div className="text-right border-l pl-3">
-            <div className="text-xs text-muted-foreground">Balance</div>
-            <div className="font-mono text-sm font-semibold" data-testid="text-balance">
-              {userStateLoading ? (
-                <span className="text-muted-foreground">Loading...</span>
-              ) : hasError ? (
-                <span className="text-destructive" title="Failed to fetch balance">Error</span>
-              ) : (
-                `$${accountValue.toFixed(2)}`
-              )}
-            </div>
-          </div>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="text-right border-l pl-3">
+                  {userStateLoading ? (
+                    <div className="text-xs text-muted-foreground">Loading...</div>
+                  ) : hasError ? (
+                    <div className="text-xs text-destructive">Error</div>
+                  ) : (
+                    <>
+                      <div className="flex items-center gap-1.5">
+                        <div className="text-xs text-muted-foreground">Portfolio</div>
+                        {isLowFreeMargin && (
+                          <Badge 
+                            variant="outline" 
+                            className="h-4 px-1 text-[10px] border-destructive text-destructive"
+                            data-testid="badge-free-margin-warning"
+                          >
+                            <AlertTriangle className="h-2.5 w-2.5" />
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="font-mono text-sm font-semibold" data-testid="text-portfolio">
+                        ${accountValue.toFixed(2)}
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-0.5">Free Margin</div>
+                      <div 
+                        className={`font-mono text-xs font-semibold ${isLowFreeMargin ? 'text-destructive' : ''}`}
+                        data-testid="text-free-margin"
+                      >
+                        ${withdrawable.toFixed(2)}
+                      </div>
+                    </>
+                  )}
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="max-w-xs">
+                <div className="space-y-1">
+                  <p className="font-semibold">Understanding Your Balance</p>
+                  <p className="text-xs">
+                    <span className="font-semibold">Portfolio:</span> Total account equity including open positions and unrealized P&L.
+                  </p>
+                  <p className="text-xs">
+                    <span className="font-semibold">Free Margin:</span> Available capital for opening new positions. This is your withdrawable balance minus margin used by existing positions.
+                  </p>
+                  {isLowFreeMargin && (
+                    <p className="text-xs text-destructive font-semibold mt-2">
+                      Low free margin! Close positions or cancel orders to free up capital.
+                    </p>
+                  )}
+                </div>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
           <Button 
             variant="ghost" 
             size="icon" 

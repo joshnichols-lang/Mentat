@@ -212,6 +212,56 @@ function validateMinimumNotional(size: number, price: number, symbol: string): v
   }
 }
 
+// Helper function to validate sufficient free margin
+async function validateFreeMargin(
+  size: number, 
+  price: number, 
+  leverage: number, 
+  symbol: string,
+  hyperliquidClient: any
+): Promise<void> {
+  try {
+    // Get current account state
+    const userState = await hyperliquidClient.getUserState();
+    
+    // Log fetched state for diagnostics
+    console.log(`[Trade Executor] Fetched user state for margin check:`, JSON.stringify({
+      accountValue: userState?.marginSummary?.accountValue,
+      totalMarginUsed: userState?.marginSummary?.totalMarginUsed,
+      withdrawable: userState?.withdrawable
+    }));
+    
+    const accountValue = parseFloat(userState?.marginSummary?.accountValue || '0');
+    const totalMarginUsed = parseFloat(userState?.marginSummary?.totalMarginUsed || '0');
+    const withdrawable = parseFloat(userState?.withdrawable || '0');
+    
+    // Calculate required initial margin for this trade
+    const notionalValue = size * price;
+    const requiredMargin = notionalValue / leverage;
+    
+    // Add buffer for fees (assume 0.03% taker fee = 0.0003 of notional)
+    const estimatedFees = notionalValue * 0.0003;
+    const totalRequired = requiredMargin + estimatedFees;
+    
+    // Check if sufficient free margin
+    if (withdrawable < totalRequired) {
+      throw new Error(
+        `Insufficient free margin: Available $${withdrawable.toFixed(2)}, Required ~$${totalRequired.toFixed(2)} for ${symbol}. ` +
+        `Account value $${accountValue.toFixed(2)}, margin used $${totalMarginUsed.toFixed(2)}. ` +
+        `Reduce size/leverage, close positions, or cancel open orders.`
+      );
+    }
+    
+    console.log(`[Trade Executor] ✓ Free margin check passed: Available $${withdrawable.toFixed(2)}, Required $${totalRequired.toFixed(2)}`);
+  } catch (error: any) {
+    // Re-throw our custom error message, or wrap generic errors
+    if (error.message.includes('Insufficient free margin')) {
+      throw error;
+    }
+    throw new Error(`Failed to validate free margin: ${error.message}`);
+  }
+}
+
 function validateLeverage(leverage: number): number {
   const lev = validateNumericInput(leverage, "leverage");
   
@@ -1311,7 +1361,7 @@ async function executeOpenPosition(
 
     // Set leverage for this asset BEFORE placing the order
     // Cap leverage to the maximum allowed for this asset
-    const requestedLeverage = action.leverage;
+    const requestedLeverage = action.leverage || 1;
     let actualLeverage = requestedLeverage;
     
     if (metadata.maxLeverage && requestedLeverage > metadata.maxLeverage) {
@@ -1358,6 +1408,9 @@ async function executeOpenPosition(
     
     // Validate minimum notional value ($10 USD minimum)
     validateMinimumNotional(size, limitPrice, action.symbol);
+    
+    // Validate sufficient free margin before placing order
+    await validateFreeMargin(size, limitPrice, actualLeverage, action.symbol, hyperliquid);
     
     // TERMINAL GUARD: Final price sanity check before submitting to exchange
     // This catches any unrealistic prices that made it through earlier validation
