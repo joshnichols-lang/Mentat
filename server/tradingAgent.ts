@@ -120,8 +120,14 @@ export async function processTradingPrompt(
     console.log(`[Trading Prompt] ========================================`);
     
     // First, classify if this is a trading question or general question
-    // If screenshots are attached, strongly bias towards trading
-    let classification = { isTrading: true, reason: "default to trading" };
+    // KEY CHANGE: Default behavior depends on whether a strategy is active
+    // - NO STRATEGY ACTIVE: Default to general conversational mode (like normal Grok)
+    // - STRATEGY ACTIVE: Default to trading mode (analyze markets)
+    const hasActiveStrategy = !!strategyDetails;
+    let classification = { 
+      isTrading: hasActiveStrategy, 
+      reason: hasActiveStrategy ? "strategy active - default to trading mode" : "no strategy - default to conversational mode"
+    };
     
     // Simple keyword-based pre-check for obvious non-trading questions
     const generalKeywords = ['what is', 'who was', 'who is', 'when did', 'tell me about', 'calculate', 'news today', 'president', 'history of'];
@@ -237,9 +243,9 @@ This is the strategy you're currently using for autonomous trading. If the user 
       const generalMessages: AIMessage[] = [
         {
           role: "system" as const,
-          content: `You are Mr. Fox, a helpful and knowledgeable AI assistant. You can answer questions on any topic - math, science, history, current events, general knowledge, and more. Be friendly, accurate, and conversational.
+          content: `You are Grok, a helpful and knowledgeable AI assistant. You can answer questions on any topic - math, science, history, current events, general knowledge, technology, and more. Be friendly, accurate, and conversational. Respond naturally just like you would on the Grok website.
 
-You also happen to be an expert crypto trader, but the user is asking you a general question right now, so respond naturally without any trading jargon unless relevant.${strategyContext}`
+${hasActiveStrategy ? `Note: The user has an active trading strategy configured ("${strategyDetails?.name}"), but they're asking you a general question right now, so respond naturally without forcing trading analysis unless they specifically ask about markets or trading.${strategyContext}` : 'The user does not have an active trading strategy, so just respond as a general-purpose AI assistant.'}`
         },
         {
           role: "user" as const,
