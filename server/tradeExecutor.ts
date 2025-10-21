@@ -511,9 +511,35 @@ export async function executeTradeStrategy(
   const hyperliquid = await getUserHyperliquidClient(userId);
   const results: ExecutionResult[] = [];
   
-  // Fetch user's margin mode preference (default: isolated)
+  // Fetch user's agent mode and margin mode preference
   const user = await storage.getUser(userId);
   const useIsolatedMargin = !user || user.marginMode !== "cross"; // Default to isolated if not set or if user explicitly chose isolated
+  
+  // ============================================================================
+  // PASSIVE MODE EXECUTION BLOCKING
+  // ============================================================================
+  // If user is in PASSIVE mode, AI can generate trading actions for discussion
+  // but they will NOT be executed. Only Active mode allows trade execution.
+  if (user && user.agentMode === "passive") {
+    console.warn(`[Trade Executor] 🚫 PASSIVE MODE: User ${userId} is in PASSIVE mode - blocking all trade execution`);
+    console.warn(`[Trade Executor] AI generated ${actions.length} action(s), but they will NOT be executed`);
+    console.warn(`[Trade Executor] Switch to ACTIVE mode in settings to enable trade execution`);
+    
+    // Return summary indicating all actions were skipped due to passive mode
+    return {
+      totalActions: actions.length,
+      successfulExecutions: 0,
+      failedExecutions: 0,
+      skippedActions: actions.length,
+      results: actions.map(action => ({
+        success: false,
+        action,
+        error: "PASSIVE MODE: Trade execution blocked. Switch to Active mode to execute trades."
+      }))
+    };
+  }
+  
+  console.log(`[Trade Executor] ✓ ACTIVE MODE: User ${userId} is in ACTIVE mode - proceeding with trade execution`)
   
   // ============================================================================
   // CRITICAL ASSET RESTRICTION VALIDATION

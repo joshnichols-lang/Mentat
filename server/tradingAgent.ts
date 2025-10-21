@@ -1,7 +1,5 @@
 import { storage } from "./storage";
-import { TEST_USER_ID } from "./constants";
 import { makeAIRequest, type AIMessage } from "./aiRouter";
-import type { PerplexityModel } from "./perplexity";
 
 interface MarketData {
   symbol: string;
@@ -12,19 +10,19 @@ interface MarketData {
 
 interface TradingAction {
   action: "buy" | "sell" | "hold" | "close" | "stop_loss" | "take_profit" | "cancel_order";
-  symbol: string;  // REQUIRED for all actions - the trading pair (e.g., "HYPE-PERP")
-  side?: "long" | "short";  // Not required for cancel_order
-  size?: string;  // Not required for cancel_order
-  leverage?: number;  // Not required for cancel_order
+  symbol: string;
+  side?: "long" | "short";
+  size?: string;
+  leverage?: number;
   reasoning: string;
   expectedEntry?: string;
-  exitCriteria?: string; // Detailed reasoning for stop loss placement based on market structure
-  expectedRoi?: string; // Expected ROI percentage for this trade
-  stopLossReasoning?: string; // Why stop loss will be placed at specific level (for buy/sell actions)
-  takeProfitReasoning?: string; // Why take profit will be placed at specific level (for buy/sell actions)
-  exitStrategy?: string; // How to manage trade if in profit but unlikely to reach original TP
-  triggerPrice?: string; // For stop_loss and take_profit ACTIONS - the price that triggers the order
-  orderId?: number; // REQUIRED for cancel_order action - the order ID to cancel
+  exitCriteria?: string;
+  expectedRoi?: string;
+  stopLossReasoning?: string;
+  takeProfitReasoning?: string;
+  exitStrategy?: string;
+  triggerPrice?: string;
+  orderId?: number;
 }
 
 interface TradingStrategy {
@@ -35,26 +33,21 @@ interface TradingStrategy {
 }
 
 function analyzeMarketTrends(marketData: MarketData[]): string {
-  // Calculate overall market sentiment based on 24h changes
   const totalAssets = marketData.length;
   const gainers = marketData.filter(m => parseFloat(m.change24h) > 0).length;
   const losers = marketData.filter(m => parseFloat(m.change24h) < 0).length;
   const neutral = totalAssets - gainers - losers;
 
-  // Find top performers
   const sorted = [...marketData].sort((a, b) => parseFloat(b.change24h) - parseFloat(a.change24h));
   const topGainers = sorted.slice(0, 3);
   const topLosers = sorted.slice(-3).reverse();
 
-  // Calculate average changes
   const avgChange = marketData.reduce((sum, m) => sum + parseFloat(m.change24h), 0) / totalAssets;
   
-  // Determine market sentiment
   let sentiment = "Mixed";
   if (gainers > losers * 1.5) sentiment = "Bullish";
   else if (losers > gainers * 1.5) sentiment = "Bearish";
 
-  // Calculate total volume
   const totalVolume = marketData.reduce((sum, m) => sum + parseFloat(m.volume24h), 0);
   const avgVolume = totalVolume / totalAssets;
 
@@ -83,250 +76,22 @@ export async function processTradingPrompt(
 ): Promise<TradingStrategy> {
   
   try {
-    // Fetch the trading strategy details if strategyId is provided (BEFORE classification)
-    let strategyDetails: any = null;
-    console.log(`[Trading Prompt] ========================================`);
-    console.log(`[Trading Prompt] Received strategyId: ${strategyId} (type: ${typeof strategyId})`);
+    console.log(`[Trading Prompt] Processing prompt for user ${userId}${strategyId ? ` with strategy ${strategyId}` : ''}`);
     
+    // Fetch strategy details if provided
+    let strategyDetails: any = null;
     if (strategyId) {
       try {
         strategyDetails = await storage.getTradingMode(userId, strategyId);
-        
         if (strategyDetails) {
-          console.log(`[Trading Prompt] ✓ STRATEGY CONTEXT LOADED: "${strategyDetails.name}"`);
-          console.log(`[Trading Prompt] Full strategy object keys: ${Object.keys(strategyDetails).join(', ')}`);
-          console.log(`[Trading Prompt] Strategy parameters type: ${typeof strategyDetails.parameters}`);
-          console.log(`[Trading Prompt] Strategy parameters value: ${JSON.stringify(strategyDetails.parameters)}`);
-          console.log(`[Trading Prompt] Strategy details: ${JSON.stringify({
-            name: strategyDetails.name,
-            description: strategyDetails.description,
-            parameters: strategyDetails.parameters
-          }, null, 2)}`);
-        } else {
-          console.warn(`[Trading Prompt] ❌ STRATEGY NOT FOUND: strategyId="${strategyId}" returned null/undefined`);
-          console.warn(`[Trading Prompt] AI will proceed WITHOUT strategy context`);
+          console.log(`[Trading Prompt] Strategy loaded: "${strategyDetails.name}"`);
         }
-      } catch (strategyError) {
-        console.error(`[Trading Prompt] ❌ ERROR FETCHING STRATEGY: ${strategyError}`);
-        console.error(strategyError);
-        // Continue without strategy details
-      }
-    } else {
-      console.log(`[Trading Prompt] ℹ️ No strategyId provided (null/undefined) - proceeding in GENERAL mode without strategy constraints`);
-    }
-    console.log(`[Trading Prompt] Strategy context will ${strategyDetails ? 'BE' : 'NOT be'} included in AI prompt`);
-    console.log(`[Trading Prompt] ========================================`);
-    
-    // First, classify if this is a trading question or general question
-    // KEY CHANGE: Default behavior depends on whether a strategy is active
-    // - NO STRATEGY ACTIVE: Default to general conversational mode (like normal Grok)
-    // - STRATEGY ACTIVE: Default to trading mode (analyze markets)
-    const hasActiveStrategy = !!strategyDetails;
-    let classification = { 
-      isTrading: hasActiveStrategy, 
-      reason: hasActiveStrategy ? "strategy active - default to trading mode" : "no strategy - default to conversational mode"
-    };
-    
-    // Simple keyword-based pre-check for obvious non-trading questions
-    const generalKeywords = ['what is', 'who was', 'who is', 'when did', 'tell me about', 'calculate', 'news today', 'president', 'history of'];
-    
-    // META/VERIFICATION keywords - questions about the AI itself or asking it to check/verify its work
-    // These should ALWAYS be conversational mode regardless of active strategy
-    const metaKeywords = ['double check', 'verify', 'make sure', 'check if', 'confirm that', 'are you sure', 'did you', 'validate', 'correct', 'accurate', 'right', 'wrong'];
-    
-    // Split trading keywords into two categories:
-    // EXECUTION keywords - always trigger trading mode (user wants to place/manage trades)
-    const executionKeywords = ['buy', 'sell', 'close', 'long', 'short', 'stop loss', 'take profit', 'cancel order', 'open position', 'enter trade'];
-    
-    // INFORMATIONAL keywords - only trigger trading mode if strategy is active
-    // (otherwise these are just questions about account status/market info)
-    const informationalKeywords = ['position', 'portfolio', 'trade', 'market', 'price', 'chart', 'leverage', 'margin', 'balance'];
-    
-    // Educational questions about specific technical indicators - treat as general questions
-    const indicatorEducationKeywords = ['market cipher', 'cipher a', 'cipher b', 'what is rsi', 'what is macd', 'what is ema', 'what is sma', 'what is bollinger', 'what is stochastic', 'what is fibonacci', 'what is ichimoku', 'what is adx', 'what is atr', 'explain rsi', 'explain macd', 'explain ema', 'how does rsi', 'how does macd', 'how does bollinger'];
-    
-    const lowerPrompt = prompt.toLowerCase();
-    const hasGeneralKeywords = generalKeywords.some(kw => lowerPrompt.includes(kw));
-    const hasMetaKeywords = metaKeywords.some(kw => lowerPrompt.includes(kw));
-    const hasExecutionKeywords = executionKeywords.some(kw => lowerPrompt.includes(kw));
-    const hasInformationalKeywords = informationalKeywords.some(kw => lowerPrompt.includes(kw));
-    const hasIndicatorEducationKeywords = indicatorEducationKeywords.some(kw => lowerPrompt.includes(kw));
-    
-    // Log keyword detection for debugging
-    console.log(`[Classification] Keyword detection:`, {
-      hasActiveStrategy,
-      hasMetaKeywords,
-      hasIndicatorEducationKeywords,
-      hasExecutionKeywords,
-      hasInformationalKeywords,
-      hasGeneralKeywords,
-      hasScreenshots: !!(screenshots && screenshots.length > 0)
-    });
-    
-    // Priority 0: META/VERIFICATION questions - always conversational mode (asking AI to check its work)
-    if (hasMetaKeywords && !hasExecutionKeywords) {
-      classification = { isTrading: false, reason: "meta/verification question - asking AI to verify its own work" };
-    }
-    // Priority 1: If asking about specific technical indicators, treat as general (educational)
-    else if (hasIndicatorEducationKeywords) {
-      classification = { isTrading: false, reason: "educational question about trading indicators" };
-    }
-    // Priority 2: If user attached screenshots, it's almost certainly trading
-    else if (screenshots && screenshots.length > 0) {
-      classification = { isTrading: true, reason: "screenshots attached - likely charts" };
-    }
-    // Priority 3: If has EXECUTION keywords (buy/sell/close), always enter trading mode
-    else if (hasExecutionKeywords) {
-      classification = { isTrading: true, reason: "execution keywords detected - user wants to trade" };
-    }
-    // Priority 4: If has INFORMATIONAL keywords BUT no strategy active, stay conversational
-    else if (hasInformationalKeywords && !hasActiveStrategy) {
-      classification = { isTrading: false, reason: "informational question without active strategy - conversational mode" };
-    }
-    // Priority 5: If has informational keywords AND strategy is active, enter trading mode
-    else if (hasInformationalKeywords && hasActiveStrategy) {
-      classification = { isTrading: true, reason: "informational keywords + active strategy - trading mode" };
-    }
-    // Priority 4: If ONLY has general keywords (no trading keywords), classify via AI
-    else if (hasGeneralKeywords) {
-      try {
-        const classificationMessages: AIMessage[] = [
-          {
-            role: "system" as const,
-            content: `Determine if this is about trading/markets OR a general question. Respond with JSON: {"isTrading": true/false, "reason": "brief"}`
-          },
-          {
-            role: "user" as const,
-            content: prompt
-          }
-        ];
-
-        const classificationResponse = await makeAIRequest(userId, {
-          messages: classificationMessages,
-          model,
-        }, preferredProvider);
-
-        let cleanContent = classificationResponse.content?.trim() || '{}';
-        if (cleanContent.startsWith('```json')) {
-          cleanContent = cleanContent.replace(/^```json\s*/, '').replace(/\s*```$/, '');
-        } else if (cleanContent.startsWith('```')) {
-          cleanContent = cleanContent.replace(/^```\s*/, '').replace(/\s*```$/, '');
-        }
-        classification = JSON.parse(cleanContent);
-      } catch (e) {
-        console.log("Failed to classify - defaulting to general question");
-        classification = { isTrading: false, reason: "classification failed - treated as general" };
-      }
-    }
-    // Priority 5: No keywords at all - use AI to classify
-    else {
-      try {
-        const classificationMessages: AIMessage[] = [
-          {
-            role: "system" as const,
-            content: `Determine if this is about trading/markets OR a general question. Respond with JSON: {"isTrading": true/false, "reason": "brief"}`
-          },
-          {
-            role: "user" as const,
-            content: prompt
-          }
-        ];
-
-        const classificationResponse = await makeAIRequest(userId, {
-          messages: classificationMessages,
-          model,
-        }, preferredProvider);
-
-        let cleanContent = classificationResponse.content?.trim() || '{}';
-        if (cleanContent.startsWith('```json')) {
-          cleanContent = cleanContent.replace(/^```json\s*/, '').replace(/\s*```$/, '');
-        } else if (cleanContent.startsWith('```')) {
-          cleanContent = cleanContent.replace(/^```\s*/, '').replace(/\s*```$/, '');
-        }
-        classification = JSON.parse(cleanContent);
-      } catch (e) {
-        console.log("Failed to classify no-keyword prompt - defaulting to general question");
-        classification = { isTrading: false, reason: "classification failed - ambiguous prompt treated as general" };
+      } catch (error) {
+        console.error(`[Trading Prompt] Error loading strategy:`, error);
       }
     }
 
-    console.log(`[Trading Prompt] Classification: ${classification.isTrading ? 'TRADING' : 'GENERAL'} - ${classification.reason}`);
-
-    // If it's a general question, respond naturally without trading JSON format
-    if (!classification.isTrading) {
-      // Build strategy context string if available
-      let strategyContext = "";
-      if (strategyDetails) {
-        const params = strategyDetails.parameters || {};
-        const preferredAssets = Array.isArray(params.preferredAssets) 
-          ? params.preferredAssets.join(', ')
-          : params.preferredAssets || 'Any';
-        strategyContext = `\n\nCURRENT ACTIVE TRADING STRATEGY:
-- Name: "${strategyDetails.name}"
-- Description: ${strategyDetails.description || "No description"}
-- Risk per trade: ${params.riskPercentage || params.riskPercentPerTrade || 'Undefined'}%
-- Max positions: ${params.maxPositions || 'Undefined'}
-- Max leverage: ${params.preferredLeverage || params.maxLeverage || 'Undefined'}x
-- Timeframe: ${params.timeframe || 'Undefined'}
-- Preferred assets: ${preferredAssets}
-- Max entry orders per symbol: ${params.maxEntryOrdersPerSymbol || 3}
-${params.customRules ? `- Custom rules: ${params.customRules}` : ''}
-
-This is the strategy you're currently using for autonomous trading. If the user asks about it, reference these details.`;
-      }
-      
-      // Build Hyperliquid account context (always available to Grok)
-      const accountContext = `\n\nHYPERLIQUID TRADING ACCOUNT:
-- Portfolio Value: $${userState?.marginSummary?.accountValue || '0'}
-- Available Balance: $${userState?.withdrawable || '0'}
-- Margin Used: $${userState?.marginSummary?.totalMarginUsed || '0'}
-- Open Positions: ${currentPositions.length > 0 ? `${currentPositions.length} position(s) - ${currentPositions.map((p: any) => `${p.symbol} ${p.side} ${p.size} @ $${p.entryPrice}`).join(', ')}` : 'None'}
-- Open Orders: ${openOrders.length > 0 ? `${openOrders.length} order(s)` : 'None'}`;
-      
-      const generalMessages: AIMessage[] = [
-        {
-          role: "system" as const,
-          content: `You are Grok.${strategyContext}${accountContext}`
-        },
-        {
-          role: "user" as const,
-          content: prompt
-        }
-      ];
-
-      const generalResponse = await makeAIRequest(userId, {
-        messages: generalMessages,
-        model,
-      }, preferredProvider);
-
-      // Log usage
-      try {
-        await storage.logAiUsage(userId, {
-          provider: generalResponse.provider,
-          model: generalResponse.model,
-          promptTokens: generalResponse.usage.promptTokens,
-          completionTokens: generalResponse.usage.completionTokens,
-          totalTokens: generalResponse.usage.totalTokens,
-          estimatedCost: generalResponse.cost.toFixed(6),
-          userPrompt: prompt,
-          aiResponse: generalResponse.content || '',
-          success: 1,
-          strategyId: strategyId || null
-        });
-      } catch (logError) {
-        console.error("Failed to log AI usage:", logError);
-      }
-
-      // Return as a "strategy" with the general response in interpretation
-      return {
-        interpretation: generalResponse.content || "I don't have an answer to that.",
-        actions: [],
-        riskManagement: "Not applicable - general question",
-        expectedOutcome: "Not applicable - general question"
-      };
-    }
-
-    // Fetch recent user prompt history (last 5 successful prompts) - filtered by strategyId
+    // Fetch conversation history (last 5 prompts for this strategy)
     let promptHistory: {timestamp: Date, prompt: string}[] = [];
     try {
       const recentPrompts = await storage.getAiUsageLogs(userId, 5, strategyId);
@@ -334,375 +99,235 @@ This is the strategy you're currently using for autonomous trading. If the user 
         .filter(log => log.success === 1 && log.userPrompt)
         .map(log => ({
           timestamp: log.timestamp,
-          prompt: log.userPrompt!  // Already filtered for non-null
+          prompt: log.userPrompt!
         }));
-    } catch (historyError) {
-      console.error("Failed to fetch prompt history:", historyError);
-      // Continue without history
+    } catch (error) {
+      console.error("Failed to fetch prompt history:", error);
     }
 
-    // Analyze market trends from current data
+    // Analyze market trends
     let marketTrends = "Market data not available";
     try {
       if (marketData && marketData.length > 0) {
         marketTrends = analyzeMarketTrends(marketData);
       }
-    } catch (trendError) {
-      console.error("Failed to analyze market trends:", trendError);
-      // Continue with fallback message
+    } catch (error) {
+      console.error("Failed to analyze market trends:", error);
     }
 
-    const messages: AIMessage[] = [
-      {
-        role: "system" as const,
-        content: `You are Mr. Fox, a professional AI trader managing Hyperliquid perpetual contracts. Your goal is to maximize the Sharpe ratio by executing trades with optimal sizing, entries, exits, and compounding, while enforcing strict risk management.
+    // Build strategy context if available
+    let strategyContext = "";
+    if (strategyDetails) {
+      const params = strategyDetails.parameters || {};
+      const preferredAssets = Array.isArray(params.preferredAssets) 
+        ? params.preferredAssets.join(', ')
+        : params.preferredAssets || 'Any';
+      
+      strategyContext = `
 
-Core Trading Principles (DEFAULTS - Custom Rules Override When More Conservative):
-- Analyze multiple timeframes (1m to Daily) using the most appropriate and best technical indicators, price action and order flow strategies, to identify overall market regime: Bullish, Neutral, or Bearish
-- Generate high-probability trade setups with clear entry triggers, aligned across timeframes
-- Calculate position size based on a fixed risk percentage per trade adjusted for volatility, ensuring max drawdown and exposure limits are never breached
-- Execute entries with defined stop loss and take profit rules based on key levels and perceived best metrics; use trailing stops to protect gains
-- **RISK MANAGEMENT**: Follow the active strategy's custom rules for risk-to-reward ratios, stop loss placement, and entry criteria. If custom rules specify requirements (e.g., "only 3:1 R:R setups", "stop only at market structure"), those take priority over generic defaults.
-- Compound gains by reinvesting a controlled portion of profits, prioritizing growth of risk-adjusted returns over raw gain maximization
-- Continuously monitor Sharpe ratio, drawdown, and risk metrics; halt new trades if risk limits or performance thresholds are violated
-- Respect portfolio size, funding costs, liquidity, and margin requirements for perpetuals at all times
+🎯 ACTIVE TRADING STRATEGY: "${strategyDetails.name}"
+${strategyDetails.description ? `Description: ${strategyDetails.description}` : ''}
+Parameters:
+- Risk per trade: ${params.riskPercentage || params.riskPercentPerTrade || 1}%
+- Max positions: ${params.maxPositions || 5}
+- Max leverage: ${params.preferredLeverage || params.maxLeverage || 10}x
+- Timeframe: ${params.timeframe || 'Not specified'}
+- Preferred assets: ${preferredAssets}
+- Max entry orders per symbol: ${params.maxEntryOrdersPerSymbol || 3}
+${params.restrictedAssets && params.restrictedAssets.trim() !== '' ? `- RESTRICTED ASSETS (HARD LIMIT): You can ONLY trade: ${params.restrictedAssets}` : ''}
+${params.customRules ? `
+Custom Rules (User's Trading Philosophy):
+${params.customRules}
 
-🚨 **CUSTOM RULES PRIORITY SYSTEM** 🚨
-The user's custom rules in their active strategy are PARAMOUNT. These rules represent their trading philosophy and risk tolerance. You MUST follow the custom rules strictly:
-- If custom rules say "only 3:1 R:R setups" → Reject any trade worse than 3:1
-- If custom rules say "max 2% risk per trade" → Use 2%, not the strategy's configured risk percentage
-- If custom rules specify entry/exit criteria → Follow those criteria strictly (e.g., "only enter on confirmed breakouts")
-- If custom rules are GENERAL (e.g., "focus on momentum") → Use as guidance alongside the strategy's parameters
-Custom rules OVERRIDE defaults when they are more specific and conservative. Your job is to learn and execute the user's trading strategy, not to impose rigid rules.
+These custom rules guide your trading decisions. Follow them strictly when generating trades.` : ''}
 
-Analysis Guidelines:
-- **SCAN ALL AVAILABLE MARKETS**: You have access to the ENTIRE Hyperliquid universe - don't limit yourself to just BTC, ETH, or SOL
-- Analyze the complete "Current market data" provided - look for opportunities across ALL trading pairs
-- Consider altcoins, memecoins, and emerging assets with strong momentum and volume
-- Focus on top gainers/losers and high-volume assets from the Market analysis section
-- Implement professional risk management through precise position sizing
-- Time entries and exits based on multi-timeframe technical analysis
-- Account for user's historical trading preferences and patterns
-- Evaluate overall market sentiment and volatility conditions
-- Factor in funding rates, liquidity depth, and margin efficiency
+When the user asks you to trade or when you're autonomously monitoring markets, generate trading actions that follow this strategy.`;
+    }
 
-IMPORTANT: You must respond ONLY with valid JSON. No other text before or after the JSON object.
+    // Build conversation history context
+    let conversationContext = "";
+    if (promptHistory.length > 0) {
+      conversationContext = `
 
-JSON format:
+RECENT CONVERSATION HISTORY:
+${promptHistory.map((h, i) => `${i + 1}. "${h.prompt}"`).join('\n')}
+
+Use this to understand recent discussions and any strategy modifications the user has requested.`;
+    }
+
+    // Build the unified conversational system prompt
+    const systemPrompt = `You are Grok, an AI assistant helping with Hyperliquid trading. You respond naturally and conversationally to all questions - trading, markets, math, science, current events, or casual conversation.${strategyContext}${conversationContext}
+
+HYPERLIQUID TRADING ACCOUNT STATUS:
+- Portfolio Value: $${userState?.marginSummary?.accountValue || '0'}
+- Available Balance: $${userState?.withdrawable || '0'}
+- Margin Used: $${userState?.marginSummary?.totalMarginUsed || '0'}
+- Open Positions: ${currentPositions.length > 0 ? `${currentPositions.length} position(s) - ${currentPositions.map((p: any) => `${p.symbol} ${p.side} ${p.size} @ $${p.entryPrice}`).join(', ')}` : 'None'}
+- Open Orders: ${openOrders.length > 0 ? `${openOrders.length} order(s)` : 'None'}
+
+MARKET CONDITIONS:
+${marketTrends}
+
+WHEN TO INCLUDE TRADING ACTIONS IN YOUR RESPONSE:
+- User explicitly asks to trade, buy, sell, or close positions
+- User asks for market analysis and trading recommendations
+- User modifies the active strategy parameters (e.g., "use 2 ATR stops instead of 1")
+- You're running autonomously and find a setup that matches the active strategy
+
+HOW TO RESPOND:
+You MUST respond with ONLY valid JSON in this exact format (no other text before or after):
+
 {
-  "interpretation": "Professional analysis of market conditions, regime identification, and alignment with user's trading history",
+  "interpretation": "Your natural, conversational response explaining your analysis and reasoning",
   "actions": [
-    {
-      "action": "buy" | "sell" | "hold" | "close" | "stop_loss" | "take_profit" | "cancel_order",
-      "symbol": "<ANY_SYMBOL_FROM_MARKET_DATA>" (e.g. "BTC-PERP", "ETH-PERP", "DOGE-PERP", "WIF-PERP", "PEPE-PERP" - use ANY symbol available in the market data),
-      "side": "long" | "short",
-      "size": "numeric value as string (e.g. '0.5', '1.25', '10') - MUST be actual number, NOT 'calculated'",
-      "leverage": 1-10,
-      "reasoning": "Technical analysis across timeframes, entry trigger, risk management rationale",
-      "expectedEntry": "numeric price as string (e.g. '45000.5')" [for buy/sell actions],
-      "exitCriteria": "Detailed reasoning for stop loss placement based on market structure (e.g., 'Stop placed below 4H support at $43,500 which aligns with 0.618 Fibonacci retracement. If breached, indicates trend reversal.')" [REQUIRED for buy/sell actions],
-      "expectedRoi": "Expected ROI percentage as string (e.g. '5.8' for 5.8%)" [REQUIRED for buy/sell - calculated from entry to take profit],
-      "stopLossReasoning": "Explain WHY you placed the stop loss at this specific level - cite technical levels, market structure, volatility, etc." [REQUIRED for buy/sell actions],
-      "takeProfitReasoning": "Explain WHY you placed the take profit at this specific level - cite resistance/support, Fibonacci targets, R:R ratio, etc." [REQUIRED for buy/sell actions],
-      "exitStrategy": "Describe how you will manage this trade if it's in profit but appears unlikely to reach the original take profit (e.g., 'If price reaches 50% of profit target but shows reversal signals on 1H chart, will close 50% position and trail stop to breakeven for remainder')" [REQUIRED for buy/sell actions],
-      "triggerPrice": "numeric price as string (e.g. '44000')" [REQUIRED for stop_loss/take_profit actions - the price that triggers the order],
-      "orderId": number [REQUIRED for cancel_order actions - the order ID from open orders list]
-    }
+    // Include trading actions here ONLY when appropriate based on context above
+    // If just answering a question, leave this array empty: []
   ],
-  "riskManagement": "Detailed risk management strategy including position sizing methodology, stop loss placement, and exposure limits",
-  "expectedOutcome": "Expected Sharpe ratio impact, potential drawdown, and compounding strategy"
+  "riskManagement": "Risk management notes (or 'N/A' if no trades)",
+  "expectedOutcome": "Expected outcome (or 'N/A' if no trades)"
 }
 
-🚨 CRITICAL - PROTECTIVE BRACKETS FOR NEW POSITIONS 🚨
-For EVERY "buy" or "sell" action, you MUST immediately follow it with TWO separate actions:
-1. A "stop_loss" action for the same symbol
-2. A "take_profit" action for the same symbol
-
-Example - CORRECT FORMAT:
+TRADING ACTION FORMAT (when generating trades):
+Each action must have:
 {
-  "actions": [
-    {
-      "action": "buy",
-      "symbol": "BTC-PERP",
-      "side": "long",
-      "size": "0.5",
-      "leverage": 5,
-      "expectedEntry": "45000",
-      "reasoning": "Bullish breakout above 4H resistance...",
-      "exitCriteria": "Stop below key support at $43,500",
-      "stopLossReasoning": "Placed at market structure invalidation point",
-      "takeProfitReasoning": "Target at next resistance zone with 3:1 R:R",
-      "exitStrategy": "Will trail stop to breakeven if 50% target hit",
-      "expectedRoi": "6.7"
-    },
-    {
-      "action": "stop_loss",
-      "symbol": "BTC-PERP",
-      "side": "long",
-      "triggerPrice": "43500",
-      "reasoning": "Market structure invalidation - 4H support break confirms reversal"
-    },
-    {
-      "action": "take_profit",
-      "symbol": "BTC-PERP", 
-      "side": "long",
-      "triggerPrice": "49500",
-      "reasoning": "Major resistance zone with confluence at previous high"
-    }
-  ]
+  "action": "buy" | "sell" | "hold" | "close" | "stop_loss" | "take_profit" | "cancel_order",
+  "symbol": "SYMBOL-PERP" (e.g., "BTC-PERP", "ETH-PERP", "DOGE-PERP"),
+  "side": "long" | "short",
+  "size": "0.5" (actual numeric string, never "calculated"),
+  "leverage": 5,
+  "expectedEntry": "45000.50" (limit price),
+  "reasoning": "Why this trade",
+  "exitCriteria": "Stop loss reasoning" [REQUIRED for buy/sell],
+  "expectedRoi": "5.8" [REQUIRED for buy/sell],
+  "stopLossReasoning": "Why SL at this level" [REQUIRED for buy/sell],
+  "takeProfitReasoning": "Why TP at this level" [REQUIRED for buy/sell],
+  "exitStrategy": "How to manage if TP unlikely" [REQUIRED for buy/sell],
+  "triggerPrice": "43500" [REQUIRED for stop_loss/take_profit],
+  "orderId": 12345 [REQUIRED for cancel_order]
 }
 
-THE SYSTEM WILL REJECT YOUR ENTIRE STRATEGY IF:
-- You generate a buy/sell action WITHOUT corresponding stop_loss and take_profit actions
-- The stop_loss or take_profit actions are missing the "symbol" field
-- The protective actions don't match the entry action's symbol
+🚨 CRITICAL SAFETY RULES 🚨
+1. PROTECTIVE BRACKETS: For EVERY buy/sell action, you MUST include TWO additional actions:
+   - ONE "stop_loss" action with same symbol and triggerPrice
+   - ONE "take_profit" action with same symbol and triggerPrice
+   
+   Example:
+   "actions": [
+     {"action": "buy", "symbol": "BTC-PERP", "side": "long", "size": "0.5", ...},
+     {"action": "stop_loss", "symbol": "BTC-PERP", "side": "long", "triggerPrice": "43500", "reasoning": "..."},
+     {"action": "take_profit", "symbol": "BTC-PERP", "side": "long", "triggerPrice": "49500", "reasoning": "..."}
+   ]
 
-This is NON-NEGOTIABLE for safety. Every new position MUST have protective brackets attached.
+2. EXISTING POSITIONS: If there are open positions, you MUST include stop_loss actions for ALL of them in every response (you can adjust the levels, but never omit them).
 
-IMPORTANT - SYMBOL SELECTION:
-- You can trade ANY symbol from the "Current market data" section provided to you
-- Don't limit yourself to BTC, ETH, or SOL - explore the full universe of available assets
-- Look at top gainers, high volume assets, and emerging opportunities
-- Use the exact symbol format as shown in the market data (e.g. "DOGE-PERP", "WIF-PERP", "BONK-PERP")
+3. SIZE FIELD: Must ALWAYS be an actual number like "0.5" or "10", NEVER "calculated" or placeholder text.
 
-ORDER MANAGEMENT GUIDANCE:
-You will be provided with a list of "Open entry orders" (unfilled buy/sell limit orders). Consider these when making decisions:
+4. CANCEL_ORDER: Requires symbol and orderId fields. Only cancel entry orders, never protective orders (reduceOnly: true).
 
-CONTEXT AWARENESS:
-- Unfilled limit orders reserve margin even when not filled
-- If margin is locked in many unfilled orders, you may need to cancel some to free up capital for new opportunities
-- The strategy's custom rules and timeframe should guide your decisions about managing existing orders
+5. For CLOSE actions, the "side" field must match the existing position's side (long position = side: "long").
 
-ADAPTIVE DECISION-MAKING:
-You have full autonomy to manage open orders based on the active strategy's philosophy. Consider:
-- Does the existing order still align with the strategy's current market view?
-- Has market structure changed significantly since the order was placed?
-- Would canceling free up margin for a higher-conviction opportunity?
-- What would the user want based on the strategy's custom rules and timeframe?
+Remember: Respond conversationally in the "interpretation" field. Include trading actions ONLY when the context calls for it.`;
 
-Your judgment should be guided by the strategy's description, custom rules, and the user's trading philosophy you learn from conversations.
-
-RULES FOR CANCEL_ORDER:
-- **REQUIRED FIELDS**: symbol (e.g., "HYPE-PERP"), orderId (from open orders list), reasoning
-- The "symbol" field MUST match the symbol from the order you're canceling (check "Open entry orders" list)
-- Include thoughtful reasoning explaining why you're canceling
-- NEVER cancel protective orders (reduceOnly: true) - only cancel entry orders
-- Avoid canceling an order only to immediately replace it with a nearly identical one (wastes fees)
-
-CANCEL_ORDER FORMAT EXAMPLE (symbol field is MANDATORY):
-{
-  "action": "cancel_order",
-  "symbol": "HYPE-PERP",
-  "orderId": 123456,
-  "reasoning": "Market structure invalidated - broke below key support. Original setup no longer valid."
-}
-
-CRITICAL RULES:
-1. The 'size' field must ALWAYS contain an actual numeric value (like "0.5" or "10"), NEVER the word "calculated" or any placeholder text.
-2. For "buy" and "sell" actions, you MUST provide the "expectedEntry" field with the exact limit price. Hyperliquid does not support market orders - all orders must specify a limit price.
-3. 🚨 NEW POSITION PROTECTIVE BRACKETS 🚨: For EVERY "buy" or "sell" action, you MUST generate TWO additional actions:
-   - ONE "stop_loss" action with the same symbol and triggerPrice
-   - ONE "take_profit" action with the same symbol and triggerPrice
-   - These are SEPARATE actions in the actions array, NOT fields on the buy/sell action
-   - Missing these will cause IMMEDIATE REJECTION of your entire strategy
-4. 🚨 EXISTING POSITION PROTECTION 🚨: If there are ANY existing positions shown in "Current positions" data, you MUST include stop_loss actions for EVERY SINGLE ONE in your response. Never omit stop loss orders for existing positions - positions must NEVER be left without stop loss protection, even for a single monitoring cycle. You may ADJUST stop losses (e.g., trailing stops, breakeven stops) but you must ALWAYS include them.
-5. For "close" actions, the expectedEntry field is optional (system will use IOC limit orders to close at market price).
-6. IMPORTANT: For "close" actions, the "side" field MUST match the existing position's side from Current positions data:
-   - If position has positive size (long position), use side: "long"
-   - If position has negative size (short position), use side: "short"
-   - DO NOT use the direction of the closing trade - use the position's current side!
-
-Output real-time executed trades with professional precision and risk-adjusted optimization.`
-      },
-      {
-        role: "user" as const,
-        content: screenshots && screenshots.length > 0 
-          ? [
-              {
-                type: "text" as const,
-                text: `User prompt: "${prompt}"
-
-${strategyDetails ? `ACTIVE TRADING STRATEGY:
-You are operating under the "${strategyDetails.name}" trading strategy with the following rules and constraints:
-- Description: ${strategyDetails.description || 'No description provided'}
-- Risk per trade: ${strategyDetails.parameters?.riskPercentage || strategyDetails.parameters?.riskPercentPerTrade || 1}% of portfolio
-- Maximum positions: ${strategyDetails.parameters?.maxPositions || 5}
-- Maximum leverage: ${strategyDetails.parameters?.preferredLeverage || strategyDetails.parameters?.maxLeverage || 10}x
-- Timeframe: ${strategyDetails.parameters?.timeframe || 'Not specified'}
-- Preferred assets: ${Array.isArray(strategyDetails.parameters?.preferredAssets) ? strategyDetails.parameters.preferredAssets.join(', ') : strategyDetails.parameters?.preferredAssets || 'All assets'}
-- Restricted assets (HARD LIMIT): ${strategyDetails.parameters?.restrictedAssets && strategyDetails.parameters.restrictedAssets.trim() !== '' ? strategyDetails.parameters.restrictedAssets : 'None - can trade any asset'}
-- Custom rules: ${strategyDetails.parameters?.customRules || 'No custom rules'}
-
-IMPORTANT: You MUST follow these strategy constraints. When generating trades:
-1. Respect the risk percentage per trade (${strategyDetails.parameters?.riskPercentage || strategyDetails.parameters?.riskPercentPerTrade || 1}%)
-2. Do not exceed the maximum number of positions (${strategyDetails.parameters?.maxPositions || 5})
-3. Do not use leverage higher than ${strategyDetails.parameters?.preferredLeverage || strategyDetails.parameters?.maxLeverage || 10}x
-4. Focus on the specified timeframe: ${strategyDetails.parameters?.timeframe || 'any timeframe'}
-5. ${strategyDetails.parameters?.restrictedAssets && strategyDetails.parameters.restrictedAssets.trim() !== '' ? `CRITICAL: You can ONLY trade these assets: ${strategyDetails.parameters.restrictedAssets}. Trading ANY other asset will be REJECTED by the system.` : (Array.isArray(strategyDetails.parameters?.preferredAssets) && strategyDetails.parameters.preferredAssets.length > 0) || (typeof strategyDetails.parameters?.preferredAssets === 'string' && strategyDetails.parameters?.preferredAssets !== 'All assets') ? `Prioritize these assets: ${Array.isArray(strategyDetails.parameters.preferredAssets) ? strategyDetails.parameters.preferredAssets.join(', ') : strategyDetails.parameters.preferredAssets}` : 'Consider all available assets'}
-6. ${strategyDetails.parameters?.customRules ? `🚨 CUSTOM RULES (HIGHEST PRIORITY): ${strategyDetails.parameters.customRules}
-
-These custom rules represent the user's specific trading philosophy and risk tolerance. When custom rules specify MORE CONSERVATIVE constraints than the defaults (e.g., "only 3:1 R:R setups", "max 2% risk per trade", "only enter on confirmed breakouts"), you MUST follow the custom rules instead of the defaults. Your job is to learn and execute this specific strategy, not to impose generic rules. Treat custom rules as OVERRIDING the default constraints when they are more specific and conservative.` : 'No custom rules - use default risk management principles'}
-
-` : ''}Account Information:
-- Total Portfolio Value: $${userState?.marginSummary?.accountValue || '0'}
-- Available Balance: $${userState?.withdrawable || '0'}
-- Total Margin Used: $${userState?.marginSummary?.totalMarginUsed || '0'}
+    // Build user message with all market data and context
+    const userContent = screenshots && screenshots.length > 0 
+      ? [
+          {
+            type: "text" as const,
+            text: `User prompt: "${prompt}"
 
 Current market data:
 ${JSON.stringify(marketData, null, 2)}
 
-Market analysis:
-${marketTrends}
-
 Current positions:
 ${currentPositions.length > 0 ? JSON.stringify(currentPositions, null, 2) : "No open positions"}
 
-Open entry orders (unfilled buy/sell limit orders):
+Open entry orders:
 ${openOrders.length > 0 ? JSON.stringify(openOrders.filter((o: any) => !o.reduceOnly && !o.orderType?.trigger), null, 2) : "No open entry orders"}
 
-${promptHistory.length > 0 ? `Recent user prompt history (for context on trading style and preferences):
-${promptHistory.map(p => `- ${new Date(p.timestamp).toLocaleString()}: "${p.prompt}"`).join('\n')}
-
-Consider the user's historical prompts to understand their trading style, risk tolerance, and strategic preferences. Build upon previous strategies and refine suggestions based on learned patterns.` : ''}
-
-The user has attached ${screenshots.length} screenshot(s) showing price charts or market structure. Analyze these images along with the prompt and market data to generate your trading strategy.
-
-Generate a trading strategy that addresses the user's current prompt while considering their historical preferences${strategyDetails ? ' and adhering to the ACTIVE TRADING STRATEGY constraints' : ''} and maximizing risk-adjusted returns based on current market conditions. Remember to respond with ONLY the JSON object, no other text.`
-              },
-              ...screenshots.map(screenshot => ({
-                type: "image_url" as const,
-                image_url: {
-                  url: screenshot
-                }
-              }))
-            ]
-          : `User prompt: "${prompt}"
-
-${strategyDetails ? `ACTIVE TRADING STRATEGY:
-You are operating under the "${strategyDetails.name}" trading strategy with the following rules and constraints:
-- Description: ${strategyDetails.description || 'No description provided'}
-- Risk per trade: ${strategyDetails.parameters?.riskPercentage || strategyDetails.parameters?.riskPercentPerTrade || 1}% of portfolio
-- Maximum positions: ${strategyDetails.parameters?.maxPositions || 5}
-- Maximum leverage: ${strategyDetails.parameters?.preferredLeverage || strategyDetails.parameters?.maxLeverage || 10}x
-- Timeframe: ${strategyDetails.parameters?.timeframe || 'Not specified'}
-- Preferred assets: ${Array.isArray(strategyDetails.parameters?.preferredAssets) ? strategyDetails.parameters.preferredAssets.join(', ') : strategyDetails.parameters?.preferredAssets || 'All assets'}
-- Restricted assets (HARD LIMIT): ${strategyDetails.parameters?.restrictedAssets && strategyDetails.parameters.restrictedAssets.trim() !== '' ? strategyDetails.parameters.restrictedAssets : 'None - can trade any asset'}
-- Custom rules: ${strategyDetails.parameters?.customRules || 'No custom rules'}
-
-IMPORTANT: You MUST follow these strategy constraints. When generating trades:
-1. Respect the risk percentage per trade (${strategyDetails.parameters?.riskPercentage || strategyDetails.parameters?.riskPercentPerTrade || 1}%)
-2. Do not exceed the maximum number of positions (${strategyDetails.parameters?.maxPositions || 5})
-3. Do not use leverage higher than ${strategyDetails.parameters?.preferredLeverage || strategyDetails.parameters?.maxLeverage || 10}x
-4. Focus on the specified timeframe: ${strategyDetails.parameters?.timeframe || 'any timeframe'}
-5. ${strategyDetails.parameters?.restrictedAssets && strategyDetails.parameters.restrictedAssets.trim() !== '' ? `CRITICAL: You can ONLY trade these assets: ${strategyDetails.parameters.restrictedAssets}. Trading ANY other asset will be REJECTED by the system.` : (Array.isArray(strategyDetails.parameters?.preferredAssets) && strategyDetails.parameters.preferredAssets.length > 0) || (typeof strategyDetails.parameters?.preferredAssets === 'string' && strategyDetails.parameters?.preferredAssets !== 'All assets') ? `Prioritize these assets: ${Array.isArray(strategyDetails.parameters.preferredAssets) ? strategyDetails.parameters.preferredAssets.join(', ') : strategyDetails.parameters.preferredAssets}` : 'Consider all available assets'}
-6. ${strategyDetails.parameters?.customRules ? `🚨 CUSTOM RULES (HIGHEST PRIORITY): ${strategyDetails.parameters.customRules}
-
-These custom rules represent the user's specific trading philosophy and risk tolerance. When custom rules specify MORE CONSERVATIVE constraints than the defaults (e.g., "only 3:1 R:R setups", "max 2% risk per trade", "only enter on confirmed breakouts"), you MUST follow the custom rules instead of the defaults. Your job is to learn and execute this specific strategy, not to impose generic rules. Treat custom rules as OVERRIDING the default constraints when they are more specific and conservative.` : 'No custom rules - use default risk management principles'}
-
-` : ''}Account Information:
-- Total Portfolio Value: $${userState?.marginSummary?.accountValue || '0'}
-- Available Balance: $${userState?.withdrawable || '0'}
-- Total Margin Used: $${userState?.marginSummary?.totalMarginUsed || '0'}
+The user has attached ${screenshots.length} screenshot(s) showing price charts. Analyze these images along with the prompt and market data.`
+          },
+          ...screenshots.map(screenshot => ({
+            type: "image_url" as const,
+            image_url: { url: screenshot }
+          }))
+        ]
+      : `User prompt: "${prompt}"
 
 Current market data:
 ${JSON.stringify(marketData, null, 2)}
 
-Market analysis:
-${marketTrends}
-
 Current positions:
 ${currentPositions.length > 0 ? JSON.stringify(currentPositions, null, 2) : "No open positions"}
 
-Open entry orders (unfilled buy/sell limit orders):
-${openOrders.length > 0 ? JSON.stringify(openOrders.filter((o: any) => !o.reduceOnly && !o.orderType?.trigger), null, 2) : "No open entry orders"}
+Open entry orders:
+${openOrders.length > 0 ? JSON.stringify(openOrders.filter((o: any) => !o.reduceOnly && !o.orderType?.trigger), null, 2) : "No open entry orders"}`;
 
-${promptHistory.length > 0 ? `Recent user prompt history (for context on trading style and preferences):
-${promptHistory.map(p => `- ${new Date(p.timestamp).toLocaleString()}: "${p.prompt}"`).join('\n')}
-
-Consider the user's historical prompts to understand their trading style, risk tolerance, and strategic preferences. Build upon previous strategies and refine suggestions based on learned patterns.` : ''}
-
-Generate a trading strategy that addresses the user's current prompt while considering their historical preferences${strategyDetails ? ' and adhering to the ACTIVE TRADING STRATEGY constraints' : ''} and maximizing risk-adjusted returns based on current market conditions. Remember to respond with ONLY the JSON object, no other text.`
-      }
+    // Make AI request
+    const messages: AIMessage[] = [
+      { role: "system" as const, content: systemPrompt },
+      { role: "user" as const, content: userContent }
     ];
 
-    const aiResponse = await makeAIRequest(userId, {
-      messages,
-      model,
-    }, preferredProvider);
+    const response = await makeAIRequest(userId, { messages, model }, preferredProvider);
 
-    const content = aiResponse.content;
-    if (!content) {
-      throw new Error("No response from AI");
+    // Parse JSON response
+    let cleanContent = response.content?.trim() || '{}';
+    if (cleanContent.startsWith('```json')) {
+      cleanContent = cleanContent.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+    } else if (cleanContent.startsWith('```')) {
+      cleanContent = cleanContent.replace(/^```\s*/, '').replace(/\s*```$/, '');
     }
 
-    // Clean the response - remove markdown code blocks if present
-    let cleanedContent = content.trim();
-    if (cleanedContent.startsWith('```json')) {
-      cleanedContent = cleanedContent.replace(/^```json\s*/, '').replace(/\s*```$/, '');
-    } else if (cleanedContent.startsWith('```')) {
-      cleanedContent = cleanedContent.replace(/^```\s*/, '').replace(/\s*```$/, '');
-    }
+    const strategy: TradingStrategy = JSON.parse(cleanContent);
 
-    // Try to parse as JSON, but if it fails, treat as a general conversational response
-    let strategy: TradingStrategy;
-    try {
-      strategy = JSON.parse(cleanedContent) as TradingStrategy;
-    } catch (parseError) {
-      console.log("Failed to parse trading JSON - treating as general conversational response");
-      // If JSON parsing fails, this was likely a general question misclassified as trading
-      // Return the conversational response wrapped in a strategy format
-      strategy = {
-        interpretation: content,
-        actions: [],
-        riskManagement: "Not applicable - conversational response",
-        expectedOutcome: "Not applicable - conversational response"
-      };
-    }
-
-    // Log usage and cost
+    // Log AI usage
     try {
       await storage.logAiUsage(userId, {
-        provider: aiResponse.provider,
-        model: aiResponse.model,
-        promptTokens: aiResponse.usage.promptTokens,
-        completionTokens: aiResponse.usage.completionTokens,
-        totalTokens: aiResponse.usage.totalTokens,
-        estimatedCost: aiResponse.cost.toFixed(6),
+        provider: response.provider,
+        model: response.model,
+        promptTokens: response.usage.promptTokens,
+        completionTokens: response.usage.completionTokens,
+        totalTokens: response.usage.totalTokens,
+        estimatedCost: response.cost.toFixed(6),
         userPrompt: prompt,
-        aiResponse: JSON.stringify(strategy),
+        aiResponse: strategy.interpretation || '',
         success: 1,
-        mode: "manual", // or "autonomous" - will be set by the caller
         strategyId: strategyId || null
       });
     } catch (error) {
       console.error("Failed to log AI usage:", error);
     }
 
+    console.log(`[Trading Prompt] AI response: ${strategy.actions.length} actions generated`);
     return strategy;
-  } catch (error: any) {
-    // Log failed attempt with provider info from error context
-    // Extract provider and model from error if available (thrown by AI router)
-    const errorProvider = error.provider || preferredProvider || "unknown";
-    const errorModel = error.model || model || "unknown";
+
+  } catch (error) {
+    console.error("[Trading Prompt] Error processing prompt:", error);
     
+    // Log failed usage
     try {
       await storage.logAiUsage(userId, {
-        provider: errorProvider,
-        model: errorModel,
+        provider: preferredProvider || 'unknown',
+        model: model || 'unknown',
         promptTokens: 0,
         completionTokens: 0,
         totalTokens: 0,
-        estimatedCost: "0",
+        estimatedCost: '0',
         userPrompt: prompt,
+        aiResponse: `Error: ${error instanceof Error ? error.message : 'Unknown error'}`,
         success: 0,
-        mode: "manual",
         strategyId: strategyId || null
       });
     } catch (logError) {
-      console.error("Failed to log AI usage error:", logError);
+      console.error("Failed to log error:", logError);
     }
-    
-    // Re-throw the original error
-    throw error;
+
+    // Return error response
+    return {
+      interpretation: `I encountered an error processing your request: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`,
+      actions: [],
+      riskManagement: "Error occurred",
+      expectedOutcome: "Error occurred"
+    };
   }
 }
