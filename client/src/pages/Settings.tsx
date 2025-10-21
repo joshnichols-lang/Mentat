@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Lock, KeyRound, Brain, TrendingUp, Trash2, Plus, AlertCircle, Clock, DollarSign } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -101,6 +102,7 @@ const MONITORING_FREQUENCIES = [
 
 export default function Settings() {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [isAddingAI, setIsAddingAI] = useState(false);
   const [isAddingHyperliquid, setIsAddingHyperliquid] = useState(false);
@@ -109,6 +111,19 @@ export default function Settings() {
   const [monitoringFrequency, setMonitoringFrequency] = useState<string>(() => {
     return localStorage.getItem("monitoringFrequency") || "5";
   });
+
+  // Sync monitoring frequency from backend (fixes admin panel changes not showing)
+  useEffect(() => {
+    if (user?.monitoringFrequencyMinutes !== undefined) {
+      const backendFrequency = String(user.monitoringFrequencyMinutes);
+      // Only update if different from current state
+      if (backendFrequency !== monitoringFrequency) {
+        console.log(`[Monitoring] Synced frequency to ${backendFrequency} minutes`);
+        setMonitoringFrequency(backendFrequency);
+        localStorage.setItem("monitoringFrequency", backendFrequency);
+      }
+    }
+  }, [user?.monitoringFrequencyMinutes]);
 
   const { data: apiKeysData } = useQuery<{ success: boolean; apiKeys: ApiKey[] }>({
     queryKey: ['/api/api-keys'],
