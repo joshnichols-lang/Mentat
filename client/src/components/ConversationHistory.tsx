@@ -88,10 +88,11 @@ export default function ConversationHistory() {
 
   // Mutation to send follow-up messages with conversation thread context
   const followUpMutation = useMutation({
-    mutationFn: async ({ conversationId, message, threadContext }: { 
+    mutationFn: async ({ conversationId, message, threadContext, threadStrategyId }: { 
       conversationId: string; 
       message: string; 
-      threadContext: { userPrompt: string; aiResponse: string }
+      threadContext: { userPrompt: string; aiResponse: string };
+      threadStrategyId: string | null;
     }) => {
       // Build context-aware prompt
       const contextualPrompt = `[Continuing previous conversation]
@@ -103,7 +104,7 @@ Follow-up question: ${message}`;
       
       const response = await apiRequest("POST", "/api/trading-prompt", {
         prompt: contextualPrompt,
-        strategyId: strategyId || null,
+        strategyId: threadStrategyId,
       });
       return response.json();
     },
@@ -134,6 +135,7 @@ Follow-up question: ${message}`;
         userPrompt: log.userPrompt || "",
         aiResponse: log.aiResponse || "",
       },
+      threadStrategyId: log.strategyId || null,
     });
     
     // Clear the input after sending
