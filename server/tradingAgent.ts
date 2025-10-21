@@ -130,6 +130,10 @@ export async function processTradingPrompt(
     // Simple keyword-based pre-check for obvious non-trading questions
     const generalKeywords = ['what is', 'who was', 'who is', 'when did', 'tell me about', 'calculate', 'news today', 'president', 'history of'];
     
+    // META/VERIFICATION keywords - questions about the AI itself or asking it to check/verify its work
+    // These should ALWAYS be conversational mode regardless of active strategy
+    const metaKeywords = ['double check', 'verify', 'make sure', 'check if', 'confirm that', 'are you sure', 'did you', 'validate', 'correct', 'accurate', 'right', 'wrong'];
+    
     // Split trading keywords into two categories:
     // EXECUTION keywords - always trigger trading mode (user wants to place/manage trades)
     const executionKeywords = ['buy', 'sell', 'close', 'long', 'short', 'stop loss', 'take profit', 'cancel order', 'open position', 'enter trade'];
@@ -143,12 +147,28 @@ export async function processTradingPrompt(
     
     const lowerPrompt = prompt.toLowerCase();
     const hasGeneralKeywords = generalKeywords.some(kw => lowerPrompt.includes(kw));
+    const hasMetaKeywords = metaKeywords.some(kw => lowerPrompt.includes(kw));
     const hasExecutionKeywords = executionKeywords.some(kw => lowerPrompt.includes(kw));
     const hasInformationalKeywords = informationalKeywords.some(kw => lowerPrompt.includes(kw));
     const hasIndicatorEducationKeywords = indicatorEducationKeywords.some(kw => lowerPrompt.includes(kw));
     
+    // Log keyword detection for debugging
+    console.log(`[Classification] Keyword detection:`, {
+      hasActiveStrategy,
+      hasMetaKeywords,
+      hasIndicatorEducationKeywords,
+      hasExecutionKeywords,
+      hasInformationalKeywords,
+      hasGeneralKeywords,
+      hasScreenshots: !!(screenshots && screenshots.length > 0)
+    });
+    
+    // Priority 0: META/VERIFICATION questions - always conversational mode (asking AI to check its work)
+    if (hasMetaKeywords && !hasExecutionKeywords) {
+      classification = { isTrading: false, reason: "meta/verification question - asking AI to verify its own work" };
+    }
     // Priority 1: If asking about specific technical indicators, treat as general (educational)
-    if (hasIndicatorEducationKeywords) {
+    else if (hasIndicatorEducationKeywords) {
       classification = { isTrading: false, reason: "educational question about trading indicators" };
     }
     // Priority 2: If user attached screenshots, it's almost certainly trading
