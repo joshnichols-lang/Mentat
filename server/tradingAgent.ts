@@ -471,7 +471,7 @@ IMPORTANT: You MUST follow these strategy constraints. When generating trades:
 
 ` : ''}Account Information:
 - Total Portfolio Value: $${userState?.marginSummary?.accountValue || '0'}
-- Available Balance: $${userState?.marginSummary?.withdrawable || '0'}
+- Available Balance: $${userState?.withdrawable || '0'}
 - Total Margin Used: $${userState?.marginSummary?.totalMarginUsed || '0'}
 
 Current market data:
@@ -525,7 +525,7 @@ IMPORTANT: You MUST follow these strategy constraints. When generating trades:
 
 ` : ''}Account Information:
 - Total Portfolio Value: $${userState?.marginSummary?.accountValue || '0'}
-- Available Balance: $${userState?.marginSummary?.withdrawable || '0'}
+- Available Balance: $${userState?.withdrawable || '0'}
 - Total Margin Used: $${userState?.marginSummary?.totalMarginUsed || '0'}
 
 Current market data:
