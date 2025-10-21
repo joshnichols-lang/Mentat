@@ -1,16 +1,21 @@
 import { useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { MessageSquare, Bot, ChevronDown, Search, Activity, Target } from "lucide-react";
+import { MessageSquare, Bot, ChevronDown, Search, Activity, Target, Send } from "lucide-react";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import type { AiUsageLog, TradingMode } from "@shared/schema";
 
 export default function ConversationHistory() {
   const [isPanelOpen, setIsPanelOpen] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [followUpMessages, setFollowUpMessages] = useState<Record<string, string>>({});
+  const { toast } = useToast();
   
   // Fetch active trading strategy to filter conversations by strategy
   const { data: activeStrategyData } = useQuery<{ success: boolean; mode: TradingMode | null }>({
@@ -80,6 +85,60 @@ export default function ConversationHistory() {
       return false;
     });
   }, [allConversations, searchQuery]);
+
+  // Mutation to send follow-up messages with conversation thread context
+  const followUpMutation = useMutation({
+    mutationFn: async ({ conversationId, message, threadContext }: { 
+      conversationId: string; 
+      message: string; 
+      threadContext: { userPrompt: string; aiResponse: string }
+    }) => {
+      // Build context-aware prompt
+      const contextualPrompt = `[Continuing previous conversation]
+Previous context:
+User: ${threadContext.userPrompt}
+AI: ${threadContext.aiResponse.substring(0, 500)}${threadContext.aiResponse.length > 500 ? '...' : ''}
+
+Follow-up question: ${message}`;
+      
+      const response = await apiRequest("POST", "/api/trading-prompt", {
+        prompt: contextualPrompt,
+        strategyId: strategyId || null,
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/ai/usage"] });
+      toast({
+        title: "Follow-up sent",
+        description: "Mr. Fox is analyzing your question...",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to send follow-up message",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleFollowUpSubmit = (log: AiUsageLog) => {
+    const message = followUpMessages[log.id];
+    if (!message?.trim()) return;
+    
+    followUpMutation.mutate({
+      conversationId: log.id,
+      message: message.trim(),
+      threadContext: {
+        userPrompt: log.userPrompt || "",
+        aiResponse: log.aiResponse || "",
+      },
+    });
+    
+    // Clear the input after sending
+    setFollowUpMessages(prev => ({ ...prev, [log.id]: "" }));
+  };
 
   if (isLoading) {
     return (
@@ -410,6 +469,42 @@ export default function ConversationHistory() {
                       <Bot className="h-3.5 w-3.5 mt-0.5 text-muted-foreground shrink-0" />
                       <div className="flex-1">
                         <div className="text-xs text-muted-foreground italic">No response recorded</div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Follow-up input for non-automated conversations */}
+                  {!isAutomated && log.aiResponse && (
+                    <div className="mt-3 pt-3 border-t">
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="text"
+                          placeholder="Continue this conversation..."
+                          value={followUpMessages[log.id] || ""}
+                          onChange={(e) => setFollowUpMessages(prev => ({ ...prev, [log.id]: e.target.value }))}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && !e.shiftKey) {
+                              e.preventDefault();
+                              handleFollowUpSubmit(log);
+                            }
+                          }}
+                          className="text-xs h-8 flex-1"
+                          disabled={followUpMutation.isPending}
+                          data-testid={`input-followup-${log.id}`}
+                        />
+                        <Button
+                          size="sm"
+                          onClick={() => handleFollowUpSubmit(log)}
+                          disabled={followUpMutation.isPending || !followUpMessages[log.id]?.trim()}
+                          className="h-8"
+                          data-testid={`button-send-followup-${log.id}`}
+                        >
+                          {followUpMutation.isPending ? (
+                            <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                          ) : (
+                            <Send className="h-3.5 w-3.5" />
+                          )}
+                        </Button>
                       </div>
                     </div>
                   )}
