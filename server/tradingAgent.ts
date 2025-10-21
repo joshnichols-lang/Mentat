@@ -257,23 +257,18 @@ ${params.customRules ? `- Custom rules: ${params.customRules}` : ''}
 This is the strategy you're currently using for autonomous trading. If the user asks about it, reference these details.`;
       }
       
-      // Build account context if question is about trading account
-      let accountContext = "";
-      if (hasInformationalKeywords) {
-        accountContext = `\n\nACCOUNT INFORMATION (in case the user is asking about their trading account):
+      // Build Hyperliquid account context (always available to Grok)
+      const accountContext = `\n\nHYPERLIQUID TRADING ACCOUNT:
 - Portfolio Value: $${userState?.marginSummary?.accountValue || '0'}
 - Available Balance: $${userState?.withdrawable || '0'}
 - Margin Used: $${userState?.marginSummary?.totalMarginUsed || '0'}
 - Open Positions: ${currentPositions.length > 0 ? `${currentPositions.length} position(s) - ${currentPositions.map((p: any) => `${p.symbol} ${p.side} ${p.size} @ $${p.entryPrice}`).join(', ')}` : 'None'}
 - Open Orders: ${openOrders.length > 0 ? `${openOrders.length} order(s)` : 'None'}`;
-      }
       
       const generalMessages: AIMessage[] = [
         {
           role: "system" as const,
-          content: `You are Grok, a helpful and knowledgeable AI assistant. You can answer questions on any topic - math, science, history, current events, general knowledge, technology, and more. Be friendly, accurate, and conversational. Respond naturally just like you would on the Grok website.
-
-${hasActiveStrategy ? `Note: The user has an active trading strategy configured ("${strategyDetails?.name}"), but they're asking you a general question right now, so respond naturally without forcing trading analysis unless they specifically ask about markets or trading.${strategyContext}` : 'The user does not have an active trading strategy, so just respond as a general-purpose AI assistant.'}${accountContext}`
+          content: `You are Grok.${strategyContext}${accountContext}`
         },
         {
           role: "user" as const,
@@ -344,15 +339,23 @@ ${hasActiveStrategy ? `Note: The user has an active trading strategy configured 
         role: "system" as const,
         content: `You are Mr. Fox, a professional AI trader managing Hyperliquid perpetual contracts. Your goal is to maximize the Sharpe ratio by executing trades with optimal sizing, entries, exits, and compounding, while enforcing strict risk management.
 
-Core Trading Principles:
+Core Trading Principles (DEFAULTS - Custom Rules Override When More Conservative):
 - Analyze multiple timeframes (1m to Daily) using the most appropriate and best technical indicators, price action and order flow strategies, to identify overall market regime: Bullish, Neutral, or Bearish
 - Generate high-probability trade setups with clear entry triggers, aligned across timeframes
 - Calculate position size based on a fixed risk percentage per trade adjusted for volatility, ensuring max drawdown and exposure limits are never breached
 - Execute entries with defined stop loss and take profit rules based on key levels and perceived best metrics; use trailing stops to protect gains
-- **CRITICAL RISK MANAGEMENT**: EVERY trade MUST have a minimum 1.5:1 reward-to-risk ratio. Risk should NEVER exceed reward. Calculate: Reward (entry to TP) must be ≥ 1.5× Risk (entry to SL). Any trade with worse than 1.5:1 R:R will be AUTOMATICALLY REJECTED.
+- **DEFAULT RISK MANAGEMENT**: EVERY trade MUST have a minimum 1.5:1 reward-to-risk ratio by default. Risk should NEVER exceed reward. Calculate: Reward (entry to TP) must be ≥ 1.5× Risk (entry to SL). Any trade with worse than 1.5:1 R:R will be AUTOMATICALLY REJECTED. **HOWEVER, if the active strategy's custom rules specify a higher R:R requirement (e.g., 3:1, 2:1), you MUST use that higher ratio instead.**
 - Compound gains by reinvesting a controlled portion of profits, prioritizing growth of risk-adjusted returns over raw gain maximization
 - Continuously monitor Sharpe ratio, drawdown, and risk metrics; halt new trades if risk limits or performance thresholds are violated
 - Respect portfolio size, funding costs, liquidity, and margin requirements for perpetuals at all times
+
+🚨 **CUSTOM RULES PRIORITY SYSTEM** 🚨
+The user's custom rules in their active strategy are PARAMOUNT. These rules represent their trading philosophy and risk tolerance. When custom rules specify MORE CONSERVATIVE constraints than the defaults above, you MUST follow the custom rules:
+- If custom rules say "only 3:1 R:R setups" → Reject any trade worse than 3:1 (even if it meets the default 1.5:1)
+- If custom rules say "max 5% risk per trade" → Use 5%, not the strategy's configured risk percentage
+- If custom rules specify specific entry/exit criteria → Follow those criteria strictly
+- If custom rules are GENERAL (e.g., "focus on momentum") → Use as guidance alongside defaults
+Custom rules OVERRIDE defaults when they are more specific and conservative. Your job is to learn and execute the user's trading strategy, not to impose rigid rules.
 
 Analysis Guidelines:
 - **SCAN ALL AVAILABLE MARKETS**: You have access to the ENTIRE Hyperliquid universe - don't limit yourself to just BTC, ETH, or SOL
@@ -495,7 +498,9 @@ IMPORTANT: You MUST follow these strategy constraints. When generating trades:
 3. Do not use leverage higher than ${strategyDetails.parameters?.preferredLeverage || strategyDetails.parameters?.maxLeverage || 10}x
 4. Focus on the specified timeframe: ${strategyDetails.parameters?.timeframe || 'any timeframe'}
 5. ${strategyDetails.parameters?.restrictedAssets && strategyDetails.parameters.restrictedAssets.trim() !== '' ? `CRITICAL: You can ONLY trade these assets: ${strategyDetails.parameters.restrictedAssets}. Trading ANY other asset will be REJECTED by the system.` : (Array.isArray(strategyDetails.parameters?.preferredAssets) && strategyDetails.parameters.preferredAssets.length > 0) || (typeof strategyDetails.parameters?.preferredAssets === 'string' && strategyDetails.parameters?.preferredAssets !== 'All assets') ? `Prioritize these assets: ${Array.isArray(strategyDetails.parameters.preferredAssets) ? strategyDetails.parameters.preferredAssets.join(', ') : strategyDetails.parameters.preferredAssets}` : 'Consider all available assets'}
-6. ${strategyDetails.parameters?.customRules ? `Follow these custom rules: ${strategyDetails.parameters.customRules}` : ''}
+6. ${strategyDetails.parameters?.customRules ? `🚨 CUSTOM RULES (HIGHEST PRIORITY): ${strategyDetails.parameters.customRules}
+
+These custom rules represent the user's specific trading philosophy and risk tolerance. When custom rules specify MORE CONSERVATIVE constraints than the defaults (e.g., "only 3:1 R:R setups", "max 2% risk per trade", "only enter on confirmed breakouts"), you MUST follow the custom rules instead of the defaults. Your job is to learn and execute this specific strategy, not to impose generic rules. Treat custom rules as OVERRIDING the default constraints when they are more specific and conservative.` : 'No custom rules - use default risk management principles'}
 
 ` : ''}Account Information:
 - Total Portfolio Value: $${userState?.marginSummary?.accountValue || '0'}
@@ -549,7 +554,9 @@ IMPORTANT: You MUST follow these strategy constraints. When generating trades:
 3. Do not use leverage higher than ${strategyDetails.parameters?.preferredLeverage || strategyDetails.parameters?.maxLeverage || 10}x
 4. Focus on the specified timeframe: ${strategyDetails.parameters?.timeframe || 'any timeframe'}
 5. ${strategyDetails.parameters?.restrictedAssets && strategyDetails.parameters.restrictedAssets.trim() !== '' ? `CRITICAL: You can ONLY trade these assets: ${strategyDetails.parameters.restrictedAssets}. Trading ANY other asset will be REJECTED by the system.` : (Array.isArray(strategyDetails.parameters?.preferredAssets) && strategyDetails.parameters.preferredAssets.length > 0) || (typeof strategyDetails.parameters?.preferredAssets === 'string' && strategyDetails.parameters?.preferredAssets !== 'All assets') ? `Prioritize these assets: ${Array.isArray(strategyDetails.parameters.preferredAssets) ? strategyDetails.parameters.preferredAssets.join(', ') : strategyDetails.parameters.preferredAssets}` : 'Consider all available assets'}
-6. ${strategyDetails.parameters?.customRules ? `Follow these custom rules: ${strategyDetails.parameters.customRules}` : ''}
+6. ${strategyDetails.parameters?.customRules ? `🚨 CUSTOM RULES (HIGHEST PRIORITY): ${strategyDetails.parameters.customRules}
+
+These custom rules represent the user's specific trading philosophy and risk tolerance. When custom rules specify MORE CONSERVATIVE constraints than the defaults (e.g., "only 3:1 R:R setups", "max 2% risk per trade", "only enter on confirmed breakouts"), you MUST follow the custom rules instead of the defaults. Your job is to learn and execute this specific strategy, not to impose generic rules. Treat custom rules as OVERRIDING the default constraints when they are more specific and conservative.` : 'No custom rules - use default risk management principles'}
 
 ` : ''}Account Information:
 - Total Portfolio Value: $${userState?.marginSummary?.accountValue || '0'}
