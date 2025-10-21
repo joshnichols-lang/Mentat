@@ -289,26 +289,19 @@ function validateRiskRewardRatio(
 
   const entry = parseFloat(action.expectedEntry);
 
-  // Extract stop loss and take profit from action or protective actions
+  // Extract stop loss and take profit from protective actions
   let stopLoss: number | null = null;
   let takeProfit: number | null = null;
 
-  if (action.stopLoss) {
-    stopLoss = parseFloat(action.stopLoss);
-  }
-  if (action.takeProfit) {
-    takeProfit = parseFloat(action.takeProfit);
-  }
-
-  // Check protective actions if not in main action
+  // Check protective actions for stop loss and take profit
   if (protectiveActions) {
     const slAction = protectiveActions.find(a => a.action === "stop_loss" && a.symbol === action.symbol);
     const tpAction = protectiveActions.find(a => a.action === "take_profit" && a.symbol === action.symbol);
     
-    if (slAction?.triggerPrice && !stopLoss) {
+    if (slAction?.triggerPrice) {
       stopLoss = parseFloat(slAction.triggerPrice);
     }
-    if (tpAction?.triggerPrice && !takeProfit) {
+    if (tpAction?.triggerPrice) {
       takeProfit = parseFloat(tpAction.triggerPrice);
     }
   }
@@ -327,20 +320,10 @@ function validateRiskRewardRatio(
     throw new Error(`REJECTED: Invalid risk/reward calculation - Risk: $${risk.toFixed(2)}, Reward: $${reward.toFixed(2)}`);
   }
 
-  // Calculate reward:risk ratio
+  // Calculate and log reward:risk ratio (no minimum requirement - user defines via custom rules)
   const rewardRiskRatio = reward / risk;
-  const MINIMUM_RR_RATIO = 1.5; // Require at least 1.5:1 reward:risk
 
-  if (rewardRiskRatio < MINIMUM_RR_RATIO) {
-    throw new Error(
-      `REJECTED: Poor risk/reward ratio ${rewardRiskRatio.toFixed(2)}:1 (Reward: $${reward.toFixed(2)}, Risk: $${risk.toFixed(2)}). ` +
-      `Minimum required is ${MINIMUM_RR_RATIO}:1. For ${isLong ? 'LONG' : 'SHORT'} ${action.symbol}: ` +
-      `Entry $${entry.toFixed(2)}, SL $${stopLoss.toFixed(2)}, TP $${takeProfit.toFixed(2)}. ` +
-      `Adjust your stop loss tighter or take profit wider to achieve better risk/reward.`
-    );
-  }
-
-  console.log(`[Risk/Reward Validation] ✓ PASSED for ${action.symbol}: ${rewardRiskRatio.toFixed(2)}:1 (Reward: $${reward.toFixed(2)}, Risk: $${risk.toFixed(2)})`);
+  console.log(`[Risk/Reward Info] ${action.symbol}: ${rewardRiskRatio.toFixed(2)}:1 R:R (Reward: $${reward.toFixed(2)}, Risk: $${risk.toFixed(2)})`);
 }
 
 interface PriceValidationResult {
@@ -461,47 +444,60 @@ async function validatePriceReasonableness(
   const side = action.action; // "buy" or "sell"
 
   try {
-    // Validate using market context analyzer
+    // Get current market price for Terminal Safety Guard enforcement
+    const marketData = await hyperliquidClient.getMarketData();
+    const assetData = marketData.find((d: any) => d.symbol === action.symbol);
+    
+    if (assetData) {
+      const currentPrice = parseFloat(assetData.price);
+      
+      if (Number.isFinite(currentPrice) && currentPrice > 0) {
+        const distancePercent = Math.abs((limitPrice - currentPrice) / currentPrice) * 100;
+        
+        // TERMINAL SAFETY GUARD: Enforce 20% maximum distance from market price
+        // This is a CRITICAL safety feature that prevents catastrophic fat-finger errors
+        if (distancePercent > 20) {
+          return {
+            valid: false,
+            reason: `Price ${limitPrice.toFixed(2)} is ${distancePercent.toFixed(1)}% from market price ${currentPrice.toFixed(2)}. Maximum allowed distance is 20% (Terminal Safety Guard). Please use prices closer to current market level.`,
+            submittedPrice: limitPrice,
+            currentPrice,
+            deviation: distancePercent / 100,
+          };
+        }
+      }
+    }
+    
+    // Validate using market context analyzer for fill probability
     const validation = await validateLimitOrder(
       userId,
       action.symbol,
       limitPrice,
       side,
       strategyTimeframe,
-      true // Auto-correct unrealistic prices
+      false // NO auto-correct - let users test aggressive limit orders
     );
 
+    // Fill probability is now a WARNING, not a rejection
+    // Users can define aggressive limit order strategies in their custom rules
     if (!validation.isValid) {
-      return {
-        valid: false,
-        reason: validation.reason,
-        submittedPrice: limitPrice,
-      };
+      console.warn(`[Price Validator] ⚠️ LOW FILL PROBABILITY WARNING: ${validation.reason}`);
+      console.warn(`[Price Validator] Order will be placed as requested - user strategy takes precedence`);
     }
 
-    // If price was auto-corrected, update the action
-    if (validation.price !== limitPrice) {
-      action.expectedEntry = validation.price.toString();
-      return {
-        valid: true,
-        reason: validation.reason,
-        deviation: Math.abs(validation.price - limitPrice) / limitPrice,
-        currentPrice: validation.price, // Corrected price
-        submittedPrice: limitPrice,
-      };
-    }
-
+    // Accept the user's requested price (passed Terminal Safety Guard)
     return {
       valid: true,
-      reason: validation.reason,
+      reason: validation.isValid ? validation.reason : `⚠️ WARNING: ${validation.reason} (Placing anyway per strategy)`,
       submittedPrice: limitPrice,
     };
   } catch (error: any) {
     console.error(`[Price Validator] Error validating ${action.symbol}:`, error);
-    // FAIL-CLOSED: On error, REJECT the order for safety (don't place orders we can't validate)
+    // On error, still allow order if it's not too far from a reasonable price
+    // The Terminal Safety Guard in executeOpenPosition will provide final protection
     return { 
-      valid: false,
-      reason: `Price validation error: ${error.message || "Unknown error"}`,
+      valid: true,
+      reason: `Price validation unavailable - proceeding with user's requested price`,
       submittedPrice: limitPrice,
     };
   }
@@ -749,7 +745,7 @@ export async function executeTradeStrategy(
   }
   
   if (entryActions.length > 0) {
-    console.log(`[Trade Executor] ✓ RISK/REWARD VALIDATION PASSED: All ${entryActions.length} entry order(s) meet minimum 1.5:1 reward:risk ratio`);
+    console.log(`[Trade Executor] ✓ PROTECTIVE BRACKETS VALIDATED: All ${entryActions.length} entry order(s) have stop loss and take profit defined`);
   }
   
   // VALIDATION: Ensure at most ONE stop_loss per symbol (take profits can be multiple)
@@ -892,20 +888,12 @@ export async function executeTradeStrategy(
     }
   }
   
+  // CHANGED: Anti-churn is now a WARNING, not a rejection
+  // User strategy and custom rules take precedence
   if (churningActions.length > 0) {
-    console.error(`[Trade Executor] 🚨 ANTI-CHURN VIOLATION: Detected ${churningActions.length} cancel+replace loop(s): ${churningActions.join(', ')}. This wastes fees and creates infinite loops. REJECTING entire strategy.`);
-    
-    return {
-      totalActions: actions.length,
-      successfulExecutions: 0,
-      failedExecutions: actions.length,
-      skippedActions: 0,
-      results: [{
-        success: false,
-        action: actions[0] || { action: "hold", symbol: "UNKNOWN", reasoning: "Anti-churn validation failed" },
-        error: `ANTI-CHURN VIOLATION: Strategy attempted to cancel and immediately replace ${churningActions.length} order(s) with identical orders: ${churningActions.join(', ')}. This wastes fees. Only cancel orders when price is stale (>2-5% from market) or switching assets/direction. If existing orders are still valid, leave them alone.`,
-      }],
-    };
+    console.warn(`[Trade Executor] ⚠️ ANTI-CHURN WARNING: Detected ${churningActions.length} cancel+replace pattern(s): ${churningActions.join(', ')}.`);
+    console.warn(`[Trade Executor] This may waste fees. Consider if the strategy's custom rules justify this behavior.`);
+    console.warn(`[Trade Executor] Proceeding with execution - user strategy takes precedence.`);
   }
   
   console.log(`[Trade Executor] Checking ${priceValidatedActions.length} actions against ${existingOrders.length} existing orders`);
