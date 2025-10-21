@@ -353,7 +353,10 @@ export function setupAuth(app: Express) {
       const createUserSchema = z.object({
         username: z.string().min(3).max(50),
         password: passwordSchema,
-        email: z.string().email("Invalid email address").optional(),
+        email: z.preprocess(
+          (val) => val === "" ? undefined : val,
+          z.string().email("Invalid email address").optional()
+        ),
         autoApprove: z.boolean().optional(),
       });
 
