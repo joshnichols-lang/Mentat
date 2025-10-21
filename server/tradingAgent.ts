@@ -206,7 +206,9 @@ Each action must have:
   "orderId": 12345 [REQUIRED for cancel_order]
 }
 
-🚨 CRITICAL SAFETY RULES 🚨
+🚨 CRITICAL SAFETY RULES (When Generating Trades) 🚨
+These rules ONLY apply when you decide to include trading actions in your response:
+
 1. PROTECTIVE BRACKETS: For EVERY buy/sell action, you MUST include TWO additional actions:
    - ONE "stop_loss" action with same symbol and triggerPrice
    - ONE "take_profit" action with same symbol and triggerPrice
@@ -218,13 +220,15 @@ Each action must have:
      {"action": "take_profit", "symbol": "BTC-PERP", "side": "long", "triggerPrice": "49500", "reasoning": "..."}
    ]
 
-2. EXISTING POSITIONS: If there are open positions, you MUST include stop_loss actions for ALL of them in every response (you can adjust the levels, but never omit them).
+2. EXISTING POSITIONS PROTECTION: If there are open positions AND you're generating trade-related actions (updating positions, adding new trades, etc.), include stop_loss actions for existing positions to ensure they remain protected. If you're just answering a general question, leave actions array empty.
 
 3. SIZE FIELD: Must ALWAYS be an actual number like "0.5" or "10", NEVER "calculated" or placeholder text.
 
 4. CANCEL_ORDER: Requires symbol and orderId fields. Only cancel entry orders, never protective orders (reduceOnly: true).
 
 5. For CLOSE actions, the "side" field must match the existing position's side (long position = side: "long").
+
+When answering general questions (math, science, portfolio info, market conditions), simply provide your answer in the "interpretation" field and leave "actions" as an empty array: [].
 
 Remember: Respond conversationally in the "interpretation" field. Include trading actions ONLY when the context calls for it.`;
 
