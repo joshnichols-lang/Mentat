@@ -131,13 +131,22 @@ export async function processTradingPrompt(
     
     // Simple keyword-based pre-check for obvious non-trading questions
     const generalKeywords = ['what is', 'who was', 'who is', 'when did', 'tell me about', 'calculate', 'news today', 'president', 'history of'];
-    const tradingKeywords = ['buy', 'sell', 'close', 'position', 'portfolio', 'trade', 'market', 'price', 'chart', 'stop loss', 'take profit', 'long', 'short', 'leverage'];
+    
+    // Split trading keywords into two categories:
+    // EXECUTION keywords - always trigger trading mode (user wants to place/manage trades)
+    const executionKeywords = ['buy', 'sell', 'close', 'long', 'short', 'stop loss', 'take profit', 'cancel order', 'open position', 'enter trade'];
+    
+    // INFORMATIONAL keywords - only trigger trading mode if strategy is active
+    // (otherwise these are just questions about account status/market info)
+    const informationalKeywords = ['position', 'portfolio', 'trade', 'market', 'price', 'chart', 'leverage', 'margin', 'balance'];
+    
     // Educational questions about specific technical indicators - treat as general questions
     const indicatorEducationKeywords = ['market cipher', 'cipher a', 'cipher b', 'what is rsi', 'what is macd', 'what is ema', 'what is sma', 'what is bollinger', 'what is stochastic', 'what is fibonacci', 'what is ichimoku', 'what is adx', 'what is atr', 'explain rsi', 'explain macd', 'explain ema', 'how does rsi', 'how does macd', 'how does bollinger'];
     
     const lowerPrompt = prompt.toLowerCase();
     const hasGeneralKeywords = generalKeywords.some(kw => lowerPrompt.includes(kw));
-    const hasTradingKeywords = tradingKeywords.some(kw => lowerPrompt.includes(kw));
+    const hasExecutionKeywords = executionKeywords.some(kw => lowerPrompt.includes(kw));
+    const hasInformationalKeywords = informationalKeywords.some(kw => lowerPrompt.includes(kw));
     const hasIndicatorEducationKeywords = indicatorEducationKeywords.some(kw => lowerPrompt.includes(kw));
     
     // Priority 1: If asking about specific technical indicators, treat as general (educational)
@@ -148,9 +157,17 @@ export async function processTradingPrompt(
     else if (screenshots && screenshots.length > 0) {
       classification = { isTrading: true, reason: "screenshots attached - likely charts" };
     }
-    // Priority 3: If has trading keywords, it's trading (even if also has general keywords)
-    else if (hasTradingKeywords) {
-      classification = { isTrading: true, reason: "trading keywords detected" };
+    // Priority 3: If has EXECUTION keywords (buy/sell/close), always enter trading mode
+    else if (hasExecutionKeywords) {
+      classification = { isTrading: true, reason: "execution keywords detected - user wants to trade" };
+    }
+    // Priority 4: If has INFORMATIONAL keywords BUT no strategy active, stay conversational
+    else if (hasInformationalKeywords && !hasActiveStrategy) {
+      classification = { isTrading: false, reason: "informational question without active strategy - conversational mode" };
+    }
+    // Priority 5: If has informational keywords AND strategy is active, enter trading mode
+    else if (hasInformationalKeywords && hasActiveStrategy) {
+      classification = { isTrading: true, reason: "informational keywords + active strategy - trading mode" };
     }
     // Priority 4: If ONLY has general keywords (no trading keywords), classify via AI
     else if (hasGeneralKeywords) {
@@ -240,12 +257,23 @@ ${params.customRules ? `- Custom rules: ${params.customRules}` : ''}
 This is the strategy you're currently using for autonomous trading. If the user asks about it, reference these details.`;
       }
       
+      // Build account context if question is about trading account
+      let accountContext = "";
+      if (hasInformationalKeywords) {
+        accountContext = `\n\nACCOUNT INFORMATION (in case the user is asking about their trading account):
+- Portfolio Value: $${userState?.marginSummary?.accountValue || '0'}
+- Available Balance: $${userState?.withdrawable || '0'}
+- Margin Used: $${userState?.marginSummary?.totalMarginUsed || '0'}
+- Open Positions: ${currentPositions.length > 0 ? `${currentPositions.length} position(s) - ${currentPositions.map((p: any) => `${p.symbol} ${p.side} ${p.size} @ $${p.entryPrice}`).join(', ')}` : 'None'}
+- Open Orders: ${openOrders.length > 0 ? `${openOrders.length} order(s)` : 'None'}`;
+      }
+      
       const generalMessages: AIMessage[] = [
         {
           role: "system" as const,
           content: `You are Grok, a helpful and knowledgeable AI assistant. You can answer questions on any topic - math, science, history, current events, general knowledge, technology, and more. Be friendly, accurate, and conversational. Respond naturally just like you would on the Grok website.
 
-${hasActiveStrategy ? `Note: The user has an active trading strategy configured ("${strategyDetails?.name}"), but they're asking you a general question right now, so respond naturally without forcing trading analysis unless they specifically ask about markets or trading.${strategyContext}` : 'The user does not have an active trading strategy, so just respond as a general-purpose AI assistant.'}`
+${hasActiveStrategy ? `Note: The user has an active trading strategy configured ("${strategyDetails?.name}"), but they're asking you a general question right now, so respond naturally without forcing trading analysis unless they specifically ask about markets or trading.${strategyContext}` : 'The user does not have an active trading strategy, so just respond as a general-purpose AI assistant.'}${accountContext}`
         },
         {
           role: "user" as const,
