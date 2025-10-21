@@ -468,7 +468,7 @@ export default function Onboarding() {
                   name="apiKey"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>API Wallet Address</FormLabel>
+                      <FormLabel>Private Key</FormLabel>
                       <FormControl>
                         <Input
                           {...field}
@@ -480,7 +480,7 @@ export default function Onboarding() {
                         />
                       </FormControl>
                       <FormDescription>
-                        Your Hyperliquid API wallet address (starts with 0x)
+                        Your Hyperliquid API private key (starts with 0x)
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -490,11 +490,11 @@ export default function Onboarding() {
                 <Alert>
                   <CheckCircle2 className="h-4 w-4" />
                   <AlertDescription>
-                    <p className="font-medium mb-2">How to get your API wallet address on Hyperliquid:</p>
+                    <p className="font-medium mb-2">How to get your private key on Hyperliquid:</p>
                     <ol className="list-decimal list-inside space-y-1 text-sm">
                       <li>Go to Hyperliquid → More → API</li>
                       <li>Click "Generate" or "Authorize API Wallet"</li>
-                      <li>Copy the API wallet address (starts with "0x")</li>
+                      <li>Copy the private key (starts with "0x")</li>
                       <li>Paste it above</li>
                     </ol>
                   </AlertDescription>
