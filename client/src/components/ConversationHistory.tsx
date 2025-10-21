@@ -5,15 +5,29 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { MessageSquare, Bot, ChevronDown, Search, Activity } from "lucide-react";
-import type { AiUsageLog } from "@shared/schema";
+import { MessageSquare, Bot, ChevronDown, Search, Activity, Target } from "lucide-react";
+import type { AiUsageLog, TradingMode } from "@shared/schema";
 
 export default function ConversationHistory() {
   const [isPanelOpen, setIsPanelOpen] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   
+  // Fetch active trading strategy to filter conversations by strategy
+  const { data: activeStrategyData } = useQuery<{ success: boolean; mode: TradingMode | null }>({
+    queryKey: ["/api/trading-modes/active"],
+    refetchInterval: 5000,
+  });
+  
+  const activeStrategy = activeStrategyData?.mode;
+  const strategyId = activeStrategy?.id;
+  
+  // Fetch conversation history filtered by current strategy
+  // If strategyId exists, only show conversations for that strategy
+  // If no strategy is active, show general conversations (strategyId=null)
   const { data: usageLogs, isLoading } = useQuery<{ success: boolean; logs: AiUsageLog[] }>({
-    queryKey: ["/api/ai/usage"],
+    queryKey: strategyId 
+      ? ["/api/ai/usage", `?strategyId=${strategyId}`]
+      : ["/api/ai/usage", "?strategyId=null"],
     refetchInterval: 5000,
   });
 
@@ -90,7 +104,17 @@ export default function ConversationHistory() {
       <Card className="p-4">
         <CollapsibleTrigger className="w-full hover-elevate active-elevate-2 -m-4 p-4 mb-0 group" data-testid="toggle-conversation-panel">
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold">CONVERSATION HISTORY</h2>
+            <div className="flex flex-col items-start gap-1">
+              <h2 className="text-sm font-semibold">CONVERSATION HISTORY</h2>
+              {activeStrategy ? (
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <Target className="h-3 w-3" />
+                  <span>{activeStrategy.name}</span>
+                </div>
+              ) : (
+                <div className="text-xs text-muted-foreground">General Conversations</div>
+              )}
+            </div>
             <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
           </div>
         </CollapsibleTrigger>

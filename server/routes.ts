@@ -509,7 +509,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = getUserId(req);
       
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 100;
-      const logs = await storage.getAiUsageLogs(userId, limit);
+      
+      // Support optional strategyId filtering for strategy-scoped conversations
+      // If strategyId="null", filter for logs with no strategy (general conversations)
+      // If strategyId is provided, filter for that specific strategy
+      // If strategyId is not provided, return all logs (no filtering)
+      let strategyIdFilter: string | null | undefined = undefined;
+      if (req.query.strategyId !== undefined) {
+        strategyIdFilter = req.query.strategyId === "null" ? null : req.query.strategyId as string;
+      }
+      
+      const logs = await storage.getAiUsageLogs(userId, limit, strategyIdFilter);
       res.json({ success: true, logs });
     } catch (error) {
       console.error("Error fetching AI usage logs:", error);
