@@ -94,6 +94,15 @@ export default function ConversationHistory() {
       threadContext: { userPrompt: string; aiResponse: string };
       threadStrategyId: string | null;
     }) => {
+      // Fetch current market data and positions
+      const [marketDataResponse, positionsResponse] = await Promise.all([
+        fetch("/api/hyperliquid/market-data"),
+        fetch("/api/hyperliquid/positions")
+      ]);
+      
+      const marketDataResult = await marketDataResponse.json();
+      const positionsResult = await positionsResponse.json();
+      
       // Build context-aware prompt
       const contextualPrompt = `[Continuing previous conversation]
 Previous context:
@@ -104,6 +113,8 @@ Follow-up question: ${message}`;
       
       const response = await apiRequest("POST", "/api/trading/prompt", {
         prompt: contextualPrompt,
+        marketData: marketDataResult.marketData || [],
+        currentPositions: positionsResult.positions || [],
         strategyId: threadStrategyId,
       });
       return response.json();
