@@ -331,7 +331,7 @@ ${openOrders.length > 0 ? JSON.stringify(openOrders.filter((o: any) => !o.reduce
         totalTokens: response.usage.totalTokens,
         estimatedCost: response.cost.toFixed(6),
         userPrompt: prompt,
-        aiResponse: strategy.interpretation || '',
+        aiResponse: JSON.stringify(strategy),
         success: 1,
         strategyId: strategyId || null
       });
