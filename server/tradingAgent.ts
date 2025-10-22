@@ -213,12 +213,23 @@ These rules ONLY apply when you decide to include trading actions in your respon
    - ONE "stop_loss" action with same symbol and triggerPrice
    - ONE "take_profit" action with same symbol and triggerPrice
    
-   Example:
+   LONG Position Example (entry: $45000):
    "actions": [
-     {"action": "buy", "symbol": "BTC-PERP", "side": "long", "size": "0.5", ...},
-     {"action": "stop_loss", "symbol": "BTC-PERP", "side": "long", "triggerPrice": "43500", "reasoning": "..."},
-     {"action": "take_profit", "symbol": "BTC-PERP", "side": "long", "triggerPrice": "49500", "reasoning": "..."}
+     {"action": "buy", "symbol": "BTC-PERP", "side": "long", "size": "0.5", "expectedEntry": "45000", ...},
+     {"action": "stop_loss", "symbol": "BTC-PERP", "side": "long", "triggerPrice": "43500", "reasoning": "Exit if price drops below support"},
+     {"action": "take_profit", "symbol": "BTC-PERP", "side": "long", "triggerPrice": "49500", "reasoning": "Take profit at resistance"}
    ]
+   
+   SHORT Position Example (entry: $45000):
+   "actions": [
+     {"action": "sell", "symbol": "BTC-PERP", "side": "short", "size": "0.5", "expectedEntry": "45000", ...},
+     {"action": "stop_loss", "symbol": "BTC-PERP", "side": "short", "triggerPrice": "46500", "reasoning": "Exit if price rises above resistance"},
+     {"action": "take_profit", "symbol": "BTC-PERP", "side": "short", "triggerPrice": "41500", "reasoning": "Take profit at support"}
+   ]
+   
+   🔴 CRITICAL FOR SHORT POSITIONS: 
+   - Stop Loss must be ABOVE entry price (you lose when price goes UP)
+   - Take Profit must be BELOW entry price (you profit when price goes DOWN)
 
 2. EXISTING POSITIONS PROTECTION: If there are open positions AND you're generating trade-related actions (updating positions, adding new trades, etc.), include stop_loss actions for existing positions to ensure they remain protected. If you're just answering a general question, leave actions array empty.
 
