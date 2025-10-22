@@ -102,7 +102,7 @@ AI: ${threadContext.aiResponse.substring(0, 500)}${threadContext.aiResponse.leng
 
 Follow-up question: ${message}`;
       
-      const response = await apiRequest("POST", "/api/trading-prompt", {
+      const response = await apiRequest("POST", "/api/trading/prompt", {
         prompt: contextualPrompt,
         strategyId: threadStrategyId,
       });
