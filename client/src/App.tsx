@@ -18,12 +18,14 @@ import Settings from "@/pages/Settings";
 import TradeHistory from "@/pages/TradeHistory";
 import TradeJournal from "@/pages/TradeJournal";
 import TradingModes from "@/pages/TradingModes";
+import UIPreview from "@/pages/UIPreview";
 import NotFound from "@/pages/not-found";
 
 function Router() {
   return (
     <Switch>
       <Route path="/auth" component={AuthPage} />
+      <Route path="/ui-preview" component={UIPreview} />
       <ProtectedRoute path="/onboarding" component={Onboarding} />
       <ProtectedRoute path="/pending-approval" component={PendingApproval} />
       <ProtectedRoute path="/admin/verification" component={AdminVerification} />
