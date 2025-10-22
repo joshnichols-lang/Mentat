@@ -63,6 +63,11 @@ Preferred communication style: Simple, everyday language.
 **Trading Modes (Strategies):** User-defined strategies with customizable parameters (name, description, timeframe, risk %, max positions, leverage, preferred assets, custom rules). Only one strategy can be active at a time.
 **Core Features:** Autonomous trading engine, order management, configurable monitoring frequency, enhanced performance metrics (Sharpe, Sortino, Calmar, Sterling, Omega), and trading controls. Performance metrics are calculated using cumulative data from all snapshots. **Portfolio snapshots are created automatically at the user's configured monitoring frequency**, capturing total account value (including unrealized PnL from open positions), ensuring risk-adjusted metrics accurately reflect real-time portfolio performance.
 **Monitoring & Resource Management:** Monitoring frequency intelligence prevents immediate execution on server restart if within the configured interval. User deletion cleans up monitoring intervals to prevent resource leaks.
+**Hyperliquid SDK Defensive Guards (Oct 22, 2025):** Comprehensive error handling protects all exchange API calls from SDK initialization failures:
+- **Flexible Verification Helper:** `verifyExchangeAPI(methodName?)` validates SDK structure and specific method availability before any exchange operation
+- **Protected Methods:** All trading operations (placeOrder, placeBracketOrder, placeTriggerOrder, cancelOrder, updateLeverage) verify SDK readiness and return structured errors instead of throwing
+- **Enhanced Diagnostics:** Constructor and initialization logging provides actionable error messages for production debugging
+- **Production Safety:** Prevents `TypeError: this.sdk.exchange.X is not a function` crashes by validating method existence before invocation
 
 ## External Dependencies
 
