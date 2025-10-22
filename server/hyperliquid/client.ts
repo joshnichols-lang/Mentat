@@ -57,20 +57,42 @@ export class HyperliquidClient {
     if (!config.walletAddress) {
       const wallet = new ethers.Wallet(config.privateKey);
       this.config.walletAddress = wallet.address;
-      console.log(`Hyperliquid wallet address derived: ${this.config.walletAddress}`);
+      console.log(`[Hyperliquid] Wallet address derived: ${this.config.walletAddress}`);
     }
+    
+    console.log(`[Hyperliquid] Initializing SDK with config:`, {
+      testnet: config.testnet || false,
+      walletAddress: this.config.walletAddress,
+      enableWs: false,
+    });
     
     this.sdk = new Hyperliquid({
       privateKey: config.privateKey,
       testnet: config.testnet || false,
-      walletAddress: config.walletAddress,
+      walletAddress: this.config.walletAddress,
       enableWs: false, // Disable WebSocket for now
     });
+    
+    // Log SDK initialization status
+    console.log(`[Hyperliquid] SDK initialized, checking structure...`);
+    console.log(`[Hyperliquid] SDK type:`, typeof this.sdk);
+    console.log(`[Hyperliquid] SDK has exchange:`, !!this.sdk.exchange);
+    console.log(`[Hyperliquid] SDK exchange type:`, typeof this.sdk.exchange);
+    if (this.sdk.exchange) {
+      console.log(`[Hyperliquid] Exchange has placeOrder:`, typeof this.sdk.exchange.placeOrder === 'function');
+    }
   }
 
   private async ensureInitialized(): Promise<void> {
     if (!this.isInitialized) {
       try {
+        // Defensive check - ensure SDK and info are available
+        if (!this.sdk || !this.sdk.info) {
+          console.error("[Hyperliquid] SDK not properly initialized in ensureInitialized");
+          this.isInitialized = true; // Mark as initialized to prevent retries
+          return;
+        }
+        
         // Initialize asset maps by fetching metadata
         // This forces the SDK to load available assets
         await this.sdk.info.perpetuals.getMeta();
@@ -82,6 +104,52 @@ export class HyperliquidClient {
         this.isInitialized = true;
       }
     }
+  }
+  
+  private verifyExchangeAPI(methodName?: string): { valid: boolean; error?: string } {
+    if (!this.sdk) {
+      console.error("[Hyperliquid] SDK not initialized");
+      return {
+        valid: false,
+        error: "Hyperliquid SDK not initialized",
+      };
+    }
+    
+    if (!this.sdk.exchange) {
+      console.error("[Hyperliquid] Exchange API not available on SDK");
+      console.error("[Hyperliquid] SDK keys:", Object.keys(this.sdk));
+      return {
+        valid: false,
+        error: "Hyperliquid Exchange API not available",
+      };
+    }
+    
+    // If a specific method is requested, verify it exists
+    if (methodName) {
+      const method = (this.sdk.exchange as any)[methodName];
+      if (typeof method !== 'function') {
+        console.error(`[Hyperliquid] ${methodName} is not a function`);
+        console.error("[Hyperliquid] exchange type:", typeof this.sdk.exchange);
+        console.error("[Hyperliquid] exchange keys:", Object.keys(this.sdk.exchange));
+        return {
+          valid: false,
+          error: `${methodName} method not available on Exchange API`,
+        };
+      }
+    } else {
+      // Default behavior - check for placeOrder (most common method)
+      if (typeof this.sdk.exchange.placeOrder !== 'function') {
+        console.error("[Hyperliquid] placeOrder is not a function");
+        console.error("[Hyperliquid] exchange type:", typeof this.sdk.exchange);
+        console.error("[Hyperliquid] exchange keys:", Object.keys(this.sdk.exchange));
+        return {
+          valid: false,
+          error: "placeOrder method not available on Exchange API",
+        };
+      }
+    }
+    
+    return { valid: true };
   }
 
   async getMarketData(): Promise<MarketData[]> {
@@ -333,6 +401,15 @@ export class HyperliquidClient {
 
   async placeOrder(params: OrderParams): Promise<{ success: boolean; response?: any; error?: string }> {
     try {
+      // CRITICAL: Verify SDK structure BEFORE any operations
+      const verification = this.verifyExchangeAPI();
+      if (!verification.valid) {
+        return {
+          success: false,
+          error: verification.error,
+        };
+      }
+      
       // Ensure asset maps are initialized before trading
       await this.ensureInitialized();
       
@@ -372,6 +449,16 @@ export class HyperliquidClient {
     stopLoss?: { triggerPx: string; limitPx?: string };
   }): Promise<{ success: boolean; response?: any; error?: string }> {
     try {
+      // CRITICAL: Verify SDK structure BEFORE any operations
+      const verification = this.verifyExchangeAPI();
+      if (!verification.valid) {
+        console.error("[Hyperliquid] Bracket order failed verification:", verification.error);
+        return {
+          success: false,
+          error: verification.error,
+        };
+      }
+      
       // Ensure asset maps are initialized before trading
       await this.ensureInitialized();
       
@@ -453,6 +540,16 @@ export class HyperliquidClient {
 
   async placeTriggerOrder(params: TriggerOrderParams): Promise<{ success: boolean; response?: any; error?: string }> {
     try {
+      // CRITICAL: Verify SDK structure BEFORE any operations
+      const verification = this.verifyExchangeAPI();
+      if (!verification.valid) {
+        console.error("[Hyperliquid] Trigger order failed verification:", verification.error);
+        return {
+          success: false,
+          error: verification.error,
+        };
+      }
+      
       // Ensure asset maps are initialized before trading
       await this.ensureInitialized();
       
@@ -490,6 +587,16 @@ export class HyperliquidClient {
 
   async cancelOrder(params: { coin: string; oid: number }): Promise<{ success: boolean; error?: string }> {
     try {
+      // CRITICAL: Verify SDK structure BEFORE any operations
+      const verification = this.verifyExchangeAPI("cancelOrder");
+      if (!verification.valid) {
+        console.error("[Hyperliquid] Cancel order failed verification:", verification.error);
+        return {
+          success: false,
+          error: verification.error,
+        };
+      }
+      
       await this.sdk.exchange.cancelOrder({
         coin: params.coin,
         o: params.oid,
@@ -534,6 +641,16 @@ export class HyperliquidClient {
 
   async updateLeverage(params: { coin: string; is_cross: boolean; leverage: number }): Promise<{ success: boolean; error?: string }> {
     try {
+      // CRITICAL: Verify SDK structure BEFORE any operations
+      const verification = this.verifyExchangeAPI("updateLeverage");
+      if (!verification.valid) {
+        console.error("[Hyperliquid] Update leverage failed verification:", verification.error);
+        return {
+          success: false,
+          error: verification.error,
+        };
+      }
+      
       // SDK signature: updateLeverage(symbol, leverageMode, leverage)
       // leverageMode: "cross" for cross margin, anything else for isolated
       await this.sdk.exchange.updateLeverage(
