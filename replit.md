@@ -68,6 +68,7 @@ Preferred communication style: Simple, everyday language.
 - **Protected Methods:** All trading operations (placeOrder, placeBracketOrder, placeTriggerOrder, cancelOrder, updateLeverage) verify SDK readiness and return structured errors instead of throwing
 - **Enhanced Diagnostics:** Constructor and initialization logging provides actionable error messages for production debugging
 - **Production Safety:** Prevents `TypeError: this.sdk.exchange.X is not a function` crashes by validating method existence before invocation
+- **Forced Initialization (Oct 22, 2025):** Production fix for "placeOrder method not available" errors. All client creation functions (`getUserHyperliquidClient()`, `initHyperliquidClient()`) now call `await client.ensureInitialized()` immediately after construction, BEFORE caching the client. This forces the SDK to complete its async metadata fetch and ensures the exchange API is fully ready before any trading operations. Previously, clients were cached immediately after construction, leading to race conditions where the SDK wasn't fully initialized when trading operations began.
 
 ## External Dependencies
 
