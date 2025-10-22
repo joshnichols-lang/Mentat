@@ -19,6 +19,7 @@ import TradeHistory from "@/pages/TradeHistory";
 import TradeJournal from "@/pages/TradeJournal";
 import TradingModes from "@/pages/TradingModes";
 import UIPreview from "@/pages/UIPreview";
+import EnhancedUIPreview from "@/pages/EnhancedUIPreview";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -26,6 +27,7 @@ function Router() {
     <Switch>
       <Route path="/auth" component={AuthPage} />
       <Route path="/ui-preview" component={UIPreview} />
+      <Route path="/ui-enhanced" component={EnhancedUIPreview} />
       <ProtectedRoute path="/onboarding" component={Onboarding} />
       <ProtectedRoute path="/pending-approval" component={PendingApproval} />
       <ProtectedRoute path="/admin/verification" component={AdminVerification} />
