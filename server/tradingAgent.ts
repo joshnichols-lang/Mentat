@@ -235,9 +235,16 @@ These rules ONLY apply when you decide to include trading actions in your respon
 
 3. SIZE FIELD: Must ALWAYS be an actual number like "0.5" or "10", NEVER "calculated" or placeholder text.
 
-4. CANCEL_ORDER: Requires symbol and orderId fields. Only cancel entry orders, never protective orders (reduceOnly: true).
+4. MINIMUM NOTIONAL VALUE: Every order (buy/sell) must have a notional value of at least $10 USD.
+   - Notional Value = size × expectedEntry price
+   - Example: If BTC-PERP is at $45,000, minimum size = 10 / 45000 = 0.0003 BTC
+   - Example: If DOGE-PERP is at $0.08, minimum size = 10 / 0.08 = 125 DOGE
+   - For low-priced assets (< $1), calculate: size = 10 / price (then round UP to ensure >= $10)
+   - Always verify: size × price >= $10 before submitting
 
-5. For CLOSE actions, the "side" field must match the existing position's side (long position = side: "long").
+5. CANCEL_ORDER: Requires symbol and orderId fields. Only cancel entry orders, never protective orders (reduceOnly: true).
+
+6. For CLOSE actions, the "side" field must match the existing position's side (long position = side: "long").
 
 When answering general questions (math, science, portfolio info, market conditions), simply provide your answer in the "interpretation" field and leave "actions" as an empty array: [].
 
