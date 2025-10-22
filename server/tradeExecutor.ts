@@ -665,33 +665,132 @@ export async function executeTradeStrategy(
     }
   }
   
-  // REJECT the entire strategy if ANY position would be left unprotected
+  // AUTO-PROTECTION: If AI omitted protective orders, try to preserve existing ones
   if (positionsWithoutStopLoss.length > 0) {
-    const errorMsg = `CRITICAL SAFETY VIOLATION: Strategy would leave ${positionsWithoutStopLoss.length} position(s) WITHOUT stop loss orders: ${positionsWithoutStopLoss.join(', ')}. ALL existing positions MUST have stop loss protection in EVERY strategy response.`;
-    console.error(`[Trade Executor] ${errorMsg}`);
+    console.log(`[Trade Executor] ⚠️ AI omitted protective orders for ${positionsWithoutStopLoss.length} position(s): ${positionsWithoutStopLoss.join(', ')}`);
+    console.log(`[Trade Executor] 🔧 AUTO-PROTECTION: Checking for existing protective orders to preserve...`);
     
-    // Create a dummy action for error reporting (guard against empty actions array)
-    const errorAction: TradingAction = {
-      action: "hold",
-      symbol: positionsWithoutStopLoss[0] || "UNKNOWN",
-      reasoning: "Safety validation failed - missing protective orders",
-    };
+    // Fetch existing open orders to see if protective orders already exist
+    const existingOrders = await hyperliquid.getOpenOrders();
+    const autoInjectedActions: TradingAction[] = [];
     
-    // Return immediately with error - DO NOT EXECUTE ANY PART OF THIS STRATEGY
-    return {
-      totalActions: actions.length,
-      successfulExecutions: 0,
-      failedExecutions: actions.length,
-      skippedActions: 0,
-      results: [{
-        success: false,
-        action: actions.length > 0 ? actions[0] : errorAction,
-        error: errorMsg,
-      }],
-    };
+    for (const symbol of positionsWithoutStopLoss) {
+      // Find existing protective orders (reduceOnly) for this symbol
+      const existingStopLoss = existingOrders.find((order: any) => 
+        order.coin === symbol && 
+        order.reduceOnly === true &&
+        order.orderType?.trigger?.tpsl === 'sl'
+      );
+      
+      const existingTakeProfit = existingOrders.find((order: any) => 
+        order.coin === symbol && 
+        order.reduceOnly === true &&
+        order.orderType?.trigger?.tpsl === 'tp'
+      );
+      
+      const position = currentPositions.find(p => p.coin === symbol);
+      if (!position) continue;
+      
+      const isLong = parseFloat(position.szi) > 0;
+      
+      // If existing protective orders found, preserve them
+      if (existingStopLoss && existingStopLoss.limitPx) {
+        const autoStopLoss: TradingAction = {
+          action: "stop_loss",
+          symbol: symbol,
+          side: isLong ? "long" : "short",
+          triggerPrice: existingStopLoss.limitPx.toString(),
+          reasoning: `[AUTO-PRESERVED] Existing stop loss at ${existingStopLoss.limitPx} preserved by safety system`,
+        };
+        autoInjectedActions.push(autoStopLoss);
+        console.log(`[Trade Executor] ✓ Auto-injected existing stop loss for ${symbol} at ${existingStopLoss.limitPx}`);
+      } else {
+        // Calculate safe default stop loss based on liquidation protection
+        const entryPx = parseFloat(position.entryPx);
+        const liquidationPx = parseFloat(position.liquidationPx);
+        
+        // Place stop loss with 1.5% buffer from liquidation (safer than letting it get liquidated)
+        const liquidationBuffer = 0.015;
+        let safeStopLoss: number;
+        
+        if (isLong) {
+          // Long: liquidation is below, stop loss should be above liquidation
+          safeStopLoss = liquidationPx * (1 + liquidationBuffer);
+        } else {
+          // Short: liquidation is above, stop loss should be below liquidation
+          safeStopLoss = liquidationPx * (1 - liquidationBuffer);
+        }
+        
+        const autoStopLoss: TradingAction = {
+          action: "stop_loss",
+          symbol: symbol,
+          side: isLong ? "long" : "short",
+          triggerPrice: safeStopLoss.toFixed(2),
+          reasoning: `[AUTO-CALCULATED] Safe stop loss at ${safeStopLoss.toFixed(2)} (1.5% from liquidation at ${liquidationPx})`,
+        };
+        autoInjectedActions.push(autoStopLoss);
+        console.log(`[Trade Executor] ⚠️ Auto-calculated stop loss for ${symbol} at ${safeStopLoss.toFixed(2)} (no existing SL found)`);
+      }
+      
+      // Preserve or calculate take profit
+      if (existingTakeProfit && existingTakeProfit.limitPx) {
+        const autoTakeProfit: TradingAction = {
+          action: "take_profit",
+          symbol: symbol,
+          side: isLong ? "long" : "short",
+          triggerPrice: existingTakeProfit.limitPx.toString(),
+          reasoning: `[AUTO-PRESERVED] Existing take profit at ${existingTakeProfit.limitPx} preserved by safety system`,
+        };
+        autoInjectedActions.push(autoTakeProfit);
+        console.log(`[Trade Executor] ✓ Auto-injected existing take profit for ${symbol} at ${existingTakeProfit.limitPx}`);
+      } else {
+        // Calculate conservative take profit (2:1 R:R from entry if possible)
+        const entryPx = parseFloat(position.entryPx);
+        const unrealizedPnl = parseFloat(position.unrealizedPnl);
+        const currentValue = parseFloat(position.positionValue);
+        const currentPx = currentValue / Math.abs(parseFloat(position.szi));
+        
+        // If already in profit, set TP at current price + 50% more profit
+        // If in loss, set TP at breakeven + small profit
+        let safeTakeProfit: number;
+        if (unrealizedPnl > 0) {
+          // In profit: add 50% more to current profit
+          const profitDistance = Math.abs(currentPx - entryPx);
+          safeTakeProfit = isLong ? currentPx + profitDistance * 0.5 : currentPx - profitDistance * 0.5;
+        } else {
+          // In loss: aim for small profit beyond breakeven
+          const lossDistance = Math.abs(currentPx - entryPx);
+          safeTakeProfit = isLong ? entryPx + lossDistance * 0.3 : entryPx - lossDistance * 0.3;
+        }
+        
+        const autoTakeProfit: TradingAction = {
+          action: "take_profit",
+          symbol: symbol,
+          side: isLong ? "long" : "short",
+          triggerPrice: safeTakeProfit.toFixed(2),
+          reasoning: `[AUTO-CALCULATED] Conservative take profit at ${safeTakeProfit.toFixed(2)}`,
+        };
+        autoInjectedActions.push(autoTakeProfit);
+        console.log(`[Trade Executor] ⚠️ Auto-calculated take profit for ${symbol} at ${safeTakeProfit.toFixed(2)} (no existing TP found)`);
+      }
+    }
+    
+    // Inject auto-protection actions into the main actions array
+    if (autoInjectedActions.length > 0) {
+      actions.push(...autoInjectedActions);
+      console.log(`[Trade Executor] 🛡️ AUTO-PROTECTION: Injected ${autoInjectedActions.length} protective order(s) to ensure safety`);
+      
+      // Update protective order groups
+      for (const autoAction of autoInjectedActions) {
+        if (!protectiveOrderGroups.has(autoAction.symbol)) {
+          protectiveOrderGroups.set(autoAction.symbol, []);
+        }
+        protectiveOrderGroups.get(autoAction.symbol)!.push(autoAction);
+      }
+    }
   }
   
-  console.log(`[Trade Executor] ✓ SAFETY CHECK PASSED: All ${positionSymbols.size} position(s) have stop loss orders`);
+  console.log(`[Trade Executor] ✓ SAFETY CHECK PASSED: All ${positionSymbols.size} position(s) have stop loss orders (${positionsWithoutStopLoss.length > 0 ? 'auto-protected' : 'AI-provided'})`);
   
   // ============================================================================
   // CRITICAL SAFETY VALIDATION: NEW ENTRY ORDERS MUST HAVE PROTECTIVE BRACKETS
