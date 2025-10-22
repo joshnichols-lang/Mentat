@@ -971,6 +971,12 @@ Respond in JSON format:
   "marketRegime": "bullish" | "bearish" | "neutral" | "volatile",
   "volumeAnalysis": "Analysis of volume profiles and what they signal",
   "actions": [
+    // 🚨 MANDATORY: If CURRENT POSITIONS section shows ANY positions, you MUST include protective orders FOR EACH:
+    // Example for existing HYPE-PERP short: BOTH stop_loss AND take_profit actions required
+    {"action": "stop_loss", "symbol": "HYPE-PERP", "side": "short", "triggerPrice": "36.00", "reasoning": "..."},
+    {"action": "take_profit", "symbol": "HYPE-PERP", "side": "short", "triggerPrice": "35.40", "reasoning": "..."},
+    
+    // Then add any new trades (each with its own protective orders):
     {
       "action": "cancel_order" | "buy" | "sell" | "close" | "stop_loss" | "take_profit",
       "symbol": "<ANY_SYMBOL_FROM_ANALYSIS>" (use ANY symbol from Top Gainers, Top Losers, or High Volume Assets - not limited to BTC/ETH/SOL),
@@ -992,6 +998,8 @@ Respond in JSON format:
   "expectedSharpeImpact": "Expected impact on Sharpe ratio and compounding strategy"
 }
 
+🚨 CRITICAL REMINDER: Count positions in "CURRENT POSITIONS". If >0, your actions array MUST start with protective orders (stop_loss + take_profit) for EACH position BEFORE any other actions!
+
 CRITICAL - MARKET UNIVERSE:
 - You have access to the ENTIRE Hyperliquid market - scan ALL available trading pairs
 - Review "Top Gainers", "Top Losers", and "High Volume Assets" sections for opportunities
@@ -999,22 +1007,39 @@ CRITICAL - MARKET UNIVERSE:
 - Look for asymmetric opportunities where smaller assets show strong momentum/volume
 - Use exact symbol format from the data (e.g. "DOGE-PERP", "WIF-PERP", "BONK-PERP", "LINK-PERP")
 
-📋 PROTECTIVE ORDER MANAGEMENT (SECONDARY TO MARKET SCANNING):
+📋 PROTECTIVE ORDER MANAGEMENT - 🚨 MANDATORY SAFETY RULES 🚨:
 
-**IMPORTANT**: Only manage protective orders if they're explicitly listed as MISSING. Otherwise, focus on scanning market for new opportunities.
+🔴 **CRITICAL REQUIREMENT - NON-NEGOTIABLE**:
+If you generate ANY trading actions (new trades, cancellations, etc.), you MUST include protective orders for ALL existing positions.
 
-1. **READ THE "EXISTING OPEN ORDERS" SECTION**:
-   - If you see a STOP LOSS for a symbol, it EXISTS - do NOT place another one
-   - If you see a TAKE PROFIT for a symbol, it EXISTS - do NOT place another one
+**EXISTING POSITIONS PROTECTION (MANDATORY)**:
+1. Check "CURRENT POSITIONS" section at the top
+2. For EVERY position listed, you MUST include BOTH:
+   - ONE "stop_loss" action with correct symbol, side, and triggerPrice
+   - ONE "take_profit" action with correct symbol, side, and triggerPrice
+3. This applies EVEN IF you're just adding new trades or canceling orders
+4. The system will REJECT your entire strategy if ANY position lacks protective orders
 
-2. **READ THE "CRITICAL MISSING PROTECTIVE ORDERS" SECTION**:
-   - ONLY place protective orders that appear as "MISSING"
-   - If this section is empty, protective orders are complete - focus on NEW TRADE SETUPS instead
+Example: If you see HYPE-PERP short position and want to add BTC-PERP long:
+"actions": [
+  // FIRST: Protect existing HYPE-PERP position (REQUIRED!)
+  {"action": "stop_loss", "symbol": "HYPE-PERP", "side": "short", "triggerPrice": "36.00", "reasoning": "Protect existing short"},
+  {"action": "take_profit", "symbol": "HYPE-PERP", "side": "short", "triggerPrice": "35.40", "reasoning": "TP target"},
+  
+  // THEN: Add new BTC position with its protective orders
+  {"action": "buy", "symbol": "BTC-PERP", "side": "long", "size": "0.01", ...},
+  {"action": "stop_loss", "symbol": "BTC-PERP", "side": "long", "triggerPrice": "103500", "reasoning": "New position stop"},
+  {"action": "take_profit", "symbol": "BTC-PERP", "side": "long", "triggerPrice": "107000", "reasoning": "New position target"}
+]
 
-3. **PRIORITY SYSTEM**:
-   - **FIRST**: Place missing protective orders (if any listed)
-   - **THEN**: Scan market universe for new limit order opportunities
-   - Both can be done in same cycle - don't choose one or the other
+**SECONDARY - READ "CRITICAL MISSING PROTECTIVE ORDERS" SECTION**:
+- This section shows what's missing BEFORE you run
+- If protective orders are listed as MISSING, address them
+- But even if this section is empty, you MUST include protective orders when generating ANY actions
+
+**PRIORITY SYSTEM**:
+- **ALWAYS FIRST**: Include protective orders for ALL existing positions when generating actions
+- **THEN**: Add new trade setups, order management, etc.
 4. **INTELLIGENT STOP LOSS PLACEMENT**:
    - **ANALYZE MARKET STRUCTURE**: Identify actual support (longs) or resistance (shorts) levels
    - **CITE YOUR REASONING**: Explain WHY stop is at specific level (e.g., "below recent swing low at $X" or "below 0.618 Fib at $Y")

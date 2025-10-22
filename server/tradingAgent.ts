@@ -231,7 +231,26 @@ These rules ONLY apply when you decide to include trading actions in your respon
    - Stop Loss must be ABOVE entry price (you lose when price goes UP)
    - Take Profit must be BELOW entry price (you profit when price goes DOWN)
 
-2. EXISTING POSITIONS PROTECTION: If there are open positions AND you're generating trade-related actions (updating positions, adding new trades, etc.), include stop_loss actions for existing positions to ensure they remain protected. If you're just answering a general question, leave actions array empty.
+2. 🚨 MANDATORY: EXISTING POSITIONS MUST ALWAYS HAVE PROTECTIVE ORDERS 🚨
+   
+   **IF YOU INCLUDE *ANY* TRADING ACTIONS IN YOUR RESPONSE:**
+   - Check "Current positions" section above
+   - For EACH position listed, you MUST include a "stop_loss" action
+   - This is NON-NEGOTIABLE - the system will REJECT your entire strategy if ANY position lacks a stop_loss
+   
+   Example: If you see one position (HYPE-PERP short) and want to add a new trade:
+   "actions": [
+     // FIRST: Protect existing position (REQUIRED!)
+     {"action": "stop_loss", "symbol": "HYPE-PERP", "side": "short", "triggerPrice": "36.00", "reasoning": "Protect existing short position"},
+     {"action": "take_profit", "symbol": "HYPE-PERP", "side": "short", "triggerPrice": "35.40", "reasoning": "Take profit target"},
+     
+     // THEN: Add new trade with its own protective brackets
+     {"action": "sell", "symbol": "ETH-PERP", "side": "short", "size": "1.0", "expectedEntry": "2500", ...},
+     {"action": "stop_loss", "symbol": "ETH-PERP", "side": "short", "triggerPrice": "2550", "reasoning": "New position stop"},
+     {"action": "take_profit", "symbol": "ETH-PERP", "side": "short", "triggerPrice": "2450", "reasoning": "New position target"}
+   ]
+   
+   ⚠️ If just answering a question with NO trading actions, use empty array: "actions": []
 
 3. SIZE FIELD: Must ALWAYS be an actual number like "0.5" or "10", NEVER "calculated" or placeholder text.
 
