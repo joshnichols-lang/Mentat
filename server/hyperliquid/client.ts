@@ -83,7 +83,7 @@ export class HyperliquidClient {
     }
   }
 
-  private async ensureInitialized(): Promise<void> {
+  public async ensureInitialized(): Promise<void> {
     if (!this.isInitialized) {
       try {
         // Defensive check - ensure SDK and info are available
@@ -675,7 +675,7 @@ let hyperliquidClient: HyperliquidClient | null = null;
 // Cache for user-specific Hyperliquid clients to avoid recreating instances
 const userClientCache = new Map<string, HyperliquidClient>();
 
-export function initHyperliquidClient(): HyperliquidClient {
+export async function initHyperliquidClient(): Promise<HyperliquidClient> {
   if (!hyperliquidClient) {
     if (!process.env.HYPERLIQUID_PRIVATE_KEY) {
       throw new Error("HYPERLIQUID_PRIVATE_KEY environment variable is not set");
@@ -689,6 +689,10 @@ export function initHyperliquidClient(): HyperliquidClient {
     };
 
     hyperliquidClient = new HyperliquidClient(config);
+    
+    // CRITICAL: Force SDK initialization to ensure exchange API is ready
+    await hyperliquidClient.ensureInitialized();
+    console.log(`[Hyperliquid] Singleton SDK initialization completed`);
   }
 
   return hyperliquidClient;
@@ -724,6 +728,11 @@ export async function getUserHyperliquidClient(userId: string): Promise<Hyperliq
   };
 
   const client = new HyperliquidClient(config);
+  
+  // CRITICAL: Force SDK initialization before caching to ensure exchange API is ready
+  // This prevents "placeOrder method not available" errors in production
+  await client.ensureInitialized();
+  console.log(`[Hyperliquid] SDK initialization completed for user ${userId}`);
   
   // Cache the client for future use
   userClientCache.set(userId, client);
