@@ -401,7 +401,10 @@ export class HyperliquidClient {
 
   async placeOrder(params: OrderParams): Promise<{ success: boolean; response?: any; error?: string }> {
     try {
-      // CRITICAL: Verify SDK structure BEFORE any operations
+      // CRITICAL: Initialize SDK BEFORE verification (exchange may not be ready until first async call)
+      await this.ensureInitialized();
+      
+      // Now verify SDK structure
       const verification = this.verifyExchangeAPI();
       if (!verification.valid) {
         return {
@@ -409,9 +412,6 @@ export class HyperliquidClient {
           error: verification.error,
         };
       }
-      
-      // Ensure asset maps are initialized before trading
-      await this.ensureInitialized();
       
       const response = await this.sdk.exchange.placeOrder(params as any);
       
@@ -449,7 +449,10 @@ export class HyperliquidClient {
     stopLoss?: { triggerPx: string; limitPx?: string };
   }): Promise<{ success: boolean; response?: any; error?: string }> {
     try {
-      // CRITICAL: Verify SDK structure BEFORE any operations
+      // CRITICAL: Initialize SDK BEFORE verification (exchange may not be ready until first async call)
+      await this.ensureInitialized();
+      
+      // Now verify SDK structure
       const verification = this.verifyExchangeAPI();
       if (!verification.valid) {
         console.error("[Hyperliquid] Bracket order failed verification:", verification.error);
@@ -458,9 +461,6 @@ export class HyperliquidClient {
           error: verification.error,
         };
       }
-      
-      // Ensure asset maps are initialized before trading
-      await this.ensureInitialized();
       
       const orders: any[] = [params.entry];
       
@@ -540,7 +540,10 @@ export class HyperliquidClient {
 
   async placeTriggerOrder(params: TriggerOrderParams): Promise<{ success: boolean; response?: any; error?: string }> {
     try {
-      // CRITICAL: Verify SDK structure BEFORE any operations
+      // CRITICAL: Initialize SDK BEFORE verification (exchange may not be ready until first async call)
+      await this.ensureInitialized();
+      
+      // Now verify SDK structure
       const verification = this.verifyExchangeAPI();
       if (!verification.valid) {
         console.error("[Hyperliquid] Trigger order failed verification:", verification.error);
@@ -549,9 +552,6 @@ export class HyperliquidClient {
           error: verification.error,
         };
       }
-      
-      // Ensure asset maps are initialized before trading
-      await this.ensureInitialized();
       
       // Build trigger order params
       const isMarket = !params.limit_px;
