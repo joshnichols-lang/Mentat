@@ -25,6 +25,7 @@ interface VolumeProfile {
 interface TradingAction {
   action: "buy" | "sell" | "hold" | "close" | "stop_loss" | "take_profit" | "cancel_order";
   symbol: string;  // REQUIRED for all actions - the trading pair (e.g., "HYPE-PERP")
+  exchange?: "hyperliquid" | "orderly";  // Optional: defaults to hyperliquid
   side?: "long" | "short";  // Not required for cancel_order
   size?: string;  // Not required for cancel_order
   leverage?: number;  // Not required for cancel_order

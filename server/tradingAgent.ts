@@ -11,6 +11,7 @@ interface MarketData {
 interface TradingAction {
   action: "buy" | "sell" | "hold" | "close" | "stop_loss" | "take_profit" | "cancel_order";
   symbol: string;
+  exchange?: "hyperliquid" | "orderly";  // Optional: defaults to hyperliquid
   side?: "long" | "short";
   size?: string;
   leverage?: number;
@@ -156,9 +157,9 @@ Use this to understand recent discussions and any strategy modifications the use
     }
 
     // Build the unified conversational system prompt
-    const systemPrompt = `You are Grok, an AI assistant helping with Hyperliquid trading. You respond naturally and conversationally to all questions - trading, markets, math, science, current events, or casual conversation.${strategyContext}${conversationContext}
+    const systemPrompt = `You are Grok, an AI assistant helping with cryptocurrency trading across multiple decentralized exchanges (Hyperliquid and Orderly Network). You respond naturally and conversationally to all questions - trading, markets, math, science, current events, or casual conversation.${strategyContext}${conversationContext}
 
-HYPERLIQUID TRADING ACCOUNT STATUS:
+TRADING ACCOUNT STATUS (HYPERLIQUID):
 - Portfolio Value: $${userState?.marginSummary?.accountValue || '0'}
 - Available Balance: $${userState?.withdrawable || '0'}
 - Margin Used: $${userState?.marginSummary?.totalMarginUsed || '0'}
@@ -192,6 +193,7 @@ Each action must have:
 {
   "action": "buy" | "sell" | "hold" | "close" | "stop_loss" | "take_profit" | "cancel_order",
   "symbol": "SYMBOL-PERP" (e.g., "BTC-PERP", "ETH-PERP", "DOGE-PERP"),
+  "exchange": "hyperliquid" | "orderly" (optional, defaults to "hyperliquid"),
   "side": "long" | "short",
   "size": "0.5" (actual numeric string, never "calculated"),
   "leverage": 5,
@@ -205,6 +207,12 @@ Each action must have:
   "triggerPrice": "43500" [REQUIRED for stop_loss/take_profit],
   "orderId": 12345 [REQUIRED for cancel_order]
 }
+
+MULTI-EXCHANGE TRADING:
+- Hyperliquid (default): All trades execute on Hyperliquid unless specified otherwise
+- Orderly Network: Set "exchange": "orderly" to execute trades on Orderly Network DEX
+- Choose exchange based on liquidity, fees, and available symbols
+- Protective orders (SL/TP) must use the same exchange as their parent position
 
 🚨 CRITICAL SAFETY RULES (When Generating Trades) 🚨
 These rules ONLY apply when you decide to include trading actions in your response:

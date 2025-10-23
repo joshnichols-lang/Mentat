@@ -13,6 +13,7 @@ import { initializeMarketDataWebSocket } from "./marketDataWebSocket";
 import { CVDCalculator } from "./cvdCalculator";
 import { VolumeProfileCalculator } from "./volumeProfileCalculator";
 import { encryptCredential } from "./encryption";
+import { getUserOrderlyClient, hasOrderlyCredentials, storeOrderlyCredentials, deleteOrderlyCredentials } from "./orderly/helpers";
 import { z } from "zod";
 import { hashPassword, comparePasswords } from "./auth";
 import multer from "multer";
@@ -1047,6 +1048,479 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error updating Hyperliquid leverage:", error);
       res.status(500).json({ success: false, error: "Failed to update leverage" });
+    }
+  });
+
+  // Orderly Network DEX API Routes - All require authentication
+  
+  // Store Orderly API credentials
+  app.post("/api/orderly/credentials", requireVerifiedUser, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      
+      const schema = z.object({
+        orderlyApiKey: z.string().min(1, "Orderly API key is required"),
+        orderlyApiSecret: z.string().min(1, "Orderly API secret is required"),
+        accountId: z.string().min(1, "Account ID (Ethereum address) is required"),
+        testnet: z.boolean().optional().default(false),
+        label: z.string().optional().default("Main Account"),
+      });
+
+      const { orderlyApiKey, orderlyApiSecret, accountId, testnet, label } = schema.parse(req.body);
+      
+      await storeOrderlyCredentials(userId, orderlyApiKey, orderlyApiSecret, accountId, testnet, label);
+      
+      res.json({ 
+        success: true, 
+        message: "Orderly credentials stored successfully" 
+      });
+    } catch (error: any) {
+      console.error("Error storing Orderly credentials:", error);
+      res.status(500).json({ 
+        success: false, 
+        error: error.message || "Failed to store Orderly credentials" 
+      });
+    }
+  });
+
+  // Check if user has Orderly credentials
+  app.get("/api/orderly/credentials/status", requireVerifiedUser, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const label = (req.query.label as string) || "Main Account";
+      
+      const hasCredentials = await hasOrderlyCredentials(userId, label);
+      
+      res.json({ 
+        success: true, 
+        hasCredentials 
+      });
+    } catch (error: any) {
+      console.error("Error checking Orderly credentials:", error);
+      res.status(500).json({ 
+        success: false, 
+        error: "Failed to check credentials status" 
+      });
+    }
+  });
+
+  // Delete Orderly credentials
+  app.delete("/api/orderly/credentials", requireVerifiedUser, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const label = (req.query.label as string) || "Main Account";
+      
+      await deleteOrderlyCredentials(userId, label);
+      
+      res.json({ 
+        success: true, 
+        message: "Orderly credentials deleted successfully" 
+      });
+    } catch (error: any) {
+      console.error("Error deleting Orderly credentials:", error);
+      res.status(500).json({ 
+        success: false, 
+        error: error.message || "Failed to delete Orderly credentials" 
+      });
+    }
+  });
+
+  // Get Orderly account balances
+  app.get("/api/orderly/balances", requireVerifiedUser, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const label = (req.query.label as string) || "Main Account";
+      
+      const orderly = await getUserOrderlyClient(userId, label);
+      const balances = await orderly.getBalance();
+      
+      res.json({ success: true, balances });
+    } catch (error: any) {
+      console.error("Error fetching Orderly balances:", error);
+      if (error.message?.includes('No Orderly API credentials')) {
+        return res.status(401).json({ success: false, error: "Please configure your Orderly API credentials first" });
+      }
+      res.status(500).json({ success: false, error: "Failed to fetch balances" });
+    }
+  });
+
+  // Get Orderly positions
+  app.get("/api/orderly/positions", requireVerifiedUser, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const label = (req.query.label as string) || "Main Account";
+      
+      const orderly = await getUserOrderlyClient(userId, label);
+      const positions = await orderly.getPositions();
+      
+      res.json({ success: true, positions });
+    } catch (error: any) {
+      console.error("Error fetching Orderly positions:", error);
+      if (error.message?.includes('No Orderly API credentials')) {
+        return res.status(401).json({ success: false, error: "Please configure your Orderly API credentials first" });
+      }
+      res.status(500).json({ success: false, error: "Failed to fetch positions" });
+    }
+  });
+
+  // Get Orderly open orders
+  app.get("/api/orderly/orders", requireVerifiedUser, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const label = (req.query.label as string) || "Main Account";
+      const symbol = req.query.symbol as string | undefined;
+      
+      const orderly = await getUserOrderlyClient(userId, label);
+      const orders = await orderly.getOpenOrders(symbol);
+      
+      res.json({ success: true, orders });
+    } catch (error: any) {
+      console.error("Error fetching Orderly orders:", error);
+      if (error.message?.includes('No Orderly API credentials')) {
+        return res.status(401).json({ success: false, error: "Please configure your Orderly API credentials first" });
+      }
+      res.status(500).json({ success: false, error: "Failed to fetch orders" });
+    }
+  });
+
+  // Place order on Orderly
+  app.post("/api/orderly/order", requireVerifiedUser, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      
+      const schema = z.object({
+        symbol: z.string(),
+        side: z.enum(['BUY', 'SELL']),
+        orderType: z.enum(['LIMIT', 'MARKET', 'IOC', 'FOK', 'POST_ONLY', 'ASK', 'BID']),
+        orderPrice: z.number().optional(),
+        orderQuantity: z.number(),
+        reduceOnly: z.boolean().optional(),
+        label: z.string().optional().default("Main Account"),
+      });
+
+      const params = schema.parse(req.body);
+      const { label, ...orderParams } = params;
+      
+      const orderly = await getUserOrderlyClient(userId, label);
+      const result = await orderly.placeOrder(orderParams);
+      
+      res.json({ success: true, order: result });
+    } catch (error: any) {
+      console.error("Error placing Orderly order:", error);
+      if (error.message?.includes('No Orderly API credentials')) {
+        return res.status(401).json({ success: false, error: "Please configure your Orderly API credentials first" });
+      }
+      res.status(500).json({ success: false, error: error.message || "Failed to place order" });
+    }
+  });
+
+  // Cancel order on Orderly
+  app.delete("/api/orderly/order", requireVerifiedUser, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      
+      const schema = z.object({
+        orderId: z.number(),
+        symbol: z.string(),
+        label: z.string().optional().default("Main Account"),
+      });
+
+      const { orderId, symbol, label } = schema.parse(req.query);
+      
+      const orderly = await getUserOrderlyClient(userId, label);
+      await orderly.cancelOrder(orderId, symbol);
+      
+      res.json({ success: true, message: "Order cancelled successfully" });
+    } catch (error: any) {
+      console.error("Error cancelling Orderly order:", error);
+      if (error.message?.includes('No Orderly API credentials')) {
+        return res.status(401).json({ success: false, error: "Please configure your Orderly API credentials first" });
+      }
+      res.status(500).json({ success: false, error: "Failed to cancel order" });
+    }
+  });
+
+  // Get Orderly market data
+  app.get("/api/orderly/market-data", requireVerifiedUser, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const symbol = req.query.symbol as string;
+      const label = (req.query.label as string) || "Main Account";
+      
+      if (!symbol) {
+        return res.status(400).json({ success: false, error: "Symbol is required" });
+      }
+      
+      const orderly = await getUserOrderlyClient(userId, label);
+      const marketData = await orderly.getMarketData(symbol);
+      
+      res.json({ success: true, marketData });
+    } catch (error: any) {
+      console.error("Error fetching Orderly market data:", error);
+      if (error.message?.includes('No Orderly API credentials')) {
+        return res.status(401).json({ success: false, error: "Please configure your Orderly API credentials first" });
+      }
+      res.status(500).json({ success: false, error: "Failed to fetch market data" });
+    }
+  });
+
+  // Get Orderly orderbook
+  app.get("/api/orderly/orderbook", requireVerifiedUser, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const symbol = req.query.symbol as string;
+      const maxLevel = req.query.maxLevel ? parseInt(req.query.maxLevel as string) : 10;
+      const label = (req.query.label as string) || "Main Account";
+      
+      if (!symbol) {
+        return res.status(400).json({ success: false, error: "Symbol is required" });
+      }
+      
+      const orderly = await getUserOrderlyClient(userId, label);
+      const orderbook = await orderly.getOrderbook(symbol, maxLevel);
+      
+      res.json({ success: true, orderbook });
+    } catch (error: any) {
+      console.error("Error fetching Orderly orderbook:", error);
+      if (error.message?.includes('No Orderly API credentials')) {
+        return res.status(401).json({ success: false, error: "Please configure your Orderly API credentials first" });
+      }
+      res.status(500).json({ success: false, error: "Failed to fetch orderbook" });
+    }
+  });
+
+  // Get available Orderly trading symbols
+  app.get("/api/orderly/symbols", requireVerifiedUser, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const label = (req.query.label as string) || "Main Account";
+      
+      const orderly = await getUserOrderlyClient(userId, label);
+      const symbols = await orderly.getSymbols();
+      
+      res.json({ success: true, symbols });
+    } catch (error: any) {
+      console.error("Error fetching Orderly symbols:", error);
+      if (error.message?.includes('No Orderly API credentials')) {
+        return res.status(401).json({ success: false, error: "Please configure your Orderly API credentials first" });
+      }
+      res.status(500).json({ success: false, error: "Failed to fetch symbols" });
+    }
+  });
+
+  // Get Orderly funding rate
+  app.get("/api/orderly/funding-rate", requireVerifiedUser, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const symbol = req.query.symbol as string;
+      const label = (req.query.label as string) || "Main Account";
+      
+      if (!symbol) {
+        return res.status(400).json({ success: false, error: "Symbol is required" });
+      }
+      
+      const orderly = await getUserOrderlyClient(userId, label);
+      const fundingRate = await orderly.getFundingRate(symbol);
+      
+      res.json({ success: true, fundingRate });
+    } catch (error: any) {
+      console.error("Error fetching Orderly funding rate:", error);
+      if (error.message?.includes('No Orderly API credentials')) {
+        return res.status(401).json({ success: false, error: "Please configure your Orderly API credentials first" });
+      }
+      res.status(500).json({ success: false, error: "Failed to fetch funding rate" });
+    }
+  });
+
+  // Multi-Exchange Aggregation Routes
+  
+  // Get aggregated positions from all exchanges
+  app.get("/api/multi-exchange/positions", requireVerifiedUser, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      
+      const positions: any[] = [];
+      
+      // Fetch Hyperliquid positions
+      try {
+        const hyperliquid = await getUserHyperliquidClient(userId);
+        const hlPositions = await hyperliquid.getPositions();
+        
+        if (hlPositions && hlPositions.length > 0) {
+          positions.push(...hlPositions.map((p: any) => ({
+            ...p,
+            exchange: 'hyperliquid'
+          })));
+        }
+      } catch (error: any) {
+        console.log('[Multi-Exchange] Hyperliquid positions not available:', error.message);
+        // Don't fail if Hyperliquid credentials are not set up
+        if (!error.message?.includes('No Hyperliquid credentials')) {
+          throw error;
+        }
+      }
+      
+      // Fetch Orderly positions
+      try {
+        const orderly = await getUserOrderlyClient(userId, "Main Account");
+        const orderlyPositions = await orderly.getPositions();
+        
+        if (orderlyPositions && orderlyPositions.length > 0) {
+          positions.push(...orderlyPositions.map((p: any) => ({
+            ...p,
+            exchange: 'orderly'
+          })));
+        }
+      } catch (error: any) {
+        console.log('[Multi-Exchange] Orderly positions not available:', error.message);
+        // Don't fail if Orderly credentials are not set up
+        if (!error.message?.includes('No Orderly API credentials')) {
+          throw error;
+        }
+      }
+      
+      res.json({ success: true, positions });
+    } catch (error: any) {
+      console.error("Error fetching multi-exchange positions:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch positions from exchanges" });
+    }
+  });
+
+  // Get aggregated balances from all exchanges
+  app.get("/api/multi-exchange/balances", requireVerifiedUser, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      
+      const balances: any = {
+        hyperliquid: null,
+        orderly: null,
+        totalUsdValue: 0
+      };
+      
+      // Fetch Hyperliquid balance
+      try {
+        const hyperliquid = await getUserHyperliquidClient(userId);
+        const hlState = await hyperliquid.getAccountState();
+        
+        balances.hyperliquid = {
+          accountValue: hlState.marginSummary?.accountValue || '0',
+          withdrawable: hlState.withdrawable || '0',
+          marginUsed: hlState.marginSummary?.totalMarginUsed || '0',
+        };
+        
+        balances.totalUsdValue += parseFloat(hlState.marginSummary?.accountValue || '0');
+      } catch (error: any) {
+        console.log('[Multi-Exchange] Hyperliquid balance not available:', error.message);
+        if (!error.message?.includes('No Hyperliquid credentials')) {
+          throw error;
+        }
+      }
+      
+      // Fetch Orderly balance
+      try {
+        const orderly = await getUserOrderlyClient(userId, "Main Account");
+        const orderlyBalance = await orderly.getBalance();
+        
+        balances.orderly = orderlyBalance;
+        
+        // Add Orderly total to aggregated value
+        if (orderlyBalance?.totalValue) {
+          balances.totalUsdValue += parseFloat(orderlyBalance.totalValue);
+        }
+      } catch (error: any) {
+        console.log('[Multi-Exchange] Orderly balance not available:', error.message);
+        if (!error.message?.includes('No Orderly API credentials')) {
+          throw error;
+        }
+      }
+      
+      res.json({ success: true, balances });
+    } catch (error: any) {
+      console.error("Error fetching multi-exchange balances:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch balances from exchanges" });
+    }
+  });
+
+  // Get aggregated portfolio summary
+  app.get("/api/multi-exchange/summary", requireVerifiedUser, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      
+      const summary: any = {
+        exchanges: [],
+        totalValue: 0,
+        totalPositions: 0,
+        totalOpenOrders: 0
+      };
+      
+      // Fetch Hyperliquid data
+      try {
+        const hyperliquid = await getUserHyperliquidClient(userId);
+        const [hlState, hlPositions, hlOrders] = await Promise.all([
+          hyperliquid.getAccountState(),
+          hyperliquid.getPositions(),
+          hyperliquid.getOpenOrders()
+        ]);
+        
+        const accountValue = parseFloat(hlState.marginSummary?.accountValue || '0');
+        summary.exchanges.push({
+          name: 'hyperliquid',
+          accountValue: accountValue,
+          positions: hlPositions?.length || 0,
+          openOrders: hlOrders?.length || 0,
+          available: true
+        });
+        
+        summary.totalValue += accountValue;
+        summary.totalPositions += hlPositions?.length || 0;
+        summary.totalOpenOrders += hlOrders?.length || 0;
+      } catch (error: any) {
+        console.log('[Multi-Exchange] Hyperliquid summary not available:', error.message);
+        if (error.message?.includes('No Hyperliquid credentials')) {
+          summary.exchanges.push({
+            name: 'hyperliquid',
+            available: false,
+            error: 'Not configured'
+          });
+        }
+      }
+      
+      // Fetch Orderly data
+      try {
+        const orderly = await getUserOrderlyClient(userId, "Main Account");
+        const [orderlyBalance, orderlyPositions, orderlyOrders] = await Promise.all([
+          orderly.getBalance(),
+          orderly.getPositions(),
+          orderly.getOpenOrders()
+        ]);
+        
+        const accountValue = parseFloat(orderlyBalance?.totalValue || '0');
+        summary.exchanges.push({
+          name: 'orderly',
+          accountValue: accountValue,
+          positions: orderlyPositions?.length || 0,
+          openOrders: orderlyOrders?.length || 0,
+          available: true
+        });
+        
+        summary.totalValue += accountValue;
+        summary.totalPositions += orderlyPositions?.length || 0;
+        summary.totalOpenOrders += orderlyOrders?.length || 0;
+      } catch (error: any) {
+        console.log('[Multi-Exchange] Orderly summary not available:', error.message);
+        if (error.message?.includes('No Orderly API credentials')) {
+          summary.exchanges.push({
+            name: 'orderly',
+            available: false,
+            error: 'Not configured'
+          });
+        }
+      }
+      
+      res.json({ success: true, summary });
+    } catch (error: any) {
+      console.error("Error fetching multi-exchange summary:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch portfolio summary" });
     }
   });
 
