@@ -1,7 +1,7 @@
 # 1fox
 
 ## Overview
-1fox is an AI-powered cryptocurrency trading terminal for the Hyperliquid perpetual futures exchange. It allows users to interact with an AI trading agent, "Mr. Fox," using natural language for automated strategy execution. The application features a "Fantastic Mr. Fox" newspaper-themed interface, real-time market data, portfolio tracking, and comprehensive trading controls. The project's vision is to provide a professional AI trading experience, prioritizing Sharpe ratio maximization through optimal sizing, entries, exits, and continuous risk management, delivered as a multi-tenant SaaS.
+1fox is an AI-powered cryptocurrency trading terminal for perpetual futures trading across multiple exchanges. It allows users to interact with an AI trading agent, "Mr. Fox," using natural language for automated strategy execution. The application features a "Fantastic Mr. Fox" newspaper-themed interface, real-time market data, portfolio tracking, and comprehensive trading controls across **Hyperliquid** (original) and **Orderly Network** (fully integrated). The project's vision is to provide a professional AI trading experience, prioritizing Sharpe ratio maximization through optimal sizing, entries, exits, and continuous risk management, delivered as a multi-tenant SaaS.
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
@@ -9,14 +9,20 @@ Preferred communication style: Simple, everyday language.
 ## System Architecture
 
 ### Frontend
-**Technology Stack:** React with TypeScript, Vite, Wouter, TanStack Query, Tailwind CSS, and shadcn/ui.
-**Design System:** "Fantastic Mr. Fox" newspaper aesthetic with a grayscale color scheme, "Courier New" typography, newsprint texture, and sharp corners. Dull green/red accents for trading elements.
+**Technology Stack:** React with TypeScript, Vite, Wouter, TanStack Query, Tailwind CSS, shadcn/ui, and lightweight-charts for advanced charting.
+**Design System:** "Fantastic Mr. Fox" newspaper aesthetic with a grayscale color scheme, "Courier New" typography, newsprint texture, and sharp corners. Grayscale theme for all trading elements (no bright colors).
 **Dashboard Layout:** Resizable 3-panel layout with portfolio analytics (left), AI conversation (center), and positions/activity (right).
+**DEX Trading Interface:** Complete visual trading interface with three-panel layout:
+- Left panel: Real-time orderbook with clickable prices that populate order form
+- Center panel: Candlestick chart using lightweight-charts library with live 15-minute OHLCV data
+- Right panel: Order entry form with buy/sell toggle, limit/market order types, and order summary
+- Styled in grayscale newspaper theme matching Dashboard
+- Real-time updates via polling (orderbook, market data) and REST endpoints (klines)
 **Advanced Visualizations:** 
 - **Portfolio Performance Charts:** AnimatedCounter for live portfolio value, PortfolioAreaChart with timeframe selector, CumulativeReturnsChart comparing against benchmark, DrawdownChart showing risk exposure over time, RollingMetricsChart for 30-day Sharpe/Sortino/Calmar ratios, SharpeGauge with animated SVG needle, MarginUsageBar with warning/danger thresholds.
 - **Position Analytics:** PositionROEChart ranking all positions by performance, PositionScatterPlot showing duration vs P&L, PositionSizeHistogram analyzing trade sizing, WinStreakChart visualizing trading consistency, TradeDistributionDonut showing win rate, HourlyPLHeatmap with 7-day × 24-hour grid.
 - **Enhanced Position Cards:** Inline sparklines showing live price movement, animated P&L and ROE counters, gradient borders by side (long/short), protective order badges (SL/TP), hover effects revealing detailed charts.
-**Key UI Components:** AI Prompt Panel, TradingView advanced charts, Custom Watchlist with Binance price feeds, Portfolio Performance Chart, Positions Grid, and Conversation History.
+**Key UI Components:** AI Prompt Panel, DEX Trading Interface (Orderly), Custom Watchlist with Binance price feeds, Portfolio Performance Chart, Positions Grid, and Conversation History.
 
 ### Backend
 **Server Framework:** Express.js with TypeScript.
@@ -52,6 +58,11 @@ Preferred communication style: Simple, everyday language.
 **Trade Performance Evaluation & Learning System:** Automates trade evaluation, learns from trades, and provides top learnings to the AI, utilizing decay-based weighting and regime-aware filtering.
 **Market Data & Indicators:** Dual WebSocket service for real-time market data. Backend provides CVD Calculator and Volume Profile Calculator.
 **Trade History Import & Analysis System:** Allows CSV upload for AI-powered style analysis, pattern extraction, and insight generation.
+**Multi-Exchange Integration:**
+- **Orderly Network:** Complete REST API and WebSocket integration for trading, market data, and account management. Supports all trading operations (market/limit orders, position tracking, balance queries). Includes real-time orderbook updates, historical OHLCV/kline data, and funding rate information.
+- **Hyperliquid:** Original exchange integration with full trading capabilities.
+- **Multi-Exchange Architecture:** Promise.allSettled pattern for resilient data aggregation across exchanges. AI can specify target exchange via optional "exchange" field in trading actions, defaulting to Hyperliquid for backward compatibility.
+- **Credential Management:** Both exchanges use AES-256-GCM envelope encryption for API credentials with per-user storage.
 **Trade Journal System:** Automatically documents trade entries with AI reasoning, expectations, and metadata. Updates entries on trade close with AI-generated analysis, tracking specific Hyperliquid order IDs.
 **Trading Modes (Strategies):** User-defined strategies with customizable parameters. Only one strategy can be active at a time.
 **Core Features:** Autonomous trading engine, order management, configurable monitoring frequency, enhanced performance metrics (Sharpe, Sortino, Calmar, Sterling, Omega) calculated from cumulative portfolio snapshots. Portfolio snapshots are created automatically at the user's configured monitoring frequency.
@@ -62,10 +73,12 @@ Preferred communication style: Simple, everyday language.
 
 **Trading Infrastructure:**
 - **Hyperliquid Exchange:** Integrated via the `hyperliquid` npm package.
+- **Orderly Network:** Custom REST API client and WebSocket service (server/orderly/client.ts, server/orderly/websocket.ts). Supports testnet and mainnet environments.
 
 **UI Component Libraries:**
 - **Radix UI:** Accessible UI primitives including resizable panels.
-- **Recharts, Victory, D3, react-sparklines, lightweight-charts:** Advanced data visualization libraries for interactive charts.
+- **Recharts, Victory, D3, react-sparklines:** Advanced data visualization libraries for interactive charts.
+- **lightweight-charts:** Professional candlestick charting for DEX Trading interface with live OHLCV data.
 - **react-countup:** Smooth number animations for portfolio metrics.
 - **Lucide React:** Iconography.
 - **Embla Carousel:** Responsive carousels.
