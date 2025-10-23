@@ -193,7 +193,7 @@ export default function Header() {
           <Button 
             variant="ghost" 
             size="icon" 
-            onClick={() => setLocation("/dex")}
+            onClick={() => window.open("https://dex.orderly.network/1fox-4617/perp/PERP_ETH_USDC", "_blank")}
             data-testid="button-dex-trading"
           >
             <LineChart className="h-4 w-4" />
