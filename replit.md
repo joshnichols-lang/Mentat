@@ -10,7 +10,7 @@ Preferred communication style: Simple, everyday language.
 
 ### Frontend
 **Technology Stack:** React with TypeScript, Vite, Wouter, TanStack Query, Tailwind CSS, shadcn/ui, and lightweight-charts for advanced charting.
-**Design System:** "Fantastic Mr. Fox" newspaper aesthetic with a grayscale color scheme, "Courier New" typography, newsprint texture, and sharp corners. Grayscale theme for all trading elements (no bright colors).
+**Design System:** Orderly Network-inspired dark trading terminal aesthetic with orange/amber accents. Dark brown/black backgrounds (hsl(18 33% 8%)), orange primary color (#B06000 / hsl(33 100% 35%)), yellow for profits/longs (#FFC107 / hsl(45 100% 51%)), and red for losses/shorts (#F54E2E / hsl(9 84% 57%)). Modern Roboto typography (sans-serif), rounded corners (8px for cards), and solid dark backgrounds. Professional trading platform look matching Orderly DEX aesthetic.
 **Dashboard Layout:** Resizable 3-panel layout with portfolio analytics (left), AI conversation (center), and positions/activity (right).
 **DEX Trading Interface:** Hosted Orderly Network DEX integration at `dex.orderly.network/1fox-4617`. Users can access the full-featured DEX directly via button in Header (opens in new tab). Future migration to custom domain planned.
 **Advanced Visualizations:** 
