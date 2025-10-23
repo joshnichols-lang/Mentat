@@ -15,75 +15,75 @@
   --elevate-2: rgba(255, 163, 82, .15);
 
   /* Orderly-inspired dark theme colors */
-  --background: 24 18 18%;
+  --background: 18 33% 8%;
 
   --foreground: 0 0% 100%;
 
-  --border: 48 40 40%;
+  --border: 30 9% 20%;
 
-  --card: 28 22 22%;
+  --card: 22 33% 10%;
 
   --card-foreground: 0 0% 100%;
 
-  --card-border: 48 40 40%;
+  --card-border: 30 9% 20%;
 
-  --sidebar: 24 18 18%;
+  --sidebar: 18 33% 8%;
 
   --sidebar-foreground: 0 0% 100%;
 
-  --sidebar-border: 48 40 40%;
+  --sidebar-border: 30 9% 20%;
 
-  --sidebar-primary: 176 96 0%;
+  --sidebar-primary: 33 100% 35%;
 
   --sidebar-primary-foreground: 0 0% 100%;
 
-  --sidebar-accent: 39 33 33%;
+  --sidebar-accent: 22 8% 14%;
 
   --sidebar-accent-foreground: 0 0% 100%;
 
-  --sidebar-ring: 176 96 0%;
+  --sidebar-ring: 33 100% 35%;
 
-  --popover: 28 22 22%;
+  --popover: 22 33% 10%;
 
   --popover-foreground: 0 0% 100%;
 
-  --popover-border: 48 40 40%;
+  --popover-border: 30 9% 20%;
 
-  --primary: 176 96 0%;
+  --primary: 33 100% 35%;
 
   --primary-foreground: 0 0% 100%;
 
-  --secondary: 56 48 48%;
+  --secondary: 30 8% 20%;
 
   --secondary-foreground: 0 0% 100%;
 
-  --muted: 44 36 36%;
+  --muted: 22 10% 16%;
 
   --muted-foreground: 0 0% 70%;
 
-  --accent: 218 137 84%;
+  --accent: 29 45% 59%;
 
   --accent-foreground: 0 0% 100%;
 
-  --destructive: 245 78 46%;
+  --destructive: 9 84% 57%;
 
   --destructive-foreground: 0 0% 100%;
 
-  --long: 255 193 7%;
+  --long: 45 100% 51%;
   
   --long-foreground: 0 0% 0%;
   
-  --short: 245 78 46%;
+  --short: 9 84% 57%;
   
   --short-foreground: 0 0% 100%;
 
-  --input: 35 29 29%;
-  --ring: 176 96 0%;
-  --chart-1: 176 96 0%;
-  --chart-2: 255 193 7%;
-  --chart-3: 245 78 46%;
-  --chart-4: 217 163 82%;
-  --chart-5: 207 87 59%;
+  --input: 24 9% 13%;
+  --ring: 33 100% 35%;
+  --chart-1: 33 100% 35%;
+  --chart-2: 45 100% 51%;
+  --chart-3: 9 84% 57%;
+  --chart-4: 33 62% 58%;
+  --chart-5: 18 57% 52%;
 
   --font-sans: 'Roboto', sans-serif;
   --font-serif: 'Roboto', sans-serif;
@@ -142,75 +142,75 @@
   --elevate-2: rgba(255, 163, 82, .15);
 
   /* Same as root for dark-first design */
-  --background: 24 18 18%;
+  --background: 18 33% 8%;
 
   --foreground: 0 0% 100%;
 
-  --border: 48 40 40%;
+  --border: 30 9% 20%;
 
-  --card: 28 22 22%;
+  --card: 22 33% 10%;
 
   --card-foreground: 0 0% 100%;
 
-  --card-border: 48 40 40%;
+  --card-border: 30 9% 20%;
 
-  --sidebar: 24 18 18%;
+  --sidebar: 18 33% 8%;
 
   --sidebar-foreground: 0 0% 100%;
 
-  --sidebar-border: 48 40 40%;
+  --sidebar-border: 30 9% 20%;
 
-  --sidebar-primary: 176 96 0%;
+  --sidebar-primary: 33 100% 35%;
 
   --sidebar-primary-foreground: 0 0% 100%;
 
-  --sidebar-accent: 39 33 33%;
+  --sidebar-accent: 22 8% 14%;
 
   --sidebar-accent-foreground: 0 0% 100%;
 
-  --sidebar-ring: 176 96 0%;
+  --sidebar-ring: 33 100% 35%;
 
-  --popover: 28 22 22%;
+  --popover: 22 33% 10%;
 
   --popover-foreground: 0 0% 100%;
 
-  --popover-border: 48 40 40%;
+  --popover-border: 30 9% 20%;
 
-  --primary: 176 96 0%;
+  --primary: 33 100% 35%;
 
   --primary-foreground: 0 0% 100%;
 
-  --secondary: 56 48 48%;
+  --secondary: 30 8% 20%;
 
   --secondary-foreground: 0 0% 100%;
 
-  --muted: 44 36 36%;
+  --muted: 22 10% 16%;
 
   --muted-foreground: 0 0% 70%;
 
-  --accent: 218 137 84%;
+  --accent: 29 45% 59%;
 
   --accent-foreground: 0 0% 100%;
 
-  --destructive: 245 78 46%;
+  --destructive: 9 84% 57%;
 
   --destructive-foreground: 0 0% 100%;
 
-  --long: 255 193 7%;
+  --long: 45 100% 51%;
   
   --long-foreground: 0 0% 0%;
   
-  --short: 245 78 46%;
+  --short: 9 84% 57%;
   
   --short-foreground: 0 0% 100%;
 
-  --input: 35 29 29%;
-  --ring: 176 96 0%;
-  --chart-1: 176 96 0%;
-  --chart-2: 255 193 7%;
-  --chart-3: 245 78 46%;
-  --chart-4: 217 163 82%;
-  --chart-5: 207 87 59%;
+  --input: 24 9% 13%;
+  --ring: 33 100% 35%;
+  --chart-1: 33 100% 35%;
+  --chart-2: 45 100% 51%;
+  --chart-3: 9 84% 57%;
+  --chart-4: 33 62% 58%;
+  --chart-5: 18 57% 52%;
 
   /* Fallback for older browsers */
   --sidebar-primary-border: hsl(var(--sidebar-primary));
