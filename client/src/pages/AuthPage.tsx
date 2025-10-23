@@ -80,11 +80,11 @@ export default function AuthPage() {
           <CardHeader>
             <div className="flex items-center gap-3 mb-2">
               <img src={logoUrl} alt="1fox logo" className="h-10 w-10" />
-              <CardTitle className="text-2xl font-mono">
+              <CardTitle className="text-2xl">
                 {isLogin ? "Welcome Back to 1fox" : "Join 1fox"}
               </CardTitle>
             </div>
-            <CardDescription className="font-mono">
+            <CardDescription>
               {isLogin
                 ? "Sign in to access your AI trading terminal"
                 : "Create an account to start AI-powered trading"}
@@ -94,7 +94,7 @@ export default function AuthPage() {
             {isLogin ? (
               <form onSubmit={handleLogin} className="space-y-4">
                 <div className="space-y-2">
-                  <label htmlFor="login-username" className="text-sm font-mono">
+                  <label htmlFor="login-username" className="text-sm">
                     Username
                   </label>
                   <input
@@ -103,12 +103,12 @@ export default function AuthPage() {
                     value={loginUsername}
                     onChange={(e) => setLoginUsername(e.target.value)}
                     placeholder="Enter your username"
-                    className="flex h-9 w-full rounded-none border border-input bg-background px-3 py-2 text-base ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring font-mono"
+                    className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     data-testid="input-login-username"
                   />
                 </div>
                 <div className="space-y-2">
-                  <label htmlFor="login-password" className="text-sm font-mono">
+                  <label htmlFor="login-password" className="text-sm">
                     Password
                   </label>
                   <input
@@ -117,14 +117,14 @@ export default function AuthPage() {
                     value={loginPassword}
                     onChange={(e) => setLoginPassword(e.target.value)}
                     placeholder="Enter your password"
-                    className="flex h-9 w-full rounded-none border border-input bg-background px-3 py-2 text-base ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring font-mono"
+                    className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     data-testid="input-login-password"
                   />
                 </div>
-                {error && <p className="text-sm text-destructive font-mono">{error}</p>}
+                {error && <p className="text-sm text-destructive">{error}</p>}
                 <Button
                   type="submit"
-                  className="w-full font-mono"
+                  className="w-full"
                   disabled={loginMutation.isPending}
                   data-testid="button-login"
                 >
@@ -134,7 +134,7 @@ export default function AuthPage() {
             ) : (
               <form onSubmit={handleRegister} className="space-y-4">
                 <div className="space-y-2">
-                  <label htmlFor="register-username" className="text-sm font-mono">
+                  <label htmlFor="register-username" className="text-sm">
                     Username
                   </label>
                   <input
@@ -143,13 +143,13 @@ export default function AuthPage() {
                     value={registerUsername}
                     onChange={(e) => setRegisterUsername(e.target.value)}
                     placeholder="Choose a username"
-                    className="flex h-9 w-full rounded-none border border-input bg-background px-3 py-2 text-base ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring font-mono"
+                    className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     data-testid="input-register-username"
                     autoComplete="off"
                   />
                 </div>
                 <div className="space-y-2">
-                  <label htmlFor="register-password" className="text-sm font-mono">
+                  <label htmlFor="register-password" className="text-sm">
                     Password
                   </label>
                   <input
@@ -158,18 +158,18 @@ export default function AuthPage() {
                     value={registerPassword}
                     onChange={(e) => setRegisterPassword(e.target.value)}
                     placeholder="Create a password"
-                    className="flex h-9 w-full rounded-none border border-input bg-background px-3 py-2 text-base ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring font-mono"
+                    className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     data-testid="input-register-password"
                     autoComplete="new-password"
                   />
-                  <p className="text-xs text-muted-foreground font-mono">
+                  <p className="text-xs text-muted-foreground">
                     Must be 8+ characters with uppercase, lowercase, number, and special character
                   </p>
                 </div>
-                {error && <p className="text-sm text-destructive font-mono">{error}</p>}
+                {error && <p className="text-sm text-destructive">{error}</p>}
                 <Button
                   type="submit"
-                  className="w-full font-mono"
+                  className="w-full"
                   disabled={registerMutation.isPending}
                   data-testid="button-register"
                 >
@@ -189,7 +189,6 @@ export default function AuthPage() {
                   setRegisterUsername("");
                   setRegisterPassword("");
                 }}
-                className="font-mono"
                 data-testid="button-toggle-auth"
               >
                 {isLogin
@@ -204,11 +203,11 @@ export default function AuthPage() {
       {/* Right side - Hero */}
       <div className="hidden lg:flex lg:w-1/2 bg-muted items-center justify-center p-12">
         <div className="max-w-md space-y-6">
-          <h1 className="text-4xl font-bold font-mono">1fox</h1>
-          <p className="text-xl text-muted-foreground font-mono">
+          <h1 className="text-4xl font-bold">1fox</h1>
+          <p className="text-xl text-muted-foreground">
             AI-Powered Cryptocurrency Trading Terminal
           </p>
-          <ul className="space-y-3 text-muted-foreground font-mono">
+          <ul className="space-y-3 text-muted-foreground">
             <li className="flex items-start gap-2">
               <span className="text-primary">▸</span>
               <span>Multi-provider AI support (Perplexity, ChatGPT, Grok)</span>
