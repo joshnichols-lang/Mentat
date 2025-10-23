@@ -3,26 +3,14 @@ import Header from "@/components/Header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { TrendingUp, BarChart3 } from "lucide-react";
 
-const grayscaleCSS = `
+const orderlyColorCSS = `
   .tradingview-widget-container iframe {
     color-scheme: dark;
   }
   
-  /* Override any colored text in TradingView widgets */
+  /* Orderly-inspired color scheme */
   .tradingview-widget-container * {
     color: inherit !important;
-  }
-  
-  /* Force grayscale for positive/negative values */
-  .tradingview-widget-container [class*="positive"],
-  .tradingview-widget-container [class*="negative"],
-  .tradingview-widget-container [class*="up"],
-  .tradingview-widget-container [class*="down"],
-  .tradingview-widget-container [style*="color: rgb(34, 171, 148)"],
-  .tradingview-widget-container [style*="color: rgb(240, 67, 56)"],
-  .tradingview-widget-container [style*="color: green"],
-  .tradingview-widget-container [style*="color: red"] {
-    color: rgb(150, 150, 150) !important;
   }
 `;
 
@@ -31,9 +19,9 @@ export default function Charts() {
   const watchlistContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Inject grayscale CSS
+    // Inject Orderly color CSS
     const styleEl = document.createElement("style");
-    styleEl.innerHTML = grayscaleCSS;
+    styleEl.innerHTML = orderlyColorCSS;
     document.head.appendChild(styleEl);
 
     return () => {
@@ -66,23 +54,23 @@ export default function Charts() {
         save_image: false,
         container_id: "tradingview-chart-widget",
         studies_overrides: {
-          "volume.volume.color.0": "rgba(120, 120, 120, 0.5)",
-          "volume.volume.color.1": "rgba(180, 180, 180, 0.5)"
+          "volume.volume.color.0": "rgba(245, 78, 46, 0.5)",
+          "volume.volume.color.1": "rgba(255, 193, 7, 0.5)"
         },
         overrides: {
-          "mainSeriesProperties.candleStyle.upColor": "#FFFFFF",
-          "mainSeriesProperties.candleStyle.downColor": "#404040",
-          "mainSeriesProperties.candleStyle.borderUpColor": "#FFFFFF",
-          "mainSeriesProperties.candleStyle.borderDownColor": "#404040",
-          "mainSeriesProperties.candleStyle.wickUpColor": "#FFFFFF",
-          "mainSeriesProperties.candleStyle.wickDownColor": "#404040",
-          "mainSeriesProperties.priceLineColor": "#888888",
+          "mainSeriesProperties.candleStyle.upColor": "#FFC107",
+          "mainSeriesProperties.candleStyle.downColor": "#F54E2E",
+          "mainSeriesProperties.candleStyle.borderUpColor": "#FFC107",
+          "mainSeriesProperties.candleStyle.borderDownColor": "#F54E2E",
+          "mainSeriesProperties.candleStyle.wickUpColor": "#FFC107",
+          "mainSeriesProperties.candleStyle.wickDownColor": "#F54E2E",
+          "mainSeriesProperties.priceLineColor": "#B06000",
           "mainSeriesProperties.priceLineWidth": 1,
-          "scalesProperties.lineColor": "#333333",
-          "scalesProperties.textColor": "#888888",
-          "paneProperties.background": "#000000",
-          "paneProperties.vertGridProperties.color": "rgba(255, 255, 255, 0.06)",
-          "paneProperties.horzGridProperties.color": "rgba(255, 255, 255, 0.06)",
+          "scalesProperties.lineColor": "#302020",
+          "scalesProperties.textColor": "#FFFFFF",
+          "paneProperties.background": "#181212",
+          "paneProperties.vertGridProperties.color": "rgba(176, 96, 0, 0.1)",
+          "paneProperties.horzGridProperties.color": "rgba(176, 96, 0, 0.1)",
           "paneProperties.legendProperties.showSeriesTitle": true,
           "paneProperties.legendProperties.showLegend": true
         },
@@ -110,18 +98,18 @@ export default function Charts() {
         isTransparent: true,
         showSymbolLogo: false,
         showFloatingTooltip: false,
-        plotLineColorGrowing: "rgba(180, 180, 180, 1)",
-        plotLineColorFalling: "rgba(120, 120, 120, 1)",
-        gridLineColor: "rgba(240, 243, 250, 0)",
-        scaleFontColor: "rgba(150, 150, 150, 1)",
-        belowLineFillColorGrowing: "rgba(180, 180, 180, 0.12)",
-        belowLineFillColorFalling: "rgba(120, 120, 120, 0.12)",
-        belowLineFillColorGrowingBottom: "rgba(180, 180, 180, 0)",
-        belowLineFillColorFallingBottom: "rgba(120, 120, 120, 0)",
-        symbolActiveColor: "rgba(150, 150, 150, 0.12)",
+        plotLineColorGrowing: "rgba(255, 193, 7, 1)",
+        plotLineColorFalling: "rgba(245, 78, 46, 1)",
+        gridLineColor: "rgba(176, 96, 0, 0.1)",
+        scaleFontColor: "rgba(255, 255, 255, 0.8)",
+        belowLineFillColorGrowing: "rgba(255, 193, 7, 0.15)",
+        belowLineFillColorFalling: "rgba(245, 78, 46, 0.15)",
+        belowLineFillColorGrowingBottom: "rgba(255, 193, 7, 0)",
+        belowLineFillColorFallingBottom: "rgba(245, 78, 46, 0)",
+        symbolActiveColor: "rgba(176, 96, 0, 0.15)",
         valuesTracking: "1",
         changeMode: "price-and-percent",
-        fontFamily: "Courier New, monospace",
+        fontFamily: "Roboto, sans-serif",
         fontSize: "10",
         tabs: [
           {
