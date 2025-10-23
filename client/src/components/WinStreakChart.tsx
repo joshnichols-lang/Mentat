@@ -19,7 +19,7 @@ export function WinStreakChart({ data }: WinStreakChartProps) {
       return (
         <div className="bg-background/95 backdrop-blur-sm border rounded-lg p-3 shadow-xl">
           <p className="text-xs text-muted-foreground mb-1">{payload[0].payload.trade}</p>
-          <p className={`text-sm font-bold ${outcome === 'win' ? 'text-green-500' : 'text-destructive'}`}>
+          <p className={`text-sm font-bold ${outcome === 'win' ? 'text-long' : 'text-destructive'}`}>
             {outcome === 'win' ? 'Win' : 'Loss'} Streak: {Math.abs(value)}
           </p>
         </div>
@@ -29,7 +29,7 @@ export function WinStreakChart({ data }: WinStreakChartProps) {
   };
 
   return (
-    <Card className="hover-elevate transition-all duration-300 border-0 bg-gradient-to-br from-card via-card to-green-500/5 shadow-xl">
+    <Card className="hover-elevate transition-all duration-300 border-0 bg-gradient-to-br from-card via-card to-long/5 shadow-xl">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm">Win/Loss Streaks</CardTitle>
@@ -43,7 +43,7 @@ export function WinStreakChart({ data }: WinStreakChartProps) {
         <div className="flex gap-3 text-xs">
           <div className="flex-1">
             <div className="text-muted-foreground">Best Win Streak</div>
-            <div className="text-sm font-bold text-green-500">+{maxWinStreak}</div>
+            <div className="text-sm font-bold text-long">+{maxWinStreak}</div>
           </div>
           <div className="flex-1">
             <div className="text-muted-foreground">Worst Loss Streak</div>
@@ -69,7 +69,7 @@ export function WinStreakChart({ data }: WinStreakChartProps) {
               {data.map((entry, index) => (
                 <Cell 
                   key={`cell-${index}`} 
-                  fill={entry.outcome === 'win' ? 'hsl(var(--green-500))' : 'hsl(var(--destructive))'}
+                  fill={entry.outcome === 'win' ? 'hsl(var(--long))' : 'hsl(var(--destructive))'}
                   opacity={0.8}
                 />
               ))}
