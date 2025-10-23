@@ -136,17 +136,18 @@ function detectVolumeSpikes(
 ): Array<{ symbol: string; currentVolume: number; avgVolume: number; ratio: number }> {
   const spikes: Array<{ symbol: string; currentVolume: number; avgVolume: number; ratio: number }> = [];
 
-  // Calculate current average volume across all markets
-  const totalVolume = marketData.reduce((sum, m) => sum + parseFloat(m.volume24h), 0);
-  const avgVolume = totalVolume / marketData.length;
-
   for (const market of marketData) {
     const currentVolume = parseFloat(market.volume24h);
-    const prevAvg = previousVolumeAvg.get(market.symbol) || avgVolume;
+    
+    // CRITICAL FIX: Initialize EMA with the symbol's own current volume
+    // This prevents false positives on first cycle for high-volume pairs
+    const prevAvg = previousVolumeAvg.get(market.symbol) || currentVolume;
 
     const ratio = currentVolume / prevAvg;
     
-    if (ratio >= threshold) {
+    // Only trigger if this is NOT the first observation (prevAvg !== currentVolume)
+    // AND the ratio exceeds threshold
+    if (previousVolumeAvg.has(market.symbol) && ratio >= threshold) {
       spikes.push({
         symbol: market.symbol,
         currentVolume,
@@ -156,7 +157,8 @@ function detectVolumeSpikes(
     }
 
     // Update rolling average (exponential moving average)
-    const newAvg = prevAvg * 0.9 + currentVolume * 0.1;
+    // Use faster decay (30%) for more responsive spike detection
+    const newAvg = prevAvg * 0.7 + currentVolume * 0.3;
     previousVolumeAvg.set(market.symbol, newAvg);
   }
 
