@@ -20,7 +20,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
 import { useState, useEffect } from "react";
-import logoUrl from "@assets/generated-image-removebg-preview_1760665535887.png";
+import logoUrl from "@assets/1fox-removebg-preview(1)_1761259210534.png";
 
 export default function Header() {
   const { user } = useAuth();

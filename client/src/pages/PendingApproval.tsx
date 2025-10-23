@@ -5,7 +5,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Clock, CheckCircle2, XCircle, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
-import logoUrl from "@assets/generated-image-removebg-preview_1760665535887.png";
+import logoUrl from "@assets/1fox-removebg-preview(1)_1761259210534.png";
 
 export default function PendingApproval() {
   const { user, logoutMutation } = useAuth();

@@ -11,7 +11,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import logoUrl from "@assets/generated-image-removebg-preview_1760665535887.png";
+import logoUrl from "@assets/1fox-removebg-preview(1)_1761259210534.png";
 
 interface ExecutionResult {
   success: boolean;

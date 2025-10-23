@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import logoUrl from "@assets/generated-image-removebg-preview_1760665535887.png";
+import logoUrl from "@assets/1fox-removebg-preview(1)_1761259210534.png";
 
 export default function AuthPage() {
   const [, setLocation] = useLocation();

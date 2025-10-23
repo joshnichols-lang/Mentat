@@ -14,7 +14,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { AlertCircle, Brain, TrendingUp, CheckCircle2, Loader2, ExternalLink } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
-import logoUrl from "@assets/generated-image-removebg-preview_1760665535887.png";
+import logoUrl from "@assets/1fox-removebg-preview(1)_1761259210534.png";
 
 type OnboardingStep = "ai_choice" | "ai_provider" | "exchange" | "complete";
 type AIChoice = "platform" | "personal";
