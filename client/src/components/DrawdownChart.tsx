@@ -8,7 +8,8 @@ interface DrawdownChartProps {
 }
 
 export function DrawdownChart({ data }: DrawdownChartProps) {
-  const maxDrawdown = Math.min(...data.map(d => d.drawdown));
+  // Guard against empty data
+  const maxDrawdown = data.length > 0 ? Math.min(...data.map(d => d.drawdown)) : 0;
 
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
@@ -36,39 +37,45 @@ export function DrawdownChart({ data }: DrawdownChartProps) {
         </div>
       </CardHeader>
       <CardContent>
-        <ResponsiveContainer width="100%" height={180}>
-          <AreaChart data={data} margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
-            <defs>
-              <linearGradient id="drawdownGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="hsl(var(--destructive))" stopOpacity={0.3} />
-                <stop offset="95%" stopColor="hsl(var(--destructive))" stopOpacity={0} />
-              </linearGradient>
-            </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
-            <XAxis 
-              dataKey="date" 
-              stroke="hsl(var(--muted-foreground))"
-              fontSize={10}
-              tickLine={false}
-            />
-            <YAxis 
-              stroke="hsl(var(--muted-foreground))"
-              fontSize={10}
-              tickLine={false}
-              tickFormatter={(value) => `${value}%`}
-            />
-            <Tooltip content={<CustomTooltip />} />
-            <ReferenceLine y={0} stroke="hsl(var(--muted-foreground))" strokeDasharray="3 3" />
-            <Area
-              type="monotone"
-              dataKey="drawdown"
-              stroke="hsl(var(--destructive))"
-              strokeWidth={2}
-              fill="url(#drawdownGradient)"
-              animationDuration={1000}
-            />
-          </AreaChart>
-        </ResponsiveContainer>
+        {data.length === 0 ? (
+          <div className="flex items-center justify-center h-[180px]">
+            <p className="text-sm text-muted-foreground">No drawdown data yet</p>
+          </div>
+        ) : (
+          <ResponsiveContainer width="100%" height={180}>
+            <AreaChart data={data} margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
+              <defs>
+                <linearGradient id="drawdownGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="hsl(var(--destructive))" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="hsl(var(--destructive))" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
+              <XAxis 
+                dataKey="date" 
+                stroke="hsl(var(--muted-foreground))"
+                fontSize={10}
+                tickLine={false}
+              />
+              <YAxis 
+                stroke="hsl(var(--muted-foreground))"
+                fontSize={10}
+                tickLine={false}
+                tickFormatter={(value) => `${value}%`}
+              />
+              <Tooltip content={<CustomTooltip />} />
+              <ReferenceLine y={0} stroke="hsl(var(--muted-foreground))" strokeDasharray="3 3" />
+              <Area
+                type="monotone"
+                dataKey="drawdown"
+                stroke="hsl(var(--destructive))"
+                strokeWidth={2}
+                fill="url(#drawdownGradient)"
+                animationDuration={1000}
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        )}
       </CardContent>
     </Card>
   );

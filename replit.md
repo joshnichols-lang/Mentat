@@ -11,6 +11,11 @@ Preferred communication style: Simple, everyday language.
 ### Frontend
 **Technology Stack:** React with TypeScript, Vite, Wouter, TanStack Query, Tailwind CSS, and shadcn/ui.
 **Design System:** "Fantastic Mr. Fox" newspaper aesthetic with a grayscale color scheme, "Courier New" typography, newsprint texture, and sharp corners. Dull green/red accents for trading elements.
+**Dashboard Layout:** Resizable 3-panel layout with portfolio analytics (left), AI conversation (center), and positions/activity (right).
+**Advanced Visualizations:** 
+- **Portfolio Performance Charts:** AnimatedCounter for live portfolio value, PortfolioAreaChart with timeframe selector, CumulativeReturnsChart comparing against benchmark, DrawdownChart showing risk exposure over time, RollingMetricsChart for 30-day Sharpe/Sortino/Calmar ratios, SharpeGauge with animated SVG needle, MarginUsageBar with warning/danger thresholds.
+- **Position Analytics:** PositionROEChart ranking all positions by performance, PositionScatterPlot showing duration vs P&L, PositionSizeHistogram analyzing trade sizing, WinStreakChart visualizing trading consistency, TradeDistributionDonut showing win rate, HourlyPLHeatmap with 7-day × 24-hour grid.
+- **Enhanced Position Cards:** Inline sparklines showing live price movement, animated P&L and ROE counters, gradient borders by side (long/short), protective order badges (SL/TP), hover effects revealing detailed charts.
 **Key UI Components:** AI Prompt Panel, TradingView advanced charts, Custom Watchlist with Binance price feeds, Portfolio Performance Chart, Positions Grid, and Conversation History.
 
 ### Backend
@@ -59,8 +64,9 @@ Preferred communication style: Simple, everyday language.
 - **Hyperliquid Exchange:** Integrated via the `hyperliquid` npm package.
 
 **UI Component Libraries:**
-- **Radix UI:** Accessible UI primitives.
-- **Recharts:** Data visualization.
+- **Radix UI:** Accessible UI primitives including resizable panels.
+- **Recharts, Victory, D3, react-sparklines, lightweight-charts:** Advanced data visualization libraries for interactive charts.
+- **react-countup:** Smooth number animations for portfolio metrics.
 - **Lucide React:** Iconography.
 - **Embla Carousel:** Responsive carousels.
 

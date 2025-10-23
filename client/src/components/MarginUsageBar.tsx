@@ -16,7 +16,8 @@ export function MarginUsageBar({
   warningThreshold = 70,
   dangerThreshold = 85
 }: MarginUsageBarProps) {
-  const percentage = (used / total) * 100;
+  // Guard against division by zero
+  const percentage = total > 0 ? (used / total) * 100 : 0;
   
   const getColor = () => {
     if (percentage >= dangerThreshold) return "bg-destructive";
