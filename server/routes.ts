@@ -1332,6 +1332,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get Orderly kline/candlestick data
+  app.get("/api/orderly/klines", requireVerifiedUser, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const symbol = req.query.symbol as string;
+      const interval = (req.query.interval as string) || '15m';
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 100;
+      const label = (req.query.label as string) || "Main Account";
+      
+      if (!symbol) {
+        return res.status(400).json({ success: false, error: "Symbol is required" });
+      }
+      
+      const orderly = await getUserOrderlyClient(userId, label);
+      const klines = await orderly.getKlines(symbol, interval, limit);
+      
+      res.json({ success: true, klines });
+    } catch (error: any) {
+      console.error("Error fetching Orderly klines:", error);
+      if (error.message?.includes('No Orderly API credentials')) {
+        return res.status(401).json({ success: false, error: "Please configure your Orderly API credentials first" });
+      }
+      res.status(500).json({ success: false, error: "Failed to fetch klines" });
+    }
+  });
+
   // Multi-Exchange Aggregation Routes
   
   // Get aggregated positions from all exchanges

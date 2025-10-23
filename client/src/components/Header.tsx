@@ -1,4 +1,4 @@
-import { LogOut, UserCheck, Settings, Users, ChevronDown, MessageSquare, History, BookOpen, Target, Home, BarChart3, AlertTriangle } from "lucide-react";
+import { LogOut, UserCheck, Settings, Users, ChevronDown, MessageSquare, History, BookOpen, Target, Home, BarChart3, AlertTriangle, LineChart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -189,6 +189,14 @@ export default function Header() {
             data-testid="button-contact-admin"
           >
             <MessageSquare className="h-4 w-4" />
+          </Button>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={() => setLocation("/dex")}
+            data-testid="button-dex-trading"
+          >
+            <LineChart className="h-4 w-4" />
           </Button>
           <Button 
             variant="ghost" 

@@ -328,6 +328,26 @@ export class OrderlyClient {
       throw error;
     }
   }
+
+  /**
+   * Get kline/candlestick data for a symbol
+   * @param symbol Symbol (e.g., "PERP_BTC_USDC")
+   * @param interval Kline interval (e.g., "1m", "5m", "15m", "1h", "1d")
+   * @param limit Number of candles to fetch (default: 100, max: 1000)
+   */
+  async getKlines(symbol: string, interval: string = '15m', limit: number = 100): Promise<any[]> {
+    console.log(`[Orderly] Fetching ${limit} klines for ${symbol} (${interval})`);
+    try {
+      const response = await this.client.get(`/v1/public/kline?symbol=${symbol}&type=${interval}&limit=${limit}`);
+      const data = response.data.data;
+      
+      // Orderly returns klines in format: [[timestamp, open, high, low, close, volume], ...]
+      return data.rows || [];
+    } catch (error: any) {
+      console.error(`[Orderly] Failed to fetch klines for ${symbol}:`, error.message);
+      throw error;
+    }
+  }
 }
 
 /**

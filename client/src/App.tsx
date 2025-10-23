@@ -7,6 +7,7 @@ import { ThemeProvider } from "@/components/ThemeProvider";
 import { AuthProvider } from "@/hooks/use-auth";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Dashboard from "@/pages/Dashboard";
+import DexTrading from "@/pages/DexTrading";
 import AuthPage from "@/pages/AuthPage";
 import Onboarding from "@/pages/Onboarding";
 import PendingApproval from "@/pages/PendingApproval";
@@ -38,6 +39,7 @@ function Router() {
       <ProtectedRoute path="/trade-history" component={TradeHistory} />
       <ProtectedRoute path="/trade-journal" component={TradeJournal} />
       <ProtectedRoute path="/trading-modes" component={TradingModes} />
+      <ProtectedRoute path="/dex" component={DexTrading} />
       <ProtectedRoute path="/" component={Dashboard} />
       <Route component={NotFound} />
     </Switch>
