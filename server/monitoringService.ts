@@ -6,6 +6,7 @@ import { makeAIRequest } from "./aiRouter";
 import { getRecentLearnings } from "./evaluationService";
 import { reconcilePositions } from "./positionReconciliation";
 import { reconcileJournalEntries } from "./journalReconciliation";
+import { evaluateTriggers, getDefaultTriggerConfig, type TriggerConfig } from "./triggerEvaluation";
 
 interface MarketData {
   symbol: string;
@@ -46,6 +47,9 @@ interface AutonomousStrategy {
 
 // Store previous volume data for abnormal condition detection
 const previousVolumeData = new Map<string, Map<string, number>>();
+
+// Track monitoring cycles per user to implement time-based triggers
+const userMonitoringCycles = new Map<string, number>();
 
 /**
  * Discover existing positions and track their protective orders if not already tracked
@@ -416,6 +420,73 @@ export async function developAutonomousStrategy(userId: string): Promise<void> {
       
       return;
     }
+    
+    // ====================================================================
+    // SMART TRIGGER EVALUATION - Reduces AI costs by 80-95%
+    // ====================================================================
+    // Only call AI when significant market events occur
+    
+    // Increment cycle counter for this user
+    const currentCycle = (userMonitoringCycles.get(userId) || 0) + 1;
+    userMonitoringCycles.set(userId, currentCycle);
+    
+    // Get trigger configuration from strategy (defaults to moderate if not set)
+    const triggerSensitivity = (activeTradingMode.parameters.triggerSensitivity || 'moderate') as 'conservative' | 'moderate' | 'aggressive';
+    const triggerConfig = getDefaultTriggerConfig(triggerSensitivity);
+    
+    // Get or initialize volume tracking for this user
+    if (!previousVolumeData.has(userId)) {
+      previousVolumeData.set(userId, new Map<string, number>());
+    }
+    const userVolumeData = previousVolumeData.get(userId)!;
+    
+    // Evaluate triggers
+    const triggerResult = evaluateTriggers(
+      triggerConfig,
+      marketData,
+      currentPositions,
+      currentCycle,
+      userVolumeData
+    );
+    
+    // Log trigger evaluation
+    console.log(`[Trigger Evaluation] User ${userId} - Cycle ${currentCycle} - Sensitivity: ${triggerSensitivity}`);
+    console.log(`[Trigger Evaluation] Should call AI: ${triggerResult.shouldCallAI}`);
+    console.log(`[Trigger Evaluation] Triggered by: ${triggerResult.triggeredBy.join(', ') || 'none'}`);
+    
+    // If no triggers fired, skip AI call and just create snapshot
+    if (!triggerResult.shouldCallAI) {
+      console.log(`[Trigger Evaluation] No significant market events - skipping AI call (cost saving)`);
+      
+      // Log that we're monitoring but no action needed
+      await storage.createMonitoringLog(userId, {
+        analysis: JSON.stringify({
+          mode: "monitoring",
+          message: `Monitoring active (cycle ${currentCycle}) - No significant market events detected. AI call skipped to reduce costs.`,
+          sensitivity: triggerSensitivity,
+          nextExpectedTrigger: `Cycle ${currentCycle + triggerConfig.timeBasedCycles - (currentCycle % triggerConfig.timeBasedCycles)}`,
+        }),
+        alertLevel: "info"
+      });
+      
+      return; // Skip AI call - snapshot will be created in finally block
+    }
+    
+    // Log what triggered the AI call
+    await storage.createMonitoringLog(userId, {
+      analysis: JSON.stringify({
+        mode: "trigger_fired",
+        message: `AI analysis triggered by: ${triggerResult.triggeredBy.join(', ')}`,
+        triggerContext: triggerResult.context,
+        cycle: currentCycle,
+      }),
+      alertLevel: triggerResult.triggeredBy.includes('position_risk') ? 'warning' : 'info'
+    });
+    
+    console.log(`[Trigger Evaluation] Proceeding with AI call - triggers fired:`, triggerResult.triggeredBy);
+    // ====================================================================
+    // END TRIGGER EVALUATION
+    // ====================================================================
     
     const prompt = `You are Mr. Fox, an autonomous AI trader. Develop a complete trade thesis and execute trades based on current market conditions.
 

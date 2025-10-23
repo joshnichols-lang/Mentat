@@ -430,6 +430,7 @@ export const tradingModes = pgTable("trading_modes", {
   //   entryStyle: "patient" | "aggressive",
   //   exitStyle: "target-based" | "trailing",
   //   customRules: "Any custom AI instructions",
+  //   triggerSensitivity: "conservative" | "moderate" | "aggressive", // AI call frequency (5%, 10%, 20%)
   // }
   
   isActive: integer("is_active").notNull().default(0), // Only one mode can be active at a time per user
