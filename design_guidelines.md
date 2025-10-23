@@ -1,187 +1,198 @@
-# Design Guidelines: 1fox - Fantastic Mr. Fox Newspaper Edition
+# Design Guidelines: 1fox - Orderly-Inspired Trading Terminal
 
 ## Design Approach
-**Minimalist Newspaper Aesthetic** - Inspired by the newspaper scenes from Wes Anderson's "Fantastic Mr. Fox." Pure grayscale printing with clean typography, grid-based layouts, and the charming simplicity of classic newsprint. Combines the clarity of traditional newspaper design with modern trading functionality - all information is presented with journalistic precision in black, white, and shades of gray.
+**Modern Dark Trading Interface** - Inspired by Orderly Network's professional DEX design. Rich orange/amber accent colors against dark brown/black backgrounds, creating a sophisticated and focused trading environment. Roboto typography provides clean, modern readability while maintaining professional credibility.
 
 ## Core Design Elements
 
 ### A. Color Palette
 
-**Grayscale Foundation**
-Most colors use 0% saturation for true grayscale
+**Dark Mode Foundation (Primary)**
+Based on Orderly Network's color system
 
-**Light Mode (Newsprint)**
-- Background Primary: 0 0% 98% (Clean white paper)
-- Background Secondary: 0 0% 95% (Subtle gray paper)
-- Background Tertiary: 0 0% 92% (Light gray sections)
-- Border/Divider: 0 0% 80% (Medium gray lines)
+**Backgrounds (Base Colors)**
+- Base 10 (Darkest): 16 12 12 (Primary background)
+- Base 9: 24 18 18 (Secondary background)
+- Base 8: 28 22 22 (Card background)
+- Base 7: 32 26 26 (Elevated surfaces)
+- Base 6: 35 29 29 (Input backgrounds)
+- Base 5: 39 33 33 (Hover states)
+- Base 4: 44 36 36 (Active states)
+- Base 3: 48 40 40 (Borders)
+- Base 2: 56 48 48 (Dividers)
+- Base 1: 64 56 56 (Subtle highlights)
+
+**Primary Colors (Orange/Amber)**
+- Primary: 176 96 0 (Main orange)
+- Primary Light: 217 163 82 (Light amber)
+- Primary Darken: 137 64 0 (Dark orange)
+- Primary Contrast: 255 255 255 (White text on orange)
+
+**Accent Colors**
+- Link: 207 87 59 (Orange link)
+- Link Light: 250 154 122 (Light orange link)
+- Tertiary: 218 137 84 (Amber accent)
+- Secondary: 255 255 255 (White)
+
+**Status Colors**
+- Danger/Sell: 245 78 46 (Red for losses/shorts)
+- Danger Light: 250 142 93
+- Danger Darken: 237 56 34
+- Success/Buy: 255 193 7 (Yellow/Gold for profits/longs)
+- Success Light: 255 223 74
+- Success Darken: 255 152 0
+- Warning: 255 209 70 (Amber warning)
+- Warning Light: 255 229 133
 
 **Text Colors**
-- Primary Text: 0 0% 10% (Newspaper black ink)
-- Secondary Text: 0 0% 30% (Medium gray text)
-- Tertiary/Labels: 0 0% 50% (Light gray labels)
+- Base Foreground: 255 255 255 (Primary white text)
+- Line Color: 255 255 255 (Borders/dividers)
 
-**Dark Mode (Night Edition)**
-- Background Primary: 0 0% 12% (Dark newspaper)
-- Background Secondary: 0 0% 16% (Slightly lighter dark)
-- Background Tertiary: 0 0% 20% (Medium dark)
-- Border/Divider: 0 0% 30% (Dark gray lines)
+**Trading Colors**
+- Trading Loss: 245 78 46 (Red) - Contrast: 255 255 255
+- Trading Profit: 255 193 7 (Gold) - Contrast: 0 0 0
 
-**Dark Mode Text**
-- Primary Text: 0 0% 95% (White ink on dark)
-- Secondary Text: 0 0% 70% (Light gray text)
-- Tertiary/Labels: 0 0% 50% (Medium gray labels)
-
-**Trading Colors (Dull/Muted)**
-- Long/Positive (Light): 120 25% 35% (dull dark green)
-- Long/Positive (Dark): 120 25% 60% (dull light green)
-- Short/Negative (Light): 0 30% 40% (dull dark red)
-- Short/Negative (Dark): 0 30% 55% (dull light red)
-
-**Accent Grayscales (All modes)**
-- Primary Action: 0 0% 20% (dark gray for light mode) / 0 0% 80% (light gray for dark mode)
-- Neutral/Info: 0 0% 40% / 0 0% 60%
-
-**Data Visualization**
-- Chart Primary: 0 0% 20%
-- Chart Secondary: 0 0% 40%
-- Chart Tertiary: 0 0% 60%
-- Grid Lines: 0 0% 85% (light mode) / 0 0% 25% (dark mode)
+**Gradients**
+- Primary: from 128 64 0 to 207 87 59
+- Secondary: from 176 96 0 to 255 163 82
+- Success: from 255 193 7 to 255 223 74
+- Danger: from 153 24 24 to 245 78 46
+- Brand: from 231 163 82 to 255 193 7
+- Warning: from 152 58 8 to 255 209 70
+- Neutral: from 27 29 24 to 38 41 36
 
 ### B. Typography
 
 **Font Stack**
-- Universal: 'Courier New', Courier, monospace (typewriter/newspaper print aesthetic)
-- All text uses the same monospace typewriter font for consistent newspaper aesthetic
+- Primary: 'Roboto', sans-serif (all UI text)
+- Base size: 16px
 
 **Type Scale**
-- Display/Hero: text-4xl font-bold uppercase tracking-tight (Newspaper headlines)
-- Section Headers: text-2xl font-bold uppercase tracking-normal (Article headers)
-- Subsection: text-xl font-semibold (Component titles)
+- Display/Hero: text-4xl font-bold (Major metrics)
+- Section Headers: text-2xl font-semibold (Page sections)
+- Subsection: text-xl font-medium (Component titles)
 - Body/UI: text-base font-normal (16px base, all UI)
 - Data/Numbers: text-lg font-semibold (Prices, quantities)
-- Small/Labels: text-sm uppercase tracking-wide (Input labels)
-- Captions: text-xs uppercase tracking-wider (Timestamps, metadata)
+- Small/Labels: text-sm font-medium (Input labels)
+- Captions: text-xs (Timestamps, metadata)
 
 **Number Formatting**
-- Large metrics: text-4xl font-black
-- Price data: text-xl font-bold
-- Percentages: text-base
+- Large metrics: text-4xl font-bold
+- Price data: text-2xl font-semibold
+- Percentages: text-base font-medium
 
 ### C. Layout System
 
+**Border Radius (Smooth Modern)**
+- sm: 2px
+- default: 4px
+- md: 6px
+- lg: 8px
+- xl: 12px
+- 2xl: 16px
+- full: 9999px
+
 **Spacing Primitives**
-Use tailwind units of **4, 6, 8, 12** for clean newspaper rhythm
-- Tight: p-4, gap-4 (column spacing)
-- Standard: p-6, gap-6 (section margins)
-- Generous: p-8, gap-8 (page sections)
-- Large: p-12, gap-12 (major breaks)
+- xs: 20rem
+- sm: 22.5rem
+- md: 26.25rem
+- lg: 30rem
+- xl: 33.75rem
 
 **Dashboard Grid**
-- Primary container: max-w-[1600px] mx-auto (newspaper page width)
+- Primary container: max-w-[1600px] mx-auto
 - Main content: grid grid-cols-12 gap-6
-- Borders: Clean solid borders (border-solid) for newspaper feel
+- Borders: Subtle borders in base-3 color
 
 ### D. Component Library
 
 **Cards & Containers**
-- Base card: rounded-none border border-solid bg-card shadow-sm
-- Data card: p-6 with newspaper-style horizontal rules (border-t border-solid)
-- Stat card: Clean boxes with bold numbers
-- Interactive cards: hover:shadow-md transition
-- Minimal decoration - focus on content
+- Base card: rounded-md border border-base-3 bg-base-8 shadow-sm
+- Data card: p-6 with subtle borders
+- Stat card: Clean boxes with bold numbers, orange accents
+- Interactive cards: hover:bg-base-7 transition
+- Elevated: bg-base-7 for raised surfaces
 
 **Data Display**
-- Tables: Grid lines (border-b border-solid), clean alignment, monospace numbers
-- Price displays: Large bold numbers, newspaper ticker-style
-- Charts: Clean line charts with grayscale, grid like graph paper
-- Metrics grid: 2-3 column layouts with boxed values
+- Tables: Clean borders (base-3), hover:bg-base-7
+- Price displays: Large bold numbers, orange for buys/green alternatives
+- Charts: Orange/yellow/red color scheme, dark backgrounds
+- Metrics grid: 2-3 column layouts with gradient cards
 
 **Navigation**
-- Top bar: Clean header with "1fox" branding
-- Tabs: Underlined tabs with clean styling (border-b-2)
-- Section dividers: Simple horizontal rules
+- Top bar: Dark header with orange "1fox" branding
+- Tabs: Orange underline for active tab
+- Section dividers: Subtle base-3 borders
 
 **Forms & Inputs**
-- Text inputs: border border-solid bg-background focus:border-primary focus:ring-1
-- Number inputs: Monospace with clean styling
+- Text inputs: border border-base-3 bg-base-6 focus:border-primary focus:ring-1 focus:ring-primary
+- Number inputs: Roboto with orange focus states
 - Buttons:
-  - Primary: bg-primary text-primary-foreground border border-solid uppercase tracking-wide font-bold
-  - Outline: border-2 border-primary bg-background hover:bg-primary/10 uppercase
-  - Ghost: hover:bg-accent/10
+  - Primary: bg-primary text-white hover:bg-primary-darken font-medium rounded-md
+  - Outline: border-2 border-primary bg-transparent hover:bg-primary/10
+  - Ghost: hover:bg-base-5 text-foreground
 
 **Trading Specific**
-- Order entry panel: Clean form with grid lines
-- Position cards: Card design with headers, monospace data
-- Order book: Two-column layout with clean depth bars
-- Trade history: Table style with timestamp columns
+- Buy orders: bg-success text-black or gradient-success
+- Sell orders: bg-danger text-white or gradient-danger
+- Position cards: Dark cards with orange accents
+- Order book: Two-column with orange/red depth visualization
+- Trade history: Table with alternating row backgrounds
 
 **AI Prompt Interface**
-- Large textarea: Clean input with border, monospace font
-- Status indicators: "ANALYZING...", "EXECUTING..." in simple caps
-- Results display: Formatted as clean article with header
+- Large textarea: Dark input with orange focus ring
+- Status indicators: Orange loading states
+- Results display: Card format with gradient headers
 
 **Status & Notifications**
-- Toast notifications: Clean message boxes, top-right corner
-- Connection status: Simple dot indicator
-- Live updates: Subtle highlight on changes
-- Warnings: Bold uppercase text in boxes
+- Toast notifications: Dark with orange accents
+- Connection status: Orange dot for connected
+- Live updates: Subtle orange highlight on changes
+- Warnings: Amber/yellow colored boxes
 
 **Data Visualization**
-- Price charts: Grayscale candlesticks on clean grid
-- Performance graphs: Area charts with clean fills
-- Sparklines: Minimalist inline charts
+- Price charts: Orange for positive, red for negative
+- Performance graphs: Gradient fills with orange/yellow
+- Sparklines: Orange inline charts
+- Progress bars: Orange gradients
 
 ### E. Animations
-**Minimal & Clean**
-- Data updates: Brief flash (100ms) on price changes
-- Loading states: Simple spinner or pulse
-- Transitions: duration-200 ease-out for snappy feel
-- Page loads: Instant - no fancy effects
+**Smooth & Professional**
+- Data updates: Brief highlight (150ms) in orange
+- Loading states: Orange spinner or pulse
+- Transitions: duration-200 ease-out for responsive feel
+- Page loads: Smooth fade-ins (300ms)
 
-**Typography Style**
-- All text uses Courier New monospace font
-- Creates authentic typewriter/newspaper print aesthetic
-- Consistent across headers, body text, buttons, badges, and data
+**Interactive States**
+- Hover: Subtle background elevation (bg-base-7)
+- Active: Deeper background (bg-base-5)
+- Focus: Orange ring (ring-2 ring-primary)
 
 ## Dashboard Layout Structure
 
 **Main Trading Terminal View**
-1. **Newspaper Header**: "1fox" logo in clean serif, connection status, account info
-2. **AI Prompt Section**: Large clean input with simple label
-3. **Market Board** (3-4 columns): Clean crypto prices grid
-4. **Active Positions**: Card grid showing open positions
-5. **Order Entry Form**: Clean panel with radio buttons
-6. **Trade Log**: Table with clean borders
-7. **Performance Dashboard** (2-3 columns): Metric boxes with numbers
+1. **Header**: Dark bar with orange "1fox" logo, connection status in orange
+2. **AI Prompt Section**: Large dark input with orange accents
+3. **Market Board**: Grid of crypto prices with orange highlights
+4. **Active Positions**: Cards with orange/red color coding
+5. **Order Entry Form**: Dark panel with orange buy/red sell buttons
+6. **Trade Log**: Dark table with subtle borders
+7. **Performance Dashboard**: Metric cards with orange gradient accents
 
 ## Visual Hierarchy Principles
 
-1. **Bold Headlines**: Uppercase headers for major sections
-2. **Grayscale Contrast**: Use different shades to create depth
-3. **Typewriter Typography**: Courier New monospace for all text (headers, body, data)
-4. **Grid Lines**: Solid borders define sections cleanly
-5. **Minimal Decoration**: Focus on content, not ornamentation
-6. **High Contrast**: Ensure readability with clear black/white/gray separation
-
-## Images & Textures
-
-**Newsprint Texture**
-- Very subtle noise overlay on backgrounds (2-3% opacity)
-- Clean paper feel, not aged or distressed
-- Optional: very faint grid lines as texture
-
-**Decorative Elements**
-- Simple icons from Lucide React in grayscale
-- Clean geometric shapes
-- Minimal use of decorative elements
-
-**No Hero Images** - This is a utility dashboard. Focus on data clarity with clean newspaper aesthetic.
+1. **Orange Accents**: Use primary orange for CTAs and important data
+2. **Dark Depth**: Layer different base colors to create depth
+3. **Roboto Typography**: Clean, professional, highly readable
+4. **Smooth Corners**: 4-8px border radius for modern feel
+5. **Gradient Highlights**: Use orange gradients for emphasis
+6. **High Contrast**: White text on dark backgrounds
 
 ## Brand Identity
 
 **1fox**
 - Name represents: one platform, sharp focus, clever trading
-- Aesthetic: Wes Anderson's Fantastic Mr. Fox newspaper scenes
-- Values: Clarity, precision, intelligence, minimalism
-- Color palette: Pure grayscale only - no colors ever
+- Aesthetic: Orderly Network-inspired professional trading terminal
+- Values: Sophistication, precision, modern technology, performance
+- Color palette: Rich orange/amber on dark brown/black backgrounds
+- Typography: Roboto for clean, professional readability
