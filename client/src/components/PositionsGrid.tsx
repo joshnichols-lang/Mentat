@@ -1,4 +1,4 @@
-import { X, XCircle } from "lucide-react";
+import { X, XCircle, TrendingUp, TrendingDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +12,8 @@ import {
   HoverCardTrigger,
 } from "@/components/ui/hover-card";
 import MiniPriceChart from "@/components/MiniPriceChart";
+import { PositionSparkline } from "@/components/PositionSparkline";
+import { AnimatedCounter } from "@/components/AnimatedCounter";
 
 interface HyperliquidPosition {
   coin: string;
@@ -193,65 +195,121 @@ export default function PositionsGrid() {
           const change24h = market ? parseFloat(market.change24h) : 0;
           const hasMarketData = !!market;
           
+          // Generate sparkline data (simulate recent price movement)
+          const sparklineData = Array.from({ length: 20 }, (_, i) => {
+            const variation = (Math.random() - 0.5) * currentPrice * 0.02;
+            return currentPrice + variation;
+          });
+          
+          const { stopLoss, takeProfit } = getPositionOrders(position.coin);
+          
           return (
-            <Card key={position.coin} className="p-3" data-testid={`card-position-${position.coin}`}>
+            <Card key={position.coin} className="group p-3 hover-elevate transition-all duration-300 border-l-4" 
+                  style={{ borderLeftColor: side === "long" ? "hsl(var(--primary))" : "hsl(var(--destructive))" }}
+                  data-testid={`card-position-${position.coin}`}>
               <div className="flex items-start justify-between gap-3">
-                <div className="flex-1 space-y-2">
-                  <div className="flex items-center gap-2">
-                    <HoverCard openDelay={200} closeDelay={100}>
-                      <HoverCardTrigger asChild>
-                        <div className="text-sm font-semibold cursor-default">{displaySymbol}/USD</div>
-                      </HoverCardTrigger>
-                      <HoverCardContent side="top" align="start" className="w-auto p-3">
-                        {hasMarketData ? (
-                          <MiniPriceChart
-                            symbol={displaySymbol}
-                            currentPrice={currentPrice}
-                            change24h={change24h}
-                          />
+                <div className="flex-1 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className={`h-8 w-8 rounded-lg flex items-center justify-center ${
+                        side === "long" 
+                          ? "bg-gradient-to-br from-primary/20 to-primary/5" 
+                          : "bg-gradient-to-br from-destructive/20 to-destructive/5"
+                      }`}>
+                        {side === "long" ? (
+                          <TrendingUp className="h-4 w-4 text-primary" />
                         ) : (
-                          <div className="w-[280px] text-center text-sm text-muted-foreground py-4">
-                            Market data unavailable
-                          </div>
+                          <TrendingDown className="h-4 w-4 text-destructive" />
                         )}
-                      </HoverCardContent>
-                    </HoverCard>
+                      </div>
+                      <div>
+                        <HoverCard openDelay={200} closeDelay={100}>
+                          <HoverCardTrigger asChild>
+                            <div className="text-sm font-semibold cursor-default">{displaySymbol}/USD</div>
+                          </HoverCardTrigger>
+                          <HoverCardContent side="top" align="start" className="w-auto p-3">
+                            {hasMarketData ? (
+                              <MiniPriceChart
+                                symbol={displaySymbol}
+                                currentPrice={currentPrice}
+                                change24h={change24h}
+                              />
+                            ) : (
+                              <div className="w-[280px] text-center text-sm text-muted-foreground py-4">
+                                Market data unavailable
+                              </div>
+                            )}
+                          </HoverCardContent>
+                        </HoverCard>
+                        <div className="text-xs text-muted-foreground">
+                          {absSize.toFixed(4)} @ ${entryPrice.toLocaleString()}
+                        </div>
+                      </div>
+                    </div>
                     <Badge 
                       variant={side === "long" ? "default" : "destructive"}
-                      className={`text-xs ${side === "long" ? "bg-long text-long-foreground hover:bg-long/90" : "bg-short text-short-foreground hover:bg-short/90"}`}
+                      className={`gap-1 ${side === "long" ? "bg-long text-long-foreground hover:bg-long/90" : "bg-short text-short-foreground hover:bg-short/90"}`}
                     >
                       {side.toUpperCase()} {position.leverage.value}x
                     </Badge>
                   </div>
                   
-                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+                  {/* Inline Sparkline Chart */}
+                  <div className="rounded-lg bg-muted/30 p-2">
+                    <PositionSparkline 
+                      data={sparklineData}
+                      color={side === "long" ? "hsl(var(--primary))" : "hsl(var(--destructive))"}
+                      fillColor={side === "long" ? "hsl(var(--primary) / 0.1)" : "hsl(var(--destructive) / 0.1)"}
+                      width={200}
+                      height={40}
+                    />
+                  </div>
+                  
+                  {/* Metrics Grid with Animated Counters */}
+                  <div className="grid grid-cols-2 gap-3 text-xs">
                     <div>
-                      <div className="text-xs text-muted-foreground">Size</div>
-                      <div className="font-mono text-xs font-medium">{absSize.toFixed(4)} {displaySymbol}</div>
+                      <div className="text-muted-foreground">P&L</div>
+                      <div className={`text-sm font-bold ${
+                        pnl >= 0 ? "text-green-500" : "text-destructive"
+                      }`} data-testid={`text-pnl-${position.coin}`}>
+                        <AnimatedCounter value={pnl} prefix={pnl >= 0 ? "+" : ""} decimals={2} />
+                      </div>
                     </div>
                     <div>
-                      <div className="text-xs text-muted-foreground">Entry</div>
-                      <div className="font-mono text-xs font-medium">${entryPrice.toLocaleString()}</div>
+                      <div className="text-muted-foreground">ROE</div>
+                      <div className="text-sm font-bold">
+                        <AnimatedCounter value={roe * 100} suffix="%" decimals={2} />
+                      </div>
                     </div>
                     <div>
-                      <div className="text-xs text-muted-foreground">Value</div>
-                      <div className="font-mono text-xs font-medium">${parseFloat(position.positionValue).toFixed(2)}</div>
+                      <div className="text-muted-foreground">Value</div>
+                      <div className="text-sm font-medium">
+                        $<AnimatedCounter value={parseFloat(position.positionValue)} decimals={2} />
+                      </div>
                     </div>
                     <div>
-                      <div className="text-xs text-muted-foreground">Liquidation</div>
-                      <div className="font-mono text-xs font-semibold" data-testid={`text-liquidation-${position.coin}`}>
+                      <div className="text-muted-foreground">Liq Price</div>
+                      <div className="text-sm font-medium" data-testid={`text-liquidation-${position.coin}`}>
                         {liquidationPrice ? `$${liquidationPrice.toLocaleString()}` : "N/A"}
                       </div>
                     </div>
-                    <div>
-                      <div className="text-xs text-muted-foreground">P&L</div>
-                      <div className={`font-mono text-xs font-semibold ${
-                        pnl >= 0 ? "text-long" : "text-short"
-                      }`} data-testid={`text-pnl-${position.coin}`}>
-                        ${pnl >= 0 ? "+" : ""}{pnl.toFixed(2)} ({pnl >= 0 ? "+" : ""}{(roe * 100).toFixed(2)}%)
-                      </div>
-                    </div>
                   </div>
+                  
+                  {/* Protective Orders Display */}
+                  {(stopLoss || takeProfit) && (
+                    <div className="flex gap-2 text-xs">
+                      {stopLoss && (
+                        <Badge variant="outline" className="text-destructive border-destructive/50">
+                          SL: ${parseFloat(stopLoss.limitPx).toFixed(2)}
+                        </Badge>
+                      )}
+                      {takeProfit && (
+                        <Badge variant="outline" className="text-green-500 border-green-500/50">
+                          TP: ${parseFloat(takeProfit.limitPx).toFixed(2)}
+                        </Badge>
+                      )}
+                    </div>
+                  )}
                 </div>
                 
                 <Button
