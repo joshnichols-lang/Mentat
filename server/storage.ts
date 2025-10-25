@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type UpsertUser, type UserWallet, type InsertUserWallet, type Trade, type InsertTrade, type Position, type InsertPosition, type PortfolioSnapshot, type InsertPortfolioSnapshot, type AiUsageLog, type InsertAiUsageLog, type MonitoringLog, type InsertMonitoringLog, type UserApiCredential, type InsertUserApiCredential, type ApiKey, type InsertApiKey, type ContactMessage, type InsertContactMessage, type ProtectiveOrderEvent, type InsertProtectiveOrderEvent, type UserTradeHistoryImport, type InsertUserTradeHistoryImport, type UserTradeHistoryTrade, type InsertUserTradeHistoryTrade, type TradeStyleProfile, type InsertTradeStyleProfile, type TradeJournalEntry, type TradeJournalEntryWithStrategy, type InsertTradeJournalEntry, type TradingMode, type InsertTradingMode, type BudgetAlert, type InsertBudgetAlert, users, userWallets, trades, positions, portfolioSnapshots, aiUsageLog, monitoringLog, userApiCredentials, apiKeys, contactMessages, protectiveOrderEvents, userTradeHistoryImports, userTradeHistoryTrades, tradeStyleProfiles, tradeJournalEntries, tradingModes, budgetAlerts } from "@shared/schema";
+import { type User, type InsertUser, type UpsertUser, type UserWallet, type InsertUserWallet, type EmbeddedWallet, type InsertEmbeddedWallet, type Trade, type InsertTrade, type Position, type InsertPosition, type PortfolioSnapshot, type InsertPortfolioSnapshot, type AiUsageLog, type InsertAiUsageLog, type MonitoringLog, type InsertMonitoringLog, type UserApiCredential, type InsertUserApiCredential, type ApiKey, type InsertApiKey, type ContactMessage, type InsertContactMessage, type ProtectiveOrderEvent, type InsertProtectiveOrderEvent, type UserTradeHistoryImport, type InsertUserTradeHistoryImport, type UserTradeHistoryTrade, type InsertUserTradeHistoryTrade, type TradeStyleProfile, type InsertTradeStyleProfile, type TradeJournalEntry, type TradeJournalEntryWithStrategy, type InsertTradeJournalEntry, type TradingMode, type InsertTradingMode, type BudgetAlert, type InsertBudgetAlert, users, userWallets, embeddedWallets, trades, positions, portfolioSnapshots, aiUsageLog, monitoringLog, userApiCredentials, apiKeys, contactMessages, protectiveOrderEvents, userTradeHistoryImports, userTradeHistoryTrades, tradeStyleProfiles, tradeJournalEntries, tradingModes, budgetAlerts } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql, and, isNull, type SQL } from "drizzle-orm";
 import session from "express-session";
@@ -41,6 +41,11 @@ export interface IStorage {
   createUserWallet(wallet: Omit<InsertUserWallet, 'userId'> & { userId: string }): Promise<UserWallet>;
   getUserWallets(userId: string): Promise<UserWallet[]>;
   getPrimaryAuthWallet(userId: string): Promise<UserWallet | undefined>;
+  
+  // Embedded Wallet methods
+  createEmbeddedWallet(userId: string, wallet: InsertEmbeddedWallet): Promise<EmbeddedWallet>;
+  getEmbeddedWallet(userId: string): Promise<EmbeddedWallet | undefined>;
+  markSeedPhraseShown(userId: string): Promise<EmbeddedWallet | undefined>;
   
   // Trade methods (multi-tenant)
   getTrades(userId: string, limit?: number): Promise<Trade[]>;
@@ -345,6 +350,36 @@ export class DbStorage implements IStorage {
         eq(userWallets.isAuthPrimary, 1)
       ))
       .limit(1);
+    return result[0];
+  }
+
+  // Embedded Wallet methods
+  async createEmbeddedWallet(userId: string, wallet: InsertEmbeddedWallet): Promise<EmbeddedWallet> {
+    const result = await db.insert(embeddedWallets).values({
+      userId,
+      ...wallet,
+    }).returning();
+    return result[0];
+  }
+
+  async getEmbeddedWallet(userId: string): Promise<EmbeddedWallet | undefined> {
+    const result = await db.select()
+      .from(embeddedWallets)
+      .where(eq(embeddedWallets.userId, userId))
+      .limit(1);
+    return result[0];
+  }
+
+  async markSeedPhraseShown(userId: string): Promise<EmbeddedWallet | undefined> {
+    const result = await db
+      .update(embeddedWallets)
+      .set({
+        seedPhraseShown: 1,
+        seedPhraseShownAt: sql`now()`,
+        updatedAt: sql`now()`,
+      })
+      .where(eq(embeddedWallets.userId, userId))
+      .returning();
     return result[0];
   }
 

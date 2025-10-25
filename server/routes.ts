@@ -1579,6 +1579,103 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Embedded Wallet Routes
+  
+  // Create embedded wallets for user (called after external wallet auth)
+  app.post("/api/wallets/embedded", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      
+      const schema = z.object({
+        solanaAddress: z.string().min(1),
+        evmAddress: z.string().min(1),
+        hyperliquidAddress: z.string().min(1),
+      });
+      
+      const { solanaAddress, evmAddress, hyperliquidAddress } = schema.parse(req.body);
+      
+      // Check if user already has embedded wallets
+      const existingWallet = await storage.getEmbeddedWallet(userId);
+      if (existingWallet) {
+        return res.status(400).json({
+          success: false,
+          error: "Embedded wallets already exist for this user"
+        });
+      }
+      
+      // Create embedded wallet record (only public addresses, no private keys)
+      const embeddedWallet = await storage.createEmbeddedWallet(userId, {
+        solanaAddress,
+        evmAddress,
+        hyperliquidAddress,
+      });
+      
+      res.json({
+        success: true,
+        wallet: embeddedWallet,
+      });
+    } catch (error: any) {
+      console.error("Error creating embedded wallet:", error);
+      res.status(500).json({
+        success: false,
+        error: error.message || "Failed to create embedded wallet"
+      });
+    }
+  });
+  
+  // Get embedded wallet for current user
+  app.get("/api/wallets/embedded", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const wallet = await storage.getEmbeddedWallet(userId);
+      
+      if (!wallet) {
+        return res.status(404).json({
+          success: false,
+          error: "No embedded wallet found for this user"
+        });
+      }
+      
+      res.json({
+        success: true,
+        wallet,
+      });
+    } catch (error: any) {
+      console.error("Error fetching embedded wallet:", error);
+      res.status(500).json({
+        success: false,
+        error: error.message || "Failed to fetch embedded wallet"
+      });
+    }
+  });
+  
+  // Mark seed phrase as shown (called after user confirms they've saved it)
+  app.post("/api/wallets/embedded/confirm-seed", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      
+      const wallet = await storage.markSeedPhraseShown(userId);
+      
+      if (!wallet) {
+        return res.status(404).json({
+          success: false,
+          error: "No embedded wallet found for this user"
+        });
+      }
+      
+      res.json({
+        success: true,
+        wallet,
+      });
+    } catch (error: any) {
+      console.error("Error confirming seed phrase:", error);
+      res.status(500).json({
+        success: false,
+        error: error.message || "Failed to confirm seed phrase"
+      });
+    }
+  });
+
   // Create multi-provider API key
   app.post("/api/api-keys", isAuthenticated, async (req, res) => {
     try {

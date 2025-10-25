@@ -60,6 +60,23 @@ export const userWallets = pgTable("user_wallets", {
   index("idx_user_auth_primary").on(table.userId, table.isAuthPrimary),
 ]);
 
+// Embedded wallets - Platform-generated wallets derived from a single BIP39 seed phrase
+// CRITICAL SECURITY: Private keys and seed phrases are NEVER stored in database
+// Only public addresses are stored for balance queries and transaction monitoring
+export const embeddedWallets = pgTable("embedded_wallets", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().unique().references(() => users.id, { onDelete: "cascade" }),
+  // Public addresses only - NO PRIVATE KEYS
+  solanaAddress: text("solana_address").notNull(), // Solana mainnet address
+  evmAddress: text("evm_address").notNull(), // EVM address (Arbitrum, Ethereum, etc)
+  hyperliquidAddress: text("hyperliquid_address").notNull(), // Hyperliquid trading address (same as EVM)
+  // Seed phrase shown once on creation, then deleted - NEVER stored
+  seedPhraseShown: integer("seed_phrase_shown").notNull().default(0), // 1 = user has seen and confirmed seed phrase
+  seedPhraseShownAt: timestamp("seed_phrase_shown_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
 export const trades = pgTable("trades", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
@@ -474,6 +491,7 @@ export const budgetAlerts = pgTable("budget_alerts", {
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true, updatedAt: true });
 export const upsertUserSchema = createInsertSchema(users).omit({ createdAt: true, updatedAt: true }).partial();
 export const insertUserWalletSchema = createInsertSchema(userWallets).omit({ id: true, userId: true, createdAt: true });
+export const insertEmbeddedWalletSchema = createInsertSchema(embeddedWallets).omit({ id: true, userId: true, createdAt: true, updatedAt: true });
 export const insertTradeSchema = createInsertSchema(trades).omit({ id: true, userId: true, entryTimestamp: true });
 export const insertPositionSchema = createInsertSchema(positions).omit({ id: true, userId: true, lastUpdated: true });
 export const insertPortfolioSnapshotSchema = createInsertSchema(portfolioSnapshots).omit({ id: true, userId: true, timestamp: true });
@@ -502,6 +520,8 @@ export type UpsertUser = z.infer<typeof upsertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type InsertUserWallet = z.infer<typeof insertUserWalletSchema>;
 export type UserWallet = typeof userWallets.$inferSelect;
+export type InsertEmbeddedWallet = z.infer<typeof insertEmbeddedWalletSchema>;
+export type EmbeddedWallet = typeof embeddedWallets.$inferSelect;
 export type InsertTrade = z.infer<typeof insertTradeSchema>;
 export type Trade = typeof trades.$inferSelect;
 export type InsertPosition = z.infer<typeof insertPositionSchema>;

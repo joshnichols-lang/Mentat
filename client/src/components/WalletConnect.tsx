@@ -7,6 +7,8 @@ import { useMutation } from '@tanstack/react-query';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { useLocation } from 'wouter';
+import { useEmbeddedWallet } from '@/hooks/use-embedded-wallet';
+import { RecoveryPhraseModal } from '@/components/RecoveryPhraseModal';
 import logoUrl from "@assets/1fox-removebg-preview(1)_1761259210534.png";
 
 export default function WalletConnect() {
@@ -15,6 +17,17 @@ export default function WalletConnect() {
   const { signMessageAsync } = useSignMessage();
   const { toast } = useToast();
   const [isAuthenticating, setIsAuthenticating] = useState(false);
+  const [authCompleted, setAuthCompleted] = useState(false);
+  
+  const {
+    hasEmbeddedWallet,
+    seedPhrase,
+    showRecoveryModal,
+    createEmbeddedWallet,
+    handleRecoveryConfirm,
+    handleRecoveryClose,
+    isCreating,
+  } = useEmbeddedWallet();
 
   const walletAuthMutation = useMutation({
     mutationFn: async ({ walletAddress, signature, message, nonce }: { 
@@ -32,13 +45,13 @@ export default function WalletConnect() {
       });
       return await res.json();
     },
-    onSuccess: (user) => {
+    onSuccess: async (user) => {
       queryClient.setQueryData(['/api/user'], user);
       toast({
         title: 'Connected successfully!',
         description: `Welcome to 1fox`,
       });
-      setLocation('/');
+      setAuthCompleted(true);
     },
     onError: (error: Error) => {
       toast({
@@ -91,7 +104,41 @@ export default function WalletConnect() {
     authenticateWallet();
   }, [isConnected, address]);
 
+  // After external wallet auth completes, check if user needs embedded wallets
+  useEffect(() => {
+    const initializeEmbeddedWallets = async () => {
+      if (authCompleted && !hasEmbeddedWallet && !isCreating) {
+        try {
+          await createEmbeddedWallet();
+        } catch (error) {
+          console.error('Failed to create embedded wallets:', error);
+          toast({
+            title: 'Wallet Creation Failed',
+            description: 'Failed to generate embedded wallets. Please try again.',
+            variant: 'destructive',
+          });
+        }
+      }
+    };
+
+    initializeEmbeddedWallets();
+  }, [authCompleted, hasEmbeddedWallet, isCreating]);
+
+  // Navigate to dashboard after recovery modal is confirmed
+  useEffect(() => {
+    if (authCompleted && hasEmbeddedWallet && !showRecoveryModal) {
+      setLocation('/');
+    }
+  }, [authCompleted, hasEmbeddedWallet, showRecoveryModal, setLocation]);
+
   return (
+    <>
+      <RecoveryPhraseModal
+        isOpen={showRecoveryModal}
+        seedPhrase={seedPhrase}
+        onConfirm={handleRecoveryConfirm}
+        onClose={handleRecoveryClose}
+      />
     <div className="min-h-screen flex">
       <div className="w-full lg:w-1/2 flex items-center justify-center p-8">
         <Card className="w-full max-w-md">
@@ -215,5 +262,6 @@ export default function WalletConnect() {
         </div>
       </div>
     </div>
+    </>
   );
 }
