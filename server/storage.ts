@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type UpsertUser, type Trade, type InsertTrade, type Position, type InsertPosition, type PortfolioSnapshot, type InsertPortfolioSnapshot, type AiUsageLog, type InsertAiUsageLog, type MonitoringLog, type InsertMonitoringLog, type UserApiCredential, type InsertUserApiCredential, type ApiKey, type InsertApiKey, type ContactMessage, type InsertContactMessage, type ProtectiveOrderEvent, type InsertProtectiveOrderEvent, type UserTradeHistoryImport, type InsertUserTradeHistoryImport, type UserTradeHistoryTrade, type InsertUserTradeHistoryTrade, type TradeStyleProfile, type InsertTradeStyleProfile, type TradeJournalEntry, type TradeJournalEntryWithStrategy, type InsertTradeJournalEntry, type TradingMode, type InsertTradingMode, type BudgetAlert, type InsertBudgetAlert, users, trades, positions, portfolioSnapshots, aiUsageLog, monitoringLog, userApiCredentials, apiKeys, contactMessages, protectiveOrderEvents, userTradeHistoryImports, userTradeHistoryTrades, tradeStyleProfiles, tradeJournalEntries, tradingModes, budgetAlerts } from "@shared/schema";
+import { type User, type InsertUser, type UpsertUser, type UserWallet, type InsertUserWallet, type Trade, type InsertTrade, type Position, type InsertPosition, type PortfolioSnapshot, type InsertPortfolioSnapshot, type AiUsageLog, type InsertAiUsageLog, type MonitoringLog, type InsertMonitoringLog, type UserApiCredential, type InsertUserApiCredential, type ApiKey, type InsertApiKey, type ContactMessage, type InsertContactMessage, type ProtectiveOrderEvent, type InsertProtectiveOrderEvent, type UserTradeHistoryImport, type InsertUserTradeHistoryImport, type UserTradeHistoryTrade, type InsertUserTradeHistoryTrade, type TradeStyleProfile, type InsertTradeStyleProfile, type TradeJournalEntry, type TradeJournalEntryWithStrategy, type InsertTradeJournalEntry, type TradingMode, type InsertTradingMode, type BudgetAlert, type InsertBudgetAlert, users, userWallets, trades, positions, portfolioSnapshots, aiUsageLog, monitoringLog, userApiCredentials, apiKeys, contactMessages, protectiveOrderEvents, userTradeHistoryImports, userTradeHistoryTrades, tradeStyleProfiles, tradeJournalEntries, tradingModes, budgetAlerts } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql, and, isNull, type SQL } from "drizzle-orm";
 import session from "express-session";
@@ -24,6 +24,7 @@ export interface IStorage {
   // User methods
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
+  getUserByWalletAddress(normalizedAddress: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   upsertUser(user: UpsertUser): Promise<User>;
   updateUserMonitoringFrequency(userId: string, minutes: number): Promise<User | undefined>;
@@ -35,6 +36,11 @@ export interface IStorage {
   getPendingVerificationUsers(): Promise<User[]>;
   getAllUsers(): Promise<User[]>;
   deleteUser(userId: string): Promise<void>;
+  
+  // User Wallet methods
+  createUserWallet(wallet: Omit<InsertUserWallet, 'userId'> & { userId: string }): Promise<UserWallet>;
+  getUserWallets(userId: string): Promise<UserWallet[]>;
+  getPrimaryAuthWallet(userId: string): Promise<UserWallet | undefined>;
   
   // Trade methods (multi-tenant)
   getTrades(userId: string, limit?: number): Promise<Trade[]>;
@@ -298,6 +304,48 @@ export class DbStorage implements IStorage {
 
   async deleteUser(userId: string): Promise<void> {
     await db.delete(users).where(eq(users.id, userId));
+  }
+
+  // User Wallet methods
+  async getUserByWalletAddress(normalizedAddress: string): Promise<User | undefined> {
+    // Find wallet with this normalized address where it's the primary auth wallet
+    const walletResult = await db.select()
+      .from(userWallets)
+      .where(and(
+        eq(userWallets.normalizedAddress, normalizedAddress),
+        eq(userWallets.isAuthPrimary, 1)
+      ))
+      .limit(1);
+    
+    if (!walletResult || walletResult.length === 0) {
+      return undefined;
+    }
+    
+    const wallet = walletResult[0];
+    return await this.getUser(wallet.userId);
+  }
+
+  async createUserWallet(wallet: Omit<InsertUserWallet, 'userId'> & { userId: string }): Promise<UserWallet> {
+    const result = await db.insert(userWallets).values(wallet).returning();
+    return result[0];
+  }
+
+  async getUserWallets(userId: string): Promise<UserWallet[]> {
+    return await db.select()
+      .from(userWallets)
+      .where(eq(userWallets.userId, userId))
+      .orderBy(desc(userWallets.createdAt));
+  }
+
+  async getPrimaryAuthWallet(userId: string): Promise<UserWallet | undefined> {
+    const result = await db.select()
+      .from(userWallets)
+      .where(and(
+        eq(userWallets.userId, userId),
+        eq(userWallets.isAuthPrimary, 1)
+      ))
+      .limit(1);
+    return result[0];
   }
 
   // Trade methods

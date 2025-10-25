@@ -9,6 +9,26 @@ import { User as SelectUser } from "@shared/schema";
 import { z } from "zod";
 import { stopUserMonitoring, startUserMonitoring, restartUserMonitoring } from "./userMonitoringManager";
 
+// In-memory nonce store (consider Redis for production multi-instance deployments)
+interface WalletNonce {
+  nonce: string;
+  walletAddress: string;
+  issuedAt: number;
+  expiresAt: number;
+}
+
+const walletNonces = new Map<string, WalletNonce>();
+
+// Cleanup expired nonces every 5 minutes
+setInterval(() => {
+  const now = Date.now();
+  for (const [nonce, data] of walletNonces.entries()) {
+    if (data.expiresAt < now) {
+      walletNonces.delete(nonce);
+    }
+  }
+}, 5 * 60 * 1000);
+
 // Strong password validation schema
 const passwordSchema = z.string()
   .min(8, "Password must be at least 8 characters long")
@@ -191,6 +211,142 @@ export function setupAuth(app: Express) {
     // Sanitize response - don't send password hash
     const { password, ...safeUser } = req.user!;
     res.json(safeUser);
+  });
+
+  // Issue a nonce for wallet authentication
+  app.get("/api/auth/wallet/nonce", (req, res, next) => {
+    try {
+      const walletAddress = req.query.address as string;
+      
+      if (!walletAddress) {
+        return res.status(400).json({ error: "Wallet address required" });
+      }
+
+      // Generate cryptographic nonce
+      const nonce = randomBytes(32).toString('hex');
+      const now = Date.now();
+      const NONCE_EXPIRY_MS = 5 * 60 * 1000; // 5 minutes
+
+      // Store nonce
+      walletNonces.set(nonce, {
+        nonce,
+        walletAddress: walletAddress.toLowerCase(),
+        issuedAt: now,
+        expiresAt: now + NONCE_EXPIRY_MS,
+      });
+
+      console.log(`[Wallet Auth] Issued nonce for ${walletAddress}: ${nonce}`);
+      
+      res.json({ 
+        nonce,
+        expiresAt: now + NONCE_EXPIRY_MS 
+      });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // Wallet authentication endpoint
+  app.post("/api/auth/wallet", async (req, res, next) => {
+    try {
+      const schema = z.object({
+        walletAddress: z.string(),
+        signature: z.string(),
+        message: z.string(),
+        nonce: z.string(),
+        walletType: z.string(),
+      });
+
+      const { walletAddress, signature, message, nonce, walletType } = schema.parse(req.body);
+
+      // Normalize wallet address (lowercase for EVM)
+      const normalizedAddress = walletAddress.toLowerCase();
+
+      // Validate nonce exists and hasn't expired
+      const nonceData = walletNonces.get(nonce);
+      if (!nonceData) {
+        return res.status(401).json({ error: "Invalid or expired nonce" });
+      }
+
+      if (nonceData.expiresAt < Date.now()) {
+        walletNonces.delete(nonce);
+        return res.status(401).json({ error: "Nonce expired" });
+      }
+
+      if (nonceData.walletAddress !== normalizedAddress) {
+        return res.status(401).json({ error: "Nonce wallet mismatch" });
+      }
+
+      // Verify signature using viem
+      const { verifyMessage } = await import('viem');
+      const isValid = await verifyMessage({
+        address: walletAddress as `0x${string}`,
+        message,
+        signature: signature as `0x${string}`,
+      });
+
+      if (!isValid) {
+        return res.status(401).json({ error: "Invalid signature" });
+      }
+
+      // Validate message format includes nonce and wallet address
+      if (!message.includes(nonce) || !message.includes(walletAddress)) {
+        return res.status(400).json({ error: "Message must include nonce and wallet address" });
+      }
+
+      // Invalidate nonce after successful verification (one-time use)
+      walletNonces.delete(nonce);
+
+      console.log(`[Wallet Auth] Verified signature for ${normalizedAddress}`);
+
+      // Check if user exists with this wallet
+      let user = await storage.getUserByWalletAddress(normalizedAddress);
+
+      if (!user) {
+        // Create new user with wallet authentication
+        // Check if this is the first user - if so, make them admin
+        const allUsers = await storage.getAllUsers();
+        const isFirstUser = allUsers.length === 0;
+
+        user = await storage.createUser({
+          username: `wallet_${normalizedAddress.slice(0, 8)}`, // Generate username from wallet
+          authProvider: "wallet",
+          email: null,
+          password: null,
+          role: isFirstUser ? "admin" : "user",
+          verificationStatus: isFirstUser ? "approved" : "pending",
+        });
+
+        // Create user wallet record
+        await storage.createUserWallet({
+          userId: user.id,
+          walletAddress,
+          normalizedAddress,
+          chain: "arbitrum", // Default to Arbitrum for Hyperliquid
+          chainId: "42161",
+          walletType,
+          purpose: "both", // Used for both auth and trading
+          isAuthPrimary: 1,
+          isTrading: 1,
+          isVerified: 1, // Verified through signature
+          verifiedAt: new Date(),
+        });
+
+        console.log(`[Wallet Auth] Created new user for wallet ${normalizedAddress}`);
+      }
+
+      // Log user in
+      req.login(user, (err) => {
+        if (err) return next(err);
+        const { password, ...safeUser } = user!;
+        res.status(200).json(safeUser);
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid request", details: error.errors });
+      }
+      next(error);
+    }
   });
 
   app.post("/api/user/wallet-address", async (req, res, next) => {

@@ -23,7 +23,7 @@ Preferred communication style: Simple, everyday language.
 **Server Framework:** Express.js with TypeScript.
 **Database Strategy:** Drizzle ORM with PostgreSQL for storing trades, positions, portfolio snapshots, AI usage logs, trade evaluations, strategy learnings, market regime snapshots, and trade history imports.
 **API Design:** RESTful endpoints for trading prompts, database operations, and Hyperliquid exchange interactions.
-**Authentication & Security:** Multi-tenant architecture with Passport.js and PostgreSQL session persistence. AES-256-GCM encryption for API keys. Tiered onboarding supports user registration, AI provider choice, and exchange credential setup.
+**Authentication & Security:** Multi-tenant architecture with Passport.js and PostgreSQL session persistence. **Wallet-based authentication** using wagmi + viem + RainbowKit supports MetaMask, Rabby, WalletConnect, and other EVM wallets. Multi-wallet architecture stores wallet addresses per user with normalized addresses, chain tracking, and purpose flags (isAuthPrimary, isTrading). Signature verification using viem ensures only wallet owners can authenticate. AES-256-GCM encryption for API keys. Legacy username/password auth remains supported for backward compatibility.
 **AI Integration:**
 - **Tiered AI Provider System:** Supports Platform AI (shared key) and Personal AI Key (user-provided Perplexity, OpenAI, or xAI credentials). Defaults to xAI Grok 4 Fast Reasoning with Perplexity fallback.
 - **Multi-Provider AI Router:** Handles credential decryption, client creation, and usage tracking for Perplexity, OpenAI/ChatGPT, and xAI/Grok.
@@ -72,6 +72,7 @@ Preferred communication style: Simple, everyday language.
 
 **UI Component Libraries:**
 - **Radix UI:** Accessible UI primitives including resizable panels.
+- **RainbowKit + wagmi + viem:** Wallet connection and authentication for EVM wallets (MetaMask, Rabby, WalletConnect).
 - **Recharts, Victory, D3, react-sparklines:** Advanced data visualization libraries for interactive charts.
 - **react-countup:** Smooth number animations for portfolio metrics.
 - **Lucide React:** Iconography.
