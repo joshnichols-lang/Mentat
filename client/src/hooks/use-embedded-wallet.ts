@@ -83,6 +83,16 @@ export function useEmbeddedWallet() {
     // User must explicitly click Continue
   };
 
+  // SECURITY: Cleanup sensitive data if component unmounts before confirmation
+  useEffect(() => {
+    return () => {
+      if (generatedWallets) {
+        console.log('[Security] Cleaning up wallet data on unmount');
+        clearWalletData(generatedWallets);
+      }
+    };
+  }, [generatedWallets]);
+
   return {
     embeddedWallet: embeddedWallet?.wallet,
     hasEmbeddedWallet: !!embeddedWallet?.wallet,

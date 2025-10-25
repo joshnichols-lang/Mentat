@@ -1675,6 +1675,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
+  
+  // Get all wallet balances (Solana, Arbitrum, Hyperliquid)
+  app.get("/api/wallets/balances", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const { balanceService } = await import('./balanceService');
+      
+      const balances = await balanceService.getAllBalances(userId, storage);
+      
+      res.json({
+        success: true,
+        balances,
+      });
+    } catch (error: any) {
+      console.error("Error fetching wallet balances:", error);
+      res.status(500).json({
+        success: false,
+        error: error.message || "Failed to fetch wallet balances"
+      });
+    }
+  });
 
   // Create multi-provider API key
   app.post("/api/api-keys", isAuthenticated, async (req, res) => {
