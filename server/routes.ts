@@ -1697,6 +1697,167 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Bridge API endpoints
+
+  // Get bridge quote
+  app.post("/api/bridge/quote", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const { getBridgeQuote } = await import('./mayanBridge');
+      
+      const schema = z.object({
+        fromChain: z.enum(['solana', 'arbitrum']),
+        fromToken: z.enum(['usdc', 'sol', 'eth']),
+        amount: z.number().positive(),
+        slippageBps: z.union([z.number(), z.literal('auto')]).optional(),
+      });
+
+      const validated = schema.parse(req.body);
+      
+      // Get user's embedded wallet to get destination address
+      const wallet = await storage.getEmbeddedWallet(userId);
+      if (!wallet) {
+        return res.status(404).json({
+          success: false,
+          error: "No embedded wallet found. Please create one first."
+        });
+      }
+
+      // Get Hyperliquid address as destination
+      const destinationAddress = wallet.hyperliquidAddress;
+
+      const quote = await getBridgeQuote({
+        fromChain: validated.fromChain,
+        toChain: 'hypercore',
+        fromToken: validated.fromToken,
+        toToken: 'usdc',
+        amount: validated.amount,
+        slippageBps: validated.slippageBps,
+        destinationAddress,
+      });
+
+      res.json({
+        success: true,
+        quote,
+      });
+    } catch (error: any) {
+      console.error("Error fetching bridge quote:", error);
+      res.status(500).json({
+        success: false,
+        error: error.message || "Failed to fetch bridge quote"
+      });
+    }
+  });
+
+  // Execute bridge swap
+  app.post("/api/bridge/swap", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const { executeBridgeSwap } = await import('./mayanBridge');
+      const { decryptPrivateKey } = await import('./credentialService');
+      
+      const schema = z.object({
+        quote: z.any(), // Raw Mayan quote object
+        fromChain: z.enum(['solana', 'arbitrum']),
+      });
+
+      const validated = schema.parse(req.body);
+      
+      // Get user's embedded wallet
+      const wallet = await storage.getEmbeddedWallet(userId);
+      if (!wallet) {
+        return res.status(404).json({
+          success: false,
+          error: "No embedded wallet found. Please create one first."
+        });
+      }
+
+      // Get the appropriate private key based on source chain
+      let privateKey: string;
+      let originAddress: string;
+      
+      if (validated.fromChain === 'solana') {
+        if (!wallet.solanaPrivateKey) {
+          return res.status(400).json({
+            success: false,
+            error: "Solana private key not found in wallet"
+          });
+        }
+        privateKey = Buffer.from(decryptPrivateKey(
+          wallet.solanaPrivateKey,
+          wallet.solanaKeyIv!,
+          wallet.solanaKeyDek!,
+          wallet.solanaKeyDekIv!
+        ), 'hex').toString('base64');
+        originAddress = wallet.solanaAddress;
+      } else {
+        // Arbitrum
+        if (!wallet.evmPrivateKey) {
+          return res.status(400).json({
+            success: false,
+            error: "EVM private key not found in wallet"
+          });
+        }
+        privateKey = decryptPrivateKey(
+          wallet.evmPrivateKey,
+          wallet.evmKeyIv!,
+          wallet.evmKeyDek!,
+          wallet.evmKeyDekIv!
+        );
+        originAddress = wallet.evmAddress;
+      }
+
+      const destinationAddress = wallet.hyperliquidAddress;
+
+      const result = await executeBridgeSwap({
+        quote: validated.quote,
+        fromChain: validated.fromChain,
+        privateKey,
+        originAddress,
+        destinationAddress,
+      });
+
+      res.json({
+        success: true,
+        result,
+      });
+    } catch (error: any) {
+      console.error("Error executing bridge swap:", error);
+      res.status(500).json({
+        success: false,
+        error: error.message || "Failed to execute bridge swap"
+      });
+    }
+  });
+
+  // Track bridge swap status
+  app.get("/api/bridge/status/:txHash", isAuthenticated, async (req, res) => {
+    try {
+      const { trackSwapStatus } = await import('./mayanBridge');
+      const { txHash } = req.params;
+      
+      if (!txHash) {
+        return res.status(400).json({
+          success: false,
+          error: "Transaction hash is required"
+        });
+      }
+
+      const status = await trackSwapStatus(txHash);
+
+      res.json({
+        success: true,
+        status,
+      });
+    } catch (error: any) {
+      console.error("Error tracking bridge swap:", error);
+      res.status(500).json({
+        success: false,
+        error: error.message || "Failed to track bridge swap"
+      });
+    }
+  });
+
   // Create multi-provider API key
   app.post("/api/api-keys", isAuthenticated, async (req, res) => {
     try {
