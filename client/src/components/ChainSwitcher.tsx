@@ -99,7 +99,7 @@ export default function ChainSwitcher() {
                 ) : hasError ? (
                   <span className="text-destructive">Error</span>
                 ) : (
-                  `$${balances?.totalUsd.toFixed(2)}`
+                  `$${(balances?.totalUsd ?? 0).toFixed(2)}`
                 )}
               </div>
             </div>
@@ -110,15 +110,15 @@ export default function ChainSwitcher() {
               <div className="space-y-0.5">
                 <div className="flex justify-between gap-4">
                   <span className="text-muted-foreground">Solana:</span>
-                  <span className="font-mono">${balances?.solana.totalUsd.toFixed(2) || '0.00'}</span>
+                  <span className="font-mono">${(balances?.solana?.totalUsd ?? 0).toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between gap-4">
                   <span className="text-muted-foreground">Arbitrum:</span>
-                  <span className="font-mono">${balances?.arbitrum.totalUsd.toFixed(2) || '0.00'}</span>
+                  <span className="font-mono">${(balances?.arbitrum?.totalUsd ?? 0).toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between gap-4">
                   <span className="text-muted-foreground">Hyperliquid:</span>
-                  <span className="font-mono">${balances?.hyperliquid.accountValue.toFixed(2) || '0.00'}</span>
+                  <span className="font-mono">${(balances?.hyperliquid?.accountValue ?? 0).toFixed(2)}</span>
                 </div>
               </div>
             </div>
@@ -169,11 +169,11 @@ export default function ChainSwitcher() {
             
             if (balances) {
               if (chain.id === 'solana') {
-                balance = balances.solana.totalUsd;
-                subBalance = `${balances.solana.sol.toFixed(4)} SOL • ${balances.solana.usdc.toFixed(2)} USDC`;
+                balance = balances.solana?.totalUsd ?? 0;
+                subBalance = `${(balances.solana?.sol ?? 0).toFixed(4)} SOL • ${(balances.solana?.usdc ?? 0).toFixed(2)} USDC`;
               } else {
-                balance = balances.hyperliquid.accountValue;
-                subBalance = `Free: $${balances.hyperliquid.withdrawable.toFixed(2)}`;
+                balance = balances.hyperliquid?.accountValue ?? 0;
+                subBalance = `Free: $${(balances.hyperliquid?.withdrawable ?? 0).toFixed(2)}`;
               }
             }
 
@@ -217,10 +217,10 @@ export default function ChainSwitcher() {
             <div className="text-xs text-muted-foreground mb-1">Arbitrum (coming soon)</div>
             <div className="flex items-center justify-between text-xs">
               <span className="text-muted-foreground">
-                {balances ? `${balances.arbitrum.eth.toFixed(4)} ETH • ${balances.arbitrum.usdc.toFixed(2)} USDC` : 'Loading...'}
+                {balances ? `${(balances.arbitrum?.eth ?? 0).toFixed(4)} ETH • ${(balances.arbitrum?.usdc ?? 0).toFixed(2)} USDC` : 'Loading...'}
               </span>
               <span className="font-mono">
-                ${balances?.arbitrum.totalUsd.toFixed(2) || '0.00'}
+                ${(balances?.arbitrum?.totalUsd ?? 0).toFixed(2)}
               </span>
             </div>
           </div>
