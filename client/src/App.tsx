@@ -6,6 +6,10 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { AuthProvider } from "@/hooks/use-auth";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { WagmiProvider } from 'wagmi';
+import { RainbowKitProvider, darkTheme } from '@rainbow-me/rainbowkit';
+import { config } from '@/lib/wagmi';
+import '@rainbow-me/rainbowkit/styles.css';
 import Dashboard from "@/pages/Dashboard";
 import AuthPage from "@/pages/AuthPage";
 import Onboarding from "@/pages/Onboarding";
@@ -47,14 +51,24 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider>
-        <TooltipProvider>
-          <AuthProvider>
-            <Router />
-            <Toaster />
-          </AuthProvider>
-        </TooltipProvider>
-      </ThemeProvider>
+      <WagmiProvider config={config}>
+        <RainbowKitProvider
+          theme={darkTheme({
+            accentColor: '#B06000',
+            accentColorForeground: 'white',
+            borderRadius: 'medium',
+          })}
+        >
+          <ThemeProvider>
+            <TooltipProvider>
+              <AuthProvider>
+                <Router />
+                <Toaster />
+              </AuthProvider>
+            </TooltipProvider>
+          </ThemeProvider>
+        </RainbowKitProvider>
+      </WagmiProvider>
     </QueryClientProvider>
   );
 }

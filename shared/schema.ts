@@ -16,12 +16,12 @@ export const sessions = pgTable(
 
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  username: text("username").notNull().unique(),
+  username: text("username").unique(), // Optional for wallet users
   email: text("email").unique(),
   password: text("password"), // Hashed password for username/password auth
   authProviderId: text("auth_provider_id").unique(), // For OAuth (Replit Auth)
-  authProvider: text("auth_provider"), // "replit", "email", etc.
-  firstName: text("first_name"), // From Replit Auth
+  authProvider: text("auth_provider"), // "replit", "email", "wallet", etc.
+  firstName: text("first_name"), // From Replit Auth or wallet ENS
   lastName: text("last_name"), // From Replit Auth
   profileImageUrl: text("profile_image_url"), // From Replit Auth
   role: text("role").notNull().default("user"), // "user", "admin"
@@ -31,12 +31,34 @@ export const users = pgTable("users", {
   agentMode: text("agent_mode").notNull().default("passive"), // "passive", "active"
   monitoringFrequencyMinutes: integer("monitoring_frequency_minutes").notNull().default(0), // 0 = disabled, per-user monitoring frequency
   marginMode: text("margin_mode").notNull().default("isolated"), // "isolated", "cross" - margin mode for trading
-  walletAddress: text("wallet_address"), // Hyperliquid wallet address for referral verification
+  walletAddress: text("wallet_address"), // DEPRECATED: Kept for backward compatibility, migrating to user_wallets table
   verificationStatus: text("verification_status").notNull().default("pending"), // "pending", "approved", "rejected"
   verifiedAt: timestamp("verified_at"), // Timestamp when admin verified the wallet
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
+
+// Multi-wallet support for cross-chain trading and authentication
+export const userWallets = pgTable("user_wallets", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  walletAddress: text("wallet_address").notNull(), // Raw wallet address
+  normalizedAddress: text("normalized_address").notNull(), // Lowercased for EVM, checksummed for others
+  chain: text("chain").notNull(), // "arbitrum", "mainnet", "base", "optimism", "solana", etc.
+  chainId: text("chain_id"), // EVM chain ID or Solana cluster (mainnet-beta, devnet)
+  walletType: text("wallet_type").notNull(), // "metamask", "rabby", "walletconnect", "phantom", "backpack"
+  purpose: text("purpose").notNull(), // "auth", "trading", "both"
+  isAuthPrimary: integer("is_auth_primary").notNull().default(0), // 1 if this is primary auth wallet
+  isTrading: integer("is_trading").notNull().default(0), // 1 if used for trading
+  isVerified: integer("is_verified").notNull().default(0), // 1 if ownership verified via signature
+  verifiedAt: timestamp("verified_at"),
+  lastUsedAt: timestamp("last_used_at").notNull().defaultNow(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => [
+  uniqueIndex("unique_user_wallet").on(table.userId, table.normalizedAddress, table.chain),
+  index("idx_normalized_address").on(table.normalizedAddress),
+  index("idx_user_auth_primary").on(table.userId, table.isAuthPrimary),
+]);
 
 export const trades = pgTable("trades", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -451,6 +473,7 @@ export const budgetAlerts = pgTable("budget_alerts", {
 
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true, updatedAt: true });
 export const upsertUserSchema = createInsertSchema(users).omit({ createdAt: true, updatedAt: true }).partial();
+export const insertUserWalletSchema = createInsertSchema(userWallets).omit({ id: true, userId: true, createdAt: true });
 export const insertTradeSchema = createInsertSchema(trades).omit({ id: true, userId: true, entryTimestamp: true });
 export const insertPositionSchema = createInsertSchema(positions).omit({ id: true, userId: true, lastUpdated: true });
 export const insertPortfolioSnapshotSchema = createInsertSchema(portfolioSnapshots).omit({ id: true, userId: true, timestamp: true });
@@ -477,6 +500,8 @@ export const insertBudgetAlertSchema = createInsertSchema(budgetAlerts).omit({ i
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type UpsertUser = z.infer<typeof upsertUserSchema>;
 export type User = typeof users.$inferSelect;
+export type InsertUserWallet = z.infer<typeof insertUserWalletSchema>;
+export type UserWallet = typeof userWallets.$inferSelect;
 export type InsertTrade = z.infer<typeof insertTradeSchema>;
 export type Trade = typeof trades.$inferSelect;
 export type InsertPosition = z.infer<typeof insertPositionSchema>;
