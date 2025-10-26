@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { AuthProvider } from "@/hooks/use-auth";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { WalletInitializer } from "@/components/WalletInitializer";
 import { WagmiProvider } from 'wagmi';
 import { RainbowKitProvider, darkTheme } from '@rainbow-me/rainbowkit';
 import { config } from '@/lib/wagmi';
@@ -62,6 +63,7 @@ function App() {
           <ThemeProvider>
             <TooltipProvider>
               <AuthProvider>
+                <WalletInitializer />
                 <Router />
                 <Toaster />
               </AuthProvider>

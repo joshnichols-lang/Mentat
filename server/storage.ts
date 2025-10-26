@@ -46,6 +46,7 @@ export interface IStorage {
   createEmbeddedWallet(userId: string, wallet: InsertEmbeddedWallet): Promise<EmbeddedWallet>;
   getEmbeddedWallet(userId: string): Promise<EmbeddedWallet | undefined>;
   markSeedPhraseShown(userId: string): Promise<EmbeddedWallet | undefined>;
+  updateApiWalletApproval(userId: string, apiWalletAddress: string): Promise<EmbeddedWallet | undefined>;
   
   // Trade methods (multi-tenant)
   getTrades(userId: string, limit?: number): Promise<Trade[]>;
@@ -376,6 +377,20 @@ export class DbStorage implements IStorage {
       .set({
         seedPhraseShown: 1,
         seedPhraseShownAt: sql`now()`,
+        updatedAt: sql`now()`,
+      })
+      .where(eq(embeddedWallets.userId, userId))
+      .returning();
+    return result[0];
+  }
+
+  async updateApiWalletApproval(userId: string, apiWalletAddress: string): Promise<EmbeddedWallet | undefined> {
+    const result = await db
+      .update(embeddedWallets)
+      .set({
+        apiWalletAddress,
+        apiWalletApproved: 1,
+        apiWalletApprovedAt: sql`now()`,
         updatedAt: sql`now()`,
       })
       .where(eq(embeddedWallets.userId, userId))
