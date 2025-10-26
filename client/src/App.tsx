@@ -23,6 +23,7 @@ import Settings from "@/pages/Settings";
 import TradeHistory from "@/pages/TradeHistory";
 import TradeJournal from "@/pages/TradeJournal";
 import TradingModes from "@/pages/TradingModes";
+import TradingTerminal from "@/pages/TradingTerminal";
 import UIPreview from "@/pages/UIPreview";
 import EnhancedUIPreview from "@/pages/EnhancedUIPreview";
 import NotFound from "@/pages/not-found";
@@ -40,6 +41,7 @@ function Router() {
       <ProtectedRoute path="/admin/messages" component={AdminMessages} />
       <ProtectedRoute path="/admin" component={Admin} />
       <ProtectedRoute path="/settings" component={Settings} />
+      <ProtectedRoute path="/trade" component={TradingTerminal} />
       <ProtectedRoute path="/trade-history" component={TradeHistory} />
       <ProtectedRoute path="/trade-journal" component={TradeJournal} />
       <ProtectedRoute path="/trading-modes" component={TradingModes} />
