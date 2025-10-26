@@ -37,6 +37,7 @@ export default function TradingChart({ symbol, onSymbolChange }: TradingChartPro
       layout: {
         background: { color: "transparent" },
         textColor: "#9ca3af",
+        attributionLogo: false,
       },
       grid: {
         vertLines: { color: "rgba(255, 163, 82, 0.05)" },
