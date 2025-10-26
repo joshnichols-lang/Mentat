@@ -70,6 +70,12 @@ export const embeddedWallets = pgTable("embedded_wallets", {
   solanaAddress: text("solana_address").notNull(), // Solana mainnet address
   evmAddress: text("evm_address").notNull(), // EVM address (Arbitrum, Ethereum, etc)
   hyperliquidAddress: text("hyperliquid_address").notNull(), // Hyperliquid trading address (same as EVM)
+  // API wallet for Hyperliquid trading - separate wallet with limited permissions
+  apiWalletAddress: text("api_wallet_address"), // API wallet public address (private key stored encrypted in apiKeys table)
+  apiWalletApproved: integer("api_wallet_approved").notNull().default(0), // 1 = user has signed approveAgent transaction
+  apiWalletApprovedAt: timestamp("api_wallet_approved_at"),
+  // 1fox referral code for earning trading fees
+  referralCode: text("referral_code").notNull().default("1FOX"), // Default 1fox referral code
   // Seed phrase shown once on creation, then deleted - NEVER stored
   seedPhraseShown: integer("seed_phrase_shown").notNull().default(0), // 1 = user has seen and confirmed seed phrase
   seedPhraseShownAt: timestamp("seed_phrase_shown_at"),
