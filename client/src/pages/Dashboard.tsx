@@ -153,7 +153,7 @@ export default function Dashboard() {
 
   return (
     <SymbolProvider>
-      <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
+      <div className="min-h-screen">
         <Header />
         
         <main className="h-[calc(100vh-3.5rem)]">

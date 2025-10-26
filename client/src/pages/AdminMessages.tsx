@@ -53,7 +53,7 @@ export default function AdminMessages() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen">
         <Header />
         <div className="p-6">
           <div className="text-center text-muted-foreground">Loading messages...</div>
@@ -63,7 +63,7 @@ export default function AdminMessages() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen">
       <Header />
       
       <main className="mx-auto max-w-[1920px] p-6 space-y-6">

@@ -60,7 +60,7 @@ export default function PendingApproval() {
   const status = getStatusMessage();
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-background p-4">
+    <div className="flex items-center justify-center min-h-screen p-4">
       <Card className="w-full max-w-lg">
         <CardHeader>
           <div className="flex items-center justify-between mb-4">

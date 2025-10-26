@@ -135,7 +135,7 @@ export default function Charts() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen">
       <Header />
       
       <main className="mx-auto max-w-[1800px] p-4 space-y-4">

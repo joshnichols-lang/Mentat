@@ -24,7 +24,7 @@ export default function Header() {
   const [depositModalOpen, setDepositModalOpen] = useState(false);
 
   return (
-    <header className="border-b px-6 py-3">
+    <header className="glass-header px-6 py-3 sticky top-0 z-50">
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <div 

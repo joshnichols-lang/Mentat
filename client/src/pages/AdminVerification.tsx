@@ -50,7 +50,7 @@ export default function AdminVerification() {
 
   if (user?.role !== "admin") {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen">
         <Header />
         <div className="flex items-center justify-center p-8">
           <Alert className="max-w-md">
@@ -65,7 +65,7 @@ export default function AdminVerification() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen">
       <Header />
       
       <main className="mx-auto max-w-7xl p-4">

@@ -275,8 +275,11 @@
   }
 
   body {
-    @apply font-sans antialiased bg-background text-foreground;
+    @apply font-sans antialiased text-foreground;
     position: relative;
+    background: linear-gradient(135deg, #0a0705 0%, #1a120d 50%, #0f0a08 100%);
+    background-attachment: fixed;
+    min-height: 100vh;
   }
 
   /* Modern Roboto typography */
@@ -403,19 +406,86 @@
 
   /* ========== GLASSMORPHISM UTILITIES ========== */
   
-  /* Frosted glass effect with backdrop blur */
+  /* Glass effects layer ON TOP of existing semantic tokens (bg-card, bg-popover, etc.)
+   * Use these TOGETHER with existing background classes, not as replacements
+   * Example: className="bg-card glass" 
+   */
+  
+  /* Base frosted glass effect - adds transparency and blur to existing backgrounds */
   .glass {
-    background: rgb(var(--glass-bg) / 0.6);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgb(var(--glass-border) / 0.15);
+    background: linear-gradient(
+      135deg, 
+      rgba(176, 96, 0, 0.08) 0%, 
+      rgba(255, 163, 82, 0.05) 50%, 
+      rgba(218, 165, 32, 0.06) 100%
+    ),
+    hsl(var(--card) / 0.65);
+    backdrop-filter: blur(20px) saturate(150%);
+    -webkit-backdrop-filter: blur(20px) saturate(150%);
+    border-color: rgb(var(--glass-border) / 0.18);
+    box-shadow: 
+      0 4px 6px rgba(0, 0, 0, 0.3),
+      inset 0 1px 1px rgba(255, 163, 82, 0.1);
   }
 
+  /* Stronger glass for panels and overlays - more opaque for better readability */
   .glass-strong {
-    background: rgb(var(--glass-bg) / 0.8);
-    backdrop-filter: blur(24px);
-    -webkit-backdrop-filter: blur(24px);
-    border: 1px solid rgb(var(--glass-border) / 0.2);
+    background: linear-gradient(
+      135deg, 
+      rgba(176, 96, 0, 0.12) 0%, 
+      rgba(255, 163, 82, 0.08) 50%, 
+      rgba(218, 165, 32, 0.1) 100%
+    ),
+    hsl(var(--popover) / 0.85);
+    backdrop-filter: blur(24px) saturate(150%);
+    -webkit-backdrop-filter: blur(24px) saturate(150%);
+    border-color: rgb(var(--glass-border) / 0.25);
+    box-shadow: 
+      0 8px 12px rgba(0, 0, 0, 0.4),
+      inset 0 1px 2px rgba(255, 163, 82, 0.15),
+      0 0 1px rgba(255, 163, 82, 0.3);
+  }
+
+  /* Subtle glass for less prominent panels */
+  .glass-subtle {
+    background: linear-gradient(
+      135deg, 
+      rgba(176, 96, 0, 0.05) 0%, 
+      rgba(255, 163, 82, 0.03) 50%, 
+      rgba(218, 165, 32, 0.04) 100%
+    ),
+    hsl(var(--card) / 0.5);
+    backdrop-filter: blur(16px) saturate(130%);
+    -webkit-backdrop-filter: blur(16px) saturate(130%);
+    border-color: rgb(var(--glass-border) / 0.12);
+    box-shadow: 
+      0 2px 4px rgba(0, 0, 0, 0.2),
+      inset 0 1px 1px rgba(255, 163, 82, 0.08);
+  }
+
+  /* Panel glass - for major UI panels (Cards) with gradient overlay */
+  .glass-panel {
+    background: 
+      linear-gradient(135deg, rgba(176, 96, 0, 0.1) 0%, rgba(255, 163, 82, 0.06) 50%, rgba(218, 165, 32, 0.08) 100%),
+      hsl(var(--card) / 0.7);
+    backdrop-filter: blur(20px) saturate(150%);
+    -webkit-backdrop-filter: blur(20px) saturate(150%);
+    border-color: rgb(var(--glass-border) / 0.2);
+    box-shadow: 
+      0 8px 16px rgba(0, 0, 0, 0.35),
+      inset 0 1px 2px rgba(255, 163, 82, 0.12),
+      0 0 40px rgba(255, 163, 82, 0.05);
+  }
+
+  /* Header glass - for navigation bars, more opaque for better contrast */
+  .glass-header {
+    background: hsl(var(--background) / 0.88);
+    backdrop-filter: blur(24px) saturate(150%);
+    -webkit-backdrop-filter: blur(24px) saturate(150%);
+    border-bottom-color: rgb(var(--glass-border) / 0.2);
+    box-shadow: 
+      0 4px 8px rgba(0, 0, 0, 0.3),
+      inset 0 1px 1px rgba(255, 163, 82, 0.1);
   }
 
   /* Gradient overlays */
