@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
+import { useAccount } from "wagmi";
 import {
   Dialog,
   DialogContent,
@@ -6,19 +7,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { AlertCircle, ArrowRight, Check, Loader2 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { useRouterBridge } from "@/hooks/use-router-bridge";
+import { AlertCircle, ExternalLink } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 
 interface DepositModalProps {
@@ -26,53 +16,8 @@ interface DepositModalProps {
   onOpenChange: (open: boolean) => void;
 }
 
-// Supported chains and tokens
-const CHAINS = [
-  { 
-    id: "1", 
-    name: "Ethereum", 
-    symbol: "ETH",
-    tokens: [
-      { address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", symbol: "USDC", decimals: 6 },
-      { address: "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE", symbol: "ETH", decimals: 18 },
-    ]
-  },
-  { 
-    id: "42161", 
-    name: "Arbitrum", 
-    symbol: "ARB",
-    tokens: [
-      { address: "0xaf88d065e77c8cC2239327C5EDb3A432268e5831", symbol: "USDC", decimals: 6 },
-      { address: "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE", symbol: "ETH", decimals: 18 },
-    ]
-  },
-  { 
-    id: "137", 
-    name: "Polygon", 
-    symbol: "MATIC",
-    tokens: [
-      { address: "0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359", symbol: "USDC", decimals: 6 },
-      { address: "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE", symbol: "MATIC", decimals: 18 },
-    ]
-  },
-  { 
-    id: "8453", 
-    name: "Base", 
-    symbol: "BASE",
-    tokens: [
-      { address: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", symbol: "USDC", decimals: 6 },
-      { address: "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE", symbol: "ETH", decimals: 18 },
-    ]
-  },
-];
-
-// Hyperliquid destination (via Arbitrum bridge)
-const HYPERLIQUID_CHAIN_ID = "42161"; // Bridge to Arbitrum first, then to Hyperliquid
-const HYPERLIQUID_USDC = "0xaf88d065e77c8cC2239327C5EDb3A432268e5831";
-
 export function DepositModal({ open, onOpenChange }: DepositModalProps) {
-  const [fromChain, setFromChain] = useState(CHAINS[1].id); // Default to Arbitrum
-  const [fromToken, setFromToken] = useState("");
+  const { isConnected } = useAccount();
   const [amount, setAmount] = useState("");
   const [step, setStep] = useState<"input" | "quote" | "executing" | "success">("input");
 

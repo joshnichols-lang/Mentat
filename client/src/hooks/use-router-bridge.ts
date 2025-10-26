@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { useAccount, useWalletClient, usePublicClient } from 'wagmi';
+import { useAccount, useWalletClient } from 'wagmi';
+import { BrowserProvider } from 'ethers';
 import { PathFinder, Network } from '@routerprotocol/asset-transfer-sdk-ts';
 
 // Router Nitro Partner ID - get from https://app.routernitro.com/partnerId
@@ -22,7 +23,6 @@ interface BridgeExecuteParams {
 export function useRouterBridge() {
   const { address, isConnected } = useAccount();
   const { data: walletClient } = useWalletClient();
-  const publicClient = usePublicClient();
   const [isGettingQuote, setIsGettingQuote] = useState(false);
   const [isExecuting, setIsExecuting] = useState(false);
   const [quote, setQuote] = useState<any>(null);
@@ -82,32 +82,10 @@ export function useRouterBridge() {
     try {
       const pathfinder = new PathFinder(Network.Mainnet, PARTNER_ID);
 
-      // Create an EVM signer adapter for wagmi's wallet client
-      // Router SDK expects an ethers-like signer interface
-      const evmSigner = {
-        getAddress: async () => address,
-        signMessage: async (message: string) => {
-          return await walletClient.signMessage({ 
-            message 
-          });
-        },
-        sendTransaction: async (transaction: any) => {
-          return await walletClient.sendTransaction({
-            to: transaction.to as `0x${string}`,
-            data: transaction.data as `0x${string}`,
-            value: transaction.value ? BigInt(transaction.value) : undefined,
-            gas: transaction.gas ? BigInt(transaction.gas) : undefined,
-          });
-        },
-        provider: publicClient ? {
-          call: async (transaction: any) => {
-            return await publicClient.call({
-              to: transaction.to as `0x${string}`,
-              data: transaction.data as `0x${string}`,
-            });
-          },
-        } : undefined,
-      };
+      // Create ethers.js BrowserProvider from wagmi's wallet client
+      // This provides a full ethers Signer interface that Router SDK expects
+      const provider = new BrowserProvider(walletClient as any);
+      const evmSigner = await provider.getSigner();
 
       // Execute the bridge transaction
       // executeQuote handles token approval automatically
@@ -119,7 +97,7 @@ export function useRouterBridge() {
           receiverAddress: params.recipientAddress, // Embedded Hyperliquid wallet (destination)
         },
         {
-          evmSigner: evmSigner as any,
+          evmSigner,
         }
       );
 
@@ -128,7 +106,7 @@ export function useRouterBridge() {
     } catch (err: any) {
       const errorMessage = err?.message || 'Failed to execute bridge transaction';
       setError(errorMessage);
-      throw new Error(errorMessage);
+      throw err; // Surface SDK errors verbatim for actionable failures
     } finally {
       setIsExecuting(false);
     }
