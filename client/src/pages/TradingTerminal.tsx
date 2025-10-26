@@ -5,8 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import Header from "@/components/Header";
+import TradingChart from "@/components/TradingChart";
 import { 
-  BarChart3, 
   LineChart, 
   TrendingUp, 
   Settings,
@@ -73,16 +73,10 @@ export default function TradingTerminal() {
                 {/* Chart Panel */}
                 <ResizablePanel defaultSize={orderPanelCollapsed ? 100 : 70} minSize={30}>
                   <div className="h-full relative">
-                    <div className="absolute inset-0 glass-fade-in">
-                      {/* Chart will go here in Task 3 */}
-                      <div className="w-full h-full flex items-center justify-center glass">
-                        <div className="text-center space-y-2">
-                          <BarChart3 className="h-16 w-16 mx-auto text-primary/50" />
-                          <p className="text-muted-foreground">Chart component loading...</p>
-                          <p className="text-xs text-muted-foreground/70">lightweight-charts integration (Task 3)</p>
-                        </div>
-                      </div>
-                    </div>
+                    <TradingChart 
+                      symbol={selectedSymbol}
+                      onSymbolChange={setSelectedSymbol}
+                    />
                   </div>
                 </ResizablePanel>
 
