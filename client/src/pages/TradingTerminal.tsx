@@ -8,6 +8,7 @@ import Header from "@/components/Header";
 import TradingChart from "@/components/TradingChart";
 import OrderBook from "@/components/OrderBook";
 import RecentTrades from "@/components/RecentTrades";
+import OrderEntryPanel from "@/components/OrderEntryPanel";
 import { 
   LineChart, 
   TrendingUp, 
@@ -87,38 +88,8 @@ export default function TradingTerminal() {
                   <>
                     <ResizableHandle withHandle className="bg-glass-border/30" />
                     <ResizablePanel defaultSize={30} minSize={15} maxSize={50}>
-                      <div className="h-full glass border-t border-glass/20 p-4 overflow-auto glass-fade-in">
-                        <Tabs defaultValue="market" className="w-full">
-                          <TabsList className="grid w-[200px] grid-cols-2">
-                            <TabsTrigger value="market" data-testid="tab-market-order">Market</TabsTrigger>
-                            <TabsTrigger value="limit" data-testid="tab-limit-order">Limit</TabsTrigger>
-                          </TabsList>
-                          
-                          <TabsContent value="market" className="mt-4">
-                            <div className="grid grid-cols-2 gap-4">
-                              <Card className="glass border-glass/20">
-                                <CardHeader className="pb-2">
-                                  <CardTitle className="text-sm">Order Entry Panel</CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                  <p className="text-xs text-muted-foreground">Task 10: Order entry form</p>
-                                </CardContent>
-                              </Card>
-                              <Card className="glass border-glass/20">
-                                <CardHeader className="pb-2">
-                                  <CardTitle className="text-sm">Position Summary</CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                  <p className="text-xs text-muted-foreground">Live position data</p>
-                                </CardContent>
-                              </Card>
-                            </div>
-                          </TabsContent>
-
-                          <TabsContent value="limit" className="mt-4">
-                            <p className="text-xs text-muted-foreground">Limit order form (Task 10)</p>
-                          </TabsContent>
-                        </Tabs>
+                      <div className="h-full border-t border-glass/20 overflow-auto glass-fade-in">
+                        <OrderEntryPanel symbol={selectedSymbol} />
                       </div>
                     </ResizablePanel>
                   </>
