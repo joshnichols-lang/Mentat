@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Lock, KeyRound, Brain, TrendingUp, Trash2, Plus, AlertCircle, Clock, DollarSign } from "lucide-react";
+import { Lock, KeyRound, Brain, Trash2, Plus, AlertCircle, Clock, DollarSign } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   AlertDialog,
@@ -41,15 +41,8 @@ const aiProviderSchema = z.object({
   label: z.string().min(1, "Label is required").max(50),
 });
 
-const hyperliquidSchema = z.object({
-  apiKey: z.string().min(1, "API wallet private key is required"),
-  mainWalletAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/, "Invalid Ethereum address"),
-  label: z.string().min(1, "Label is required").max(50),
-});
-
 type PasswordChangeForm = z.infer<typeof passwordChangeSchema>;
 type AIProviderFormData = z.infer<typeof aiProviderSchema>;
-type HyperliquidFormData = z.infer<typeof hyperliquidSchema>;
 
 interface ApiKey {
   id: string;
@@ -105,7 +98,6 @@ export default function Settings() {
   const { user } = useAuth();
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [isAddingAI, setIsAddingAI] = useState(false);
-  const [isAddingHyperliquid, setIsAddingHyperliquid] = useState(false);
   const [deleteKeyId, setDeleteKeyId] = useState<string | null>(null);
   const [pendingFrequency, setPendingFrequency] = useState<string | null>(null);
   const [monitoringFrequency, setMonitoringFrequency] = useState<string>(() => {
@@ -132,7 +124,6 @@ export default function Settings() {
 
   const apiKeys = apiKeysData?.apiKeys || [];
   const aiKeys = apiKeys.filter(k => k.providerType === "ai");
-  const hyperliquidKeys = apiKeys.filter(k => k.providerType === "exchange" && k.providerName === "hyperliquid");
 
   const passwordForm = useForm<PasswordChangeForm>({
     resolver: zodResolver(passwordChangeSchema),
@@ -148,15 +139,6 @@ export default function Settings() {
     defaultValues: {
       provider: "perplexity",
       apiKey: "",
-      label: "",
-    },
-  });
-
-  const hyperliquidForm = useForm<HyperliquidFormData>({
-    resolver: zodResolver(hyperliquidSchema),
-    defaultValues: {
-      apiKey: "",
-      mainWalletAddress: "",
       label: "",
     },
   });
@@ -210,36 +192,6 @@ export default function Settings() {
     },
   });
 
-  const hyperliquidMutation = useMutation({
-    mutationFn: async (data: HyperliquidFormData) => {
-      const response = await apiRequest("POST", "/api/api-keys", {
-        providerType: "exchange",
-        providerName: "hyperliquid",
-        label: data.label,
-        apiKey: data.apiKey,
-        metadata: {
-          mainWalletAddress: data.mainWalletAddress,
-        },
-      });
-      return response.json();
-    },
-    onSuccess: () => {
-      toast({
-        title: "Hyperliquid Credentials Added",
-        description: "Your Hyperliquid credentials have been added successfully.",
-      });
-      hyperliquidForm.reset();
-      setIsAddingHyperliquid(false);
-      queryClient.invalidateQueries({ queryKey: ['/api/api-keys'] });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to add Hyperliquid credentials.",
-        variant: "destructive",
-      });
-    },
-  });
 
   const deleteKeyMutation = useMutation({
     mutationFn: async (keyId: string) => {
@@ -301,10 +253,6 @@ export default function Settings() {
 
   const onSubmitAI = (data: AIProviderFormData) => {
     aiProviderMutation.mutate(data);
-  };
-
-  const onSubmitHyperliquid = (data: HyperliquidFormData) => {
-    hyperliquidMutation.mutate(data);
   };
 
   const getProviderLabel = (providerName: string) => {
@@ -605,168 +553,6 @@ export default function Settings() {
                           aiForm.reset();
                         }}
                         data-testid="button-cancel-ai"
-                      >
-                        Cancel
-                      </Button>
-                    </div>
-                  </form>
-                </Form>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Hyperliquid Credentials */}
-          <Card data-testid="card-hyperliquid-keys">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <TrendingUp className="w-5 h-5" />
-                  <CardTitle>Hyperliquid Exchange Credentials</CardTitle>
-                </div>
-                <Button
-                  onClick={() => setIsAddingHyperliquid(true)}
-                  variant="outline"
-                  size="sm"
-                  data-testid="button-add-hyperliquid-key"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Credentials
-                </Button>
-              </div>
-              <CardDescription>
-                Manage your Hyperliquid private keys for automated trading
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {hyperliquidKeys.length === 0 && !isAddingHyperliquid && (
-                <Alert>
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>
-                    No Hyperliquid credentials configured. Add one to enable trading.
-                  </AlertDescription>
-                </Alert>
-              )}
-
-              {hyperliquidKeys.map((key) => (
-                <div
-                  key={key.id}
-                  className="flex items-center justify-between p-4 border rounded-md"
-                  data-testid={`hyperliquid-key-${key.id}`}
-                >
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <p className="font-medium">Hyperliquid</p>
-                      {key.isActive && <Badge variant="outline">Active</Badge>}
-                    </div>
-                    <p className="text-sm text-muted-foreground">{key.label}</p>
-                    {key.lastUsed && (
-                      <p className="text-xs text-muted-foreground">
-                        Last used: {new Date(key.lastUsed).toLocaleString()}
-                      </p>
-                    )}
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setDeleteKeyId(key.id)}
-                    data-testid={`button-delete-hyperliquid-${key.id}`}
-                  >
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                  </Button>
-                </div>
-              ))}
-
-              {isAddingHyperliquid && (
-                <Form {...hyperliquidForm}>
-                  <form onSubmit={hyperliquidForm.handleSubmit(onSubmitHyperliquid)} className="space-y-4 p-4 border rounded-md">
-                    <Alert>
-                      <AlertCircle className="h-4 w-4" />
-                      <AlertDescription>
-                        Hyperliquid uses an API wallet system: Your main wallet holds funds, while a separate API wallet signs trades on its behalf.
-                      </AlertDescription>
-                    </Alert>
-
-                    <FormField
-                      control={hyperliquidForm.control}
-                      name="label"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Label</FormLabel>
-                          <FormControl>
-                            <Input
-                              placeholder="e.g., Main Account, Trading Bot"
-                              data-testid="input-hyperliquid-label"
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormDescription>
-                            A friendly name to identify this account
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={hyperliquidForm.control}
-                      name="mainWalletAddress"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Main Wallet Address</FormLabel>
-                          <FormControl>
-                            <Input
-                              placeholder="0x..."
-                              data-testid="input-hyperliquid-main-wallet"
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormDescription>
-                            Your main Hyperliquid wallet address (where your funds are stored)
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={hyperliquidForm.control}
-                      name="apiKey"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>API Wallet Private Key</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="password"
-                              placeholder="Enter your API wallet private key"
-                              autoComplete="off"
-                              data-testid="input-hyperliquid-private-key"
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormDescription>
-                            The private key for the API wallet (from Hyperliquid API settings)
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <div className="flex gap-2">
-                      <Button
-                        type="submit"
-                        disabled={hyperliquidMutation.isPending}
-                        data-testid="button-submit-hyperliquid"
-                      >
-                        {hyperliquidMutation.isPending ? "Adding..." : "Add Credentials"}
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => {
-                          setIsAddingHyperliquid(false);
-                          hyperliquidForm.reset();
-                        }}
-                        data-testid="button-cancel-hyperliquid"
                       >
                         Cancel
                       </Button>
