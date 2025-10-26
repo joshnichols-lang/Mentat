@@ -108,6 +108,28 @@ export default {
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
+        "shimmer": "shimmer 2s infinite",
+        "glass-fade-in": "glassFadeIn 0.3s ease-in-out",
+      },
+      backgroundImage: {
+        "gradient-warm": "var(--gradient-warm)",
+        "gradient-glow": "var(--gradient-glow)",
+        "gradient-subtle": "var(--gradient-subtle)",
+      },
+      backgroundColor: {
+        "glass": "rgb(var(--glass-bg) / <alpha-value>)",
+      },
+      borderColor: {
+        "glass": "rgb(var(--glass-border) / <alpha-value>)",
+      },
+      boxShadow: {
+        "glow-orange": "var(--glow-orange)",
+        "glow-amber": "var(--glow-amber)",
+        "glow-gold": "var(--glow-gold)",
+      },
+      backdropBlur: {
+        "glass": "20px",
+        "glass-strong": "24px",
       },
     },
   },
