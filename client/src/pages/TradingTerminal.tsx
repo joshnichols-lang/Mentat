@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import Header from "@/components/Header";
 import TradingChart from "@/components/TradingChart";
 import OrderBook from "@/components/OrderBook";
+import RecentTrades from "@/components/RecentTrades";
 import { 
   LineChart, 
   TrendingUp, 
@@ -151,16 +152,16 @@ export default function TradingTerminal() {
                   </Card>
                 </TabsContent>
 
-                <TabsContent value="trades" className="flex-1 m-2 mt-0">
-                  <Card className="glass-strong border-glass/20 h-full">
-                    <CardHeader>
+                <TabsContent value="trades" className="flex-1 m-2 mt-0 overflow-hidden">
+                  <Card className="glass-strong border-glass/20 h-full overflow-hidden flex flex-col">
+                    <CardHeader className="pb-2">
                       <CardTitle className="text-sm flex items-center gap-2">
                         <LineChart className="h-4 w-4 text-primary" />
                         Recent Trades
                       </CardTitle>
                     </CardHeader>
-                    <CardContent>
-                      <p className="text-xs text-muted-foreground">Task 12: Live market trades</p>
+                    <CardContent className="flex-1 p-0 overflow-hidden">
+                      <RecentTrades symbol={selectedSymbol} />
                     </CardContent>
                   </Card>
                 </TabsContent>
