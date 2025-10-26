@@ -277,7 +277,7 @@
   body {
     @apply font-sans antialiased text-foreground;
     position: relative;
-    background: linear-gradient(135deg, #0a0705 0%, #1a120d 50%, #0f0a08 100%);
+    background: linear-gradient(180deg, #000000 0%, #1a0f0a 100%);
     background-attachment: fixed;
     min-height: 100vh;
   }
@@ -405,87 +405,85 @@
   }
 
   /* ========== GLASSMORPHISM UTILITIES ========== */
+  /* Inspired by reference CSS with proper transparency and frosted glass effect */
   
-  /* Glass effects layer ON TOP of existing semantic tokens (bg-card, bg-popover, etc.)
-   * Use these TOGETHER with existing background classes, not as replacements
-   * Example: className="bg-card glass" 
-   */
-  
-  /* Base frosted glass effect - adds transparency and blur to existing backgrounds */
+  /* Base frosted glass - 15% opacity with strong blur */
   .glass {
     background: linear-gradient(
-      135deg, 
-      rgba(176, 96, 0, 0.08) 0%, 
-      rgba(255, 163, 82, 0.05) 50%, 
-      rgba(218, 165, 32, 0.06) 100%
-    ),
-    hsl(var(--card) / 0.65);
-    backdrop-filter: blur(20px) saturate(150%);
-    -webkit-backdrop-filter: blur(20px) saturate(150%);
-    border-color: rgb(var(--glass-border) / 0.18);
+      180deg,
+      rgba(41, 41, 41, 0.15) 0%,
+      rgba(25, 25, 25, 0.18) 100%
+    );
+    backdrop-filter: blur(35px);
+    -webkit-backdrop-filter: blur(35px);
+    border: 1px solid rgba(255, 163, 82, 0.1);
     box-shadow: 
-      0 4px 6px rgba(0, 0, 0, 0.3),
-      inset 0 1px 1px rgba(255, 163, 82, 0.1);
+      inset 0 2px 2px 0 rgba(255, 163, 82, 0.08),
+      inset 0 -2px 2px 0 rgba(0, 0, 0, 0.2),
+      0 0 80px rgba(0, 0, 0, 0.25);
   }
 
-  /* Stronger glass for panels and overlays - more opaque for better readability */
+  /* Stronger glass for overlays (modals, dropdowns) - 25% opacity */
   .glass-strong {
     background: linear-gradient(
-      135deg, 
-      rgba(176, 96, 0, 0.12) 0%, 
-      rgba(255, 163, 82, 0.08) 50%, 
-      rgba(218, 165, 32, 0.1) 100%
-    ),
-    hsl(var(--popover) / 0.85);
-    backdrop-filter: blur(24px) saturate(150%);
-    -webkit-backdrop-filter: blur(24px) saturate(150%);
-    border-color: rgb(var(--glass-border) / 0.25);
+      180deg,
+      rgba(41, 41, 41, 0.25) 0%,
+      rgba(25, 25, 25, 0.3) 100%
+    );
+    backdrop-filter: blur(35px);
+    -webkit-backdrop-filter: blur(35px);
+    border: 2px solid rgba(255, 163, 82, 0.12);
     box-shadow: 
-      0 8px 12px rgba(0, 0, 0, 0.4),
-      inset 0 1px 2px rgba(255, 163, 82, 0.15),
-      0 0 1px rgba(255, 163, 82, 0.3);
+      inset 0 2px 2px 0 rgba(231, 196, 160, 0.1),
+      inset 0 -2px 2px 0 rgba(0, 0, 0, 0.25),
+      0 0 80px rgba(0, 0, 0, 0.35);
   }
 
-  /* Subtle glass for less prominent panels */
+  /* Subtle glass for backgrounds - 10% opacity */
   .glass-subtle {
     background: linear-gradient(
-      135deg, 
-      rgba(176, 96, 0, 0.05) 0%, 
-      rgba(255, 163, 82, 0.03) 50%, 
-      rgba(218, 165, 32, 0.04) 100%
-    ),
-    hsl(var(--card) / 0.5);
-    backdrop-filter: blur(16px) saturate(130%);
-    -webkit-backdrop-filter: blur(16px) saturate(130%);
-    border-color: rgb(var(--glass-border) / 0.12);
+      180deg,
+      rgba(41, 41, 41, 0.08) 0%,
+      rgba(25, 25, 25, 0.1) 100%
+    );
+    backdrop-filter: blur(25px);
+    -webkit-backdrop-filter: blur(25px);
+    border: 1px solid rgba(255, 163, 82, 0.06);
     box-shadow: 
-      0 2px 4px rgba(0, 0, 0, 0.2),
-      inset 0 1px 1px rgba(255, 163, 82, 0.08);
+      inset 0 1px 1px 0 rgba(255, 163, 82, 0.05),
+      inset 0 -1px 1px 0 rgba(0, 0, 0, 0.15);
   }
 
-  /* Panel glass - for major UI panels (Cards) with gradient overlay */
+  /* Panel glass - for Cards and major UI panels - 18% opacity with gradient */
   .glass-panel {
-    background: 
-      linear-gradient(135deg, rgba(176, 96, 0, 0.1) 0%, rgba(255, 163, 82, 0.06) 50%, rgba(218, 165, 32, 0.08) 100%),
-      hsl(var(--card) / 0.7);
-    backdrop-filter: blur(20px) saturate(150%);
-    -webkit-backdrop-filter: blur(20px) saturate(150%);
-    border-color: rgb(var(--glass-border) / 0.2);
+    background: linear-gradient(
+      180deg,
+      rgba(41, 41, 41, 0.18) 0%,
+      rgba(25, 25, 25, 0.22) 50%,
+      rgba(25, 25, 25, 0.2) 100%
+    );
+    backdrop-filter: blur(35px);
+    -webkit-backdrop-filter: blur(35px);
+    border: 1px solid rgba(255, 163, 82, 0.11);
     box-shadow: 
-      0 8px 16px rgba(0, 0, 0, 0.35),
-      inset 0 1px 2px rgba(255, 163, 82, 0.12),
-      0 0 40px rgba(255, 163, 82, 0.05);
+      inset 0 2px 2px 0 rgba(255, 163, 82, 0.09),
+      inset 0 -2px 2px 0 rgba(0, 0, 0, 0.22),
+      0 0 80px rgba(0, 0, 0, 0.28);
   }
 
-  /* Header glass - for navigation bars, more opaque for better contrast */
+  /* Header glass - slightly more opaque (30%) for readability */
   .glass-header {
-    background: hsl(var(--background) / 0.88);
-    backdrop-filter: blur(24px) saturate(150%);
-    -webkit-backdrop-filter: blur(24px) saturate(150%);
-    border-bottom-color: rgb(var(--glass-border) / 0.2);
+    background: linear-gradient(
+      180deg,
+      rgba(41, 41, 41, 0.3) 0%,
+      rgba(25, 25, 25, 0.32) 100%
+    );
+    backdrop-filter: blur(35px);
+    -webkit-backdrop-filter: blur(35px);
+    border-bottom: 1px solid rgba(255, 163, 82, 0.12);
     box-shadow: 
-      0 4px 8px rgba(0, 0, 0, 0.3),
-      inset 0 1px 1px rgba(255, 163, 82, 0.1);
+      inset 0 1px 1px 0 rgba(255, 163, 82, 0.08),
+      0 4px 8px rgba(0, 0, 0, 0.3);
   }
 
   /* Gradient overlays */
