@@ -54,6 +54,11 @@ export function WalletInitializer() {
 
   // Don't render anything - this component just handles the initialization logic
   // The modal is rendered when seed phrase is generated
+  // Only render modal when it should be shown to avoid Dialog component errors
+  if (!showRecoveryModal) {
+    return null;
+  }
+
   return (
     <RecoveryPhraseModal
       isOpen={showRecoveryModal}
