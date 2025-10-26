@@ -1,4 +1,4 @@
-import { LogOut, UserCheck, Settings, Users, ChevronDown, MessageSquare, History, BookOpen, Target, Home, BarChart3, LineChart } from "lucide-react";
+import { LogOut, UserCheck, Settings, Users, ChevronDown, MessageSquare, History, BookOpen, Target, Home, BarChart3, LineChart, ArrowDownToLine } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -11,6 +11,7 @@ import ThemeToggle from "./ThemeToggle";
 import AgentModeToggle from "./AgentModeToggle";
 import ChainSwitcher from "./ChainSwitcher";
 import { ContactAdmin } from "./ContactAdmin";
+import { DepositModal } from "./DepositModal";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
 import { useState } from "react";
@@ -20,6 +21,7 @@ export default function Header() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
   const [contactDialogOpen, setContactDialogOpen] = useState(false);
+  const [depositModalOpen, setDepositModalOpen] = useState(false);
 
   return (
     <header className="border-b px-6 py-3">
@@ -98,6 +100,15 @@ export default function Header() {
           <ChainSwitcher />
           <Button 
             variant="ghost" 
+            size="sm" 
+            onClick={() => setDepositModalOpen(true)}
+            data-testid="button-deposit"
+          >
+            <ArrowDownToLine className="h-4 w-4 mr-2" />
+            Deposit
+          </Button>
+          <Button 
+            variant="ghost" 
             size="icon" 
             onClick={() => setContactDialogOpen(true)}
             data-testid="button-contact-admin"
@@ -156,6 +167,7 @@ export default function Header() {
         </div>
       </div>
       <ContactAdmin open={contactDialogOpen} onOpenChange={setContactDialogOpen} />
+      <DepositModal open={depositModalOpen} onOpenChange={setDepositModalOpen} />
     </header>
   );
 }
