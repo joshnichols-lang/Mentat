@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import Header from "@/components/Header";
 import TradingChart from "@/components/TradingChart";
+import OrderBook from "@/components/OrderBook";
 import { 
   LineChart, 
   TrendingUp, 
@@ -136,32 +137,16 @@ export default function TradingTerminal() {
                   <TabsTrigger value="trades" data-testid="tab-recent-trades">Trades</TabsTrigger>
                 </TabsList>
 
-                <TabsContent value="orderbook" className="flex-1 m-2 mt-0">
-                  <Card className="glass-strong border-glass/20 h-full">
-                    <CardHeader>
+                <TabsContent value="orderbook" className="flex-1 m-2 mt-0 overflow-hidden">
+                  <Card className="glass-strong border-glass/20 h-full overflow-hidden flex flex-col">
+                    <CardHeader className="pb-2">
                       <CardTitle className="text-sm flex items-center gap-2">
                         <TrendingUp className="h-4 w-4 text-primary" />
                         Order Book
                       </CardTitle>
                     </CardHeader>
-                    <CardContent>
-                      <p className="text-xs text-muted-foreground">Task 11: Real-time order book</p>
-                      <div className="mt-4 space-y-1">
-                        {/* Mock order book entries */}
-                        {[...Array(5)].map((_, i) => (
-                          <div key={i} className="flex justify-between text-xs shimmer rounded p-1">
-                            <span className="text-short">--,---</span>
-                            <span className="text-muted-foreground">---</span>
-                          </div>
-                        ))}
-                        <div className="my-2 border-t border-glass/20" />
-                        {[...Array(5)].map((_, i) => (
-                          <div key={i} className="flex justify-between text-xs shimmer rounded p-1">
-                            <span className="text-long">--,---</span>
-                            <span className="text-muted-foreground">---</span>
-                          </div>
-                        ))}
-                      </div>
+                    <CardContent className="flex-1 p-0 overflow-hidden">
+                      <OrderBook symbol={selectedSymbol} />
                     </CardContent>
                   </Card>
                 </TabsContent>
