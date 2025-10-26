@@ -2,12 +2,14 @@
  * Client-side wallet generation from BIP39 seed phrase
  * CRITICAL SECURITY: Private keys and seed phrases are NEVER stored
  * This file only generates wallets in-memory for one-time display to user
+ * 
+ * Uses @scure/bip39 - browser-native library that doesn't require Node.js Buffer
  */
 
-import * as bip39 from 'bip39';
+import { generateMnemonic, mnemonicToSeedSync, validateMnemonic } from '@scure/bip39';
+import { wordlist } from '@scure/bip39/wordlists/english.js';
 import { Keypair } from '@solana/web3.js';
-import { Wallet, HDNodeWallet } from 'ethers';
-import bs58 from 'bs58';
+import { HDNodeWallet } from 'ethers';
 
 // Standard BIP44 derivation paths
 const SOLANA_DERIVATION_PATH = "m/44'/501'/0'/0'"; // Solana standard path
@@ -38,11 +40,13 @@ export interface GeneratedWallets {
  * 3. Clear all sensitive data from memory after use
  */
 export function generateEmbeddedWallets(): GeneratedWallets {
-  // Generate 12-word mnemonic (128 bits of entropy)
-  const mnemonic = bip39.generateMnemonic();
+  // Generate 12-word mnemonic (128 bits of entropy) using browser-native library
+  const mnemonic = generateMnemonic(wordlist);
+  
+  // Derive seed from mnemonic
+  const seed = mnemonicToSeedSync(mnemonic);
   
   // Derive Solana wallet
-  const seed = bip39.mnemonicToSeedSync(mnemonic);
   const solanaKeypair = Keypair.fromSeed(seed.slice(0, 32)); // Solana uses first 32 bytes
   
   // Derive EVM wallet using ethers HDNodeWallet
@@ -72,12 +76,14 @@ export function generateEmbeddedWallets(): GeneratedWallets {
  * @param seedPhrase - 12 or 24 word BIP39 mnemonic
  */
 export function recoverWalletsFromSeed(seedPhrase: string): GeneratedWallets {
-  if (!bip39.validateMnemonic(seedPhrase)) {
+  if (!validateMnemonic(seedPhrase, wordlist)) {
     throw new Error('Invalid seed phrase');
   }
   
+  // Derive seed from mnemonic
+  const seed = mnemonicToSeedSync(seedPhrase);
+  
   // Derive Solana wallet
-  const seed = bip39.mnemonicToSeedSync(seedPhrase);
   const solanaKeypair = Keypair.fromSeed(seed.slice(0, 32));
   
   // Derive EVM wallet

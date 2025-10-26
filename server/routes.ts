@@ -1675,6 +1675,174 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
+
+  // Generate API wallet for Hyperliquid trading (separate from main wallet for security)
+  app.post("/api/wallets/generate-api-wallet", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const { ethers } = await import('ethers');
+      
+      // Check if user already has an API wallet
+      const existingWallet = await storage.getEmbeddedWallet(userId);
+      if (!existingWallet) {
+        return res.status(400).json({
+          success: false,
+          error: "No embedded wallet found. Please complete wallet setup first."
+        });
+      }
+      
+      if (existingWallet.apiWalletApproved) {
+        return res.status(400).json({
+          success: false,
+          error: "API wallet already approved for this user"
+        });
+      }
+      
+      // Generate new random API wallet (separate seed for security)
+      const apiWallet = ethers.Wallet.createRandom();
+      const apiWalletAddress = apiWallet.address;
+      const apiWalletPrivateKey = apiWallet.privateKey;
+      
+      // Encrypt and store the API wallet private key
+      const { encryptedPrivateKey, credentialIv, encryptedDek, dekIv } = encryptCredential(apiWalletPrivateKey);
+      
+      // Store in api_keys table (initially inactive until approved)
+      await storage.createApiKey(userId, {
+        providerType: "exchange",
+        providerName: "hyperliquid",
+        encryptedApiKey: encryptedPrivateKey,
+        apiKeyIv: credentialIv,
+        encryptedDek: encryptedDek,
+        dekIv: dekIv,
+        isActive: 0, // Will be activated after user signs approval
+        metadata: {
+          apiWalletAddress,
+          mainWalletAddress: existingWallet.hyperliquidAddress,
+          purpose: "trading_agent",
+        },
+      });
+      
+      console.log(`[API Wallet] Generated API wallet for user ${userId}: ${apiWalletAddress}`);
+      
+      res.json({
+        success: true,
+        apiWalletAddress,
+      });
+    } catch (error: any) {
+      console.error("Error generating API wallet:", error);
+      res.status(500).json({
+        success: false,
+        error: error.message || "Failed to generate API wallet"
+      });
+    }
+  });
+
+  // Approve API wallet (user signs EIP-712 approveAgent message)
+  app.post("/api/wallets/approve-api-wallet", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const { verifyTypedData, recoverTypedDataAddress } = await import('viem');
+      
+      const schema = z.object({
+        signature: z.string().min(1),
+        apiWalletAddress: z.string().min(1),
+        nonce: z.string().min(1),
+      });
+      
+      const { signature, apiWalletAddress, nonce } = schema.parse(req.body);
+      
+      // Get user's embedded wallet
+      const embeddedWallet = await storage.getEmbeddedWallet(userId);
+      if (!embeddedWallet) {
+        return res.status(400).json({
+          success: false,
+          error: "No embedded wallet found"
+        });
+      }
+      
+      // Reconstruct the EIP-712 typed data that was signed
+      const domain = {
+        name: "HyperliquidSignTransaction",
+        version: "1",
+        chainId: 421614, // 0x66eee - Hyperliquid's chain ID
+        verifyingContract: "0x0000000000000000000000000000000000000000" as `0x${string}`,
+      };
+      
+      const types = {
+        "HyperliquidTransaction:ApproveAgent": [
+          { name: "hyperliquidChain", type: "string" },
+          { name: "signatureChainId", type: "string" },
+          { name: "agentAddress", type: "string" },
+          { name: "agentName", type: "string" },
+          { name: "nonce", type: "uint64" },
+        ],
+      } as const;
+      
+      // Reconstruct message with the exact nonce that was signed
+      const message = {
+        hyperliquidChain: "Mainnet",
+        signatureChainId: "0x66eee",
+        agentAddress: apiWalletAddress,
+        agentName: "1fox_agent",
+        nonce: BigInt(nonce),
+      };
+      
+      // Recover the signer address from the signature
+      const recoveredAddress = await recoverTypedDataAddress({
+        domain,
+        types,
+        primaryType: "HyperliquidTransaction:ApproveAgent",
+        message,
+        signature: signature as `0x${string}`,
+      });
+      
+      // Verify that the signer matches the user's embedded Hyperliquid wallet
+      if (recoveredAddress.toLowerCase() !== embeddedWallet.hyperliquidAddress.toLowerCase()) {
+        console.warn(`[API Wallet] Signature verification failed for user ${userId}. Expected ${embeddedWallet.hyperliquidAddress}, got ${recoveredAddress}`);
+        return res.status(403).json({
+          success: false,
+          error: "Signature verification failed. Please sign with your Hyperliquid wallet."
+        });
+      }
+      
+      // Find the API key with this address
+      const apiKeys = await storage.getApiKeys(userId);
+      const apiKey = apiKeys.find(key => 
+        key.providerType === "exchange" && 
+        key.providerName === "hyperliquid" &&
+        (key.metadata as any)?.apiWalletAddress === apiWalletAddress
+      );
+      
+      if (!apiKey) {
+        return res.status(400).json({
+          success: false,
+          error: "API wallet not found. Please generate one first."
+        });
+      }
+      
+      // Activate the API key
+      await storage.createApiKey(userId, {
+        ...apiKey,
+        isActive: 1,
+      });
+      
+      // Update embedded wallet with API wallet approval
+      await storage.updateApiWalletApproval(userId, apiWalletAddress);
+      
+      console.log(`[API Wallet] User ${userId} approved API wallet ${apiWalletAddress} with verified signature`);
+      
+      res.json({
+        success: true,
+        message: "API wallet approved successfully"
+      });
+    } catch (error: any) {
+      console.error("Error approving API wallet:", error);
+      res.status(500).json({
+        success: false,
+        error: error.message || "Failed to approve API wallet"
+      });
+    }
+  });
   
   // Get all wallet balances (Solana, Arbitrum, Hyperliquid)
   app.get("/api/wallets/balances", isAuthenticated, async (req, res) => {
