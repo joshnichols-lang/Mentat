@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { openPolygonBridge, checkPolygonBalance, getBalanceMessage } from "@/lib/polygonBridge";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -159,6 +160,17 @@ function PolymarketTradingModal({ event, onClose }: { event: any; onClose: () =>
   const [price, setPrice] = useState("");
   const { toast } = useToast();
 
+  // Fetch wallet balances for balance checking
+  const { data: balancesData } = useQuery<{ success: boolean; balances: any }>({
+    queryKey: ['/api/wallets/balances'],
+    refetchInterval: 10000, // Refetch every 10s to catch balance updates after bridging
+  });
+
+  // Fetch embedded wallet for bridge widget
+  const { data: embeddedWallet } = useQuery<{ polygonAddress: string }>({
+    queryKey: ['/api/wallets/embedded'],
+  });
+
   const yesToken = event.tokens?.find((t: any) => t.outcome === "Yes");
   const noToken = event.tokens?.find((t: any) => t.outcome === "No");
   const selectedToken = selectedOutcome === "Yes" ? yesToken : noToken;
@@ -222,13 +234,55 @@ function PolymarketTradingModal({ event, onClose }: { event: any; onClose: () =>
       return;
     }
 
+    // Check Polygon balance before placing order
+    const orderPrice = orderType === "limit" ? parseFloat(price) : currentPrice;
+    const requiredUsdc = parseFloat(size) * orderPrice;
+    
+    if (balancesData?.balances?.polygon) {
+      const polygon = balancesData.balances.polygon;
+      const balanceCheck = checkPolygonBalance(requiredUsdc, polygon.usdc, polygon.matic);
+      
+      if (!balanceCheck.sufficient) {
+        // Insufficient balance - offer to bridge
+        const message = getBalanceMessage(balanceCheck);
+        toast({
+          title: "Insufficient Balance",
+          description: `${message}. Opening bridge to add funds to Polygon.`,
+          variant: "destructive",
+        });
+        
+        // Open Router Nitro bridge widget for Polygon
+        if (embeddedWallet?.polygonAddress) {
+          const popup = openPolygonBridge({
+            destinationAddress: embeddedWallet.polygonAddress,
+            minimumAmount: balanceCheck.requiredUsdcAmount,
+          });
+          
+          if (!popup || popup.closed || typeof popup.closed === 'undefined') {
+            toast({
+              title: "Popup Blocked",
+              description: "Please allow popups and click Place Order again to bridge funds",
+              variant: "destructive",
+            });
+          } else {
+            toast({
+              title: "Bridge Opened",
+              description: "Complete the bridge, then return here to place your order",
+            });
+          }
+        }
+        return;
+      }
+    }
+
+    // Balance sufficient - place order
     placeMutation.mutate({
       eventId: event.conditionId,
       outcome: selectedOutcome,
       tokenId: selectedToken.tokenId,
       side: "BUY",
       orderType,
-      price: orderType === "limit" ? parseFloat(price) : currentPrice,
+      price: orderPrice,
       size: parseFloat(size),
       tickSize: "0.01",
       negRisk: false,
