@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { processTradingPrompt } from "./tradingAgent";
 import { initHyperliquidClient, getHyperliquidClient, getUserHyperliquidClient } from "./hyperliquid/client";
+import { PolymarketClient } from "./polymarket/client";
 import { executeTradeStrategy } from "./tradeExecutor";
 import { createPortfolioSnapshot } from "./portfolioSnapshotService";
 import { restartMonitoring } from "./monitoringService";
@@ -2408,6 +2409,172 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({
         success: false,
         error: "Failed to reset Volume Profile"
+      });
+    }
+  });
+
+  // Polymarket API Routes
+  
+  // Get Polymarket markets (public endpoint)
+  app.get("/api/polymarket/markets", async (req, res) => {
+    try {
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 100;
+      const active = req.query.active === "true";
+      
+      // Fetch markets from Polymarket Gamma API via client
+      // This is public data, no user context needed
+      const tempClient = new PolymarketClient({ 
+        privateKey: "0x0000000000000000000000000000000000000000000000000000000000000001" // Dummy key for public API
+      });
+      
+      const markets = await tempClient.getMarkets({ limit, active });
+      
+      res.json({ success: true, markets });
+    } catch (error: any) {
+      console.error("Error fetching Polymarket markets:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch Polymarket markets" });
+    }
+  });
+  
+  // Get specific Polymarket market by condition ID
+  app.get("/api/polymarket/markets/:conditionId", async (req, res) => {
+    try {
+      const { conditionId } = req.params;
+      
+      const tempClient = new PolymarketClient({
+        privateKey: "0x0000000000000000000000000000000000000000000000000000000000000001"
+      });
+      
+      const market = await tempClient.getMarket(conditionId);
+      
+      res.json({ success: true, market });
+    } catch (error: any) {
+      console.error("Error fetching Polymarket market:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch market" });
+    }
+  });
+  
+  // Get user's Polymarket positions
+  app.get("/api/polymarket/positions", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const eventId = req.query.eventId as string | undefined;
+      
+      const positions = await storage.getPolymarketPositions(userId, { eventId });
+      
+      res.json({ success: true, positions });
+    } catch (error: any) {
+      console.error("Error fetching Polymarket positions:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch positions" });
+    }
+  });
+  
+  // Get user's Polymarket orders
+  app.get("/api/polymarket/orders", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const eventId = req.query.eventId as string | undefined;
+      const status = req.query.status as string | undefined;
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
+      
+      const orders = await storage.getPolymarketOrders(userId, { eventId, status, limit });
+      
+      res.json({ success: true, orders });
+    } catch (error: any) {
+      console.error("Error fetching Polymarket orders:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch orders" });
+    }
+  });
+  
+  // Place a Polymarket order
+  app.post("/api/polymarket/orders", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      
+      // Validate request body
+      const schema = z.object({
+        eventId: z.string(),
+        outcome: z.enum(["Yes", "No"]),
+        tokenId: z.string(),
+        side: z.enum(["BUY", "SELL"]),
+        orderType: z.enum(["market", "limit"]),
+        price: z.number().min(0).max(1),
+        size: z.number().positive(),
+        tickSize: z.string(),
+        negRisk: z.boolean(),
+      });
+      
+      const orderData = schema.parse(req.body);
+      
+      // Get user's embedded wallet (Polygon wallet)
+      const embeddedWallet = await storage.getEmbeddedWallet(userId);
+      if (!embeddedWallet) {
+        return res.status(400).json({ 
+          success: false, 
+          error: "No embedded wallet found. Please generate your wallet first." 
+        });
+      }
+      
+      // Get polygon private key from user's encrypted credentials
+      const polygonPrivateKey = await getUserPrivateKey(userId);
+      if (!polygonPrivateKey) {
+        return res.status(400).json({
+          success: false,
+          error: "Polygon wallet credentials not found"
+        });
+      }
+      
+      // Initialize Polymarket client with user's Polygon wallet
+      const polymarketClient = new PolymarketClient({
+        privateKey: polygonPrivateKey,
+        funderAddress: embeddedWallet.polygonAddress,
+      });
+      
+      // Place the order
+      let orderResult;
+      if (orderData.orderType === "market") {
+        orderResult = await polymarketClient.placeMarketOrder({
+          tokenId: orderData.tokenId,
+          side: orderData.side,
+          size: orderData.size,
+          tickSize: orderData.tickSize,
+          negRisk: orderData.negRisk,
+        });
+      } else {
+        orderResult = await polymarketClient.placeLimitOrder({
+          tokenId: orderData.tokenId,
+          price: orderData.price,
+          side: orderData.side,
+          size: orderData.size,
+          tickSize: orderData.tickSize,
+          negRisk: orderData.negRisk,
+        });
+      }
+      
+      // Store order in database
+      const storedOrder = await storage.createPolymarketOrder(userId, {
+        eventId: orderData.eventId,
+        polymarketOrderId: orderResult.orderID || null,
+        outcome: orderData.outcome,
+        tokenId: orderData.tokenId,
+        side: orderData.side,
+        orderType: orderData.orderType,
+        price: orderData.price.toString(),
+        size: orderData.size.toString(),
+        filledSize: "0",
+        status: "pending",
+      });
+      
+      res.json({ 
+        success: true, 
+        order: storedOrder,
+        polymarketResponse: orderResult
+      });
+    } catch (error: any) {
+      console.error("Error placing Polymarket order:", error);
+      res.status(500).json({ 
+        success: false, 
+        error: error.message || "Failed to place order" 
       });
     }
   });

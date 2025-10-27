@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type UpsertUser, type UserWallet, type InsertUserWallet, type EmbeddedWallet, type InsertEmbeddedWallet, type Trade, type InsertTrade, type Position, type InsertPosition, type PortfolioSnapshot, type InsertPortfolioSnapshot, type AiUsageLog, type InsertAiUsageLog, type MonitoringLog, type InsertMonitoringLog, type UserApiCredential, type InsertUserApiCredential, type ApiKey, type InsertApiKey, type ContactMessage, type InsertContactMessage, type ProtectiveOrderEvent, type InsertProtectiveOrderEvent, type UserTradeHistoryImport, type InsertUserTradeHistoryImport, type UserTradeHistoryTrade, type InsertUserTradeHistoryTrade, type TradeStyleProfile, type InsertTradeStyleProfile, type TradeJournalEntry, type TradeJournalEntryWithStrategy, type InsertTradeJournalEntry, type TradingMode, type InsertTradingMode, type BudgetAlert, type InsertBudgetAlert, users, userWallets, embeddedWallets, trades, positions, portfolioSnapshots, aiUsageLog, monitoringLog, userApiCredentials, apiKeys, contactMessages, protectiveOrderEvents, userTradeHistoryImports, userTradeHistoryTrades, tradeStyleProfiles, tradeJournalEntries, tradingModes, budgetAlerts } from "@shared/schema";
+import { type User, type InsertUser, type UpsertUser, type UserWallet, type InsertUserWallet, type EmbeddedWallet, type InsertEmbeddedWallet, type Trade, type InsertTrade, type Position, type InsertPosition, type PortfolioSnapshot, type InsertPortfolioSnapshot, type AiUsageLog, type InsertAiUsageLog, type MonitoringLog, type InsertMonitoringLog, type UserApiCredential, type InsertUserApiCredential, type ApiKey, type InsertApiKey, type ContactMessage, type InsertContactMessage, type ProtectiveOrderEvent, type InsertProtectiveOrderEvent, type UserTradeHistoryImport, type InsertUserTradeHistoryImport, type UserTradeHistoryTrade, type InsertUserTradeHistoryTrade, type TradeStyleProfile, type InsertTradeStyleProfile, type TradeJournalEntry, type TradeJournalEntryWithStrategy, type InsertTradeJournalEntry, type TradingMode, type InsertTradingMode, type BudgetAlert, type InsertBudgetAlert, type PolymarketEvent, type InsertPolymarketEvent, type PolymarketPosition, type InsertPolymarketPosition, type PolymarketOrder, type InsertPolymarketOrder, users, userWallets, embeddedWallets, trades, positions, portfolioSnapshots, aiUsageLog, monitoringLog, userApiCredentials, apiKeys, contactMessages, protectiveOrderEvents, userTradeHistoryImports, userTradeHistoryTrades, tradeStyleProfiles, tradeJournalEntries, tradingModes, budgetAlerts, polymarketEvents, polymarketPositions, polymarketOrders } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql, and, isNull, type SQL } from "drizzle-orm";
 import session from "express-session";
@@ -165,6 +165,25 @@ export interface IStorage {
   updateTradingMode(userId: string, id: string, updates: Partial<InsertTradingMode>): Promise<TradingMode | undefined>;
   setActiveTradingMode(userId: string, modeId: string): Promise<TradingMode | undefined>;
   deleteTradingMode(userId: string, id: string): Promise<void>;
+  
+  // Polymarket Event methods (shared table - no user context)
+  createPolymarketEvent(data: InsertPolymarketEvent): Promise<PolymarketEvent>;
+  getPolymarketEvents(filters?: { active?: boolean; limit?: number }): Promise<PolymarketEvent[]>;
+  getPolymarketEvent(conditionId: string): Promise<PolymarketEvent | undefined>;
+  updatePolymarketEvent(conditionId: string, updates: Partial<PolymarketEvent>): Promise<PolymarketEvent | undefined>;
+  
+  // Polymarket Position methods (multi-tenant)
+  createPolymarketPosition(userId: string, data: InsertPolymarketPosition): Promise<PolymarketPosition>;
+  getPolymarketPositions(userId: string, filters?: { eventId?: string }): Promise<PolymarketPosition[]>;
+  getPolymarketPosition(userId: string, id: string): Promise<PolymarketPosition | undefined>;
+  updatePolymarketPosition(userId: string, id: string, updates: Partial<PolymarketPosition>): Promise<PolymarketPosition | undefined>;
+  deletePolymarketPosition(userId: string, id: string): Promise<void>;
+  
+  // Polymarket Order methods (multi-tenant)
+  createPolymarketOrder(userId: string, data: InsertPolymarketOrder): Promise<PolymarketOrder>;
+  getPolymarketOrders(userId: string, filters?: { eventId?: string; status?: string; limit?: number }): Promise<PolymarketOrder[]>;
+  getPolymarketOrder(userId: string, id: string): Promise<PolymarketOrder | undefined>;
+  updatePolymarketOrder(userId: string, id: string, updates: Partial<PolymarketOrder>): Promise<PolymarketOrder | undefined>;
   
   // Admin methods
   getAllUsers(): Promise<User[]>;
@@ -1180,6 +1199,137 @@ export class DbStorage implements IStorage {
   async deleteTradingMode(userId: string, id: string): Promise<void> {
     await db.delete(tradingModes)
       .where(withUserFilter(tradingModes, userId, eq(tradingModes.id, id)));
+  }
+
+  // Polymarket Event methods (shared table - no user isolation)
+  async createPolymarketEvent(data: InsertPolymarketEvent): Promise<PolymarketEvent> {
+    const result = await db.insert(polymarketEvents).values(data).returning();
+    return result[0];
+  }
+
+  async getPolymarketEvents(filters?: { active?: boolean; limit?: number }): Promise<PolymarketEvent[]> {
+    const conditions: SQL[] = [];
+    
+    if (filters?.active !== undefined) {
+      conditions.push(eq(polymarketEvents.active, filters.active ? 1 : 0));
+    }
+    
+    const baseQuery = db.select().from(polymarketEvents);
+    const withWhere = conditions.length > 0 
+      ? baseQuery.where(and(...conditions)!) 
+      : baseQuery;
+    const withOrder = withWhere.orderBy(desc(polymarketEvents.createdAt));
+    const finalQuery = filters?.limit 
+      ? withOrder.limit(filters.limit) 
+      : withOrder;
+    
+    return await finalQuery;
+  }
+
+  async getPolymarketEvent(conditionId: string): Promise<PolymarketEvent | undefined> {
+    const result = await db.select()
+      .from(polymarketEvents)
+      .where(eq(polymarketEvents.conditionId, conditionId))
+      .limit(1);
+    return result[0];
+  }
+
+  async updatePolymarketEvent(conditionId: string, updates: Partial<PolymarketEvent>): Promise<PolymarketEvent | undefined> {
+    const result = await db.update(polymarketEvents)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(polymarketEvents.conditionId, conditionId))
+      .returning();
+    return result[0];
+  }
+
+  // Polymarket Position methods
+  async createPolymarketPosition(userId: string, data: InsertPolymarketPosition): Promise<PolymarketPosition> {
+    const result = await db.insert(polymarketPositions).values({
+      ...data,
+      userId,
+    }).returning();
+    return result[0];
+  }
+
+  async getPolymarketPositions(userId: string, filters?: { eventId?: string }): Promise<PolymarketPosition[]> {
+    let conditions = [eq(polymarketPositions.userId, userId)];
+    
+    if (filters?.eventId) {
+      conditions.push(eq(polymarketPositions.eventId, filters.eventId));
+    }
+    
+    return await db.select()
+      .from(polymarketPositions)
+      .where(and(...conditions)!)
+      .orderBy(desc(polymarketPositions.openedAt));
+  }
+
+  async getPolymarketPosition(userId: string, id: string): Promise<PolymarketPosition | undefined> {
+    const result = await db.select()
+      .from(polymarketPositions)
+      .where(withUserFilter(polymarketPositions, userId, eq(polymarketPositions.id, id)))
+      .limit(1);
+    return result[0];
+  }
+
+  async updatePolymarketPosition(userId: string, id: string, updates: Partial<PolymarketPosition>): Promise<PolymarketPosition | undefined> {
+    const result = await db.update(polymarketPositions)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(withUserFilter(polymarketPositions, userId, eq(polymarketPositions.id, id)))
+      .returning();
+    return result[0];
+  }
+
+  async deletePolymarketPosition(userId: string, id: string): Promise<void> {
+    await db.delete(polymarketPositions)
+      .where(withUserFilter(polymarketPositions, userId, eq(polymarketPositions.id, id)));
+  }
+
+  // Polymarket Order methods
+  async createPolymarketOrder(userId: string, data: InsertPolymarketOrder): Promise<PolymarketOrder> {
+    const result = await db.insert(polymarketOrders).values({
+      ...data,
+      userId,
+    }).returning();
+    return result[0];
+  }
+
+  async getPolymarketOrders(userId: string, filters?: { eventId?: string; status?: string; limit?: number }): Promise<PolymarketOrder[]> {
+    const conditions = [eq(polymarketOrders.userId, userId)];
+    
+    if (filters?.eventId) {
+      conditions.push(eq(polymarketOrders.eventId, filters.eventId));
+    }
+    if (filters?.status) {
+      conditions.push(eq(polymarketOrders.status, filters.status));
+    }
+    
+    const baseQuery = db.select()
+      .from(polymarketOrders)
+      .where(and(...conditions)!)
+      .orderBy(desc(polymarketOrders.createdAt));
+    
+    const finalQuery = filters?.limit 
+      ? baseQuery.limit(filters.limit) 
+      : baseQuery;
+    
+    return await finalQuery;
+  }
+
+  async getPolymarketOrder(userId: string, id: string): Promise<PolymarketOrder | undefined> {
+    const result = await db.select()
+      .from(polymarketOrders)
+      .where(withUserFilter(polymarketOrders, userId, eq(polymarketOrders.id, id)))
+      .limit(1);
+    return result[0];
+  }
+
+  async updatePolymarketOrder(userId: string, id: string, updates: Partial<PolymarketOrder>): Promise<PolymarketOrder | undefined> {
+    const result = await db.update(polymarketOrders)
+      .set(updates)
+      .where(withUserFilter(polymarketOrders, userId, eq(polymarketOrders.id, id)))
+      .returning();
+    return result[0];
   }
 
   // Admin methods
