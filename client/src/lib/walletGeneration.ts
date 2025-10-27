@@ -25,6 +25,10 @@ export interface GeneratedWallets {
     address: string; // Checksummed Ethereum address
     privateKey: string; // Hex private key for in-memory use only, never persisted
   };
+  polygon: {
+    address: string; // Same as EVM address (Polygon is EVM-compatible)
+    privateKey: string; // Same as EVM private key
+  };
   hyperliquid: {
     address: string; // Same as EVM address
     privateKey: string; // Same as EVM private key
@@ -59,6 +63,11 @@ export function generateEmbeddedWallets(): GeneratedWallets {
       privateKey: solanaKeypair.secretKey,
     },
     evm: {
+      address: evmWallet.address,
+      privateKey: evmWallet.privateKey,
+    },
+    polygon: {
+      // Polygon uses the same EVM wallet (EVM-compatible L2)
       address: evmWallet.address,
       privateKey: evmWallet.privateKey,
     },
@@ -99,6 +108,10 @@ export function recoverWalletsFromSeed(seedPhrase: string): GeneratedWallets {
       address: evmWallet.address,
       privateKey: evmWallet.privateKey,
     },
+    polygon: {
+      address: evmWallet.address,
+      privateKey: evmWallet.privateKey,
+    },
     hyperliquid: {
       address: evmWallet.address,
       privateKey: evmWallet.privateKey,
@@ -119,5 +132,6 @@ export function clearWalletData(wallets: GeneratedWallets): void {
   // Clear string references (JS GC will handle actual cleanup)
   (wallets as any).seedPhrase = '';
   (wallets as any).evm.privateKey = '';
+  (wallets as any).polygon.privateKey = '';
   (wallets as any).hyperliquid.privateKey = '';
 }

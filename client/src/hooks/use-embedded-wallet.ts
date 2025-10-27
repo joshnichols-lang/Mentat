@@ -26,7 +26,8 @@ export function useEmbeddedWallet() {
   const createWalletMutation = useMutation({
     mutationFn: async (addresses: { 
       solanaAddress: string; 
-      evmAddress: string; 
+      evmAddress: string;
+      polygonAddress: string;
       hyperliquidAddress: string;
     }) => {
       const res = await apiRequest('POST', '/api/wallets/embedded', addresses);
@@ -67,6 +68,7 @@ export function useEmbeddedWallet() {
     await createWalletMutation.mutateAsync({
       solanaAddress: wallets.solana.publicKey,
       evmAddress: wallets.evm.address,
+      polygonAddress: wallets.polygon.address,
       hyperliquidAddress: wallets.hyperliquid.address,
     });
     

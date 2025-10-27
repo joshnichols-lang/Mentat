@@ -1768,10 +1768,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const schema = z.object({
         solanaAddress: z.string().min(1),
         evmAddress: z.string().min(1),
+        polygonAddress: z.string().min(1),
         hyperliquidAddress: z.string().min(1),
       });
       
-      const { solanaAddress, evmAddress, hyperliquidAddress } = schema.parse(req.body);
+      const { solanaAddress, evmAddress, polygonAddress, hyperliquidAddress } = schema.parse(req.body);
       
       // Check if user already has embedded wallets
       const existingWallet = await storage.getEmbeddedWallet(userId);
@@ -1786,6 +1787,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const embeddedWallet = await storage.createEmbeddedWallet(userId, {
         solanaAddress,
         evmAddress,
+        polygonAddress,
         hyperliquidAddress,
       });
       

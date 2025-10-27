@@ -69,6 +69,7 @@ export const embeddedWallets = pgTable("embedded_wallets", {
   // Public addresses only - NO PRIVATE KEYS
   solanaAddress: text("solana_address").notNull(), // Solana mainnet address
   evmAddress: text("evm_address").notNull(), // EVM address (Arbitrum, Ethereum, etc)
+  polygonAddress: text("polygon_address").notNull(), // Polygon address (same as EVM, for Polymarket)
   hyperliquidAddress: text("hyperliquid_address").notNull(), // Hyperliquid trading address (same as EVM)
   // API wallet for Hyperliquid trading - separate wallet with limited permissions
   apiWalletAddress: text("api_wallet_address"), // API wallet public address (private key stored encrypted in apiKeys table)
@@ -494,6 +495,111 @@ export const budgetAlerts = pgTable("budget_alerts", {
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
+// Polymarket Events - Prediction market events from Polymarket
+export const polymarketEvents = pgTable("polymarket_events", {
+  id: varchar("id").primaryKey(), // Polymarket's unique event ID
+  conditionId: text("condition_id").notNull(), // Polymarket condition ID
+  questionId: text("question_id"), // Question ID if part of a multi-market question
+  question: text("question").notNull(), // Event question (e.g., "Will Bitcoin reach $100k in 2025?")
+  description: text("description"), // Full event description
+  category: text("category").notNull(), // "crypto", "politics", "sports", "entertainment", etc.
+  outcomes: text("outcomes").array().notNull(), // ["Yes", "No"] or custom outcomes
+  
+  // Market data
+  yesTokenId: text("yes_token_id").notNull(), // Token ID for YES outcome
+  noTokenId: text("no_token_id").notNull(), // Token ID for NO outcome
+  yesPrice: decimal("yes_price", { precision: 10, scale: 8 }), // Current YES token price (0-1)
+  noPrice: decimal("no_price", { precision: 10, scale: 8 }), // Current NO token price (0-1)
+  volume24h: decimal("volume_24h", { precision: 18, scale: 2 }), // 24h volume in USDC
+  liquidity: decimal("liquidity", { precision: 18, scale: 2 }), // Total liquidity in USDC
+  
+  // Status
+  active: integer("active").notNull().default(1), // 1 = active, 0 = closed/resolved
+  closed: integer("closed").notNull().default(0), // 1 = closed for trading
+  resolved: integer("resolved").notNull().default(0), // 1 = event resolved
+  winningOutcome: text("winning_outcome"), // "Yes" or "No" when resolved
+  
+  // Metadata
+  endDate: timestamp("end_date"), // When event closes for trading
+  marketMakerAddress: text("market_maker_address"), // Polymarket market maker contract
+  
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+}, (table) => [
+  index("idx_polymarket_events_category").on(table.category),
+  index("idx_polymarket_events_active").on(table.active),
+]);
+
+// Polymarket Positions - User positions in prediction markets
+export const polymarketPositions = pgTable("polymarket_positions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  eventId: varchar("event_id").notNull().references(() => polymarketEvents.id, { onDelete: "cascade" }),
+  
+  // Position details
+  outcome: text("outcome").notNull(), // "Yes" or "No"
+  tokenId: text("token_id").notNull(), // Token ID being held
+  shares: decimal("shares", { precision: 18, scale: 8 }).notNull(), // Number of outcome tokens held
+  averagePrice: decimal("average_price", { precision: 10, scale: 8 }).notNull(), // Average entry price
+  invested: decimal("invested", { precision: 18, scale: 2 }).notNull(), // Total USDC invested
+  
+  // Current value
+  currentPrice: decimal("current_price", { precision: 10, scale: 8 }), // Current token price
+  currentValue: decimal("current_value", { precision: 18, scale: 2 }), // Current position value in USDC
+  unrealizedPnl: decimal("unrealized_pnl", { precision: 18, scale: 2 }), // Unrealized profit/loss
+  unrealizedPnlPercent: decimal("unrealized_pnl_percent", { precision: 10, scale: 6 }), // Unrealized PnL %
+  
+  // Status
+  status: text("status").notNull().default("open"), // "open", "closed"
+  
+  openedAt: timestamp("opened_at").notNull().defaultNow(),
+  closedAt: timestamp("closed_at"),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+}, (table) => [
+  index("idx_polymarket_positions_user").on(table.userId),
+  index("idx_polymarket_positions_event").on(table.eventId),
+  index("idx_polymarket_positions_status").on(table.status),
+]);
+
+// Polymarket Orders - Orders placed on Polymarket
+export const polymarketOrders = pgTable("polymarket_orders", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  eventId: varchar("event_id").notNull().references(() => polymarketEvents.id, { onDelete: "cascade" }),
+  positionId: varchar("position_id").references(() => polymarketPositions.id, { onDelete: "set null" }),
+  
+  // Order details
+  polymarketOrderId: text("polymarket_order_id"), // Polymarket's order ID
+  outcome: text("outcome").notNull(), // "Yes" or "No"
+  tokenId: text("token_id").notNull(), // Token ID
+  side: text("side").notNull(), // "BUY" or "SELL"
+  orderType: text("order_type").notNull(), // "market", "limit"
+  
+  // Pricing
+  price: decimal("price", { precision: 10, scale: 8 }).notNull(), // Limit price or execution price
+  size: decimal("size", { precision: 18, scale: 8 }).notNull(), // Number of tokens
+  filledSize: decimal("filled_size", { precision: 18, scale: 8 }).notNull().default("0"), // Filled amount
+  
+  // Fees and totals
+  totalCost: decimal("total_cost", { precision: 18, scale: 2 }), // Total USDC cost
+  fee: decimal("fee", { precision: 18, scale: 2 }), // Trading fee
+  
+  // Status
+  status: text("status").notNull().default("pending"), // "pending", "filled", "partial", "cancelled"
+  
+  // AI context
+  aiPrompt: text("ai_prompt"), // Original AI prompt that generated this order
+  tradingModeId: varchar("trading_mode_id").references(() => tradingModes.id, { onDelete: "set null" }),
+  
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  filledAt: timestamp("filled_at"),
+  cancelledAt: timestamp("cancelled_at"),
+}, (table) => [
+  index("idx_polymarket_orders_user").on(table.userId),
+  index("idx_polymarket_orders_event").on(table.eventId),
+  index("idx_polymarket_orders_status").on(table.status),
+]);
+
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true, updatedAt: true });
 export const upsertUserSchema = createInsertSchema(users).omit({ createdAt: true, updatedAt: true }).partial();
 export const insertUserWalletSchema = createInsertSchema(userWallets).omit({ id: true, userId: true, createdAt: true });
@@ -520,6 +626,9 @@ export const insertTradeStyleProfileSchema = createInsertSchema(tradeStyleProfil
 export const insertTradeJournalEntrySchema = createInsertSchema(tradeJournalEntries).omit({ id: true, userId: true, createdAt: true });
 export const insertTradingModeSchema = createInsertSchema(tradingModes).omit({ id: true, userId: true, createdAt: true, updatedAt: true });
 export const insertBudgetAlertSchema = createInsertSchema(budgetAlerts).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertPolymarketEventSchema = createInsertSchema(polymarketEvents).omit({ createdAt: true, updatedAt: true });
+export const insertPolymarketPositionSchema = createInsertSchema(polymarketPositions).omit({ id: true, userId: true, openedAt: true, updatedAt: true });
+export const insertPolymarketOrderSchema = createInsertSchema(polymarketOrders).omit({ id: true, userId: true, createdAt: true });
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type UpsertUser = z.infer<typeof upsertUserSchema>;
@@ -573,3 +682,9 @@ export type InsertTradingMode = z.infer<typeof insertTradingModeSchema>;
 export type TradingMode = typeof tradingModes.$inferSelect;
 export type InsertBudgetAlert = z.infer<typeof insertBudgetAlertSchema>;
 export type BudgetAlert = typeof budgetAlerts.$inferSelect;
+export type InsertPolymarketEvent = z.infer<typeof insertPolymarketEventSchema>;
+export type PolymarketEvent = typeof polymarketEvents.$inferSelect;
+export type InsertPolymarketPosition = z.infer<typeof insertPolymarketPositionSchema>;
+export type PolymarketPosition = typeof polymarketPositions.$inferSelect;
+export type InsertPolymarketOrder = z.infer<typeof insertPolymarketOrderSchema>;
+export type PolymarketOrder = typeof polymarketOrders.$inferSelect;
