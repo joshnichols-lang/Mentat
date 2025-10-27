@@ -16,6 +16,7 @@ Preferred communication style: Simple, everyday language.
 **TradingChart:** Implemented with lightweight-charts library for perpetuals. Loads up to 1000 historical candles before WebSocket connection for complete price history visualization. Supports multiple timeframes (1m, 5m, 15m, 1h, 4h, 1d, 1w). Symbol normalization strips -USD/-PERP/-SPOT suffixes before Hyperliquid API requests. Real-time updates via WebSocket overlay on historical data.
 **MarketSelector:** Searchable dialog component for browsing all Hyperliquid perpetual and spot markets. Displays real-time prices, 24h change percentages, and market type badges. Filters by search query and market type. Integrated into TradingTerminal header for quick market switching.
 **Prediction Markets Interface:** Grid-based market browser with search and category filtering. Event cards display YES/NO probability bars, volume, and end dates. Trading modal supports market/limit orders with real-time cost/profit calculations. Connects to Polymarket via Polygon network.
+**Auto-Bridging System:** Seamless cross-chain bridging for Polymarket trades. Automatically detects insufficient Polygon balance (USDC + MATIC for gas) before order placement and triggers Router Nitro bridge widget with pre-filled asset and amount. Supports both single-asset and multi-step bridging flows. Balance monitoring with 10-second refresh interval ensures trades execute once funds arrive.
 
 ### Backend
 **Server:** Express.js with TypeScript.
@@ -38,7 +39,7 @@ Preferred communication style: Simple, everyday language.
 **Market Data & Indicators:** Dual WebSocket service for real-time data, CVD Calculator, and Volume Profile Calculator.
 **Trade History Import:** CSV upload for AI-powered analysis.
 **Multi-Exchange Integration:** Full REST API and WebSocket integration for Orderly Network and Hyperliquid. Polymarket integration via @polymarket/clob-client with market/limit order support. AI can specify the target exchange and market type.
-**Polymarket Integration:** Complete backend wrapper for @polymarket/clob-client with market data fetching from Gamma API, order placement (market/limit), position tracking, and order history. User-scoped positions and orders with shared global event catalog. Polygon wallet credentials managed via encrypted storage.
+**Polymarket Integration:** Complete backend wrapper for @polymarket/clob-client with market data fetching from Gamma API, order placement (market/limit), position tracking, and order history. User-scoped positions and orders with shared global event catalog. Polygon wallet credentials managed via encrypted storage. Auto-bridging system checks Polygon USDC + MATIC balances before trades and automatically triggers Router Nitro bridge with correct asset if insufficient.
 **Trade Journal System:** Automatically documents trade entries with AI reasoning and updates on close with AI-generated analysis.
 **Trading Modes:** User-defined strategies with customizable parameters.
 **Core Features:** Autonomous trading engine, order management, configurable monitoring frequency, and enhanced performance metrics calculated from cumulative portfolio snapshots.
