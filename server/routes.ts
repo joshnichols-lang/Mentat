@@ -676,6 +676,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Get asset metadata for a specific symbol (max leverage, tick size, etc.)
+  app.get("/api/hyperliquid/asset-metadata", requireVerifiedUser, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const symbol = req.query.symbol as string;
+      
+      if (!symbol) {
+        return res.status(400).json({ success: false, error: "Symbol parameter is required" });
+      }
+      
+      const hyperliquid = await getUserHyperliquidClient(userId);
+      const metadata = await hyperliquid.getAssetMetadata(symbol);
+      
+      if (!metadata) {
+        return res.status(404).json({ success: false, error: `Asset metadata not found for ${symbol}` });
+      }
+      
+      res.json({ success: true, metadata });
+    } catch (error: any) {
+      console.error("Error fetching asset metadata:", error);
+      if (error.message?.includes('No Hyperliquid credentials')) {
+        return res.status(401).json({ success: false, error: "Please configure your Hyperliquid API credentials first" });
+      }
+      res.status(500).json({ success: false, error: "Failed to fetch asset metadata" });
+    }
+  });
+  
   // Get Hyperliquid market data
   app.get("/api/hyperliquid/market-data", requireVerifiedUser, async (req, res) => {
     try {
