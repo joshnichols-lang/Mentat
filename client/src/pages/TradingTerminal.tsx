@@ -468,7 +468,7 @@ function PredictionMarketsInterface() {
 
   // Fetch Polymarket markets
   const { data: marketsData, isLoading } = useQuery<{ success: boolean; markets: any[] }>({
-    queryKey: ['/api/polymarket/markets', { limit: 100, active: true }],
+    queryKey: ['/api/polymarket/markets?limit=100&active=true'],
   });
 
   const markets = marketsData?.markets || [];
@@ -588,14 +588,14 @@ function PredictionMarketsInterface() {
       {/* Markets Grid */}
       <div className="flex-1 overflow-auto p-4">
         {isLoading ? (
-          <div className="flex items-center justify-center h-full">
+          <div className="flex items-start justify-center pt-20">
             <div className="text-center">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
               <p className="text-sm text-foreground/70">Loading markets...</p>
             </div>
           </div>
         ) : filteredMarkets.length === 0 ? (
-          <div className="flex items-center justify-center h-full">
+          <div className="flex items-start justify-center pt-20">
             <Card className="glass-strong border-glass/20 p-6 max-w-md">
               <p className="text-center text-foreground/70">No markets found matching your criteria</p>
             </Card>
