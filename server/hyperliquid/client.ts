@@ -302,6 +302,43 @@ export class HyperliquidClient {
     }
   }
 
+  async getCandleSnapshot(params: {
+    coin: string;
+    interval: string;
+    startTime: number;
+    endTime: number;
+  }): Promise<any[]> {
+    try {
+      const apiUrl = this.config.testnet 
+        ? "https://api.hyperliquid-testnet.xyz/info"
+        : "https://api.hyperliquid.xyz/info";
+
+      const response = await fetch(apiUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "candleSnapshot",
+          req: {
+            coin: params.coin,
+            interval: params.interval,
+            startTime: params.startTime,
+            endTime: params.endTime,
+          }
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch candle snapshot: ${response.statusText}`);
+      }
+
+      const candles = await response.json();
+      return candles || [];
+    } catch (error) {
+      console.error(`[Hyperliquid] Failed to fetch candle snapshot for ${params.coin}:`, error);
+      return [];
+    }
+  }
+
   async getUserState(address?: string): Promise<any> {
     const userAddress = address || this.config.walletAddress;
     if (!userAddress) {

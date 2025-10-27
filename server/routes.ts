@@ -725,6 +725,73 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get all Hyperliquid markets (public endpoint - no auth required)
+  app.get("/api/hyperliquid/markets", async (req, res) => {
+    try {
+      let hyperliquid = getHyperliquidClient();
+      if (!hyperliquid) {
+        hyperliquid = await initHyperliquidClient();
+      }
+      
+      const markets = await hyperliquid.getMarkets();
+      res.json({ success: true, markets });
+    } catch (error: any) {
+      console.error("Error fetching Hyperliquid markets:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch markets" });
+    }
+  });
+
+  // Get historical candle data (public endpoint - no auth required)
+  app.get("/api/hyperliquid/candles", async (req, res) => {
+    try {
+      const { symbol, interval, limit } = req.query;
+      
+      if (!symbol || !interval) {
+        return res.status(400).json({ 
+          success: false, 
+          error: "Symbol and interval parameters are required" 
+        });
+      }
+
+      let hyperliquid = getHyperliquidClient();
+      if (!hyperliquid) {
+        hyperliquid = await initHyperliquidClient();
+      }
+
+      // Strip suffix from symbol (BTC-USD -> BTC, ETH-PERP -> ETH)
+      const coin = (symbol as string).replace(/-USD$|-PERP$|-SPOT$/, '');
+      
+      // Calculate time range - fetch last N candles
+      const numCandles = parseInt(limit as string) || 1000;
+      const endTime = Date.now();
+      
+      // Calculate approximate start time based on interval
+      const intervalMs: { [key: string]: number } = {
+        '1m': 60 * 1000,
+        '5m': 5 * 60 * 1000,
+        '15m': 15 * 60 * 1000,
+        '1h': 60 * 60 * 1000,
+        '4h': 4 * 60 * 60 * 1000,
+        '1D': 24 * 60 * 60 * 1000,
+      };
+      
+      const intervalDuration = intervalMs[interval as string] || intervalMs['1h'];
+      const startTime = endTime - (numCandles * intervalDuration);
+
+      const candles = await hyperliquid.getCandleSnapshot({
+        coin,
+        interval: interval as string,
+        startTime,
+        endTime,
+      });
+
+      res.json({ success: true, candles });
+    } catch (error: any) {
+      console.error("Error fetching Hyperliquid candles:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch candles" });
+    }
+  });
+
   // Get Hyperliquid user state
   app.get("/api/hyperliquid/user-state", requireVerifiedUser, async (req, res) => {
     try {
