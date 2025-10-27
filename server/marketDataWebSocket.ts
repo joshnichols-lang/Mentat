@@ -240,17 +240,26 @@ export class MarketDataWebSocketService {
     console.log(`[Market Data WS] Client subscribed to candle:${coin}:${interval}`);
   }
 
+  private normalizeHyperliquidCoin(coin: string): string {
+    // Hyperliquid expects base coin symbols without suffixes
+    // Strip -USD, -PERP, -SPOT suffixes
+    return coin.replace(/-USD$|-PERP$|-SPOT$/, '');
+  }
+
   private subscribeToHyperliquid(type: string, coin: string, interval?: string) {
     if (!this.hlWs || this.hlWs.readyState !== WebSocket.OPEN) {
       console.warn(`[Market Data WS] Cannot subscribe to ${type}:${coin} - not connected`);
       return;
     }
 
+    // Normalize coin symbol for Hyperliquid (strip -USD, -PERP, -SPOT suffixes)
+    const hlCoin = this.normalizeHyperliquidCoin(coin);
+
     const subscription: any = {
       method: "subscribe",
       subscription: {
         type,
-        coin
+        coin: hlCoin
       }
     };
 
@@ -259,7 +268,7 @@ export class MarketDataWebSocketService {
     }
 
     this.hlWs.send(JSON.stringify(subscription));
-    console.log(`[Market Data WS] Subscribed to Hyperliquid ${type}:${coin}${interval ? `:${interval}` : ""}`);
+    console.log(`[Market Data WS] Subscribed to Hyperliquid ${type}:${hlCoin}${interval ? `:${interval}` : ""} (from client coin: ${coin})`);
   }
 
   private unsubscribeClient(ws: WebSocket, type: string, coin: string, interval?: string) {
@@ -285,11 +294,14 @@ export class MarketDataWebSocketService {
   private unsubscribeFromHyperliquid(type: string, coin: string, interval?: string) {
     if (!this.hlWs || this.hlWs.readyState !== WebSocket.OPEN) return;
 
+    // Normalize coin symbol for Hyperliquid (strip -USD, -PERP, -SPOT suffixes)
+    const hlCoin = this.normalizeHyperliquidCoin(coin);
+
     const subscription: any = {
       method: "unsubscribe",
       subscription: {
         type,
-        coin
+        coin: hlCoin
       }
     };
 
@@ -298,7 +310,7 @@ export class MarketDataWebSocketService {
     }
 
     this.hlWs.send(JSON.stringify(subscription));
-    console.log(`[Market Data WS] Unsubscribed from Hyperliquid ${type}:${coin}${interval ? `:${interval}` : ""}`);
+    console.log(`[Market Data WS] Unsubscribed from Hyperliquid ${type}:${hlCoin}${interval ? `:${interval}` : ""} (from client coin: ${coin})`);
   }
 
   private handleClientDisconnect(ws: WebSocket) {
@@ -343,61 +355,102 @@ export class MarketDataWebSocketService {
   }
 
   private broadcastTrades(trade: HLTradeData) {
-    const key = `trades:${trade.coin}`;
-    const clients = this.activeSubscriptions.get(key);
-    
-    if (clients) {
-      const message = JSON.stringify({
-        type: "trade",
-        data: trade
-      });
+    // Hyperliquid sends coin without suffix (e.g., "BTC")
+    // Try to match with possible client subscriptions (BTC-USD, BTC-PERP, BTC, etc.)
+    const possibleKeys = [
+      `trades:${trade.coin}`,
+      `trades:${trade.coin}-USD`,
+      `trades:${trade.coin}-PERP`,
+      `trades:${trade.coin}-SPOT`,
+    ];
 
-      clients.forEach(ws => {
-        if (ws.readyState === WebSocket.OPEN) {
-          ws.send(message);
-        }
-      });
+    let sentToClients = false;
+    for (const key of possibleKeys) {
+      const clients = this.activeSubscriptions.get(key);
+      if (clients) {
+        const message = JSON.stringify({
+          type: "trade",
+          data: trade
+        });
+
+        clients.forEach(ws => {
+          if (ws.readyState === WebSocket.OPEN) {
+            ws.send(message);
+            sentToClients = true;
+          }
+        });
+      }
+    }
+
+    if (!sentToClients) {
+      console.log(`[Market Data WS] No clients for trade ${trade.coin}, tried keys:`, possibleKeys);
     }
   }
 
   private broadcastL2Book(book: HLL2BookData) {
-    const key = `l2Book:${book.coin}`;
-    const clients = this.activeSubscriptions.get(key);
-    
-    if (clients) {
-      const message = JSON.stringify({
-        type: "orderBook",
-        data: book
-      });
+    // Hyperliquid sends coin without suffix (e.g., "BTC")
+    // Try to match with possible client subscriptions (BTC-USD, BTC-PERP, BTC, etc.)
+    const possibleKeys = [
+      `l2Book:${book.coin}`,
+      `l2Book:${book.coin}-USD`,
+      `l2Book:${book.coin}-PERP`,
+      `l2Book:${book.coin}-SPOT`,
+    ];
 
-      clients.forEach(ws => {
-        if (ws.readyState === WebSocket.OPEN) {
-          ws.send(message);
-        }
-      });
+    let sentToClients = false;
+    for (const key of possibleKeys) {
+      const clients = this.activeSubscriptions.get(key);
+      if (clients) {
+        const message = JSON.stringify({
+          type: "orderBook",
+          data: book
+        });
+
+        clients.forEach(ws => {
+          if (ws.readyState === WebSocket.OPEN) {
+            ws.send(message);
+            sentToClients = true;
+          }
+        });
+      }
+    }
+
+    if (!sentToClients) {
+      console.log(`[Market Data WS] No clients for l2Book ${book.coin}, tried keys:`, possibleKeys);
     }
   }
 
   private broadcastCandle(candle: HLCandleData) {
-    const key = `candle:${candle.s}:${candle.i}`;
-    const clients = this.activeSubscriptions.get(key);
-    
-    console.log(`[Market Data WS] Broadcasting candle for ${candle.s}:${candle.i}, key=${key}, clients=${clients?.size || 0}`);
-    if (!clients) {
-      console.log(`[Market Data WS] No clients for key ${key}. Active keys:`, Array.from(this.activeSubscriptions.keys()));
-    }
-    
-    if (clients) {
-      const message = JSON.stringify({
-        type: "candle",
-        data: candle
-      });
+    // Hyperliquid sends coin without suffix (e.g., "BTC")
+    // Try to match with possible client subscriptions (BTC-USD, BTC-PERP, BTC, etc.)
+    const possibleKeys = [
+      `candle:${candle.s}:${candle.i}`,
+      `candle:${candle.s}-USD:${candle.i}`,
+      `candle:${candle.s}-PERP:${candle.i}`,
+      `candle:${candle.s}-SPOT:${candle.i}`,
+    ];
 
-      clients.forEach(ws => {
-        if (ws.readyState === WebSocket.OPEN) {
-          ws.send(message);
-        }
-      });
+    let sentToClients = false;
+    for (const key of possibleKeys) {
+      const clients = this.activeSubscriptions.get(key);
+      if (clients) {
+        const message = JSON.stringify({
+          type: "candle",
+          data: candle
+        });
+
+        clients.forEach(ws => {
+          if (ws.readyState === WebSocket.OPEN) {
+            ws.send(message);
+            sentToClients = true;
+          }
+        });
+      }
+    }
+
+    if (!sentToClients) {
+      console.log(`[Market Data WS] No clients for candle ${candle.s}:${candle.i}, tried keys:`, possibleKeys);
+      console.log(`[Market Data WS] Active subscription keys:`, Array.from(this.activeSubscriptions.keys()));
     }
   }
 
