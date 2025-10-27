@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { processTradingPrompt } from "./tradingAgent";
-import { initHyperliquidClient, getUserHyperliquidClient } from "./hyperliquid/client";
+import { initHyperliquidClient, getHyperliquidClient, getUserHyperliquidClient } from "./hyperliquid/client";
 import { executeTradeStrategy } from "./tradeExecutor";
 import { createPortfolioSnapshot } from "./portfolioSnapshotService";
 import { restartMonitoring } from "./monitoringService";
