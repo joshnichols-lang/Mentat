@@ -245,17 +245,28 @@ function PolymarketTradingModal({ event, onClose }: { event: any; onClose: () =>
       if (!balanceCheck.sufficient) {
         // Insufficient balance - offer to bridge
         const message = getBalanceMessage(balanceCheck);
+        
+        // Prioritize MATIC (gas) if needed, otherwise bridge USDC
+        const needsMaticBridge = balanceCheck.needsMatic;
+        const bridgeAsset: "MATIC" | "USDC" = needsMaticBridge ? "MATIC" : "USDC";
+        const bridgeAmount = needsMaticBridge 
+          ? balanceCheck.minimumMaticForGas 
+          : balanceCheck.requiredUsdcAmount;
+        
+        const bridgeAssetLabel = needsMaticBridge ? "MATIC for gas fees" : "USDC";
+        
         toast({
           title: "Insufficient Balance",
-          description: `${message}. Opening bridge to add funds to Polygon.`,
+          description: `${message}. Opening bridge to add ${bridgeAssetLabel} to Polygon.`,
           variant: "destructive",
         });
         
-        // Open Router Nitro bridge widget for Polygon
+        // Open Router Nitro bridge widget for Polygon with correct asset
         if (embeddedWallet?.polygonAddress) {
           const popup = openPolygonBridge({
             destinationAddress: embeddedWallet.polygonAddress,
-            minimumAmount: balanceCheck.requiredUsdcAmount,
+            asset: bridgeAsset,
+            minimumAmount: bridgeAmount,
           });
           
           if (!popup || popup.closed || typeof popup.closed === 'undefined') {
@@ -265,9 +276,14 @@ function PolymarketTradingModal({ event, onClose }: { event: any; onClose: () =>
               variant: "destructive",
             });
           } else {
+            const instructions = balanceCheck.needsMatic && balanceCheck.needsUsdc
+              ? `Bridge ${bridgeAmount.toFixed(4)} MATIC for gas first, then click Place Order again to bridge ${balanceCheck.requiredUsdcAmount.toFixed(2)} USDC.`
+              : `Bridge ${bridgeAmount.toFixed(needsMaticBridge ? 4 : 2)} ${bridgeAssetLabel} to complete your trade. Balances refresh every 10 seconds.`;
+            
             toast({
               title: "Bridge Opened",
-              description: "Complete the bridge, then return here to place your order",
+              description: instructions,
+              duration: 10000, // Show longer for multi-step instructions
             });
           }
         }

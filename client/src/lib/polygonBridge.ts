@@ -4,7 +4,8 @@
 
 export interface BridgeOptions {
   destinationAddress: string;
-  minimumAmount?: number; // Minimum USDC amount to bridge
+  asset: "MATIC" | "USDC"; // Which asset to bridge to Polygon
+  minimumAmount?: number; // Minimum amount to bridge
   onSuccess?: () => void;
   onError?: (error: string) => void;
 }
@@ -15,14 +16,21 @@ export interface BridgeOptions {
  * @returns Window object if popup opened successfully, null otherwise
  */
 export function openPolygonBridge(options: BridgeOptions): Window | null {
-  const { destinationAddress, minimumAmount } = options;
+  const { destinationAddress, asset, minimumAmount } = options;
   
   // URL-encode destination address for safety
   const encodedAddress = encodeURIComponent(destinationAddress);
   
   // Polygon mainnet chain ID: 137
-  // Router Nitro widget URL with destination address and Polygon as destination chain
-  let widgetUrl = `https://app.routernitro.com/swap?destinationAddress=${encodedAddress}&destinationChainId=137`;
+  // Asset token addresses on Polygon:
+  // MATIC = native token (0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE)
+  // USDC = 0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359
+  const assetAddress = asset === "MATIC" 
+    ? "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE" // Native MATIC
+    : "0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359"; // USDC
+  
+  // Router Nitro widget URL with destination address, chain, and asset
+  let widgetUrl = `https://app.routernitro.com/swap?destinationAddress=${encodedAddress}&destinationChainId=137&destinationAsset=${assetAddress}`;
   
   // Add suggested amount if provided
   if (minimumAmount) {
