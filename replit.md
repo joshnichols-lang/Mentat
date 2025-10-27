@@ -1,7 +1,7 @@
 # 1fox
 
 ## Overview
-1fox is an AI-powered cryptocurrency trading terminal specializing in perpetual futures trading across multiple exchanges. It enables users to interact with an AI trading agent, "Mr. Fox," using natural language for automated strategy execution. The platform features a "Fantastic Mr. Fox" newspaper-themed interface, real-time market data, portfolio tracking, and comprehensive trading controls for Hyperliquid and Orderly Network. Users authenticate with external wallets, and the platform auto-generates a multi-chain wallet for deposits via Router Nitro cross-chain bridging. 1fox aims to provide a professional AI trading experience focused on Sharpe ratio maximization through optimal trading actions and continuous risk management, delivered as a multi-tenant SaaS.
+1fox is an AI-powered cryptocurrency trading platform providing a comprehensive "one stop shop" for three market types: Perpetuals, Prediction Markets, and Spot Discovery (coming soon). The platform enables users to interact with an AI trading agent, "Mr. Fox," using natural language for automated strategy execution across perpetual futures (Hyperliquid, Orderly Network) and prediction markets (Polymarket). Features a glassmorphic "Fantastic Mr. Fox" themed interface with tab-based navigation, real-time market data, portfolio tracking, and comprehensive trading controls. Users authenticate with external wallets, and the platform auto-generates a multi-chain wallet (EVM, Solana, Polygon) for seamless cross-chain trading. 1fox aims to provide a professional AI trading experience focused on Sharpe ratio maximization through optimal trading actions and continuous risk management, delivered as a multi-tenant SaaS.
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
@@ -12,9 +12,10 @@ Preferred communication style: Simple, everyday language.
 **Technology Stack:** React with TypeScript, Vite, Wouter, TanStack Query, Tailwind CSS, shadcn/ui, and lightweight-charts.
 **Design System:** Glassmorphic dark trading terminal with orange/amber/gold/sepia palette. Features frosted glass effects with backdrop blur (35px), semi-transparent backgrounds (10-20% opacity for panels, 30% for header), pure black gradient backgrounds for contrast, gradient overlays (orange → amber → gold), and hover illumination effects. Dark brown/black backgrounds (hsl(18 33% 8%)), orange primary (#B06000 / hsl(33 100% 35%)), yellow for longs (#FFC107 / hsl(45 100% 51%)), red for shorts (#F54E2E / hsl(9 84% 57%)). Modern Roboto typography, rounded corners (8px). Custom glassmorphism utilities: `.glass`, `.glass-strong`, `.glass-header`, `.gradient-border`, `.glow-orange`, `.glow-amber`, `.glow-gold`, `.hover-illuminate`, `.hover-lift`, shimmer animations.
 **Hover Illumination:** Interactive card effects with subtle lift (0.2rem translateY), enhanced border glow, and lumen layers (radial gradients creating internal illumination). All Cards automatically have hover effects applied. Uses ::after pseudo-element for layered orange/amber radial gradients (0→50% opacity on hover) over 0.4s smooth transitions.
-**Layout & Components:** Resizable 3-panel dashboard, hosted Orderly Network DEX integration, Router Nitro Widget for cross-chain deposits, advanced portfolio and position analytics visualizations (e.g., PortfolioAreaChart, PositionROEChart, HourlyPLHeatmap), enhanced position cards with inline sparklines, and a multi-chain balance display in the header. Key UI components include an AI Prompt Panel, Custom Watchlist, Portfolio Performance Chart, Positions Grid, and Conversation History.
-**TradingChart:** Implemented with lightweight-charts library. Loads up to 1000 historical candles before WebSocket connection for complete price history visualization. Supports multiple timeframes (1m, 5m, 15m, 1h, 4h, 1d, 1w). Symbol normalization strips -USD/-PERP/-SPOT suffixes before Hyperliquid API requests. Real-time updates via WebSocket overlay on historical data.
+**Layout & Components:** Tab-based navigation for three market types (Perpetuals | Prediction Markets | Spot Discovery). Resizable 3-panel perpetuals terminal, hosted Orderly Network DEX integration, Router Nitro Widget for cross-chain deposits, advanced portfolio and position analytics visualizations (e.g., PortfolioAreaChart, PositionROEChart, HourlyPLHeatmap), enhanced position cards with inline sparklines, and a multi-chain balance display in the header. Key UI components include an AI Prompt Panel, Custom Watchlist, Portfolio Performance Chart, Positions Grid, and Conversation History.
+**TradingChart:** Implemented with lightweight-charts library for perpetuals. Loads up to 1000 historical candles before WebSocket connection for complete price history visualization. Supports multiple timeframes (1m, 5m, 15m, 1h, 4h, 1d, 1w). Symbol normalization strips -USD/-PERP/-SPOT suffixes before Hyperliquid API requests. Real-time updates via WebSocket overlay on historical data.
 **MarketSelector:** Searchable dialog component for browsing all Hyperliquid perpetual and spot markets. Displays real-time prices, 24h change percentages, and market type badges. Filters by search query and market type. Integrated into TradingTerminal header for quick market switching.
+**Prediction Markets Interface:** Grid-based market browser with search and category filtering. Event cards display YES/NO probability bars, volume, and end dates. Trading modal supports market/limit orders with real-time cost/profit calculations. Connects to Polymarket via Polygon network.
 
 ### Backend
 **Server:** Express.js with TypeScript.
@@ -36,7 +37,8 @@ Preferred communication style: Simple, everyday language.
 **Trade Performance Evaluation & Learning System:** Automates trade evaluation and provides learnings to the AI.
 **Market Data & Indicators:** Dual WebSocket service for real-time data, CVD Calculator, and Volume Profile Calculator.
 **Trade History Import:** CSV upload for AI-powered analysis.
-**Multi-Exchange Integration:** Full REST API and WebSocket integration for Orderly Network and Hyperliquid. AI can specify the target exchange.
+**Multi-Exchange Integration:** Full REST API and WebSocket integration for Orderly Network and Hyperliquid. Polymarket integration via @polymarket/clob-client with market/limit order support. AI can specify the target exchange and market type.
+**Polymarket Integration:** Complete backend wrapper for @polymarket/clob-client with market data fetching from Gamma API, order placement (market/limit), position tracking, and order history. User-scoped positions and orders with shared global event catalog. Polygon wallet credentials managed via encrypted storage.
 **Trade Journal System:** Automatically documents trade entries with AI reasoning and updates on close with AI-generated analysis.
 **Trading Modes:** User-defined strategies with customizable parameters.
 **Core Features:** Autonomous trading engine, order management, configurable monitoring frequency, and enhanced performance metrics calculated from cumulative portfolio snapshots.
@@ -48,6 +50,7 @@ Preferred communication style: Simple, everyday language.
 **Trading Infrastructure:**
 - **Hyperliquid Exchange:** Integrated via the `hyperliquid` npm package.
 - **Orderly Network:** Custom REST API client and WebSocket service.
+- **Polymarket:** Integrated via `@polymarket/clob-client` for prediction market trading on Polygon.
 
 **UI Component Libraries:**
 - **Radix UI:** UI primitives.
