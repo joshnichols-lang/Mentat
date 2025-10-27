@@ -10,6 +10,7 @@ import OrderBook from "@/components/OrderBook";
 import RecentTrades from "@/components/RecentTrades";
 import OrderEntryPanel from "@/components/OrderEntryPanel";
 import OrderManagementPanel from "@/components/OrderManagementPanel";
+import MarketSelector from "@/components/MarketSelector";
 import { 
   LineChart, 
   TrendingUp, 
@@ -35,14 +36,10 @@ export default function TradingTerminal() {
               {/* Chart Toolbar */}
               <div className="glass border-b border-glass/20 p-2 flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    className="hover:glow-orange"
-                    data-testid="button-symbol-selector"
-                  >
-                    <span className="font-bold text-primary">{selectedSymbol}</span>
-                  </Button>
+                  <MarketSelector
+                    selectedSymbol={selectedSymbol}
+                    onSymbolChange={setSelectedSymbol}
+                  />
                   <Badge 
                     variant="outline" 
                     className="bg-long/10 text-long border-long/30"

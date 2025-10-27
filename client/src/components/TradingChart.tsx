@@ -126,8 +126,10 @@ export default function TradingChart({ symbol, onSymbolChange }: TradingChartPro
     };
   }, []);
 
-  // WebSocket connection and data subscription
+  // Fetch historical candle data and set up WebSocket
   useEffect(() => {
+    let isMounted = true;
+    
     // Clear chart data when symbol or timeframe changes
     setCandleData(new Map());
     if (candleSeriesRef.current) {
@@ -137,6 +139,90 @@ export default function TradingChart({ symbol, onSymbolChange }: TradingChartPro
       volumeSeriesRef.current.setData([]);
     }
     setIsLoading(true);
+
+    // Fetch historical data first
+    const fetchHistoricalData = async () => {
+      try {
+        console.log(`[TradingChart] Fetching historical data for ${symbol} ${timeframe}`);
+        const response = await fetch(
+          `/api/hyperliquid/candles?symbol=${symbol}&interval=${timeframe}&limit=1000`
+        );
+        
+        if (!response.ok) {
+          throw new Error("Failed to fetch historical candles");
+        }
+
+        const data = await response.json();
+        
+        if (!isMounted || !data.success) {
+          return;
+        }
+
+        const candles = data.candles || [];
+        console.log(`[TradingChart] Loaded ${candles.length} historical candles`);
+
+        // Process and display historical candles
+        const candleMap = new Map<number, { candle: CandlestickData, volume: number }>();
+        
+        candles.forEach((candle: any) => {
+          if (!candle.t || !candle.o || !candle.h || !candle.l || !candle.c) {
+            return;
+          }
+
+          const timestamp = Math.floor(candle.t / 1000) as Time;
+          const volume = candle.v ? parseFloat(candle.v) : 0;
+          
+          const candlePoint: CandlestickData = {
+            time: timestamp,
+            open: parseFloat(candle.o),
+            high: parseFloat(candle.h),
+            low: parseFloat(candle.l),
+            close: parseFloat(candle.c),
+          };
+
+          candleMap.set(timestamp as number, { candle: candlePoint, volume });
+        });
+
+        // Update state with historical data
+        setCandleData(candleMap);
+
+        // Sort and display on chart
+        const sorted = Array.from(candleMap.entries()).sort((a, b) => a[0] - b[0]);
+        
+        if (candleSeriesRef.current) {
+          const sortedCandles = sorted.map(([_, data]) => data.candle);
+          candleSeriesRef.current.setData(sortedCandles);
+        }
+
+        if (volumeSeriesRef.current) {
+          const sortedVolumes = sorted.map(([_, data]) => {
+            const volumeColor = data.candle.close >= data.candle.open ? 
+              "rgba(255, 193, 7, 0.4)" : "rgba(245, 78, 46, 0.4)";
+            
+            return {
+              time: data.candle.time,
+              value: data.volume,
+              color: volumeColor,
+            };
+          });
+          
+          volumeSeriesRef.current.setData(sortedVolumes);
+        }
+
+        // Fit content after loading historical data
+        if (chartRef.current) {
+          chartRef.current.timeScale().fitContent();
+        }
+
+        setIsLoading(false);
+      } catch (error) {
+        console.error("[TradingChart] Error fetching historical data:", error);
+        setIsLoading(false);
+      }
+    };
+
+    // Fetch historical data first, then connect WebSocket
+    fetchHistoricalData();
 
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     const host = window.location.host;
@@ -148,14 +234,13 @@ export default function TradingChart({ symbol, onSymbolChange }: TradingChartPro
 
     ws.onopen = () => {
       console.log(`[TradingChart] Connected, subscribing to ${symbol} ${timeframe}`);
-      // Subscribe to candle data
+      // Subscribe to candle data for live updates
       ws.send(JSON.stringify({
         action: "subscribe",
         type: "candle",
         coin: symbol,
         interval: timeframe,
       }));
-      setIsLoading(false);
     };
 
     ws.onmessage = (event) => {
@@ -233,6 +318,7 @@ export default function TradingChart({ symbol, onSymbolChange }: TradingChartPro
     };
 
     return () => {
+      isMounted = false;
       if (ws.readyState === WebSocket.OPEN) {
         // Unsubscribe
         ws.send(JSON.stringify({
