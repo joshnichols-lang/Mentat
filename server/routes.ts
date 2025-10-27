@@ -886,6 +886,121 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Modify order on Hyperliquid (cancel + replace)
+  app.post("/api/hyperliquid/modify-order", requireVerifiedUser, async (req, res) => {
+    try {
+      
+      const userId = getUserId(req);
+      
+      const hyperliquid = await getUserHyperliquidClient(userId);
+      
+      const schema = z.object({
+        coin: z.string(),
+        oid: z.number(),
+        side: z.string(),
+        reduceOnly: z.boolean(),
+        newLimitPx: z.string().optional(),
+        newSz: z.string().optional(),
+        orderType: z.string().optional(),
+        triggerPx: z.string().optional(),
+        tpsl: z.string().optional().nullable(),
+      });
+
+      const params = schema.parse(req.body);
+      
+      // Get current order details to preserve unchanged values
+      const orders = await hyperliquid.getOpenOrders();
+      const currentOrder = orders.find((o: any) => o.oid === params.oid);
+      
+      if (!currentOrder) {
+        return res.status(404).json({
+          success: false,
+          error: "Order not found",
+        });
+      }
+
+      // Cancel existing order
+      const cancelResult = await hyperliquid.cancelOrder({
+        coin: params.coin,
+        oid: params.oid,
+      });
+
+      if (!cancelResult.success) {
+        return res.status(400).json({
+          success: false,
+          error: `Failed to cancel order: ${cancelResult.error}`,
+        });
+      }
+
+      // Place new order with modified parameters
+      const isBuy = params.side.toLowerCase() === "buy";
+      const newLimitPx = params.newLimitPx ? parseFloat(params.newLimitPx) : parseFloat(currentOrder.limitPx);
+      const newSz = params.newSz ? parseFloat(params.newSz) : parseFloat(currentOrder.sz);
+
+      // Determine if this is a trigger order (stop loss or take profit)
+      const isTriggerOrder = params.tpsl || params.triggerPx;
+
+      let newOrder: any;
+
+      if (isTriggerOrder) {
+        // Re-create trigger order
+        const triggerPx = params.triggerPx || currentOrder.triggerPx;
+        
+        newOrder = {
+          coin: params.coin,
+          is_buy: isBuy,
+          sz: newSz,
+          limit_px: newLimitPx,
+          order_type: {
+            trigger: {
+              triggerPx: triggerPx,
+              isMarket: !params.newLimitPx,
+              tpsl: params.tpsl || "tp",
+            },
+          },
+          reduce_only: params.reduceOnly,
+        };
+      } else {
+        // Re-create regular limit order
+        newOrder = {
+          coin: params.coin,
+          is_buy: isBuy,
+          sz: newSz,
+          limit_px: newLimitPx,
+          order_type: {
+            limit: {
+              tif: "Gtc" as const,
+            },
+          },
+          reduce_only: params.reduceOnly,
+        };
+      }
+
+      const placeResult = await hyperliquid.placeOrder(newOrder);
+
+      if (placeResult.success) {
+        res.json({
+          success: true,
+          message: "Order modified successfully",
+          response: placeResult.response,
+        });
+      } else {
+        // Order was cancelled but replacement failed
+        res.status(400).json({
+          success: false,
+          error: `Order cancelled but replacement failed: ${placeResult.error}`,
+          orderCancelled: true,
+        });
+      }
+    } catch (error: any) {
+      console.error("Error modifying Hyperliquid order:", error);
+      if (error.message?.includes('No Hyperliquid credentials')) {
+        return res.status(401).json({ success: false, error: "Please configure your Hyperliquid API credentials first" });
+      }
+      res.status(500).json({ success: false, error: "Failed to modify order" });
+    }
+  });
+
   // Close position on Hyperliquid
   app.post("/api/hyperliquid/close-position", requireVerifiedUser, async (req, res) => {
     try {
