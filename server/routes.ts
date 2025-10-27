@@ -676,17 +676,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Get asset metadata for a specific symbol (max leverage, tick size, etc.)
-  app.get("/api/hyperliquid/asset-metadata", requireVerifiedUser, async (req, res) => {
+  // Get asset metadata for a specific symbol (max leverage, tick size, etc.) - public endpoint
+  app.get("/api/hyperliquid/asset-metadata", async (req, res) => {
     try {
-      const userId = getUserId(req);
       const symbol = req.query.symbol as string;
       
       if (!symbol) {
         return res.status(400).json({ success: false, error: "Symbol parameter is required" });
       }
       
-      const hyperliquid = await getUserHyperliquidClient(userId);
+      // Asset metadata is public - use singleton client for info-only API access
+      let hyperliquid = getHyperliquidClient();
+      
+      // If singleton not initialized, initialize it
+      if (!hyperliquid) {
+        hyperliquid = await initHyperliquidClient();
+      }
+      
       const metadata = await hyperliquid.getAssetMetadata(symbol);
       
       if (!metadata) {
@@ -696,27 +702,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ success: true, metadata });
     } catch (error: any) {
       console.error("Error fetching asset metadata:", error);
-      if (error.message?.includes('No Hyperliquid credentials')) {
-        return res.status(401).json({ success: false, error: "Please configure your Hyperliquid API credentials first" });
-      }
       res.status(500).json({ success: false, error: "Failed to fetch asset metadata" });
     }
   });
   
-  // Get Hyperliquid market data
-  app.get("/api/hyperliquid/market-data", requireVerifiedUser, async (req, res) => {
+  // Get Hyperliquid market data (public endpoint - no auth required)
+  app.get("/api/hyperliquid/market-data", async (req, res) => {
     try {
+      // Market data is public - use singleton client for info-only API access
+      let hyperliquid = getHyperliquidClient();
       
-      const userId = getUserId(req);
+      // If singleton not initialized, initialize it
+      if (!hyperliquid) {
+        hyperliquid = await initHyperliquidClient();
+      }
       
-      const hyperliquid = await getUserHyperliquidClient(userId);
       const marketData = await hyperliquid.getMarketData();
       res.json({ success: true, marketData });
     } catch (error: any) {
       console.error("Error fetching Hyperliquid market data:", error);
-      if (error.message?.includes('No Hyperliquid credentials')) {
-        return res.status(401).json({ success: false, error: "Please configure your Hyperliquid API credentials first" });
-      }
       res.status(500).json({ success: false, error: "Failed to fetch market data" });
     }
   });
