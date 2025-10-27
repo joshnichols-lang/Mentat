@@ -640,41 +640,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Hyperliquid API Routes - All require authentication
-  
-  // Get all available Hyperliquid markets (perpetuals + spot)
-  app.get("/api/hyperliquid/markets", requireVerifiedUser, async (req, res) => {
-    try {
-      const userId = getUserId(req);
-      const hyperliquid = await getUserHyperliquidClient(userId);
-      
-      const markets = await hyperliquid.getMarkets();
-      
-      res.json({ success: true, markets });
-    } catch (error: any) {
-      console.error("Failed to fetch Hyperliquid markets:", error);
-      
-      // Fallback to popular pairs if API is rate-limited or unavailable
-      const fallbackMarkets = [
-        { symbol: "BTC", displayName: "BTC-USD", type: "perp" as const, index: 0, maxLeverage: 50 },
-        { symbol: "ETH", displayName: "ETH-USD", type: "perp" as const, index: 1, maxLeverage: 50 },
-        { symbol: "SOL", displayName: "SOL-USD", type: "perp" as const, index: 2, maxLeverage: 20 },
-        { symbol: "ARB", displayName: "ARB-USD", type: "perp" as const, index: 3, maxLeverage: 20 },
-        { symbol: "OP", displayName: "OP-USD", type: "perp" as const, index: 4, maxLeverage: 20 },
-        { symbol: "AVAX", displayName: "AVAX-USD", type: "perp" as const, index: 5, maxLeverage: 20 },
-        { symbol: "DOGE", displayName: "DOGE-USD", type: "perp" as const, index: 6, maxLeverage: 20 },
-        { symbol: "XRP", displayName: "XRP-USD", type: "perp" as const, index: 7, maxLeverage: 20 },
-        { symbol: "MATIC", displayName: "MATIC-USD", type: "perp" as const, index: 8, maxLeverage: 20 },
-      ];
-      
-      if (error.message?.includes('No Hyperliquid credentials')) {
-        return res.status(401).json({ success: false, error: "Please configure your Hyperliquid API credentials first" });
-      }
-      
-      console.log("[Markets API] Returning fallback markets due to API error");
-      res.json({ success: true, markets: fallbackMarkets });
-    }
-  });
+  // Hyperliquid API Routes - Some require authentication, some are public
   
   // Get asset metadata for a specific symbol (max leverage, tick size, etc.) - public endpoint
   app.get("/api/hyperliquid/asset-metadata", async (req, res) => {
