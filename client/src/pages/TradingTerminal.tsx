@@ -507,20 +507,44 @@ function PredictionMarketsInterface() {
 
   const filterTags = getFilterTags();
 
+  // Category keyword mapping for flexible filtering
+  const getCategoryKeywords = (category: string): string[] => {
+    const keywords: { [key: string]: string[] } = {
+      "Trending": [], // Show all
+      "Politics": ["congress", "senate", "house", "government", "biden", "republican", "democrat", "political", "policy", "governor", "mayor", "administration"],
+      "Sports": ["nfl", "nba", "mlb", "nhl", "soccer", "football", "basketball", "baseball", "hockey", "world series", "super bowl", "championship", "playoffs", "athlete", "player"],
+      "Finance": ["fed", "federal reserve", "interest rate", "stock market", "dow", "s&p", "nasdaq", "inflation", "gdp", "recession", "treasury", "bonds"],
+      "Crypto": ["bitcoin", "btc", "ethereum", "eth", "crypto", "cryptocurrency", "blockchain", "solana", "sol", "defi", "nft", "web3", "token"],
+      "Culture": ["celebrity", "entertainment", "movie", "film", "music", "artist", "award", "oscar", "grammy", "emmy", "actor", "actress"],
+      "World": ["international", "global", "ukraine", "china", "russia", "europe", "middle east", "war", "conflict", "united nations"],
+      "Elections": ["election", "vote", "ballot", "candidate", "primary", "presidential", "2024", "2025", "campaign", "trump", "governor race"]
+    };
+    return keywords[category] || [];
+  };
+
   // Filter markets by search, category, and filter tag
   const filteredMarkets = markets.filter((market: any) => {
     const matchesSearch = market.question?.toLowerCase().includes(searchQuery.toLowerCase());
     
-    // Category matching
+    // Category matching using keyword matching
     let matchesCategory = true;
     if (selectedCategory !== "Trending") {
-      matchesCategory = market.category?.toLowerCase() === selectedCategory.toLowerCase();
+      const categoryKeywords = getCategoryKeywords(selectedCategory);
+      const question = market.question?.toLowerCase() || "";
+      const tags = (market.tags || []).map((t: string) => t.toLowerCase()).join(" ");
+      const category = market.category?.toLowerCase() || "";
+      const searchText = `${question} ${tags} ${category}`;
+      
+      matchesCategory = categoryKeywords.some(keyword => searchText.includes(keyword));
     }
     
     // Filter tag matching
     let matchesFilter = selectedFilter === "All";
     if (!matchesFilter) {
-      matchesFilter = market.question?.toLowerCase().includes(selectedFilter.toLowerCase());
+      const question = market.question?.toLowerCase() || "";
+      const tags = (market.tags || []).map((t: string) => t.toLowerCase()).join(" ");
+      const searchText = `${question} ${tags}`;
+      matchesFilter = searchText.includes(selectedFilter.toLowerCase());
     }
     
     return matchesSearch && matchesCategory && matchesFilter && market.active && !market.closed;
