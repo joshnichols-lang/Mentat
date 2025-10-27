@@ -45,18 +45,19 @@ export default function MarketSelector({ selectedSymbol, onSymbolChange }: Marke
   const markets: Market[] = (marketsData as any)?.markets || [];
   const prices = (marketData as any)?.marketData || [];
 
-  // Filter markets based on search query
+  // Filter markets based on search query - ONLY PERPETUALS
   const filteredMarkets = markets.filter((market) => {
     const query = searchQuery.toLowerCase();
-    return (
+    const matchesSearch = 
       market.symbol.toLowerCase().includes(query) ||
-      market.displayName.toLowerCase().includes(query)
-    );
+      market.displayName.toLowerCase().includes(query);
+    
+    // Only show perpetual markets
+    return matchesSearch && market.type === "perp";
   });
 
-  // Group markets by type
-  const perpMarkets = filteredMarkets.filter((m) => m.type === "perp");
-  const spotMarkets = filteredMarkets.filter((m) => m.type === "spot");
+  // All filtered markets are perpetuals
+  const perpMarkets = filteredMarkets;
 
   const handleSelectMarket = (market: Market) => {
     onSymbolChange(market.symbol);
@@ -154,8 +155,8 @@ export default function MarketSelector({ selectedSymbol, onSymbolChange }: Marke
               </div>
             ) : (
               <div className="space-y-4">
-                {/* Perpetual Markets */}
-                {perpMarkets.length > 0 && (
+                {/* Perpetual Markets Only */}
+                {perpMarkets.length > 0 ? (
                   <div>
                     <div className="flex items-center gap-2 mb-2">
                       <h3 className="text-sm font-semibold text-muted-foreground uppercase">
@@ -171,31 +172,12 @@ export default function MarketSelector({ selectedSymbol, onSymbolChange }: Marke
                       ))}
                     </div>
                   </div>
-                )}
-
-                {/* Spot Markets */}
-                {spotMarkets.length > 0 && (
-                  <div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <h3 className="text-sm font-semibold text-muted-foreground uppercase">
-                        Spot Markets
-                      </h3>
-                      <Badge variant="outline" className="text-xs">
-                        {spotMarkets.length}
-                      </Badge>
+                ) : (
+                  !isLoading && (
+                    <div className="text-center py-8 text-muted-foreground">
+                      No perpetual markets found
                     </div>
-                    <div className="space-y-1">
-                      {spotMarkets.map((market) => (
-                        <MarketRow key={market.symbol} market={market} />
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {filteredMarkets.length === 0 && !isLoading && (
-                  <div className="text-center py-8 text-muted-foreground">
-                    No markets found
-                  </div>
+                  )
                 )}
               </div>
             )}
