@@ -32,7 +32,7 @@ export default function OrderEntryPanel({ symbol, lastPrice = 0 }: OrderEntryPan
     success: boolean; 
     metadata: { maxLeverage: number; szDecimals: number; tickSize: number } 
   }>({
-    queryKey: ['/api/hyperliquid/asset-metadata', symbol],
+    queryKey: ['/api/hyperliquid/asset-metadata', { symbol }],
     enabled: !!symbol,
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
   });
@@ -277,7 +277,7 @@ export default function OrderEntryPanel({ symbol, lastPrice = 0 }: OrderEntryPan
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Leverage</span>
-                <span className="font-medium text-primary" data-testid="text-leverage">{leverage[0]}x</span>
+                <span className="font-medium text-primary" data-testid="text-leverage">{leverage}x</span>
               </div>
               {lastPrice > 0 && (
                 <div className="flex justify-between">
