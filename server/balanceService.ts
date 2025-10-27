@@ -8,9 +8,13 @@ const SOLANA_RPC_URL = process.env.SOLANA_RPC_URL || 'https://api.mainnet-beta.s
 // Arbitrum RPC endpoint
 const ARBITRUM_RPC_URL = process.env.ARBITRUM_RPC_URL || 'https://arb1.arbitrum.io/rpc';
 
+// Polygon RPC endpoint
+const POLYGON_RPC_URL = process.env.POLYGON_RPC_URL || 'https://polygon-rpc.com';
+
 // USDC token addresses
 const SOLANA_USDC_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'; // Mainnet USDC
 const ARBITRUM_USDC_ADDRESS = '0xaf88d065e77c8cC2239327C5EDb3A432268e5831'; // Arbitrum USDC
+const POLYGON_USDC_ADDRESS = '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359'; // Polygon USDC (native)
 
 // ERC20 ABI for balanceOf
 const ERC20_ABI = [
@@ -29,6 +33,11 @@ export interface WalletBalances {
     usdc: number;
     totalUsd: number;
   };
+  polygon: {
+    matic: number;
+    usdc: number;
+    totalUsd: number;
+  };
   hyperliquid: {
     accountValue: number;
     withdrawable: number;
@@ -39,10 +48,12 @@ export interface WalletBalances {
 export class BalanceService {
   private solanaConnection: Connection;
   private arbitrumProvider: ethers.JsonRpcProvider;
+  private polygonProvider: ethers.JsonRpcProvider;
   
   constructor() {
     this.solanaConnection = new Connection(SOLANA_RPC_URL, 'confirmed');
     this.arbitrumProvider = new ethers.JsonRpcProvider(ARBITRUM_RPC_URL);
+    this.polygonProvider = new ethers.JsonRpcProvider(POLYGON_RPC_URL);
   }
   
   async getSolanaBalances(publicKey: string): Promise<{ sol: number; usdc: number; totalUsd: number }> {
@@ -93,6 +104,30 @@ export class BalanceService {
     }
   }
   
+  async getPolygonBalances(address: string): Promise<{ matic: number; usdc: number; totalUsd: number }> {
+    try {
+      // Get MATIC balance
+      const maticBalance = await this.polygonProvider.getBalance(address);
+      const matic = parseFloat(ethers.formatEther(maticBalance));
+      
+      // Get USDC balance
+      const usdcContract = new ethers.Contract(POLYGON_USDC_ADDRESS, ERC20_ABI, this.polygonProvider);
+      const usdcBalance = await usdcContract.balanceOf(address);
+      const decimals = await usdcContract.decimals();
+      const usdc = parseFloat(ethers.formatUnits(usdcBalance, decimals));
+      
+      // Approximate USD value (would need price oracle in production)
+      // For now, assume MATIC = $0.80 (placeholder)
+      const maticPrice = 0.80;
+      const totalUsd = (matic * maticPrice) + usdc;
+      
+      return { matic, usdc, totalUsd };
+    } catch (error) {
+      console.error('[Balance Service] Polygon balance error:', error);
+      return { matic: 0, usdc: 0, totalUsd: 0 };
+    }
+  }
+  
   async getHyperliquidBalance(userId: string, storage: IStorage): Promise<{ accountValue: number; withdrawable: number }> {
     try {
       // Import getUserHyperliquidClient dynamically to avoid circular dependency
@@ -124,21 +159,24 @@ export class BalanceService {
     }
     
     // Fetch all balances in parallel
-    const [solana, arbitrum, hyperliquid] = await Promise.allSettled([
+    const [solana, arbitrum, polygon, hyperliquid] = await Promise.allSettled([
       this.getSolanaBalances(embeddedWallet.solanaAddress),
       this.getArbitrumBalances(embeddedWallet.evmAddress),
+      this.getPolygonBalances(embeddedWallet.polygonAddress),
       this.getHyperliquidBalance(userId, storage),
     ]);
     
     const solanaBalances = solana.status === 'fulfilled' ? solana.value : { sol: 0, usdc: 0, totalUsd: 0 };
     const arbitrumBalances = arbitrum.status === 'fulfilled' ? arbitrum.value : { eth: 0, usdc: 0, totalUsd: 0 };
+    const polygonBalances = polygon.status === 'fulfilled' ? polygon.value : { matic: 0, usdc: 0, totalUsd: 0 };
     const hyperliquidBalances = hyperliquid.status === 'fulfilled' ? hyperliquid.value : { accountValue: 0, withdrawable: 0 };
     
-    const totalUsd = solanaBalances.totalUsd + arbitrumBalances.totalUsd + hyperliquidBalances.accountValue;
+    const totalUsd = solanaBalances.totalUsd + arbitrumBalances.totalUsd + polygonBalances.totalUsd + hyperliquidBalances.accountValue;
     
     return {
       solana: solanaBalances,
       arbitrum: arbitrumBalances,
+      polygon: polygonBalances,
       hyperliquid: hyperliquidBalances,
       totalUsd,
     };
