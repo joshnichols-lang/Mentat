@@ -1,13 +1,14 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { DollarSign, Percent, TrendingUp, TrendingDown } from "lucide-react";
+import { LeverageSlider } from "@/components/LeverageSlider";
 
 interface OrderEntryPanelProps {
   symbol: string;
@@ -19,12 +20,24 @@ export default function OrderEntryPanel({ symbol, lastPrice = 0 }: OrderEntryPan
   const [side, setSide] = useState<"buy" | "sell">("buy");
   const [sizeMode, setSizeMode] = useState<"usd" | "percent">("usd");
   const [sizeValue, setSizeValue] = useState("");
-  const [leverage, setLeverage] = useState([5]);
+  const [leverage, setLeverage] = useState(5);
   const [limitPrice, setLimitPrice] = useState("");
   const [takeProfitEnabled, setTakeProfitEnabled] = useState(false);
   const [takeProfitPrice, setTakeProfitPrice] = useState("");
   const [stopLossEnabled, setStopLossEnabled] = useState(false);
   const [stopLossPrice, setStopLossPrice] = useState("");
+
+  // Fetch asset metadata to get max leverage for the selected symbol
+  const { data: assetMetadata } = useQuery<{ 
+    success: boolean; 
+    metadata: { maxLeverage: number; szDecimals: number; tickSize: number } 
+  }>({
+    queryKey: ['/api/hyperliquid/asset-metadata', symbol],
+    enabled: !!symbol,
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+  });
+
+  const maxLeverage = assetMetadata?.metadata?.maxLeverage ?? 50;
 
   const handlePlaceOrder = (orderSide: "buy" | "sell") => {
     console.log("[OrderEntry] Placing order:", {
@@ -33,7 +46,7 @@ export default function OrderEntryPanel({ symbol, lastPrice = 0 }: OrderEntryPan
       side: orderSide,
       sizeMode,
       sizeValue,
-      leverage: leverage[0],
+      leverage,
       limitPrice: orderType === "limit" ? limitPrice : undefined,
       takeProfit: takeProfitEnabled ? takeProfitPrice : undefined,
       stopLoss: stopLossEnabled ? stopLossPrice : undefined,
@@ -104,27 +117,13 @@ export default function OrderEntryPanel({ symbol, lastPrice = 0 }: OrderEntryPan
               </div>
 
               {/* Leverage Slider */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label className="text-sm">Leverage</Label>
-                  <span className="text-sm font-medium text-primary glow-orange">
-                    {leverage[0]}x
-                  </span>
-                </div>
-                <Slider
+              <div>
+                <LeverageSlider
                   value={leverage}
-                  onValueChange={setLeverage}
+                  onChange={setLeverage}
                   min={1}
-                  max={50}
-                  step={1}
-                  className="glow-orange"
-                  data-testid="slider-leverage"
+                  max={maxLeverage}
                 />
-                <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>1x</span>
-                  <span>25x</span>
-                  <span>50x</span>
-                </div>
               </div>
             </TabsContent>
 
@@ -181,27 +180,13 @@ export default function OrderEntryPanel({ symbol, lastPrice = 0 }: OrderEntryPan
               </div>
 
               {/* Leverage Slider */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label className="text-sm">Leverage</Label>
-                  <span className="text-sm font-medium text-primary glow-orange">
-                    {leverage[0]}x
-                  </span>
-                </div>
-                <Slider
+              <div>
+                <LeverageSlider
                   value={leverage}
-                  onValueChange={setLeverage}
+                  onChange={setLeverage}
                   min={1}
-                  max={50}
-                  step={1}
-                  className="glow-orange"
-                  data-testid="slider-leverage-limit"
+                  max={maxLeverage}
                 />
-                <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>1x</span>
-                  <span>25x</span>
-                  <span>50x</span>
-                </div>
               </div>
             </TabsContent>
           </Tabs>
