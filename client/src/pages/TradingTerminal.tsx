@@ -9,12 +9,14 @@ import TradingChart from "@/components/TradingChart";
 import OrderBook from "@/components/OrderBook";
 import RecentTrades from "@/components/RecentTrades";
 import OrderEntryPanel from "@/components/OrderEntryPanel";
+import OrderManagementPanel from "@/components/OrderManagementPanel";
 import { 
   LineChart, 
   TrendingUp, 
   Settings,
   Maximize2,
   Minimize2,
+  ListOrdered,
 } from "lucide-react";
 
 export default function TradingTerminal() {
@@ -104,9 +106,10 @@ export default function TradingTerminal() {
           <ResizablePanel defaultSize={30} minSize={20} maxSize={40}>
             <div className="h-full flex flex-col glass">
               <Tabs defaultValue="orderbook" className="flex-1 flex flex-col">
-                <TabsList className="m-2">
-                  <TabsTrigger value="orderbook" data-testid="tab-orderbook">Order Book</TabsTrigger>
+                <TabsList className="m-2 grid grid-cols-3">
+                  <TabsTrigger value="orderbook" data-testid="tab-orderbook">Book</TabsTrigger>
                   <TabsTrigger value="trades" data-testid="tab-recent-trades">Trades</TabsTrigger>
+                  <TabsTrigger value="orders" data-testid="tab-orders">Orders</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="orderbook" className="flex-1 m-2 mt-0 overflow-hidden">
@@ -135,6 +138,10 @@ export default function TradingTerminal() {
                       <RecentTrades symbol={selectedSymbol} />
                     </CardContent>
                   </Card>
+                </TabsContent>
+
+                <TabsContent value="orders" className="flex-1 m-2 mt-0 overflow-auto">
+                  <OrderManagementPanel />
                 </TabsContent>
               </Tabs>
             </div>

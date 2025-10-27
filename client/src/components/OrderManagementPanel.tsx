@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -7,6 +7,17 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import {
   TrendingUp,
   TrendingDown,
@@ -47,12 +58,35 @@ interface DragState {
   currentPrice: number;
 }
 
+// Schema for edit order form
+const editOrderSchema = z.object({
+  price: z.string()
+    .min(1, "Price is required")
+    .refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) > 0, {
+      message: "Price must be a positive number",
+    }),
+  size: z.string()
+    .min(1, "Size is required")
+    .refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) > 0, {
+      message: "Size must be a positive number",
+    }),
+});
+
+type EditOrderForm = z.infer<typeof editOrderSchema>;
+
 export default function OrderManagementPanel() {
   const { toast } = useToast();
   const [dragState, setDragState] = useState<DragState | null>(null);
   const [editingOrder, setEditingOrder] = useState<Order | null>(null);
-  const [editPrice, setEditPrice] = useState("");
-  const [editSize, setEditSize] = useState("");
+
+  // Form for editing orders with validation
+  const editForm = useForm<EditOrderForm>({
+    resolver: zodResolver(editOrderSchema),
+    defaultValues: {
+      price: "",
+      size: "",
+    },
+  });
 
   // Fetch open orders
   const { data: ordersData, isLoading } = useQuery<{ orders: Order[] }>({
@@ -114,6 +148,10 @@ export default function OrderManagementPanel() {
       });
       return response.json();
     },
+    onMutate: () => {
+      // Clear drag state when starting mutation to prevent UI from getting stuck
+      setDragState(null);
+    },
     onSuccess: (_, { order }) => {
       toast({
         title: "Order Modified",
@@ -122,9 +160,10 @@ export default function OrderManagementPanel() {
       queryClient.invalidateQueries({ queryKey: ["/api/hyperliquid/open-orders"] });
       queryClient.invalidateQueries({ queryKey: ["/api/hyperliquid/positions"] });
       setEditingOrder(null);
-      setDragState(null);
     },
     onError: (error: any) => {
+      // Clear drag state on error to prevent UI from getting stuck
+      setDragState(null);
       toast({
         title: "Modify Failed",
         description: error.message || "Failed to modify order",
@@ -144,72 +183,77 @@ export default function OrderManagementPanel() {
     });
   };
 
-  const handleDragMove = (e: MouseEvent) => {
-    if (!dragState) return;
-    
-    // Calculate price change based on vertical movement
-    // Moving up = higher price, moving down = lower price
-    const deltaY = dragState.initialY - e.clientY;
-    const pricePerPixel = dragState.initialPrice * 0.001; // 0.1% per pixel
-    const newPrice = Math.max(0.01, dragState.initialPrice + (deltaY * pricePerPixel));
-    
-    setDragState({
-      ...dragState,
-      currentPrice: newPrice,
-    });
-  };
-
-  const handleDragEnd = () => {
-    if (!dragState) return;
-    
-    const order = orders.find(o => o.oid === dragState.orderId);
-    if (!order) {
-      setDragState(null);
-      return;
-    }
-
-    const currentPrice = parseFloat(order.triggerPx || order.limitPx);
-    const priceChanged = Math.abs(dragState.currentPrice - currentPrice) > 0.01;
-
-    if (priceChanged) {
-      modifyMutation.mutate({
-        order,
-        newPrice: dragState.currentPrice.toFixed(2),
-      });
-    } else {
-      setDragState(null);
-    }
-  };
-
   // Set up drag event listeners
-  useState(() => {
-    const handleMouseMove = (e: MouseEvent) => handleDragMove(e);
-    const handleMouseUp = () => handleDragEnd();
+  useEffect(() => {
+    if (!dragState) return;
 
-    if (dragState) {
-      document.addEventListener("mousemove", handleMouseMove);
-      document.addEventListener("mouseup", handleMouseUp);
-      return () => {
-        document.removeEventListener("mousemove", handleMouseMove);
-        document.removeEventListener("mouseup", handleMouseUp);
-      };
-    }
-  });
+    const handleDragMove = (e: MouseEvent) => {
+      // Calculate price change based on vertical movement
+      // Moving up = higher price, moving down = lower price
+      const deltaY = dragState.initialY - e.clientY;
+      const pricePerPixel = dragState.initialPrice * 0.001; // 0.1% per pixel
+      const newPrice = Math.max(0.01, dragState.initialPrice + (deltaY * pricePerPixel));
+      
+      setDragState(prev => prev ? {
+        ...prev,
+        currentPrice: newPrice,
+      } : null);
+    };
+
+    const handleDragEnd = () => {
+      const order = orders.find(o => o.oid === dragState.orderId);
+      if (!order) {
+        setDragState(null);
+        return;
+      }
+
+      const currentPrice = parseFloat(order.triggerPx || order.limitPx);
+      const priceChanged = Math.abs(dragState.currentPrice - currentPrice) > 0.01;
+
+      if (priceChanged) {
+        modifyMutation.mutate({
+          order,
+          newPrice: dragState.currentPrice.toFixed(2),
+        });
+      } else {
+        setDragState(null);
+      }
+    };
+
+    document.addEventListener("mousemove", handleDragMove);
+    document.addEventListener("mouseup", handleDragEnd);
+    
+    return () => {
+      document.removeEventListener("mousemove", handleDragMove);
+      document.removeEventListener("mouseup", handleDragEnd);
+    };
+  }, [dragState, orders, modifyMutation]);
 
   const handleEdit = (order: Order) => {
     setEditingOrder(order);
-    setEditPrice(order.triggerPx || order.limitPx);
-    setEditSize(order.sz);
+    // Reset form with order's current values
+    editForm.reset({
+      price: order.triggerPx || order.limitPx,
+      size: order.sz,
+    });
   };
 
-  const handleSaveEdit = () => {
+  const handleSaveEdit = (data: EditOrderForm) => {
     if (!editingOrder) return;
+    
+    const originalPrice = editingOrder.triggerPx || editingOrder.limitPx;
+    const originalSize = editingOrder.sz;
     
     modifyMutation.mutate({
       order: editingOrder,
-      newPrice: editPrice !== (editingOrder.triggerPx || editingOrder.limitPx) ? editPrice : undefined,
-      newSize: editSize !== editingOrder.sz ? editSize : undefined,
+      newPrice: data.price !== originalPrice ? data.price : undefined,
+      newSize: data.size !== originalSize ? data.size : undefined,
     });
+  };
+
+  const handleCloseEditDialog = () => {
+    setEditingOrder(null);
+    editForm.reset();
   };
 
   const getOrderTypeLabel = (order: Order) => {
@@ -398,7 +442,7 @@ export default function OrderManagementPanel() {
       </Card>
 
       {/* Edit Order Dialog */}
-      <Dialog open={!!editingOrder} onOpenChange={(open) => !open && setEditingOrder(null)}>
+      <Dialog open={!!editingOrder} onOpenChange={(open) => !open && handleCloseEditDialog()}>
         <DialogContent data-testid="dialog-edit-order">
           <DialogHeader>
             <DialogTitle>Edit Order</DialogTitle>
@@ -406,46 +450,65 @@ export default function OrderManagementPanel() {
               Modify the price and size of your order for {editingOrder?.coin.replace("-PERP", "")}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="edit-price">Price ($)</Label>
-              <Input
-                id="edit-price"
-                type="number"
-                step="0.01"
-                value={editPrice}
-                onChange={(e) => setEditPrice(e.target.value)}
-                data-testid="input-edit-price"
+          <Form {...editForm}>
+            <form onSubmit={editForm.handleSubmit(handleSaveEdit)} className="space-y-4 py-4">
+              <FormField
+                control={editForm.control}
+                name="price"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Price ($)</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        placeholder="Enter price"
+                        data-testid="input-edit-price"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-size">Size</Label>
-              <Input
-                id="edit-size"
-                type="number"
-                step="0.0001"
-                value={editSize}
-                onChange={(e) => setEditSize(e.target.value)}
-                data-testid="input-edit-size"
+              <FormField
+                control={editForm.control}
+                name="size"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Size</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        step="0.0001"
+                        placeholder="Enter size"
+                        data-testid="input-edit-size"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button 
-              variant="outline" 
-              onClick={() => setEditingOrder(null)}
-              data-testid="button-cancel-edit"
-            >
-              Cancel
-            </Button>
-            <Button 
-              onClick={handleSaveEdit} 
-              disabled={modifyMutation.isPending}
-              data-testid="button-save-edit"
-            >
-              {modifyMutation.isPending ? "Saving..." : "Save Changes"}
-            </Button>
-          </DialogFooter>
+              <DialogFooter>
+                <Button 
+                  type="button"
+                  variant="outline" 
+                  onClick={handleCloseEditDialog}
+                  data-testid="button-cancel-edit"
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  type="submit"
+                  disabled={modifyMutation.isPending}
+                  data-testid="button-save-edit"
+                >
+                  {modifyMutation.isPending ? "Saving..." : "Save Changes"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
         </DialogContent>
       </Dialog>
     </>
