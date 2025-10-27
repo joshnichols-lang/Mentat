@@ -462,7 +462,8 @@ function PolymarketTradingModal({ event, onClose }: { event: any; onClose: () =>
 // Prediction Markets Interface
 function PredictionMarketsInterface() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [selectedCategory, setSelectedCategory] = useState<string>("Trending");
+  const [selectedFilter, setSelectedFilter] = useState<string>("All");
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
 
   // Fetch Polymarket markets
@@ -472,52 +473,113 @@ function PredictionMarketsInterface() {
 
   const markets = marketsData?.markets || [];
 
-  // Filter markets by search and category
+  // Main category tabs (Polymarket style)
+  const mainCategories = [
+    "Trending",
+    "Politics", 
+    "Sports",
+    "Finance",
+    "Crypto",
+    "Culture",
+    "World",
+    "Elections"
+  ];
+
+  // Dynamic filter tags based on selected category and markets
+  const getFilterTags = () => {
+    if (selectedCategory === "Trending") {
+      return ["All", "Trump", "Elections", "Sports"];
+    }
+    if (selectedCategory === "Politics") {
+      return ["All", "Trump", "Gov Shutdown", "NYC Mayor"];
+    }
+    if (selectedCategory === "Sports") {
+      return ["All", "World Series", "NFL", "NBA"];
+    }
+    if (selectedCategory === "Finance") {
+      return ["All", "Fed", "Crypto", "Stocks"];
+    }
+    if (selectedCategory === "Crypto") {
+      return ["All", "Bitcoin", "Ethereum", "Solana"];
+    }
+    return ["All"];
+  };
+
+  const filterTags = getFilterTags();
+
+  // Filter markets by search, category, and filter tag
   const filteredMarkets = markets.filter((market: any) => {
     const matchesSearch = market.question?.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = selectedCategory === "all" || market.category === selectedCategory;
-    return matchesSearch && matchesCategory && market.active && !market.closed;
+    
+    // Category matching
+    let matchesCategory = true;
+    if (selectedCategory !== "Trending") {
+      matchesCategory = market.category?.toLowerCase() === selectedCategory.toLowerCase();
+    }
+    
+    // Filter tag matching
+    let matchesFilter = selectedFilter === "All";
+    if (!matchesFilter) {
+      matchesFilter = market.question?.toLowerCase().includes(selectedFilter.toLowerCase());
+    }
+    
+    return matchesSearch && matchesCategory && matchesFilter && market.active && !market.closed;
   });
-
-  // Get unique categories
-  const categories: string[] = ["all", ...Array.from(new Set(markets.map((m: any) => m.category).filter(Boolean) as string[]))];
 
   return (
     <div className="flex-1 overflow-hidden flex flex-col">
-      {/* Header & Filters */}
-      <div className="glass border-b border-glass/20 p-4 space-y-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Vote className="h-5 w-5 text-primary" />
-            <h2 className="text-lg font-semibold">Prediction Markets</h2>
-            <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30">
-              {filteredMarkets.length} Markets
-            </Badge>
-          </div>
+      {/* Header with Category Tabs */}
+      <div className="glass-header border-b border-glass/20">
+        <div className="flex items-center gap-3 px-4 py-3 border-b border-glass/10">
+          <Vote className="h-5 w-5 text-primary" />
+          <h2 className="text-lg font-semibold">Prediction Markets</h2>
+          <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30">
+            {filteredMarkets.length}
+          </Badge>
         </div>
 
-        {/* Search & Category Filters */}
-        <div className="flex gap-2 flex-wrap">
+        {/* Main Category Tabs */}
+        <div className="flex items-center gap-1 px-4 py-2 overflow-x-auto scrollbar-hide">
+          {mainCategories.map((cat) => (
+            <Button
+              key={cat}
+              variant={selectedCategory === cat ? "default" : "ghost"}
+              size="sm"
+              onClick={() => {
+                setSelectedCategory(cat);
+                setSelectedFilter("All");
+              }}
+              className={selectedCategory === cat ? "" : "text-foreground/70 hover:text-foreground"}
+              data-testid={`button-category-${cat.toLowerCase()}`}
+            >
+              {cat}
+            </Button>
+          ))}
+        </div>
+
+        {/* Quick Filter Tags */}
+        <div className="flex items-center gap-2 px-4 py-2 border-t border-glass/10">
           <input
             type="text"
             placeholder="Search markets..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="flex-1 min-w-[200px] px-3 py-2 text-sm bg-glass/50 border border-glass/20 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50"
+            className="px-3 py-1.5 text-sm bg-glass/30 border border-glass/20 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50 w-48"
             data-testid="input-search-markets"
           />
-          <div className="flex gap-1 flex-wrap">
-            {categories.slice(0, 6).map((cat: string) => (
-              <Button
-                key={cat}
-                variant={selectedCategory === cat ? "default" : "outline"}
-                size="sm"
-                onClick={() => setSelectedCategory(cat)}
-                className="capitalize"
-                data-testid={`button-category-${cat}`}
+          <div className="flex gap-1.5 flex-wrap">
+            {filterTags.map((tag) => (
+              <Badge
+                key={tag}
+                variant={selectedFilter === tag ? "default" : "outline"}
+                className={`cursor-pointer hover-elevate active-elevate-2 ${
+                  selectedFilter === tag ? "" : "bg-glass/20 text-foreground/70 hover:text-foreground"
+                }`}
+                onClick={() => setSelectedFilter(tag)}
+                data-testid={`badge-filter-${tag.toLowerCase()}`}
               >
-                {cat}
-              </Button>
+                {tag}
+              </Badge>
             ))}
           </div>
         </div>
@@ -539,7 +601,7 @@ function PredictionMarketsInterface() {
             </Card>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-3">
             {filteredMarkets.map((market: any) => {
               const yesToken = market.tokens?.find((t: any) => t.outcome === "Yes");
               const noToken = market.tokens?.find((t: any) => t.outcome === "No");
@@ -550,53 +612,67 @@ function PredictionMarketsInterface() {
               return (
                 <Card
                   key={market.conditionId}
-                  className="glass-strong border-glass/20 hover-elevate active-elevate-2 cursor-pointer"
+                  className="glass border-glass/30 hover-elevate active-elevate-2 cursor-pointer transition-all duration-300"
                   onClick={() => setSelectedEvent(market)}
                   data-testid={`card-market-${market.conditionId}`}
                 >
-                  <CardHeader className="pb-3">
-                    <div className="flex items-start justify-between gap-2">
-                      <CardTitle className="text-sm font-medium line-clamp-2 flex-1">
-                        {market.question}
-                      </CardTitle>
-                      {market.category && (
-                        <Badge variant="outline" className="text-xs capitalize shrink-0">
-                          {market.category}
-                        </Badge>
-                      )}
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    {/* Probability Bars */}
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="text-foreground/70">YES</span>
-                        <span className="font-semibold text-long">{(yesPrice * 100).toFixed(1)}%</span>
-                      </div>
-                      <div className="h-2 bg-glass/30 rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-gradient-to-r from-long/70 to-long transition-all"
-                          style={{ width: `${yesPrice * 100}%` }}
-                        />
+                  <CardContent className="p-4 space-y-3">
+                    <h3 className="text-sm font-medium line-clamp-3 min-h-[3.5rem] leading-snug">
+                      {market.question}
+                    </h3>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1.5">
+                        <div className="text-xs text-foreground/60 font-medium">YES</div>
+                        <div className="text-2xl font-bold text-long">
+                          {(yesPrice * 100).toFixed(0)}%
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full border-long/40 text-long hover:bg-long/10"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedEvent(market);
+                          }}
+                          data-testid={`button-yes-${market.conditionId}`}
+                        >
+                          Yes
+                        </Button>
                       </div>
 
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="text-foreground/70">NO</span>
-                        <span className="font-semibold text-short">{(noPrice * 100).toFixed(1)}%</span>
-                      </div>
-                      <div className="h-2 bg-glass/30 rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-gradient-to-r from-short/70 to-short transition-all"
-                          style={{ width: `${noPrice * 100}%` }}
-                        />
+                      <div className="space-y-1.5">
+                        <div className="text-xs text-foreground/60 font-medium">NO</div>
+                        <div className="text-2xl font-bold text-short">
+                          {(noPrice * 100).toFixed(0)}%
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full border-short/40 text-short hover:bg-short/10"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedEvent(market);
+                          }}
+                          data-testid={`button-no-${market.conditionId}`}
+                        >
+                          No
+                        </Button>
                       </div>
                     </div>
 
-                    {/* Market Stats */}
-                    <div className="flex items-center justify-between text-xs text-foreground/60">
-                      <span>Volume: ${volume > 1000 ? `${(volume / 1000).toFixed(1)}k` : volume.toFixed(0)}</span>
+                    <div className="flex items-center justify-between pt-2 border-t border-glass/20 text-xs text-foreground/50">
+                      <span className="flex items-center gap-1">
+                        <TrendingUp className="h-3 w-3" />
+                        {volume >= 1000000 
+                          ? `$${(volume / 1000000).toFixed(1)}M` 
+                          : volume >= 1000 
+                          ? `$${(volume / 1000).toFixed(0)}k`
+                          : `$${volume.toFixed(0)}`
+                        }
+                      </span>
                       {market.endDate && (
-                        <span>Ends: {new Date(market.endDate).toLocaleDateString()}</span>
+                        <span>{new Date(market.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
                       )}
                     </div>
                   </CardContent>
