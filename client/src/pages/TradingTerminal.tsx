@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -146,6 +147,244 @@ function PerpetualsInterface() {
           </div>
         </ResizablePanel>
       </ResizablePanelGroup>
+    </div>
+  );
+}
+
+// Polymarket Trading Modal Component
+function PolymarketTradingModal({ event, onClose }: { event: any; onClose: () => void }) {
+  const [selectedOutcome, setSelectedOutcome] = useState<"Yes" | "No">("Yes");
+  const [orderType, setOrderType] = useState<"market" | "limit">("market");
+  const [size, setSize] = useState("");
+  const [price, setPrice] = useState("");
+  const { toast } = useToast();
+
+  const yesToken = event.tokens?.find((t: any) => t.outcome === "Yes");
+  const noToken = event.tokens?.find((t: any) => t.outcome === "No");
+  const selectedToken = selectedOutcome === "Yes" ? yesToken : noToken;
+  const currentPrice = selectedToken ? parseFloat(selectedToken.price) : 0;
+
+  // Order placement mutation
+  const placeMutation = useMutation({
+    mutationFn: async (orderData: any) => {
+      const res = await fetch('/api/polymarket/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(orderData),
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || 'Failed to place order');
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Order Placed",
+        description: `${selectedOutcome} order placed successfully`,
+      });
+      onClose();
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Order Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handlePlaceOrder = () => {
+    if (!selectedToken || !selectedToken.tokenId) {
+      toast({
+        title: "Invalid Market",
+        description: "Market data unavailable. Please try another market.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!size || parseFloat(size) <= 0) {
+      toast({
+        title: "Invalid Size",
+        description: "Please enter a valid order size",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (orderType === "limit" && (!price || parseFloat(price) <= 0 || parseFloat(price) > 1)) {
+      toast({
+        title: "Invalid Price",
+        description: "Price must be between 0 and 1",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    placeMutation.mutate({
+      eventId: event.conditionId,
+      outcome: selectedOutcome,
+      tokenId: selectedToken.tokenId,
+      side: "BUY",
+      orderType,
+      price: orderType === "limit" ? parseFloat(price) : currentPrice,
+      size: parseFloat(size),
+      tickSize: "0.01",
+      negRisk: false,
+    });
+  };
+
+  const estimatedCost = parseFloat(size || "0") * (orderType === "limit" ? parseFloat(price || "0") : currentPrice);
+  const potentialProfit = parseFloat(size || "0") - estimatedCost;
+
+  return (
+    <div
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+      onClick={onClose}
+      data-testid="modal-polymarket-trading"
+    >
+      <Card
+        className="glass-strong border-glass/20 max-w-2xl w-full max-h-[90vh] overflow-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <CardHeader className="border-b border-glass/20">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex-1">
+              <CardTitle className="text-base mb-2">{event.question}</CardTitle>
+              {event.category && (
+                <Badge variant="outline" className="text-xs capitalize">
+                  {event.category}
+                </Badge>
+              )}
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onClose}
+              data-testid="button-close-trading-modal"
+            >
+              <Settings className="h-4 w-4 rotate-45" />
+            </Button>
+          </div>
+        </CardHeader>
+
+        <CardContent className="p-6 space-y-6">
+          {/* Outcome Selection */}
+          <div>
+            <label className="text-sm font-medium mb-2 block">Select Outcome</label>
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                variant={selectedOutcome === "Yes" ? "default" : "outline"}
+                className={selectedOutcome === "Yes" ? "bg-long hover:bg-long/90 border-long" : ""}
+                onClick={() => setSelectedOutcome("Yes")}
+                data-testid="button-outcome-yes"
+              >
+                <div className="text-center w-full">
+                  <div className="font-semibold">YES</div>
+                  <div className="text-xs opacity-80">{(parseFloat(yesToken?.price || "0") * 100).toFixed(1)}% ({(parseFloat(yesToken?.price || "0") * 100).toFixed(1)}¢)</div>
+                </div>
+              </Button>
+              <Button
+                variant={selectedOutcome === "No" ? "default" : "outline"}
+                className={selectedOutcome === "No" ? "bg-short hover:bg-short/90 border-short" : ""}
+                onClick={() => setSelectedOutcome("No")}
+                data-testid="button-outcome-no"
+              >
+                <div className="text-center w-full">
+                  <div className="font-semibold">NO</div>
+                  <div className="text-xs opacity-80">{(parseFloat(noToken?.price || "0") * 100).toFixed(1)}% ({(parseFloat(noToken?.price || "0") * 100).toFixed(1)}¢)</div>
+                </div>
+              </Button>
+            </div>
+          </div>
+
+          {/* Order Type Selection */}
+          <div>
+            <label className="text-sm font-medium mb-2 block">Order Type</label>
+            <Tabs value={orderType} onValueChange={(v) => setOrderType(v as any)}>
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="market" data-testid="tab-market-order">Market</TabsTrigger>
+                <TabsTrigger value="limit" data-testid="tab-limit-order">Limit</TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
+
+          {/* Size Input */}
+          <div>
+            <label className="text-sm font-medium mb-2 block">Size (shares)</label>
+            <input
+              type="number"
+              min="0"
+              step="1"
+              value={size}
+              onChange={(e) => setSize(e.target.value)}
+              placeholder="Enter number of shares"
+              className="w-full px-3 py-2 bg-glass/50 border border-glass/20 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50"
+              data-testid="input-order-size"
+            />
+          </div>
+
+          {/* Limit Price Input */}
+          {orderType === "limit" && (
+            <div>
+              <label className="text-sm font-medium mb-2 block">Limit Price (0-1)</label>
+              <input
+                type="number"
+                min="0"
+                max="1"
+                step="0.01"
+                value={price}
+                onChange={(e) => setPrice(e.target.value)}
+                placeholder="Enter price (e.g., 0.65)"
+                className="w-full px-3 py-2 bg-glass/50 border border-glass/20 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50"
+                data-testid="input-limit-price"
+              />
+            </div>
+          )}
+
+          {/* Order Summary */}
+          <div className="glass rounded-lg p-4 space-y-2 border border-glass/20">
+            <h3 className="text-sm font-semibold mb-3">Order Summary</h3>
+            <div className="flex justify-between text-sm">
+              <span className="text-foreground/70">Estimated Cost</span>
+              <span className="font-medium">${estimatedCost.toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-foreground/70">Potential Profit</span>
+              <span className={`font-medium ${potentialProfit > 0 ? 'text-long' : ''}`}>
+                ${potentialProfit.toFixed(2)}
+              </span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-foreground/70">Potential Return</span>
+              <span className="font-medium">
+                {estimatedCost > 0 ? `${((potentialProfit / estimatedCost) * 100).toFixed(1)}%` : '0%'}
+              </span>
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={onClose}
+              data-testid="button-cancel-order"
+            >
+              Cancel
+            </Button>
+            <Button
+              className="flex-1 bg-primary hover:bg-primary/90"
+              onClick={handlePlaceOrder}
+              disabled={placeMutation.isPending}
+              data-testid="button-place-order"
+            >
+              {placeMutation.isPending ? "Placing..." : `Place ${selectedOutcome} Order`}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
@@ -298,28 +537,8 @@ function PredictionMarketsInterface() {
         )}
       </div>
 
-      {/* Event Detail Modal - Placeholder for task 8 */}
-      {selectedEvent && (
-        <div
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-          onClick={() => setSelectedEvent(null)}
-        >
-          <Card
-            className="glass-strong border-glass/20 max-w-2xl w-full"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <CardHeader>
-              <CardTitle>Trading Interface - Coming Soon</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-foreground/70 mb-4">{selectedEvent.question}</p>
-              <Button onClick={() => setSelectedEvent(null)} data-testid="button-close-event">
-                Close
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+      {/* Trading Modal */}
+      {selectedEvent && <PolymarketTradingModal event={selectedEvent} onClose={() => setSelectedEvent(null)} />}
     </div>
   );
 }
