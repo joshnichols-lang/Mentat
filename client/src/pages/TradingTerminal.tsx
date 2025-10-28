@@ -171,10 +171,16 @@ function PolymarketTradingModal({ event, onClose }: { event: any; onClose: () =>
     queryKey: ['/api/wallets/embedded'],
   });
 
-  const yesToken = event.tokens?.find((t: any) => t.outcome === "Yes");
-  const noToken = event.tokens?.find((t: any) => t.outcome === "No");
-  const selectedToken = selectedOutcome === "Yes" ? yesToken : noToken;
-  const currentPrice = selectedToken ? parseFloat(selectedToken.price) : 0;
+  // Get prices from outcomePrices array [YES, NO]
+  const outcomePrices = event.outcomePrices || ["0", "0"];
+  const clobTokenIds = event.clobTokenIds || [];
+  const yesPrice = parseFloat(outcomePrices[0] || "0");
+  const noPrice = parseFloat(outcomePrices[1] || "0");
+  const yesTokenId = clobTokenIds[0];
+  const noTokenId = clobTokenIds[1];
+  
+  const selectedTokenId = selectedOutcome === "Yes" ? yesTokenId : noTokenId;
+  const currentPrice = selectedOutcome === "Yes" ? yesPrice : noPrice;
 
   // Order placement mutation
   const placeMutation = useMutation({
@@ -207,7 +213,7 @@ function PolymarketTradingModal({ event, onClose }: { event: any; onClose: () =>
   });
 
   const handlePlaceOrder = () => {
-    if (!selectedToken || !selectedToken.tokenId) {
+    if (!selectedTokenId) {
       toast({
         title: "Invalid Market",
         description: "Market data unavailable. Please try another market.",
@@ -295,7 +301,7 @@ function PolymarketTradingModal({ event, onClose }: { event: any; onClose: () =>
     placeMutation.mutate({
       eventId: event.conditionId,
       outcome: selectedOutcome,
-      tokenId: selectedToken.tokenId,
+      tokenId: selectedTokenId,
       side: "BUY",
       orderType,
       price: orderPrice,
@@ -352,7 +358,7 @@ function PolymarketTradingModal({ event, onClose }: { event: any; onClose: () =>
               >
                 <div className="text-center w-full">
                   <div className="font-semibold">YES</div>
-                  <div className="text-xs opacity-80">{(parseFloat(yesToken?.price || "0") * 100).toFixed(1)}% ({(parseFloat(yesToken?.price || "0") * 100).toFixed(1)}¢)</div>
+                  <div className="text-xs opacity-80">{(yesPrice * 100).toFixed(1)}% ({(yesPrice * 100).toFixed(1)}¢)</div>
                 </div>
               </Button>
               <Button
@@ -363,7 +369,7 @@ function PolymarketTradingModal({ event, onClose }: { event: any; onClose: () =>
               >
                 <div className="text-center w-full">
                   <div className="font-semibold">NO</div>
-                  <div className="text-xs opacity-80">{(parseFloat(noToken?.price || "0") * 100).toFixed(1)}% ({(parseFloat(noToken?.price || "0") * 100).toFixed(1)}¢)</div>
+                  <div className="text-xs opacity-80">{(noPrice * 100).toFixed(1)}% ({(noPrice * 100).toFixed(1)}¢)</div>
                 </div>
               </Button>
             </div>
@@ -627,10 +633,10 @@ function PredictionMarketsInterface() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-3">
             {filteredMarkets.map((market: any) => {
-              const yesToken = market.tokens?.find((t: any) => t.outcome === "Yes");
-              const noToken = market.tokens?.find((t: any) => t.outcome === "No");
-              const yesPrice = yesToken ? parseFloat(yesToken.price) : 0;
-              const noPrice = noToken ? parseFloat(noToken.price) : 0;
+              // Get prices from outcomePrices array [YES, NO]
+              const outcomePrices = market.outcomePrices || ["0", "0"];
+              const yesPrice = parseFloat(outcomePrices[0] || "0");
+              const noPrice = parseFloat(outcomePrices[1] || "0");
               const volume = market.volume ? parseFloat(market.volume) : 0;
 
               return (
