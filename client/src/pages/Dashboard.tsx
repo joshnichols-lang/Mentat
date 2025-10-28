@@ -119,31 +119,6 @@ export default function Dashboard() {
   const losses = 42;
   const breakeven = 5;
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <p className="text-muted-foreground">Loading...</p>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen gap-4">
-        <p className="text-destructive">Failed to load credentials status</p>
-        <p className="text-sm text-muted-foreground">{error.message}</p>
-      </div>
-    );
-  }
-
-  if (!hasCredentials && user?.role !== "admin") {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <p className="text-muted-foreground" data-testid="text-onboarding-redirect">Redirecting to onboarding...</p>
-      </div>
-    );
-  }
-
   return (
     <SymbolProvider>
       <div className="min-h-screen">
