@@ -8,7 +8,6 @@ import { TEST_USER_ID } from "./constants";
 import { startUserMonitoring } from "./userMonitoringManager";
 import { storage } from "./storage";
 import { startScheduler } from "./scheduler";
-import { ensureDefaultAdmin } from "./auth";
 
 const app = express();
 app.use(express.json({ limit: '50mb' })); // Support large images in AI prompts
@@ -75,9 +74,6 @@ app.use((req, res, next) => {
     reusePort: true,
   }, async () => {
     log(`serving on port ${port}`);
-    
-    // Ensure default admin account exists
-    await ensureDefaultAdmin();
     
     // Initialize autonomous trading for all active users
     try {
