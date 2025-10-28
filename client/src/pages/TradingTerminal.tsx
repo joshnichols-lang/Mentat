@@ -491,24 +491,41 @@ function PredictionMarketsInterface() {
     "Elections"
   ];
 
-  // Dynamic filter tags based on selected category and markets
+  // Dynamic filter tags extracted from markets' eventTags based on selected category
   const getFilterTags = () => {
-    if (selectedCategory === "Trending") {
-      return ["All", "Trump", "Elections", "Sports"];
-    }
-    if (selectedCategory === "Politics") {
-      return ["All", "Trump", "Gov Shutdown", "NYC Mayor"];
-    }
-    if (selectedCategory === "Sports") {
-      return ["All", "World Series", "NFL", "NBA"];
-    }
-    if (selectedCategory === "Finance") {
-      return ["All", "Fed", "Crypto", "Stocks"];
-    }
-    if (selectedCategory === "Crypto") {
-      return ["All", "Bitcoin", "Ethereum", "Solana"];
-    }
-    return ["All"];
+    // First filter markets by main category
+    const categoryFilteredMarkets = markets.filter((market: any) => {
+      if (selectedCategory === "Trending") return true;
+      
+      const categoryKeywords = getCategoryKeywords(selectedCategory);
+      const question = market.question?.toLowerCase() || "";
+      const tags = (market.tags || []).map((t: string) => t.toLowerCase()).join(" ");
+      const eventTags = (market.eventTags || []).map((t: any) => t.label?.toLowerCase() || "").join(" ");
+      const category = market.category?.toLowerCase() || "";
+      const searchText = `${question} ${tags} ${eventTags} ${category}`;
+      
+      return categoryKeywords.some(keyword => searchText.includes(keyword));
+    });
+    
+    // Extract unique tags from filtered markets
+    const tagCounts = new Map<string, number>();
+    categoryFilteredMarkets.forEach((market: any) => {
+      const eventTags = market.eventTags || [];
+      eventTags.forEach((tag: any) => {
+        const label = tag.label || tag;
+        if (label) {
+          tagCounts.set(label, (tagCounts.get(label) || 0) + 1);
+        }
+      });
+    });
+    
+    // Sort tags by frequency and take top ones
+    const topTags = Array.from(tagCounts.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10)
+      .map(([tag]) => tag);
+    
+    return ["All", ...topTags];
   };
 
   const filterTags = getFilterTags();
@@ -544,12 +561,16 @@ function PredictionMarketsInterface() {
       matchesCategory = categoryKeywords.some(keyword => searchText.includes(keyword));
     }
     
-    // Filter tag matching
+    // Subcategory tag matching - check against eventTags
     let matchesFilter = selectedFilter === "All";
     if (!matchesFilter) {
       const question = market.question?.toLowerCase() || "";
       const tags = (market.tags || []).map((t: string) => t.toLowerCase()).join(" ");
-      const searchText = `${question} ${tags}`;
+      const eventTags = (market.eventTags || []).map((t: any) => {
+        const label = t.label || t;
+        return typeof label === 'string' ? label.toLowerCase() : '';
+      }).join(" ");
+      const searchText = `${question} ${tags} ${eventTags}`;
       matchesFilter = searchText.includes(selectedFilter.toLowerCase());
     }
     
