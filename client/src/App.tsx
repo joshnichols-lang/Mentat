@@ -11,6 +11,7 @@ import { WagmiProvider } from 'wagmi';
 import { RainbowKitProvider, darkTheme } from '@rainbow-me/rainbowkit';
 import { config } from '@/lib/wagmi';
 import '@rainbow-me/rainbowkit/styles.css';
+import LandingPage from "@/pages/LandingPage";
 import Dashboard from "@/pages/Dashboard";
 import AuthPage from "@/pages/AuthPage";
 import PendingApproval from "@/pages/PendingApproval";
@@ -30,9 +31,11 @@ import NotFound from "@/pages/not-found";
 function Router() {
   return (
     <Switch>
+      <Route path="/" component={LandingPage} />
       <Route path="/auth" component={AuthPage} />
       <Route path="/ui-preview" component={UIPreview} />
       <Route path="/ui-enhanced" component={EnhancedUIPreview} />
+      <ProtectedRoute path="/terminal" component={Dashboard} />
       <ProtectedRoute path="/pending-approval" component={PendingApproval} />
       <ProtectedRoute path="/admin/verification" component={AdminVerification} />
       <ProtectedRoute path="/admin/users" component={AdminUsers} />
@@ -43,7 +46,6 @@ function Router() {
       <ProtectedRoute path="/trade-history" component={TradeHistory} />
       <ProtectedRoute path="/trade-journal" component={TradeJournal} />
       <ProtectedRoute path="/trading-modes" component={TradingModes} />
-      <ProtectedRoute path="/" component={Dashboard} />
       <Route component={NotFound} />
     </Switch>
   );

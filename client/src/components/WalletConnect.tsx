@@ -124,10 +124,10 @@ export default function WalletConnect() {
     initializeEmbeddedWallets();
   }, [authCompleted, hasEmbeddedWallet, isCreating]);
 
-  // Navigate to dashboard after recovery modal is confirmed
+  // Navigate to terminal after recovery modal is confirmed
   useEffect(() => {
     if (authCompleted && hasEmbeddedWallet && !showRecoveryModal) {
-      setLocation('/');
+      setLocation('/terminal');
     }
   }, [authCompleted, hasEmbeddedWallet, showRecoveryModal, setLocation]);
 

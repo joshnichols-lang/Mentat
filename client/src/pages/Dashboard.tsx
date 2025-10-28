@@ -51,15 +51,7 @@ export default function Dashboard() {
     refetchInterval: 30000,
   });
 
-  useEffect(() => {
-    if (user?.role === "admin") {
-      return;
-    }
-    
-    if (user && user.verificationStatus !== "approved") {
-      setLocation("/pending-approval");
-    }
-  }, [user, setLocation]);
+  // No verification check needed - all users are auto-approved
 
   // Extract real portfolio data
   const accountValue = (userState?.userState?.marginSummary?.accountValue as number) || 0;
