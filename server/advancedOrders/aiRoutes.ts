@@ -7,6 +7,7 @@
 import { Router } from "express";
 import { smartOrderRouter } from "./smartOrderRouter";
 import { executionOptimizer } from "./executionOptimizer";
+import { executionTimingPredictor } from "./executionTiming";
 
 // Middleware to check if user is authenticated
 function requireAuth(req: any, res: any, next: any) {
@@ -113,6 +114,39 @@ export function setupAIOrderRoutes(router: Router) {
       console.error('[AI Routes] Runtime optimization failed:', error);
       res.status(500).json({ 
         error: error instanceof Error ? error.message : 'Failed to get runtime adjustments' 
+      });
+    }
+  });
+  
+  /**
+   * Predict optimal execution windows
+   */
+  router.post("/api/advanced-orders/predict-timing", requireAuth, async (req, res) => {
+    try {
+      const { symbol, side, size, maxDuration, urgency } = req.body;
+      
+      if (!symbol || !side || !size) {
+        return res.status(400).json({ error: "Missing required parameters" });
+      }
+      
+      const windows = await executionTimingPredictor.predictOptimalWindows({
+        symbol,
+        side,
+        size: parseFloat(size),
+        maxDuration: maxDuration ? parseInt(maxDuration) : 240, // Default 4 hours
+        urgency: urgency || 'medium',
+        userId: req.user.id,
+      });
+      
+      res.json({
+        success: true,
+        windows,
+      });
+      
+    } catch (error) {
+      console.error('[AI Routes] Timing prediction failed:', error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : 'Failed to predict execution windows' 
       });
     }
   });

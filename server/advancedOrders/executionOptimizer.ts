@@ -17,7 +17,7 @@ interface MarketConditions {
   timestamp: number;
   
   // Volatility metrics
-  realized Volatility: number;      // Recent price volatility
+  realizedVolatility: number;      // Recent price volatility
   impliedVolatility?: number;      // From options if available
   volatilityRegime: 'low' | 'medium' | 'high' | 'extreme';
   
@@ -143,18 +143,42 @@ export class ExecutionOptimizer {
       }
     );
     
-    const book = await bookResponse.json();
+    const bookData = await bookResponse.json();
+    const book = bookData?.data ?? bookData; // Handle both response formats
+    
+    // Guard against missing book data
+    if (!book || !book.levels || !Array.isArray(book.levels[0]) || !Array.isArray(book.levels[1])) {
+      console.warn(`[ExecutionOptimizer] Invalid book data for ${symbol}`);
+      // Return degraded conditions with safe defaults
+      return {
+        symbol,
+        timestamp: Date.now(),
+        realizedVolatility: 0,
+        volatilityRegime: 'low' as const,
+        bidAskSpread: 0,
+        orderBookImbalance: 0,
+        topOfBookLiquidity: 0,
+        aggregateLiquidity: 0,
+        buyPressure: 0,
+        sellPressure: 0,
+        netFlow: 0,
+        priceChange1m: 0,
+        priceChange5m: 0,
+        priceChange15m: 0,
+        trend: 'neutral' as const,
+      };
+    }
     
     // Calculate metrics
-    const bestBid = parseFloat(book.levels[0][0]?.px || '0');
-    const bestAsk = parseFloat(book.levels[1][0]?.px || '0');
+    const bestBid = parseFloat(book.levels?.[0]?.[0]?.px || '0');
+    const bestAsk = parseFloat(book.levels?.[1]?.[0]?.px || '0');
     const midPrice = (bestBid + bestAsk) / 2;
     
     const bidAskSpread = bestAsk - bestBid;
     
     // Calculate order book imbalance
-    const bidLiquidity = book.levels[0].slice(0, 10).reduce((sum: number, l: any) => sum + parseFloat(l.sz), 0);
-    const askLiquidity = book.levels[1].slice(0, 10).reduce((sum: number, l: any) => sum + parseFloat(l.sz), 0);
+    const bidLiquidity = (book.levels?.[0] || []).slice(0, 10).reduce((sum: number, l: any) => sum + parseFloat(l.sz), 0);
+    const askLiquidity = (book.levels?.[1] || []).slice(0, 10).reduce((sum: number, l: any) => sum + parseFloat(l.sz), 0);
     const orderBookImbalance = (bidLiquidity - askLiquidity) / (bidLiquidity + askLiquidity);
     
     // Get recent candles for volatility calculation
@@ -175,7 +199,8 @@ export class ExecutionOptimizer {
       }
     );
     
-    const candles = await candlesResponse.json();
+    const candlesData = await candlesResponse.json();
+    const candles = candlesData?.candles ?? [];
     
     // Calculate realized volatility (std dev of returns)
     const returns = candles.slice(1).map((c: any, i: number) => {
@@ -184,8 +209,8 @@ export class ExecutionOptimizer {
       return Math.log(currentClose / prevClose);
     });
     
-    const avgReturn = returns.reduce((sum: number, r: number) => sum + r, 0) / returns.length;
-    const variance = returns.reduce((sum: number, r: number) => sum + Math.pow(r - avgReturn, 2), 0) / returns.length;
+    const avgReturn = returns.length > 0 ? returns.reduce((sum: number, r: number) => sum + r, 0) / returns.length : 0;
+    const variance = returns.length > 0 ? returns.reduce((sum: number, r: number) => sum + Math.pow(r - avgReturn, 2), 0) / returns.length : 0;
     const realizedVolatility = Math.sqrt(variance) * Math.sqrt(525600); // Annualized
     
     // Determine volatility regime
@@ -224,7 +249,7 @@ export class ExecutionOptimizer {
       volatilityRegime,
       bidAskSpread,
       orderBookImbalance,
-      topOfBookLiquidity: parseFloat(book.levels[0][0]?.sz || '0') + parseFloat(book.levels[1][0]?.sz || '0'),
+      topOfBookLiquidity: parseFloat(book.levels?.[0]?.[0]?.sz || '0') + parseFloat(book.levels?.[1]?.[0]?.sz || '0'),
       aggregateLiquidity: bidLiquidity + askLiquidity,
       buyPressure,
       sellPressure,

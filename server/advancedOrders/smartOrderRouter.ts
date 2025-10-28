@@ -75,8 +75,22 @@ export class SmartOrderRouter {
       (Date.now() - q.lastUpdateTime) < 5000 // Quote less than 5s old
     );
     
+    // Handle degraded state when no valid quotes are available
     if (validQuotes.length === 0) {
-      throw new Error('No valid execution venues available');
+      console.warn('[SOR] No valid quotes available, returning degraded routing decision');
+      return {
+        strategy: 'single_venue',
+        venues: [{
+          exchange: quotes.length > 0 ? quotes[0].exchange : 'hyperliquid',
+          size: params.size,
+          executionOrder: 1,
+          reasoning: 'No valid liquidity available - market data temporarily unavailable'
+        }],
+        expectedSlippageBps: 999999,
+        expectedFillTime: 0,
+        confidenceScore: 0,
+        aiReasoning: 'Unable to route order due to insufficient market data. Please try again or use manual order entry.',
+      };
     }
     
     // Use AI to determine optimal routing strategy
@@ -146,10 +160,32 @@ export class SmartOrderRouter {
       }
     );
     
-    const book = await bookResponse.json();
+    const bookData = await bookResponse.json();
+    const book = bookData?.data ?? bookData; // Handle both response formats
+    
+    // Guard against missing book data
+    if (!book || !book.levels || !Array.isArray(book.levels[0]) || !Array.isArray(book.levels[1])) {
+      console.warn(`[SOR] Invalid book data for ${symbol} on Hyperliquid`);
+      return {
+        exchange: 'hyperliquid',
+        symbol,
+        side,
+        availableLiquidity: 0,
+        avgPrice: 0,
+        slippageBps: 999999,
+        estimatedFee: 0,
+        totalCost: 0,
+        fillProbability: 0,
+        historicalPerformance: await this.getHistoricalPerformance(symbol, 'hyperliquid'),
+        currentSpread: 0,
+        orderBookDepth: 0,
+        recentVolume24h: 0,
+        lastUpdateTime: Date.now(),
+      };
+    }
     
     // Calculate VWAP and slippage
-    const levels = side === 'buy' ? book.levels[1] : book.levels[0];
+    const levels = (side === 'buy' ? book.levels?.[1] : book.levels?.[0]) || [];
     let remainingSize = size;
     let totalCost = 0;
     let liquidityFound = 0;
@@ -166,9 +202,11 @@ export class SmartOrderRouter {
       if (remainingSize <= 0) break;
     }
     
-    const avgPrice = totalCost / (size - remainingSize);
-    const midPrice = (parseFloat(levels[0]?.px || '0') + parseFloat(book.levels[side === 'buy' ? 0 : 1][0]?.px || '0')) / 2;
-    const slippageBps = Math.abs((avgPrice - midPrice) / midPrice) * 10000;
+    const filledSize = size - remainingSize;
+    const avgPrice = filledSize > 0 ? totalCost / filledSize : 0;
+    const oppositeLevels = (side === 'buy' ? book.levels?.[0] : book.levels?.[1]) || [];
+    const midPrice = (parseFloat(levels?.[0]?.px || '0') + parseFloat(oppositeLevels?.[0]?.px || '0')) / 2;
+    const slippageBps = midPrice > 0 && avgPrice > 0 ? Math.abs((avgPrice - midPrice) / midPrice) * 10000 : 0;
     
     // Get historical performance
     const historicalPerformance = await this.getHistoricalPerformance(symbol, 'hyperliquid');
@@ -184,8 +222,8 @@ export class SmartOrderRouter {
       totalCost: avgPrice * size * 1.0002,
       fillProbability: remainingSize === 0 ? 0.95 : 0.7,
       historicalPerformance,
-      currentSpread: Math.abs(parseFloat(book.levels[1][0]?.px || '0') - parseFloat(book.levels[0][0]?.px || '0')),
-      orderBookDepth: levels.reduce((sum: number, l: any) => sum + parseFloat(l.sz), 0),
+      currentSpread: Math.abs(parseFloat(book.levels?.[1]?.[0]?.px || '0') - parseFloat(book.levels?.[0]?.[0]?.px || '0')),
+      orderBookDepth: levels.reduce((sum: number, l: any) => sum + parseFloat(l?.sz || '0'), 0),
       recentVolume24h: 0, // Would fetch from metadata
       lastUpdateTime: Date.now(),
     };
