@@ -10,6 +10,7 @@ import {
 } from "lightweight-charts";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
+import { useTheme } from "@/components/ThemeProvider";
 
 interface TradingChartProps {
   symbol: string;
@@ -18,6 +19,88 @@ interface TradingChartProps {
 
 type Timeframe = "1m" | "5m" | "15m" | "1h" | "4h" | "1D";
 
+// Theme-specific color configurations
+const themeColors = {
+  fox: {
+    dark: {
+      grid: "rgba(255, 163, 82, 0.05)",
+      crosshair: "rgba(255, 163, 82, 0.4)",
+      crosshairBg: "#B06000",
+      border: "rgba(255, 163, 82, 0.1)",
+      upColor: "#FFC107",
+      downColor: "#F54E2E",
+      volumeUp: "rgba(255, 193, 7, 0.4)",
+      volumeDown: "rgba(245, 78, 46, 0.4)",
+      volumeBase: "#B06000",
+      text: "#9ca3af",
+    },
+    light: {
+      grid: "rgba(176, 96, 0, 0.08)",
+      crosshair: "rgba(176, 96, 0, 0.5)",
+      crosshairBg: "#B06000",
+      border: "rgba(176, 96, 0, 0.15)",
+      upColor: "#D4A500",
+      downColor: "#D64324",
+      volumeUp: "rgba(212, 165, 0, 0.4)",
+      volumeDown: "rgba(214, 67, 36, 0.4)",
+      volumeBase: "#B06000",
+      text: "#374151",
+    },
+  },
+  cyber: {
+    dark: {
+      grid: "rgba(168, 85, 247, 0.05)",
+      crosshair: "rgba(168, 85, 247, 0.4)",
+      crosshairBg: "#7c3aed",
+      border: "rgba(168, 85, 247, 0.1)",
+      upColor: "#06b6d4",
+      downColor: "#ec4899",
+      volumeUp: "rgba(6, 182, 212, 0.4)",
+      volumeDown: "rgba(236, 72, 153, 0.4)",
+      volumeBase: "#7c3aed",
+      text: "#9ca3af",
+    },
+    light: {
+      grid: "rgba(124, 58, 237, 0.08)",
+      crosshair: "rgba(124, 58, 237, 0.5)",
+      crosshairBg: "#7c3aed",
+      border: "rgba(124, 58, 237, 0.15)",
+      upColor: "#0891b2",
+      downColor: "#db2777",
+      volumeUp: "rgba(8, 145, 178, 0.4)",
+      volumeDown: "rgba(219, 39, 119, 0.4)",
+      volumeBase: "#7c3aed",
+      text: "#374151",
+    },
+  },
+  matrix: {
+    dark: {
+      grid: "rgba(34, 197, 94, 0.05)",
+      crosshair: "rgba(34, 197, 94, 0.4)",
+      crosshairBg: "#16a34a",
+      border: "rgba(34, 197, 94, 0.1)",
+      upColor: "#22c55e",
+      downColor: "#dc2626",
+      volumeUp: "rgba(34, 197, 94, 0.4)",
+      volumeDown: "rgba(220, 38, 38, 0.4)",
+      volumeBase: "#16a34a",
+      text: "#9ca3af",
+    },
+    light: {
+      grid: "rgba(22, 163, 74, 0.08)",
+      crosshair: "rgba(22, 163, 74, 0.5)",
+      crosshairBg: "#16a34a",
+      border: "rgba(22, 163, 74, 0.15)",
+      upColor: "#16a34a",
+      downColor: "#b91c1c",
+      volumeUp: "rgba(22, 163, 74, 0.4)",
+      volumeDown: "rgba(185, 28, 28, 0.4)",
+      volumeBase: "#16a34a",
+      text: "#374151",
+    },
+  },
+};
+
 export default function TradingChart({ symbol, onSymbolChange }: TradingChartProps) {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
@@ -25,9 +108,13 @@ export default function TradingChart({ symbol, onSymbolChange }: TradingChartPro
   const volumeSeriesRef = useRef<ISeriesApi<"Histogram"> | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
   
+  const { themeName, mode } = useTheme();
   const [timeframe, setTimeframe] = useState<Timeframe>("1h");
   const [isLoading, setIsLoading] = useState(true);
   const [candleData, setCandleData] = useState<Map<number, { candle: CandlestickData, volume: number }>>(new Map());
+
+  // Get current theme colors
+  const colors = themeColors[themeName as keyof typeof themeColors]?.[mode as keyof typeof themeColors.fox] || themeColors.fox.dark;
 
   // Initialize chart
   useEffect(() => {
@@ -36,29 +123,29 @@ export default function TradingChart({ symbol, onSymbolChange }: TradingChartPro
     const chart = createChart(chartContainerRef.current, {
       layout: {
         background: { color: "transparent" },
-        textColor: "#9ca3af",
+        textColor: colors.text,
         attributionLogo: false,
       },
       grid: {
-        vertLines: { color: "rgba(255, 163, 82, 0.05)" },
-        horzLines: { color: "rgba(255, 163, 82, 0.05)" },
+        vertLines: { color: colors.grid },
+        horzLines: { color: colors.grid },
       },
       crosshair: {
         mode: 1,
         vertLine: {
-          color: "rgba(255, 163, 82, 0.4)",
-          labelBackgroundColor: "#B06000",
+          color: colors.crosshair,
+          labelBackgroundColor: colors.crosshairBg,
         },
         horzLine: {
-          color: "rgba(255, 163, 82, 0.4)",
-          labelBackgroundColor: "#B06000",
+          color: colors.crosshair,
+          labelBackgroundColor: colors.crosshairBg,
         },
       },
       rightPriceScale: {
-        borderColor: "rgba(255, 163, 82, 0.1)",
+        borderColor: colors.border,
       },
       timeScale: {
-        borderColor: "rgba(255, 163, 82, 0.1)",
+        borderColor: colors.border,
         timeVisible: true,
         secondsVisible: false,
       },
@@ -77,17 +164,17 @@ export default function TradingChart({ symbol, onSymbolChange }: TradingChartPro
 
     // Create candlestick series
     const candleSeries = chart.addSeries(CandlestickSeries, {
-      upColor: "#FFC107",
-      downColor: "#F54E2E",
-      borderUpColor: "#FFC107",
-      borderDownColor: "#F54E2E",
-      wickUpColor: "#FFC107",
-      wickDownColor: "#F54E2E",
+      upColor: colors.upColor,
+      downColor: colors.downColor,
+      borderUpColor: colors.upColor,
+      borderDownColor: colors.downColor,
+      wickUpColor: colors.upColor,
+      wickDownColor: colors.downColor,
     });
 
     // Create volume series
     const volumeSeries = chart.addSeries(HistogramSeries, {
-      color: "#B06000",
+      color: colors.volumeBase,
       priceFormat: {
         type: "volume",
       },
@@ -124,7 +211,7 @@ export default function TradingChart({ symbol, onSymbolChange }: TradingChartPro
       resizeObserver.disconnect();
       chart.remove();
     };
-  }, []);
+  }, [colors]);
 
   // Fetch historical candle data and set up WebSocket
   useEffect(() => {
@@ -197,7 +284,7 @@ export default function TradingChart({ symbol, onSymbolChange }: TradingChartPro
         if (volumeSeriesRef.current) {
           const sortedVolumes = sorted.map(([_, data]) => {
             const volumeColor = data.candle.close >= data.candle.open ? 
-              "rgba(255, 193, 7, 0.4)" : "rgba(245, 78, 46, 0.4)";
+              colors.volumeUp : colors.volumeDown;
             
             return {
               time: data.candle.time,
@@ -288,7 +375,7 @@ export default function TradingChart({ symbol, onSymbolChange }: TradingChartPro
             if (volumeSeriesRef.current) {
               const sortedVolumes = sorted.map(([_, data]) => {
                 const volumeColor = data.candle.close >= data.candle.open ? 
-                  "rgba(255, 193, 7, 0.4)" : "rgba(245, 78, 46, 0.4)";
+                  colors.volumeUp : colors.volumeDown;
                 
                 return {
                   time: data.candle.time,
