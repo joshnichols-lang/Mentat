@@ -1195,4 +1195,300 @@
     margin-left: 0.125rem;
     opacity: 0.8;
   }
+
+  /* ========== LIQUID TOGGLE (Gooey Glass Effect) ========== */
+  :root {
+    --liquid-transition: 0.2s;
+    --liquid-ease: ease-out;
+  }
+
+  [data-bounce='true']:has(:is(button:active, [data-pressed="true"])) {
+    --liquid-transition: 0.6s;
+    --liquid-ease: linear(
+      0 0%,
+      0.6091 3.69%,
+      1.0259 7.24%,
+      1.1733 9.05%,
+      1.283 10.92%,
+      1.3562 12.87%,
+      1.3948 14.95%,
+      1.4014 16.03%,
+      1.3999 17.16%,
+      1.3731 19.64%,
+      1.3202 22.27%,
+      1.1394 29.39%,
+      1.0582 33.17%,
+      0.9943 37.45%,
+      0.9734 39.64%,
+      0.9593 41.92%,
+      0.9505 45.08%,
+      0.9517 48.7%,
+      0.9924 63.02%,
+      1.0046 71.2%,
+      1.0061 78.24%,
+      1 100%
+    );
+  }
+
+  [data-pressed=true] .liquid__track {
+    min-height: 30px;
+  }
+
+  .liquid-toggle {
+    --unchecked: hsl(218, 8%, 81%);
+    --checked: hsl(
+      var(--hue, 33),
+      calc((8 + (var(--complete) / 100 * (92))) * 1%),
+      calc((81 - (var(--complete) / 100 * (81 - 43))) * 1%)
+    );
+    --control: hsl(300, 100%, 100%);
+    --border: 5px;
+    --width: 140;
+    --height: 60;
+    height: calc(var(--height) * 1px);
+    width: calc(var(--width) * 1px);
+    border-radius: 100px;
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+    position: relative;
+    overflow: visible;
+    container-type: inline-size;
+    background: #0000;
+    transition: outline var(--liquid-transition) var(--liquid-ease);
+    outline-offset: 2px;
+  }
+
+  .liquid-toggle:focus-visible {
+    outline: 4px solid color-mix(in oklch, var(--checked), #0000);
+  }
+
+  .liquid-toggle:active {
+    outline: none;
+  }
+
+  .liquid-toggle[data-active='true']:focus-visible {
+    outline: 4px solid #0000;
+  }
+
+  /* Background transitions for smooth color changes */
+  [data-mapped=false] .liquid-toggle {
+    --progress: round(down, var(--complete), 85);
+    --checked: hsl(
+      var(--hue, 33),
+      calc((8 + (var(--progress) / 85 * (92))) * 1%),
+      calc((81 - (var(--progress) / 85 * (81 - 43))) * 1%)
+    );
+  }
+
+  [data-mapped=false] .liquid-toggle .indicator,
+  [data-mapped=false] .liquid-toggle .indicator--masked {
+    transition: background calc(var(--liquid-transition) * 0.5) ease-out;
+  }
+
+  [data-mapped=false] .liquid-toggle .liquid__shadow {
+    transition: box-shadow calc(var(--liquid-transition) * 0.5) ease-out;
+  }
+
+  [data-mapped=false] .liquid-toggle .liquid__track {
+    transition-property: height, width, filter, left, background;
+    transition-duration: var(--liquid-transition), var(--liquid-transition), var(--liquid-transition), var(--liquid-transition), calc(var(--liquid-transition) * 0.5);
+    transition-timing-function: var(--liquid-ease), var(--liquid-ease), var(--liquid-ease), var(--liquid-ease), ease-out;
+  }
+
+  .liquid-toggle .indicator {
+    border-radius: 100px;
+    pointer-events: none;
+    height: 100%;
+    width: 100%;
+    background: var(--checked);
+    position: absolute;
+    top: 50%;
+    scale: 1;
+    left: 50%;
+    translate: -50% -50%;
+  }
+
+  .liquid-toggle .knockout {
+    height: calc(var(--height) * 1px);
+    width: calc(var(--width) * 1px);
+    border-radius: 100px;
+    filter: url(#remove-black);
+    position: absolute;
+    inset: 0;
+    will-change: filter, scale;
+    transform: translate3d(0, 0, 0);
+  }
+
+  .liquid-toggle .indicator--masked {
+    background: var(--checked);
+    z-index: 12;
+    height: 100%;
+    width: 100%;
+    translate: -50% -50%;
+    container-type: inline-size;
+  }
+
+  .liquid-toggle .indicator--masked .mask {
+    position: absolute;
+    height: calc(100% - (2 * var(--border)));
+    width: calc(60% - (2 * var(--border)));
+    top: 50%;
+    background: #000;
+    left: var(--border);
+    border-radius: 100px;
+    translate: calc(
+      (var(--complete) / 100) * (100cqi - 60cqi - (0 * var(--border)))
+    ) -50%;
+    transition-property: height, width, margin, scale;
+    transition-duration: var(--liquid-transition);
+    transition-timing-function: var(--liquid-ease);
+    will-change: height, width, margin;
+  }
+
+  .liquid-toggle .wrapper {
+    position: absolute;
+    inset: 0;
+    border-radius: 100px;
+    clip-path: inset(0 0 0 0 round 100px);
+    filter: blur(6px);
+    transition: filter var(--liquid-transition) var(--liquid-ease);
+  }
+
+  .liquid-toggle .liquids {
+    position: absolute;
+    inset: 0;
+    transform: translate3d(0, 0, 0);
+    border-radius: 100px;
+    overflow: hidden;
+    filter: url(#goo);
+  }
+
+  .liquid-toggle .liquid__shadow {
+    position: absolute;
+    inset: 0;
+    box-shadow: inset 0px 0px 3px 4px var(--checked),
+      inset calc(((var(--complete) / 100) * 8px) + -4px) 0px 3px 4px var(--checked);
+    border-radius: 100px;
+  }
+
+  .liquid-toggle .liquid__track {
+    content: '';
+    height: calc((var(--height) * 1px) - (0 * var(--border)));
+    width: calc((var(--width) * 1px) - (0 * var(--border)));
+    background: var(--checked);
+    border-radius: 100px;
+    position: absolute;
+    top: 50%;
+    left: 0;
+    transition-property: height, width, filter, left;
+    transition-duration: var(--liquid-transition);
+    transition-timing-function: var(--liquid-ease);
+    translate: calc(
+      (var(--complete) / 100) * (100cqi - 100% - (6 * var(--border)))
+    ) -50%;
+  }
+
+  [aria-pressed='true']:not([data-active='true']) .liquid__track {
+    left: calc(var(--border) * 6);
+  }
+
+  .liquid-toggle .indicator__liquid {
+    position: absolute;
+    height: calc(100% - (2 * var(--border)));
+    width: calc(60% - (2 * var(--border)));
+    container-type: inline-size;
+    top: 50%;
+    background: #0000;
+    left: var(--border);
+    border-radius: 100px;
+    translate: calc(
+      (var(--complete) / 100) * (100cqi - 100% - (2 * var(--border)))
+    ) -50%;
+    transition-property: scale;
+    transition-duration: var(--liquid-transition);
+    transition-timing-function: var(--liquid-ease);
+  }
+
+  .liquid-toggle .indicator__liquid .shadow {
+    opacity: 0;
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 100px;
+    box-shadow: 
+      1px -1px 2px hsl(0 0% 100% / 0.5) inset,
+      0px -1px 2px hsl(0 0% 100% / 0.5) inset,
+      -1px -1px 2px hsl(0 0% 100% / 0.5) inset,
+      1px 1px 2px hsl(0 0% 30% / 0.5) inset,
+      -8px 4px 10px -6px hsl(0 0% 30% / 0.25) inset,
+      -1px 1px 6px hsl(0 0% 30% / 0.25) inset,
+      -1px -1px 8px hsl(0 0% 60% / 0.15),
+      1px 1px 2px hsl(0 0% 30% / 0.15),
+      2px 2px 6px hsl(0 0% 30% / 0.15),
+      -2px -1px 2px hsl(0 0% 100% / 0.25) inset,
+      3px 6px 16px -6px hsl(0 0% 30% / 0.5);
+    z-index: 20;
+    transition: opacity var(--liquid-transition) var(--liquid-ease);
+  }
+
+  .liquid-toggle .indicator__liquid .cover {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: white;
+    border-radius: 100px;
+    transition: opacity var(--liquid-transition) var(--liquid-ease);
+  }
+
+  .liquid-toggle .indicator__liquid .liquid__track {
+    left: calc(var(--border) * 3);
+  }
+
+  /* Active state transformations */
+  [data-active='true'] .liquid-toggle .indicator--masked .mask,
+  .liquid-toggle:active .indicator--masked .mask {
+    height: calc((100% - (2 * var(--border))) * (1.65 - (var(--delta, 0) * 0.025)));
+    width: calc((60% - (2 * var(--border))) * (1.65 + (var(--delta, 0) * 0.025)));
+    margin-left: calc((60% - (2 * var(--border))) * ((.65 + (var(--delta, 0) * 0.025)) * -0.5));
+  }
+
+  [data-active='true'] .liquid-toggle .indicator__liquid,
+  .liquid-toggle:active .indicator__liquid {
+    scale: calc(1.65 + (var(--delta, 0) * 0.025)) calc(1.65 - (var(--delta, 0) * 0.025));
+  }
+
+  [data-active='true'] .liquid-toggle .wrapper,
+  .liquid-toggle:active .wrapper {
+    filter: blur(0px);
+  }
+
+  [data-active='true'] .liquid-toggle .indicator__liquid .shadow,
+  .liquid-toggle:active .indicator__liquid .shadow {
+    opacity: 1;
+  }
+
+  [data-active='true'] .liquid-toggle .indicator__liquid .cover,
+  .liquid-toggle:active .indicator__liquid .cover {
+    opacity: 0;
+  }
+
+  [data-active='true'] .liquid-toggle .indicator__liquid .liquid__track,
+  .liquid-toggle:active .indicator__liquid .liquid__track {
+    left: calc(var(--border) * 3);
+    height: calc((var(--height) * 1px) - (6 * var(--border)));
+  }
+
+  /* Screen reader only utility */
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+  }
 }
