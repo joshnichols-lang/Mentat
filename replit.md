@@ -1,7 +1,7 @@
 # 1fox
 
 ## Overview
-1fox is an AI-powered cryptocurrency trading platform providing a comprehensive "one stop shop" for three market types: Perpetuals, Prediction Markets, and Spot Discovery (coming soon). The platform enables users to interact with an AI trading agent, "Mr. Fox," using natural language for automated strategy execution across perpetual futures (Hyperliquid, Orderly Network) and prediction markets (Polymarket). Features a glassmorphic "Fantastic Mr. Fox" themed interface with tab-based navigation, real-time market data, portfolio tracking, and comprehensive trading controls. Users authenticate with external wallets, and the platform auto-generates a multi-chain wallet (EVM, Solana, Polygon) for seamless cross-chain trading. 1fox aims to provide a professional AI trading experience focused on Sharpe ratio maximization through optimal trading actions and continuous risk management, delivered as a multi-tenant SaaS.
+1fox is an AI-powered cryptocurrency trading platform providing a comprehensive "one stop shop" for three market types: Perpetuals, Prediction Markets, and Spot Discovery (coming soon). The platform enables users to interact with an AI trading agent, "Mr. Fox," using natural language for automated strategy execution across perpetual futures (Hyperliquid, Orderly Network) and prediction markets (Polymarket). Features a glassmorphic "Fantastic Mr. Fox" themed interface with tab-based navigation, real-time market data, portfolio tracking, comprehensive trading controls, and institutional-grade advanced order types (TWAP, Limit Chase, Scaled, Iceberg, OCO, Trailing TP) matching and exceeding Insilico Terminal's capabilities. Users authenticate with external wallets, and the platform auto-generates a multi-chain wallet (EVM, Solana, Polygon) for seamless cross-chain trading. 1fox aims to provide a professional AI trading experience focused on Sharpe ratio maximization through optimal trading actions and continuous risk management, delivered as a multi-tenant SaaS.
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
@@ -50,6 +50,7 @@ Preferred communication style: Simple, everyday language.
 **Core Features:** Autonomous trading engine, order management, configurable monitoring frequency, and enhanced performance metrics calculated from cumulative portfolio snapshots.
 **Monitoring & Resource Management:** Intelligent monitoring frequency and proper cleanup on user deletion.
 **Hyperliquid SDK Defensive Guards:** Comprehensive error handling, flexible verification, and production safety.
+**Advanced Order System:** Institutional-grade order execution engine supporting TWAP (Time-Weighted Average Price), Limit Chase, Scaled/Ladder Orders, Iceberg Orders, OCO (One-Cancels-Other), and Trailing Take-Profit. Features per-user execution engines with state management, progress tracking, and execution analytics. Matches and exceeds Insilico Terminal capabilities with AI-enhanced parameter optimization.
 
 ## External Dependencies
 

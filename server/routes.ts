@@ -3690,6 +3690,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Advanced Orders Routes and Manager
+  const { setupAdvancedOrdersRoutes } = await import("./advancedOrders/routes");
+  const { advancedOrderManager } = await import("./advancedOrders/manager");
+  
+  setupAdvancedOrdersRoutes(app);
+  
+  // Initialize advanced orders manager
+  await advancedOrderManager.initialize();
+  console.log("[Server] Advanced Orders Manager initialized");
+
   const httpServer = createServer(app);
 
   // Initialize market data WebSocket service

@@ -688,3 +688,97 @@ export type InsertPolymarketPosition = z.infer<typeof insertPolymarketPositionSc
 export type PolymarketPosition = typeof polymarketPositions.$inferSelect;
 export type InsertPolymarketOrder = z.infer<typeof insertPolymarketOrderSchema>;
 export type PolymarketOrder = typeof polymarketOrders.$inferSelect;
+
+// Advanced Orders - Institutional-grade order types (TWAP, Limit Chase, Scaled, Iceberg, etc.)
+export const advancedOrders = pgTable("advanced_orders", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  apiKeyId: varchar("api_key_id").references(() => apiKeys.id, { onDelete: "set null" }), // Which exchange account
+  tradingModeId: varchar("trading_mode_id").references(() => tradingModes.id, { onDelete: "set null" }), // Associated strategy
+  
+  // Order identification
+  orderType: text("order_type").notNull(), // "twap", "limit_chase", "scaled", "iceberg", "oco", "trailing_tp", "grid", "conditional"
+  symbol: text("symbol").notNull(),
+  side: text("side").notNull(), // "buy" or "sell"
+  
+  // Order size and pricing
+  totalSize: decimal("total_size", { precision: 18, scale: 8 }).notNull(), // Total order size
+  executedSize: decimal("executed_size", { precision: 18, scale: 8 }).notNull().default("0"), // Amount filled so far
+  limitPrice: decimal("limit_price", { precision: 18, scale: 8 }), // Limit price (if applicable)
+  
+  // Order parameters (JSON for flexibility across different order types)
+  parameters: jsonb("parameters").notNull(), // Type-specific params: intervals, offsets, grids, etc.
+  
+  // Execution tracking
+  status: text("status").notNull().default("pending"), // "pending", "active", "paused", "completed", "cancelled", "failed"
+  progress: decimal("progress", { precision: 5, scale: 2 }).notNull().default("0"), // Percentage complete (0-100)
+  
+  // Child orders tracking
+  childOrderIds: text("child_order_ids").array(), // Array of Hyperliquid order IDs (oids) spawned by this advanced order
+  executionLog: jsonb("execution_log"), // Array of execution events: [{ timestamp, action, price, size, reason }]
+  
+  // AI enhancement
+  aiOptimized: integer("ai_optimized").notNull().default(0), // 1 = AI optimized the parameters
+  aiReasoning: text("ai_reasoning"), // AI's explanation for parameter choices
+  
+  // Performance metrics
+  averageExecutionPrice: decimal("average_execution_price", { precision: 18, scale: 8 }),
+  totalSlippage: decimal("total_slippage", { precision: 10, scale: 6 }), // Actual vs. expected slippage
+  estimatedSavings: decimal("estimated_savings", { precision: 18, scale: 2 }), // vs. market order
+  
+  // Error handling
+  errorCount: integer("error_count").notNull().default(0),
+  lastError: text("last_error"),
+  
+  // Timestamps
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  startedAt: timestamp("started_at"),
+  completedAt: timestamp("completed_at"),
+  cancelledAt: timestamp("cancelled_at"),
+  lastExecutionAt: timestamp("last_execution_at"),
+}, (table) => [
+  index("idx_advanced_orders_user_status").on(table.userId, table.status),
+  index("idx_advanced_orders_type").on(table.orderType),
+]);
+
+// Advanced Order Executions - Track each child order/slice execution
+export const advancedOrderExecutions = pgTable("advanced_order_executions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  advancedOrderId: varchar("advanced_order_id").notNull().references(() => advancedOrders.id, { onDelete: "cascade" }),
+  
+  // Execution details
+  sequenceNumber: integer("sequence_number").notNull(), // Order of execution (1, 2, 3...)
+  hyperliquidOrderId: text("hyperliquid_order_id"), // oid from Hyperliquid
+  
+  // Order specs
+  orderType: text("order_type").notNull(), // "market", "limit"
+  size: decimal("size", { precision: 18, scale: 8 }).notNull(),
+  limitPrice: decimal("limit_price", { precision: 18, scale: 8 }),
+  
+  // Execution results
+  status: text("status").notNull().default("pending"), // "pending", "submitted", "filled", "partial", "cancelled", "failed"
+  filledSize: decimal("filled_size", { precision: 18, scale: 8 }).notNull().default("0"),
+  averagePrice: decimal("average_price", { precision: 18, scale: 8 }),
+  
+  // Market conditions at execution
+  marketPrice: decimal("market_price", { precision: 18, scale: 8 }), // Market price when order placed
+  slippage: decimal("slippage", { precision: 10, scale: 6 }), // Actual vs. expected
+  
+  // Reason and context
+  executionReason: text("execution_reason"), // Why this slice was executed now
+  marketConditions: jsonb("market_conditions"), // { volume, spread, volatility, liquidity }
+  
+  timestamp: timestamp("timestamp").notNull().defaultNow(),
+  filledAt: timestamp("filled_at"),
+}, (table) => [
+  index("idx_advanced_order_executions_parent").on(table.advancedOrderId),
+]);
+
+// Zod schemas and types
+export const insertAdvancedOrderSchema = createInsertSchema(advancedOrders).omit({ id: true, createdAt: true });
+export const insertAdvancedOrderExecutionSchema = createInsertSchema(advancedOrderExecutions).omit({ id: true, timestamp: true });
+
+export type InsertAdvancedOrder = z.infer<typeof insertAdvancedOrderSchema>;
+export type AdvancedOrder = typeof advancedOrders.$inferSelect;
+export type InsertAdvancedOrderExecution = z.infer<typeof insertAdvancedOrderExecutionSchema>;
+export type AdvancedOrderExecution = typeof advancedOrderExecutions.$inferSelect;
