@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { TrendingUp, Target, Layers, IceCream, GitBranch, TrendingDown, Grid, Zap, Brain, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { LiquidToggle } from "@/components/LiquidToggle";
 
 interface AdvancedOrderEntryProps {
   symbol: string;
@@ -211,15 +212,12 @@ export function AdvancedOrderEntry({ symbol, currentPrice }: AdvancedOrderEntryP
                 AI Optimized
               </Badge>
             )}
-            <div className="flex items-center gap-2">
-              <Label htmlFor="ai-optimize" className="text-sm">Mr. Fox AI</Label>
-              <Switch
-                id="ai-optimize"
-                checked={aiOptimizationEnabled}
-                onCheckedChange={setAiOptimizationEnabled}
-                data-testid="switch-ai-optimization"
-              />
-            </div>
+            <LiquidToggle
+              checked={aiOptimizationEnabled}
+              onCheckedChange={setAiOptimizationEnabled}
+              label="Mr. Fox AI"
+              data-testid="switch-ai-optimization"
+            />
           </div>
         </div>
       </CardHeader>
