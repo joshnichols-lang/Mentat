@@ -22,7 +22,7 @@ Preferred communication style: Simple, everyday language.
 **Server:** Express.js with TypeScript.
 **Database:** PostgreSQL with Drizzle ORM for storing trading data, portfolio snapshots, AI logs, and trade history.
 **API:** RESTful endpoints for trading, database operations, and exchange interactions.
-**Authentication & Security:** Multi-tenant architecture with Passport.js and PostgreSQL session persistence. Wallet-based authentication using wagmi, viem, and RainbowKit supports EVM wallets. AES-256-GCM encryption for API keys.
+**Authentication & Security:** Streamlined multi-tenant architecture with Passport.js and PostgreSQL session persistence. All users are auto-approved on creation (verificationStatus defaults to "approved"). Wallet-based authentication flow: Landing page (/) → Connect wallet via RainbowKit → Automatic signature request → Session creation → Embedded wallet generation → Recovery phrase confirmation → Redirect to /terminal. The LandingPage component includes integrated authentication logic with useAccount, useSignMessage, and useEmbeddedWallet hooks. Complete flow happens automatically after wallet connection without manual approval steps. AES-256-GCM encryption for API keys.
 **Multi-Chain Wallet System:** Non-custodial, BIP39-derived multi-chain wallet generation for deposits and trading; seed phrases are shown once and never stored.
 **Hyperliquid API Wallet Architecture:** A separate, encrypted API wallet (from a different seed) is used for Hyperliquid trading, authorized by the user's connected wallet via EIP-712 signature. This API wallet has no withdrawal permissions and executes all trades under 1fox's referral code.
 **AI Integration:**
