@@ -69,7 +69,7 @@ export default function LandingPage() {
   // Authenticate wallet when connected
   useEffect(() => {
     const authenticateWallet = async () => {
-      if (isConnected && address && !isAuthenticating && !walletAuthMutation.isPending) {
+      if (isConnected && address && !isAuthenticating && !walletAuthMutation.isPending && !authCompleted) {
         setIsAuthenticating(true);
         
         try {
@@ -106,7 +106,7 @@ export default function LandingPage() {
     };
 
     authenticateWallet();
-  }, [isConnected, address]);
+  }, [isConnected, address, isAuthenticating, walletAuthMutation.isPending, authCompleted, signMessageAsync, connector, toast]);
 
   // After external wallet auth completes, check if user needs embedded wallets
   useEffect(() => {
@@ -126,7 +126,7 @@ export default function LandingPage() {
     };
 
     initializeEmbeddedWallets();
-  }, [authCompleted, hasEmbeddedWallet, isCreating]);
+  }, [authCompleted, hasEmbeddedWallet, isCreating, createEmbeddedWallet, toast]);
 
   // Navigate to terminal after recovery modal is confirmed
   useEffect(() => {
