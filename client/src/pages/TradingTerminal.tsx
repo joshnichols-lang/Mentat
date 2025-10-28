@@ -546,7 +546,7 @@ function PredictionMarketsInterface() {
   };
 
   // Apply search/category filters (API already returns only active markets via closed=false)
-  const filteredMarkets = markets.filter((market: any) => {
+  let filteredMarkets = markets.filter((market: any) => {
     const matchesSearch = searchQuery === "" || market.question?.toLowerCase().includes(searchQuery.toLowerCase());
     
     // Category matching using keyword matching
@@ -576,6 +576,15 @@ function PredictionMarketsInterface() {
     
     return matchesSearch && matchesCategory && matchesFilter;
   });
+
+  // Sort by volume (descending) for Trending tab to show most active markets first
+  if (selectedCategory === "Trending") {
+    filteredMarkets = [...filteredMarkets].sort((a, b) => {
+      const volumeA = parseFloat(a.volume || "0");
+      const volumeB = parseFloat(b.volume || "0");
+      return volumeB - volumeA; // Descending order (highest volume first)
+    });
+  }
 
   return (
     <div className="flex-1 overflow-hidden flex flex-col">
