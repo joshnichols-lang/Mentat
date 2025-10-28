@@ -27,6 +27,12 @@ import {
   CheckCircle2,
   Clock,
   AlertCircle,
+  Zap,
+  Play,
+  Pause,
+  Target,
+  Layers,
+  IceCream,
 } from "lucide-react";
 import {
   Dialog,
@@ -38,6 +44,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Progress } from "@/components/ui/progress";
 
 interface Order {
   oid: number;
@@ -91,6 +98,12 @@ export default function OrderManagementPanel() {
   // Fetch open orders
   const { data: ordersData, isLoading } = useQuery<{ orders: Order[] }>({
     queryKey: ["/api/hyperliquid/open-orders"],
+    refetchInterval: 10000,
+  });
+
+  // Fetch advanced orders
+  const { data: advancedOrders = [], isLoading: isLoadingAdvanced } = useQuery<any[]>({
+    queryKey: ["/api/advanced-orders"],
     refetchInterval: 10000,
   });
 
@@ -256,6 +269,63 @@ export default function OrderManagementPanel() {
     editForm.reset();
   };
 
+  // Advanced order control handlers
+  const handleAdvancedExecute = async (orderId: string) => {
+    try {
+      await apiRequest(`/api/advanced-orders/${orderId}/execute`, { method: "POST" });
+      queryClient.invalidateQueries({ queryKey: ["/api/advanced-orders"] });
+      toast({ title: "Order Started", description: "Advanced order execution has begun" });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to start order",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleAdvancedPause = async (orderId: string) => {
+    try {
+      await apiRequest(`/api/advanced-orders/${orderId}/pause`, { method: "POST" });
+      queryClient.invalidateQueries({ queryKey: ["/api/advanced-orders"] });
+      toast({ title: "Order Paused", description: "Order execution paused successfully" });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to pause order",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleAdvancedResume = async (orderId: string) => {
+    try {
+      await apiRequest(`/api/advanced-orders/${orderId}/resume`, { method: "POST" });
+      queryClient.invalidateQueries({ queryKey: ["/api/advanced-orders"] });
+      toast({ title: "Order Resumed", description: "Order execution resumed successfully" });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to resume order",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleAdvancedCancel = async (orderId: string) => {
+    try {
+      await apiRequest(`/api/advanced-orders/${orderId}/cancel`, { method: "POST" });
+      queryClient.invalidateQueries({ queryKey: ["/api/advanced-orders"] });
+      toast({ title: "Order Cancelled", description: "Advanced order cancelled successfully" });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to cancel order",
+        variant: "destructive",
+      });
+    }
+  };
+
   const getOrderTypeLabel = (order: Order) => {
     if (order.tpsl === "tp") return "Take Profit";
     if (order.tpsl === "sl") return "Stop Loss";
@@ -375,7 +445,7 @@ export default function OrderManagementPanel() {
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="entry" className="w-full">
-            <TabsList className="grid w-full grid-cols-3 mb-4">
+            <TabsList className="grid w-full grid-cols-4 mb-4">
               <TabsTrigger value="entry" className="text-xs" data-testid="tab-entry-orders">
                 Entry ({entryOrders.length})
               </TabsTrigger>
@@ -384,6 +454,10 @@ export default function OrderManagementPanel() {
               </TabsTrigger>
               <TabsTrigger value="targets" className="text-xs" data-testid="tab-take-profits">
                 Targets ({takeProfits.length})
+              </TabsTrigger>
+              <TabsTrigger value="advanced" className="text-xs" data-testid="tab-advanced-orders">
+                <Zap className="w-3 h-3 mr-1" />
+                Advanced ({advancedOrders.length})
               </TabsTrigger>
             </TabsList>
 
@@ -435,6 +509,109 @@ export default function OrderManagementPanel() {
                     isDragging={dragState?.orderId === order.oid} 
                   />
                 ))
+              )}
+            </TabsContent>
+
+            <TabsContent value="advanced" className="space-y-2 mt-0">
+              {advancedOrders.length === 0 ? (
+                <div className="text-center py-8 text-sm text-muted-foreground" data-testid="empty-advanced-orders">
+                  <Zap className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                  No advanced orders
+                </div>
+              ) : (
+                advancedOrders.map((order: any) => {
+                  const progress = parseFloat(order.progress || "0");
+                  const isBuy = order.side.toLowerCase() === "buy";
+                  const orderIcon = order.orderType === "twap" ? <Clock className="w-3 h-3" /> :
+                                   order.orderType === "limit_chase" ? <Target className="w-3 h-3" /> :
+                                   order.orderType === "scaled" ? <Layers className="w-3 h-3" /> :
+                                   <IceCream className="w-3 h-3" />;
+
+                  return (
+                    <div
+                      key={order.id}
+                      className="flex flex-col gap-2 p-3 rounded-lg border border-border/40 bg-background/50"
+                      data-testid={`advanced-order-${order.id}`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          {orderIcon}
+                          <span className="font-semibold text-sm">{order.symbol}</span>
+                          <Badge variant={isBuy ? "default" : "destructive"} className="text-xs">
+                            {isBuy ? "BUY" : "SELL"}
+                          </Badge>
+                          <Badge variant="outline" className="text-xs capitalize">
+                            {order.orderType.replace("_", " ")}
+                          </Badge>
+                        </div>
+                        <Badge 
+                          variant={order.status === "executing" ? "default" : order.status === "completed" ? "default" : "outline"}
+                          className="text-xs"
+                        >
+                          {order.status}
+                        </Badge>
+                      </div>
+                      
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-xs text-muted-foreground">
+                          <span>{order.executedSize} / {order.totalSize}</span>
+                          <span>{progress.toFixed(1)}%</span>
+                        </div>
+                        <Progress value={progress} className="h-1" />
+                      </div>
+
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-muted-foreground">
+                          {order.averageExecutionPrice ? `Avg: $${parseFloat(order.averageExecutionPrice).toFixed(2)}` : ""}
+                        </span>
+                        <div className="flex gap-1">
+                          {order.status === "pending" && (
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-6 w-6"
+                              onClick={() => handleAdvancedExecute(order.id)}
+                              data-testid={`button-execute-${order.id}`}
+                            >
+                              <Play className="w-3 h-3" />
+                            </Button>
+                          )}
+                          {order.status === "executing" && (
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-6 w-6"
+                              onClick={() => handleAdvancedPause(order.id)}
+                              data-testid={`button-pause-${order.id}`}
+                            >
+                              <Pause className="w-3 h-3" />
+                            </Button>
+                          )}
+                          {order.status === "paused" && (
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-6 w-6"
+                              onClick={() => handleAdvancedResume(order.id)}
+                              data-testid={`button-resume-${order.id}`}
+                            >
+                              <Play className="w-3 h-3" />
+                            </Button>
+                          )}
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-6 w-6 hover:bg-destructive/10 hover:text-destructive"
+                            onClick={() => handleAdvancedCancel(order.id)}
+                            data-testid={`button-cancel-advanced-${order.id}`}
+                          >
+                            <X className="w-3 h-3" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
               )}
             </TabsContent>
           </Tabs>

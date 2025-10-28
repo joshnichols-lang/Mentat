@@ -29,8 +29,6 @@ import RecentTrades from "@/components/RecentTrades";
 import OrderEntryPanel from "@/components/OrderEntryPanel";
 import OrderManagementPanel from "@/components/OrderManagementPanel";
 import MarketSelector from "@/components/MarketSelector";
-import { AdvancedOrderEntry } from "@/components/AdvancedOrderEntry";
-import { AdvancedOrdersPanel } from "@/components/AdvancedOrdersPanel";
 import { 
   Flame,
   Vote,
@@ -41,7 +39,6 @@ import {
   Settings,
   Maximize2,
   Minimize2,
-  Zap,
 } from "lucide-react";
 
 // Perpetuals Trading Interface Component
@@ -125,14 +122,10 @@ function PerpetualsInterface() {
         <ResizablePanel defaultSize={30} minSize={20} maxSize={40}>
           <div className="h-full flex flex-col glass">
             <Tabs defaultValue="orderbook" className="flex-1 flex flex-col">
-              <TabsList className="m-2 grid grid-cols-4">
+              <TabsList className="m-2 grid grid-cols-3">
                 <TabsTrigger value="orderbook" data-testid="tab-orderbook">Book</TabsTrigger>
                 <TabsTrigger value="trades" data-testid="tab-recent-trades">Trades</TabsTrigger>
                 <TabsTrigger value="orders" data-testid="tab-orders">Orders</TabsTrigger>
-                <TabsTrigger value="advanced" data-testid="tab-advanced">
-                  <Zap className="h-3 w-3 mr-1" />
-                  Advanced
-                </TabsTrigger>
               </TabsList>
 
               <TabsContent value="orderbook" className="flex-1 m-2 mt-0 overflow-hidden">
@@ -165,14 +158,6 @@ function PerpetualsInterface() {
 
               <TabsContent value="orders" className="flex-1 m-2 mt-0 overflow-auto">
                 <OrderManagementPanel />
-              </TabsContent>
-
-              <TabsContent value="advanced" className="flex-1 m-2 mt-0 overflow-auto space-y-3">
-                <AdvancedOrderEntry 
-                  symbol={selectedSymbol}
-                  currentPrice={115000} // TODO: Get real-time price from market data
-                />
-                <AdvancedOrdersPanel />
               </TabsContent>
             </Tabs>
           </div>
