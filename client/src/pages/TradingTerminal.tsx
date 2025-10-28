@@ -522,15 +522,8 @@ function PredictionMarketsInterface() {
     return keywords[category] || [];
   };
 
-  // Filter out expired markets and apply search/category filters
+  // Apply search/category filters (API already returns only active markets via closed=false)
   const filteredMarkets = markets.filter((market: any) => {
-    // Filter out markets that have already ended
-    const now = new Date();
-    const endDate = new Date(market.endDate);
-    const isActive = endDate > now;
-    
-    if (!isActive) return false;
-    
     const matchesSearch = searchQuery === "" || market.question?.toLowerCase().includes(searchQuery.toLowerCase());
     
     // Category matching using keyword matching

@@ -111,8 +111,9 @@ export class PolymarketClient {
   }
 
   /**
-   * Get market data from Gamma Markets API
-   * Uses external API since it doesn't require authentication
+   * Get market data from Gamma Events API
+   * Uses /events endpoint which correctly returns only active markets
+   * Note: The /markets endpoint's active=true parameter is broken and returns old 2020 markets
    */
   public async getMarkets(params?: {
     limit?: number;
@@ -125,20 +126,52 @@ export class PolymarketClient {
       const queryParams = new URLSearchParams();
       if (params?.limit) queryParams.append("limit", params.limit.toString());
       if (params?.offset) queryParams.append("offset", params.offset.toString());
-      if (params?.active !== undefined) queryParams.append("active", params.active.toString());
-      if (params?.closed !== undefined) queryParams.append("closed", params.closed.toString());
+      
+      // Handle closed parameter: respect explicit closed value, otherwise default to closed=false for active markets
+      // Use closed=false instead of active=true (active parameter doesn't work on /markets endpoint)
+      if (params?.closed !== undefined) {
+        // Explicit closed parameter takes priority
+        queryParams.append("closed", params.closed.toString());
+      } else if (params?.active === false) {
+        // active=false means get closed markets
+        queryParams.append("closed", "true");
+      } else {
+        // Default to active markets (closed=false)
+        queryParams.append("closed", "false");
+      }
+      
       if (params?.archived !== undefined) queryParams.append("archived", params.archived.toString());
       
-      const url = `https://gamma-api.polymarket.com/markets?${queryParams.toString()}`;
-      console.log(`[Polymarket] Fetching markets from: ${url}`);
+      // Use /events endpoint instead of /markets
+      const url = `https://gamma-api.polymarket.com/events?${queryParams.toString()}`;
+      console.log(`[Polymarket] Fetching events from: ${url}`);
       
       const response = await fetch(url);
       if (!response.ok) {
-        throw new Error(`Markets API returned ${response.status}: ${response.statusText}`);
+        throw new Error(`Events API returned ${response.status}: ${response.statusText}`);
       }
       
-      const data = await response.json();
-      return data;
+      const events = await response.json();
+      
+      // Events contain nested markets - flatten them into a single array
+      const markets: any[] = [];
+      for (const event of events) {
+        if (event.markets && Array.isArray(event.markets)) {
+          // Add event context to each market for better display
+          for (const market of event.markets) {
+            markets.push({
+              ...market,
+              eventSlug: event.slug,
+              eventTitle: event.title,
+              eventDescription: event.description,
+              eventIcon: event.icon,
+            });
+          }
+        }
+      }
+      
+      console.log(`[Polymarket] Transformed ${events.length} events into ${markets.length} markets`);
+      return markets;
     } catch (error) {
       console.error("[Polymarket] Failed to fetch markets:", error);
       throw error;
