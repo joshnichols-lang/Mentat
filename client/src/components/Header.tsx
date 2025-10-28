@@ -8,6 +8,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import ThemeToggle from "./ThemeToggle";
+import ThemeSelector from "./ThemeSelector";
 import AgentModeToggle from "./AgentModeToggle";
 import ChainSwitcher from "./ChainSwitcher";
 import { ContactAdmin } from "./ContactAdmin";
@@ -163,6 +164,7 @@ export default function Header() {
           >
             <LogOut className="h-4 w-4" />
           </Button>
+          <ThemeSelector />
           <ThemeToggle />
         </div>
       </div>
