@@ -12,7 +12,7 @@ import { RainbowKitProvider, darkTheme } from '@rainbow-me/rainbowkit';
 import { config } from '@/lib/wagmi';
 import '@rainbow-me/rainbowkit/styles.css';
 import LandingPage from "@/pages/LandingPage";
-import Dashboard from "@/pages/Dashboard";
+import UnifiedTerminal from "@/pages/UnifiedTerminal";
 import AuthPage from "@/pages/AuthPage";
 import PendingApproval from "@/pages/PendingApproval";
 import AdminVerification from "@/pages/AdminVerification";
@@ -23,7 +23,6 @@ import Settings from "@/pages/Settings";
 import TradeHistory from "@/pages/TradeHistory";
 import TradeJournal from "@/pages/TradeJournal";
 import TradingModes from "@/pages/TradingModes";
-import TradingTerminal from "@/pages/TradingTerminal";
 import UIPreview from "@/pages/UIPreview";
 import EnhancedUIPreview from "@/pages/EnhancedUIPreview";
 import NotFound from "@/pages/not-found";
@@ -35,14 +34,14 @@ function Router() {
       <Route path="/auth" component={AuthPage} />
       <Route path="/ui-preview" component={UIPreview} />
       <Route path="/ui-enhanced" component={EnhancedUIPreview} />
-      <ProtectedRoute path="/terminal" component={Dashboard} />
+      <ProtectedRoute path="/terminal" component={UnifiedTerminal} />
+      <ProtectedRoute path="/trade" component={UnifiedTerminal} />
       <ProtectedRoute path="/pending-approval" component={PendingApproval} />
       <ProtectedRoute path="/admin/verification" component={AdminVerification} />
       <ProtectedRoute path="/admin/users" component={AdminUsers} />
       <ProtectedRoute path="/admin/messages" component={AdminMessages} />
       <ProtectedRoute path="/admin" component={Admin} />
       <ProtectedRoute path="/settings" component={Settings} />
-      <ProtectedRoute path="/trade" component={TradingTerminal} />
       <ProtectedRoute path="/trade-history" component={TradeHistory} />
       <ProtectedRoute path="/trade-journal" component={TradeJournal} />
       <ProtectedRoute path="/trading-modes" component={TradingModes} />
