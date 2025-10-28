@@ -522,9 +522,16 @@ function PredictionMarketsInterface() {
     return keywords[category] || [];
   };
 
-  // Filter markets by search, category, and filter tag
+  // Filter out expired markets and apply search/category filters
   const filteredMarkets = markets.filter((market: any) => {
-    const matchesSearch = market.question?.toLowerCase().includes(searchQuery.toLowerCase());
+    // Filter out markets that have already ended
+    const now = new Date();
+    const endDate = new Date(market.endDate);
+    const isActive = endDate > now;
+    
+    if (!isActive) return false;
+    
+    const matchesSearch = searchQuery === "" || market.question?.toLowerCase().includes(searchQuery.toLowerCase());
     
     // Category matching using keyword matching
     let matchesCategory = true;
@@ -547,7 +554,7 @@ function PredictionMarketsInterface() {
       matchesFilter = searchText.includes(selectedFilter.toLowerCase());
     }
     
-    return matchesSearch && matchesCategory && matchesFilter && market.active && !market.closed;
+    return matchesSearch && matchesCategory && matchesFilter;
   });
 
   return (
