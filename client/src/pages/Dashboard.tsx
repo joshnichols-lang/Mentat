@@ -1,6 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
 import { useLocation } from "wouter";
-import { useCredentials } from "@/hooks/useCredentials";
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery } from "@tanstack/react-query";
 import { SymbolProvider } from "@/contexts/SymbolContext";
@@ -34,7 +33,6 @@ import {
 export default function Dashboard() {
   const [, setLocation] = useLocation();
   const { user } = useAuth();
-  const { hasCredentials, isLoading, error, isSuccess } = useCredentials();
   const [timeframe, setTimeframe] = useState<'1D' | '1W' | '1M' | '3M' | 'ALL'>('1W');
 
   // Fetch real data from APIs
@@ -58,15 +56,10 @@ export default function Dashboard() {
       return;
     }
     
-    if (isSuccess && !hasCredentials) {
-      setLocation("/onboarding");
-      return;
-    }
-    
-    if (user && hasCredentials && user.verificationStatus !== "approved") {
+    if (user && user.verificationStatus !== "approved") {
       setLocation("/pending-approval");
     }
-  }, [user, hasCredentials, isSuccess, setLocation]);
+  }, [user, setLocation]);
 
   // Extract real portfolio data
   const accountValue = (userState?.userState?.marginSummary?.accountValue as number) || 0;
