@@ -314,7 +314,7 @@ export function setupAuth(app: Express) {
           email: null,
           password: null,
           role: isFirstUser ? "admin" : "user",
-          verificationStatus: isFirstUser ? "approved" : "pending",
+          verificationStatus: "approved", // Auto-approve all wallet users
         });
 
         // Create user wallet record

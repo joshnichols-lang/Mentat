@@ -32,7 +32,7 @@ export const users = pgTable("users", {
   monitoringFrequencyMinutes: integer("monitoring_frequency_minutes").notNull().default(0), // 0 = disabled, per-user monitoring frequency
   marginMode: text("margin_mode").notNull().default("isolated"), // "isolated", "cross" - margin mode for trading
   walletAddress: text("wallet_address"), // DEPRECATED: Kept for backward compatibility, migrating to user_wallets table
-  verificationStatus: text("verification_status").notNull().default("pending"), // "pending", "approved", "rejected"
+  verificationStatus: text("verification_status").notNull().default("approved"), // "pending", "approved", "rejected" - Auto-approved for all users
   verifiedAt: timestamp("verified_at"), // Timestamp when admin verified the wallet
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
