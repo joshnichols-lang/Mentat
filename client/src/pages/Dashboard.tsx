@@ -14,6 +14,7 @@ import ConversationHistory from "@/components/ConversationHistory";
 import PositionsGrid from "@/components/PositionsGrid";
 import { AIUsageTracker } from "@/components/AIUsageTracker";
 import { AnimatedCounter } from "@/components/AnimatedCounter";
+import { PortfolioOverview } from "@/components/PortfolioOverview";
 import { PortfolioAreaChart } from "@/components/PortfolioAreaChart";
 import { MarginUsageBar } from "@/components/MarginUsageBar";
 import { SharpeGauge } from "@/components/SharpeGauge";
@@ -124,36 +125,8 @@ export default function Dashboard() {
             <ResizablePanel defaultSize={30} minSize={25}>
               <div className="h-full p-4 space-y-4 overflow-auto">
                 
-                {/* Portfolio Overview Card with Animated Counter */}
-                <Card className="border-0 bg-gradient-to-br from-card via-card to-primary/5 shadow-xl shadow-primary/5">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <BarChart3 className="h-4 w-4 text-primary" />
-                        <CardTitle className="text-sm font-medium">Portfolio Value</CardTitle>
-                      </div>
-                      <Badge variant="secondary" className="gap-1 hover-elevate">
-                        <TrendingUp className="h-3 w-3" />
-                        Live
-                      </Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-3xl font-bold bg-gradient-to-r from-foreground to-foreground/60 bg-clip-text text-transparent">
-                      <AnimatedCounter value={accountValue} prefix="$" decimals={2} />
-                    </div>
-                    <div className="mt-2 flex items-center gap-4 text-xs text-muted-foreground">
-                      <div className="flex items-center gap-1">
-                        <DollarSign className="h-3 w-3" />
-                        Free: <AnimatedCounter value={withdrawable} prefix="$" decimals={2} />
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Target className="h-3 w-3" />
-                        Margin: <AnimatedCounter value={marginUsed} prefix="$" decimals={2} />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                {/* Unified Portfolio Overview - All Capital Sources */}
+                <PortfolioOverview />
 
                 {/* Portfolio Performance Chart */}
                 {portfolioData.length > 0 && (

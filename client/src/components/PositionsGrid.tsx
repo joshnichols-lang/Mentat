@@ -15,6 +15,21 @@ import MiniPriceChart from "@/components/MiniPriceChart";
 import { PositionSparkline } from "@/components/PositionSparkline";
 import { AnimatedCounter } from "@/components/AnimatedCounter";
 
+interface MultiExchangePosition {
+  symbol: string;
+  exchange: string;
+  marketType: string;
+  side: string;
+  size: string;
+  entryPrice: string;
+  currentPrice: string;
+  unrealizedPnl: string;
+  positionValue: string;
+  leverage?: number;
+  liquidationPrice?: string;
+  roe?: string;
+}
+
 interface HyperliquidPosition {
   coin: string;
   szi: string;
@@ -44,9 +59,16 @@ interface Order {
 export default function PositionsGrid() {
   const { toast } = useToast();
   
-  const { data, isLoading } = useQuery<{ positions: HyperliquidPosition[] }>({
+  // Fetch multi-exchange positions (Hyperliquid, Orderly, Polymarket)
+  const { data: multiExchangeData, isLoading: isLoadingMulti } = useQuery<{ positions: MultiExchangePosition[] }>({
+    queryKey: ["/api/multi-exchange/positions"],
+    refetchInterval: 30000,
+  });
+  
+  // Keep Hyperliquid-specific queries for orders and market data
+  const { data: hyperliquidData, isLoading: isLoadingHL } = useQuery<{ positions: HyperliquidPosition[] }>({
     queryKey: ["/api/hyperliquid/positions"],
-    refetchInterval: 30000, // Increased from 15s to 30s to reduce API load
+    refetchInterval: 30000,
   });
 
   const { data: marketData } = useQuery<{ marketData: Array<{ symbol: string; price: string; change24h: string; }> }>({
@@ -55,10 +77,11 @@ export default function PositionsGrid() {
 
   const { data: ordersData } = useQuery<{ orders: Order[] }>({
     queryKey: ["/api/hyperliquid/open-orders"],
-    refetchInterval: 30000, // Increased from 15s to 30s to reduce API load
+    refetchInterval: 30000,
   });
 
-  const positions = data?.positions || [];
+  const isLoading = isLoadingMulti || isLoadingHL;
+  const positions = multiExchangeData?.positions || [];
   const orders = ordersData?.orders || [];
   
   // Close single position mutation
@@ -179,19 +202,19 @@ export default function PositionsGrid() {
         </Button>
       </div>
       <div className="space-y-2">
-        {positions.map((position) => {
-          const size = parseFloat(position.szi);
-          const side = size > 0 ? "long" : "short";
-          const absSize = Math.abs(size);
-          const entryPrice = parseFloat(position.entryPx || "0");
+        {positions.map((position, idx) => {
+          const side = position.side.toLowerCase();
+          const absSize = parseFloat(position.size);
+          const entryPrice = parseFloat(position.entryPrice || "0");
+          const currentPrice = parseFloat(position.currentPrice || position.entryPrice || "0");
           const pnl = parseFloat(position.unrealizedPnl || "0");
-          const roe = parseFloat(position.returnOnEquity || "0");
-          const displaySymbol = position.coin.replace("-PERP", "");
-          const liquidationPrice = position.liquidationPx ? parseFloat(position.liquidationPx) : null;
+          const roe = position.roe ? parseFloat(position.roe) : 0;
+          const displaySymbol = position.symbol.replace("-PERP", "").replace("-USD", "");
+          const liquidationPrice = position.liquidationPrice ? parseFloat(position.liquidationPrice) : null;
+          const leverage = position.leverage || 1;
           
-          // Find matching market data for this position
-          const market = marketData?.marketData.find(m => m.symbol === position.coin);
-          const currentPrice = market ? parseFloat(market.price) : entryPrice;
+          // Find matching market data for Hyperliquid positions
+          const market = position.exchange === 'hyperliquid' ? marketData?.marketData.find(m => m.symbol === position.symbol) : null;
           const change24h = market ? parseFloat(market.change24h) : 0;
           const hasMarketData = !!market;
           
@@ -201,12 +224,24 @@ export default function PositionsGrid() {
             return currentPrice + variation;
           });
           
-          const { stopLoss, takeProfit } = getPositionOrders(position.coin);
+          // Only Hyperliquid positions have protective orders
+          const { stopLoss, takeProfit } = position.exchange === 'hyperliquid' 
+            ? getPositionOrders(position.symbol) 
+            : { stopLoss: undefined, takeProfit: undefined };
+          
+          // Determine exchange badge color
+          const exchangeColor = position.exchange === 'hyperliquid' ? 'text-primary' :
+                               position.exchange === 'orderly' ? 'text-amber-500' :
+                               position.exchange === 'polymarket' ? 'text-orange-500' : 'text-muted-foreground';
+          
+          // Market type badge
+          const marketTypeBadge = position.marketType === 'perpetual' ? 'PERP' :
+                                 position.marketType === 'prediction' ? 'PRED' : 'SPOT';
           
           return (
-            <Card key={position.coin} className="group p-3 hover-elevate transition-all duration-300 border-l-4" 
+            <Card key={`${position.exchange}-${position.symbol}-${idx}`} className="group p-3 hover-elevate transition-all duration-300 border-l-4" 
                   style={{ borderLeftColor: side === "long" ? "hsl(var(--primary))" : "hsl(var(--destructive))" }}
-                  data-testid={`card-position-${position.coin}`}>
+                  data-testid={`card-position-${idx}`}>
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1 space-y-3">
                   <div className="flex items-center justify-between">
@@ -246,12 +281,22 @@ export default function PositionsGrid() {
                         </div>
                       </div>
                     </div>
-                    <Badge 
-                      variant={side === "long" ? "default" : "destructive"}
-                      className={`gap-1 ${side === "long" ? "bg-long text-long-foreground hover:bg-long/90" : "bg-short text-short-foreground hover:bg-short/90"}`}
-                    >
-                      {side.toUpperCase()} {position.leverage.value}x
-                    </Badge>
+                    <div className="flex flex-col gap-1 items-end">
+                      <Badge 
+                        variant={side === "long" ? "default" : "destructive"}
+                        className={`gap-1 ${side === "long" ? "bg-long text-long-foreground hover:bg-long/90" : "bg-short text-short-foreground hover:bg-short/90"}`}
+                      >
+                        {side.toUpperCase()} {leverage}x
+                      </Badge>
+                      <div className="flex gap-1">
+                        <Badge variant="outline" className={`text-xs ${exchangeColor}`} data-testid={`badge-exchange-${idx}`}>
+                          {position.exchange.toUpperCase()}
+                        </Badge>
+                        <Badge variant="secondary" className="text-xs" data-testid={`badge-market-type-${idx}`}>
+                          {marketTypeBadge}
+                        </Badge>
+                      </div>
+                    </div>
                   </div>
                   
                   {/* Inline Sparkline Chart */}
@@ -271,7 +316,7 @@ export default function PositionsGrid() {
                       <div className="text-muted-foreground">P&L</div>
                       <div className={`text-sm font-bold ${
                         pnl >= 0 ? "text-green-500" : "text-destructive"
-                      }`} data-testid={`text-pnl-${position.coin}`}>
+                      }`} data-testid={`text-pnl-${idx}`}>
                         <AnimatedCounter value={pnl} prefix={pnl >= 0 ? "+" : ""} decimals={2} />
                       </div>
                     </div>
@@ -289,7 +334,7 @@ export default function PositionsGrid() {
                     </div>
                     <div>
                       <div className="text-muted-foreground">Liq Price</div>
-                      <div className="text-sm font-medium" data-testid={`text-liquidation-${position.coin}`}>
+                      <div className="text-sm font-medium" data-testid={`text-liquidation-${idx}`}>
                         {liquidationPrice ? `$${liquidationPrice.toLocaleString()}` : "N/A"}
                       </div>
                     </div>
@@ -312,14 +357,16 @@ export default function PositionsGrid() {
                   )}
                 </div>
                 
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => handleClose(position.coin)}
-                  data-testid={`button-close-${position.coin}`}
-                >
-                  <X className="h-3.5 w-3.5" />
-                </Button>
+                {position.exchange === 'hyperliquid' && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleClose(position.symbol)}
+                    data-testid={`button-close-${idx}`}
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </Button>
+                )}
               </div>
             </Card>
           );
