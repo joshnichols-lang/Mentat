@@ -3692,13 +3692,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Advanced Orders Routes and Manager
   const { setupAdvancedOrdersRoutes } = await import("./advancedOrders/routes");
+  const { setupAIOrderRoutes } = await import("./advancedOrders/aiRoutes");
   const { advancedOrderManager } = await import("./advancedOrders/manager");
   
   setupAdvancedOrdersRoutes(app);
+  setupAIOrderRoutes(app);
   
   // Initialize advanced orders manager
   await advancedOrderManager.initialize();
   console.log("[Server] Advanced Orders Manager initialized");
+  console.log("[Server] AI-Enhanced Order Routing enabled");
 
   const httpServer = createServer(app);
 

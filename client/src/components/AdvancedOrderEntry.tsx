@@ -7,7 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
-import { TrendingUp, Target, Layers, IceCream, GitBranch, TrendingDown, Grid, Zap } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { TrendingUp, Target, Layers, IceCream, GitBranch, TrendingDown, Grid, Zap, Brain, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 
@@ -21,6 +22,9 @@ export function AdvancedOrderEntry({ symbol, currentPrice }: AdvancedOrderEntryP
   const [side, setSide] = useState<"buy" | "sell">("buy");
   const [totalSize, setTotalSize] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [aiOptimizationEnabled, setAiOptimizationEnabled] = useState<boolean>(true);
+  const [isOptimizing, setIsOptimizing] = useState(false);
+  const [aiSuggestions, setAiSuggestions] = useState<any>(null);
   const { toast } = useToast();
 
   // TWAP parameters
@@ -131,16 +135,93 @@ export function AdvancedOrderEntry({ symbol, currentPrice }: AdvancedOrderEntryP
     }
   };
 
+  // AI Optimization Handler
+  const handleAIOptimization = async () => {
+    if (!totalSize || parseFloat(totalSize) <= 0) {
+      toast({
+        title: "Enter Order Size",
+        description: "Please specify a valid order size first",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsOptimizing(true);
+    try {
+      const response = await apiRequest("/api/advanced-orders/optimize-params", {
+        method: "POST",
+        body: JSON.stringify({
+          orderType,
+          symbol,
+          side,
+          size: totalSize,
+          baseParams: {
+            // Current user-set parameters
+            twapDuration,
+            twapSlices,
+            chaseOffset,
+            scaledLevels,
+          },
+        }),
+      });
+
+      setAiSuggestions(response.optimized);
+      
+      // Apply AI suggestions
+      if (response.optimized.twap) {
+        setTwapDuration(response.optimized.twap.optimalInterval || twapDuration);
+        setTwapSlices(response.optimized.twap.optimalSlices || twapSlices);
+      }
+      
+      toast({
+        title: "AI Optimization Complete",
+        description: `Confidence: ${(response.optimized.confidenceScore * 100).toFixed(0)}%`,
+      });
+    } catch (error) {
+      console.error("AI optimization error:", error);
+      toast({
+        title: "Optimization Failed",
+        description: error instanceof Error ? error.message : "Could not optimize parameters",
+        variant: "destructive",
+      });
+    } finally {
+      setIsOptimizing(false);
+    }
+  };
+
   return (
     <Card className="glass">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Zap className="w-5 h-5 text-primary" />
-          Advanced Orders
-        </CardTitle>
-        <CardDescription>
-          Institutional-grade order types for optimal execution
-        </CardDescription>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <Zap className="w-5 h-5 text-primary" />
+              Advanced Orders
+            </CardTitle>
+            <CardDescription>
+              Institutional-grade order types for optimal execution
+            </CardDescription>
+          </div>
+          
+          {/* AI Optimization Toggle */}
+          <div className="flex items-center gap-3">
+            {aiOptimizationEnabled && aiSuggestions && (
+              <Badge className="bg-primary/20 text-primary border-primary/30">
+                <Brain className="w-3 h-3 mr-1" />
+                AI Optimized
+              </Badge>
+            )}
+            <div className="flex items-center gap-2">
+              <Label htmlFor="ai-optimize" className="text-sm">Mr. Fox AI</Label>
+              <Switch
+                id="ai-optimize"
+                checked={aiOptimizationEnabled}
+                onCheckedChange={setAiOptimizationEnabled}
+                data-testid="switch-ai-optimization"
+              />
+            </div>
+          </div>
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
         <Tabs value={orderType} onValueChange={setOrderType}>
@@ -369,14 +450,60 @@ export function AdvancedOrderEntry({ symbol, currentPrice }: AdvancedOrderEntryP
           </div>
         </Tabs>
 
-        <Button
-          onClick={handleSubmit}
-          disabled={isSubmitting || !totalSize}
-          className="w-full"
-          data-testid="button-create-advanced-order"
-        >
-          {isSubmitting ? "Creating..." : `Create ${orderType.toUpperCase()} Order`}
-        </Button>
+        {/* AI Suggestions Display */}
+        {aiOptimizationEnabled && aiSuggestions && (
+          <Card className="glass-strong border-primary/20">
+            <CardContent className="p-4 space-y-2">
+              <div className="flex items-center gap-2 mb-2">
+                <Sparkles className="w-4 h-4 text-primary" />
+                <span className="text-sm font-semibold">Mr. Fox's Analysis</span>
+                <Badge variant="outline" className="ml-auto">
+                  {(aiSuggestions.confidenceScore * 100).toFixed(0)}% Confidence
+                </Badge>
+              </div>
+              <p className="text-xs text-muted-foreground">{aiSuggestions.aiSummary}</p>
+              
+              {aiSuggestions.warnings && aiSuggestions.warnings.length > 0 && (
+                <div className="mt-2 space-y-1">
+                  {aiSuggestions.warnings.map((warning: string, i: number) => (
+                    <div key={i} className="text-xs text-yellow-400 flex items-start gap-1">
+                      <span>⚠</span>
+                      <span>{warning}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              
+              <div className="text-xs text-muted-foreground mt-2">
+                Estimated Impact: {aiSuggestions.estimatedImpact.toFixed(2)} bps
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        <div className="grid grid-cols-2 gap-2">
+          {aiOptimizationEnabled && (
+            <Button
+              onClick={handleAIOptimization}
+              disabled={isOptimizing || !totalSize}
+              variant="outline"
+              className="border-primary/30"
+              data-testid="button-ai-optimize"
+            >
+              <Brain className="w-4 h-4 mr-2" />
+              {isOptimizing ? "Optimizing..." : "AI Optimize"}
+            </Button>
+          )}
+          
+          <Button
+            onClick={handleSubmit}
+            disabled={isSubmitting || !totalSize}
+            className={aiOptimizationEnabled ? "" : "col-span-2"}
+            data-testid="button-create-advanced-order"
+          >
+            {isSubmitting ? "Creating..." : `Create ${orderType.toUpperCase()} Order`}
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );
