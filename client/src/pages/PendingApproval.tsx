@@ -45,13 +45,13 @@ export default function PendingApproval() {
       case "rejected":
         return {
           title: "Account Verification Failed",
-          description: "Your wallet address could not be verified. Please ensure you created your Hyperliquid account using our referral link. Contact support if you believe this is an error.",
+          description: "Your account could not be verified at this time. Please contact support for assistance.",
           alertType: "error" as const,
         };
       default:
         return {
           title: "Account Pending Verification",
-          description: "Your account is awaiting admin verification. We need to confirm that your Hyperliquid wallet was created using our referral link. This usually takes 24-48 hours.",
+          description: "Your account is awaiting admin approval. This usually takes 24-48 hours. You'll receive access to the platform once your account is verified.",
           alertType: "info" as const,
         };
     }
