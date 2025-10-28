@@ -403,6 +403,129 @@ export class PolymarketClient {
   }
 
   /**
+   * Get open positions for the current user
+   * Calculates positions by aggregating filled trades
+   */
+  public async getPositions(): Promise<any[]> {
+    await this.ensureInitialized();
+    
+    try {
+      if (!this.clobClient) {
+        throw new Error("CLOB client not initialized");
+      }
+      
+      console.log("[Polymarket] Fetching positions via trade history");
+      
+      // Fetch all trades to calculate positions
+      const trades = await this.clobClient.getTrades({} as any, false);
+      
+      // Sort trades by timestamp to process chronologically
+      const sortedTrades = [...trades].sort((a, b) => {
+        const timeA = new Date(a.timestamp || a.created_at || 0).getTime();
+        const timeB = new Date(b.timestamp || b.created_at || 0).getTime();
+        return timeA - timeB;
+      });
+      
+      // Process trades chronologically to maintain accurate cost basis
+      const positionMap = new Map<string, {
+        asset_id: string;
+        market_id: string;
+        netSize: number;
+        costBasis: number;
+        marketQuestion?: string;
+      }>();
+      
+      for (const trade of sortedTrades) {
+        const assetId = trade.asset_id || trade.tokenId;
+        const size = parseFloat(trade.size || trade.amount || '0');
+        const price = parseFloat(trade.price || '0');
+        const side = trade.side;
+        
+        if (!assetId) continue;
+        
+        const existing = positionMap.get(assetId) || {
+          asset_id: assetId,
+          market_id: trade.market || assetId,
+          netSize: 0,
+          costBasis: 0,
+          marketQuestion: trade.market || undefined,
+        };
+        
+        const prevSize = existing.netSize;
+        const tradeValue = size * price;
+        
+        if (side === 'BUY') {
+          // Adding to position (long or reducing short)
+          if (prevSize >= 0) {
+            // Adding to long or starting long from flat
+            existing.costBasis += tradeValue;
+          } else {
+            // Reducing short position
+            if (prevSize + size <= 0) {
+              // Still short after this buy, reduce cost basis proportionally
+              const reduction = (size / Math.abs(prevSize)) * existing.costBasis;
+              existing.costBasis -= reduction;
+            } else {
+              // Crossing from short to long, reset cost basis
+              const longSize = prevSize + size;
+              existing.costBasis = longSize * price;
+            }
+          }
+          existing.netSize += size;
+        } else if (side === 'SELL') {
+          // Reducing position (short or reducing long)
+          if (prevSize <= 0) {
+            // Adding to short or starting short from flat
+            existing.costBasis += tradeValue;
+          } else {
+            // Reducing long position
+            if (prevSize - size >= 0) {
+              // Still long after this sell, reduce cost basis proportionally
+              const reduction = (size / prevSize) * existing.costBasis;
+              existing.costBasis -= reduction;
+            } else {
+              // Crossing from long to short, reset cost basis
+              const shortSize = Math.abs(prevSize - size);
+              existing.costBasis = shortSize * price;
+            }
+          }
+          existing.netSize -= size;
+        }
+        
+        positionMap.set(assetId, existing);
+      }
+      
+      // Filter out closed positions and format
+      const positions: any[] = [];
+      for (const [assetId, pos] of positionMap.entries()) {
+        if (Math.abs(pos.netSize) > 0.001) { // Only include non-zero positions
+          const averageEntryPrice = Math.abs(pos.netSize) > 0 
+            ? (pos.costBasis / Math.abs(pos.netSize)) 
+            : 0;
+          
+          positions.push({
+            asset_id: assetId,
+            market_id: pos.market_id,
+            marketQuestion: pos.marketQuestion || assetId,
+            size: Math.abs(pos.netSize).toString(),
+            side: pos.netSize > 0 ? 'BUY' : 'SELL',
+            averagePrice: averageEntryPrice.toFixed(4),
+            price: averageEntryPrice.toFixed(4), // Current price (use entry for now)
+            entryPrice: averageEntryPrice.toFixed(4),
+            unrealizedPnl: '0', // Would need current market price to calculate accurately
+          });
+        }
+      }
+      
+      console.log(`[Polymarket] Found ${positions.length} open positions`);
+      return positions;
+    } catch (error) {
+      console.error(`[Polymarket] Failed to fetch positions:`, error);
+      return [];
+    }
+  }
+
+  /**
    * Cancel a single order
    */
   public async cancelOrder(orderId: string): Promise<any> {
@@ -531,4 +654,39 @@ export class PolymarketClient {
       };
     }
   }
+}
+
+/**
+ * Get Polymarket client instance for a user
+ * Uses the user's Polygon wallet private key from embedded wallets
+ */
+export async function getPolymarketClient(userId: string, storage?: any): Promise<PolymarketClient> {
+  if (!storage) {
+    const { storage: defaultStorage } = await import('../storage');
+    storage = defaultStorage;
+  }
+  
+  const embeddedWallet = await storage.getEmbeddedWallet(userId);
+  
+  if (!embeddedWallet || !embeddedWallet.polygonPrivateKey) {
+    throw new Error('No Polygon wallet found for user. Please create embedded wallets first.');
+  }
+  
+  // Decrypt the Polygon private key
+  const { decryptCredential } = await import('../encryption');
+  const privateKey = decryptCredential(
+    embeddedWallet.polygonPrivateKey,
+    embeddedWallet.polygonPrivateKeyIv,
+    embeddedWallet.encryptedDek,
+    embeddedWallet.dekIv
+  );
+  
+  const client = new PolymarketClient({
+    privateKey,
+    signatureType: 1, // Magic/Email signature type
+  });
+  
+  await client.ensureInitialized();
+  
+  return client;
 }

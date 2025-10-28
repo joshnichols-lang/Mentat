@@ -1548,7 +1548,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (hlPositions && hlPositions.length > 0) {
           positions.push(...hlPositions.map((p: any) => ({
             ...p,
-            exchange: 'hyperliquid'
+            exchange: 'hyperliquid',
+            marketType: 'perpetual'
           })));
         }
       } catch (error: any) {
@@ -1567,7 +1568,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (orderlyPositions && orderlyPositions.length > 0) {
           positions.push(...orderlyPositions.map((p: any) => ({
             ...p,
-            exchange: 'orderly'
+            exchange: 'orderly',
+            marketType: 'perpetual'
           })));
         }
       } catch (error: any) {
@@ -1576,6 +1578,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (!error.message?.includes('No Orderly API credentials')) {
           throw error;
         }
+      }
+      
+      // Fetch Polymarket positions
+      try {
+        const { getPolymarketClient } = await import('./polymarket/client');
+        const polymarket = await getPolymarketClient(userId);
+        const polyPositions = await polymarket.getPositions();
+        
+        if (polyPositions && polyPositions.length > 0) {
+          positions.push(...polyPositions.map((p: any) => ({
+            ...p,
+            exchange: 'polymarket',
+            marketType: 'prediction',
+            // Standardize field names for unified display
+            symbol: p.marketQuestion || p.conditionId,
+            size: p.size || p.shares,
+            entryPrice: p.price || p.averagePrice,
+            unrealizedPnl: p.unrealizedPnl || 0,
+          })));
+        }
+      } catch (error: any) {
+        console.log('[Multi-Exchange] Polymarket positions not available:', error.message);
+        // Don't fail if Polymarket is not configured
       }
       
       res.json({ success: true, positions });
@@ -1599,7 +1624,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Fetch Hyperliquid balance
       try {
         const hyperliquid = await getUserHyperliquidClient(userId);
-        const hlState = await hyperliquid.getAccountState();
+        const hlState = await hyperliquid.getUserState();
         
         balances.hyperliquid = {
           accountValue: hlState.marginSummary?.accountValue || '0',
@@ -1623,8 +1648,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         balances.orderly = orderlyBalance;
         
         // Add Orderly total to aggregated value
-        if (orderlyBalance?.totalValue) {
-          balances.totalUsdValue += parseFloat(orderlyBalance.totalValue);
+        if (orderlyBalance?.totalCollateral) {
+          balances.totalUsdValue += parseFloat(orderlyBalance.totalCollateral);
         }
       } catch (error: any) {
         console.log('[Multi-Exchange] Orderly balance not available:', error.message);
@@ -1656,7 +1681,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         const hyperliquid = await getUserHyperliquidClient(userId);
         const [hlState, hlPositions, hlOrders] = await Promise.all([
-          hyperliquid.getAccountState(),
+          hyperliquid.getUserState(),
           hyperliquid.getPositions(),
           hyperliquid.getOpenOrders()
         ]);
@@ -1693,7 +1718,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           orderly.getOpenOrders()
         ]);
         
-        const accountValue = parseFloat(orderlyBalance?.totalValue || '0');
+        const accountValue = parseFloat(orderlyBalance?.totalCollateral || '0');
         summary.exchanges.push({
           name: 'orderly',
           accountValue: accountValue,
@@ -2036,6 +2061,200 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({
         success: false,
         error: error.message || "Failed to fetch wallet balances"
+      });
+    }
+  });
+
+  // Get comprehensive portfolio aggregation (ALL sources)
+  app.get("/api/portfolio/comprehensive", requireVerifiedUser, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const { balanceService } = await import('./balanceService');
+      
+      const portfolio: any = {
+        wallets: {
+          external: { address: null, balance: 0, usdValue: 0 },
+          embedded: {
+            solana: { sol: 0, usdc: 0, totalUsd: 0 },
+            arbitrum: { eth: 0, usdc: 0, totalUsd: 0 },
+            polygon: { matic: 0, usdc: 0, totalUsd: 0 },
+          }
+        },
+        exchanges: {
+          hyperliquid: { accountValue: 0, withdrawable: 0, marginUsed: 0 },
+          orderly: { totalValue: 0, available: 0, marginUsed: 0 },
+        },
+        polymarket: {
+          positionsValue: 0,
+          openPositions: 0,
+        },
+        totals: {
+          totalCapital: 0,
+          totalAvailable: 0,
+          totalMarginUsed: 0,
+        }
+      };
+      
+      // Get user for external wallet address
+      const user = await storage.getUser(userId);
+      if (user?.walletAddress) {
+        portfolio.wallets.external.address = user.walletAddress;
+        // TODO: Fetch external wallet balance via RPC (for now, 0)
+        // Would need to determine which chain and fetch balance
+      }
+      
+      // Get embedded wallet balances
+      try {
+        const embeddedBalances = await balanceService.getAllBalances(userId, storage);
+        portfolio.wallets.embedded.solana = embeddedBalances.solana;
+        portfolio.wallets.embedded.arbitrum = embeddedBalances.arbitrum;
+        portfolio.wallets.embedded.polygon = embeddedBalances.polygon;
+        portfolio.exchanges.hyperliquid = {
+          accountValue: embeddedBalances.hyperliquid.accountValue,
+          withdrawable: embeddedBalances.hyperliquid.withdrawable,
+          marginUsed: embeddedBalances.hyperliquid.accountValue - embeddedBalances.hyperliquid.withdrawable,
+        };
+        
+        portfolio.totals.totalCapital += embeddedBalances.totalUsd;
+        portfolio.totals.totalAvailable += embeddedBalances.hyperliquid.withdrawable;
+      } catch (error: any) {
+        console.log('[Portfolio] Embedded wallet balances not available:', error.message);
+      }
+      
+      // Get Orderly balance
+      try {
+        const orderly = await getUserOrderlyClient(userId, "Main Account");
+        const orderlyBalance = await orderly.getBalance();
+        
+        const totalValue = parseFloat(orderlyBalance?.totalCollateral || '0');
+        // Calculate available by summing availableBalance from all holdings
+        let available = 0;
+        if (orderlyBalance?.holding && Array.isArray(orderlyBalance.holding)) {
+          available = orderlyBalance.holding.reduce((sum: number, h: any) => {
+            return sum + parseFloat(h.availableBalance || '0');
+          }, 0);
+        }
+        
+        portfolio.exchanges.orderly = {
+          totalValue,
+          available,
+          marginUsed: totalValue - available,
+        };
+        
+        portfolio.totals.totalCapital += totalValue;
+        portfolio.totals.totalAvailable += available;
+        portfolio.totals.totalMarginUsed += (totalValue - available);
+      } catch (error: any) {
+        console.log('[Portfolio] Orderly balance not available:', error.message);
+      }
+      
+      // Get Polymarket positions
+      try {
+        const { getPolymarketClient } = await import('./polymarket/client');
+        const polymarket = await getPolymarketClient(userId);
+        const positions = await polymarket.getPositions();
+        
+        let positionsValue = 0;
+        let unrealizedPnl = 0;
+        if (positions && Array.isArray(positions)) {
+          // Calculate total value and P&L of all positions
+          positions.forEach((pos: any) => {
+            const size = parseFloat(pos.size || '0');
+            const price = parseFloat(pos.price || '0');
+            const currentValue = size * price;
+            positionsValue += currentValue;
+            
+            // Calculate unrealized P&L if entry price available
+            if (pos.entryPrice || pos.averagePrice) {
+              const entryPrice = parseFloat(pos.entryPrice || pos.averagePrice || '0');
+              const costBasis = size * entryPrice;
+              unrealizedPnl += (currentValue - costBasis);
+            }
+          });
+          
+          portfolio.polymarket = {
+            positionsValue,
+            openPositions: positions.length,
+            unrealizedPnl,
+          };
+          
+          portfolio.totals.totalCapital += positionsValue;
+        }
+      } catch (error: any) {
+        console.log('[Portfolio] Polymarket positions not available:', error.message);
+      }
+      
+      // Get all positions for P&L calculation
+      let totalUnrealizedPnl = portfolio.polymarket.unrealizedPnl || 0;
+      try {
+        // Fetch Hyperliquid positions for P&L
+        const hyperliquid = await getUserHyperliquidClient(userId);
+        const hlPositions = await hyperliquid.getPositions();
+        if (hlPositions && hlPositions.length > 0) {
+          hlPositions.forEach((pos: any) => {
+            totalUnrealizedPnl += parseFloat(pos.unrealizedPnl || pos.pnl || '0');
+          });
+        }
+      } catch (error: any) {
+        console.log('[Portfolio] Hyperliquid positions P&L not available');
+      }
+      
+      try {
+        // Fetch Orderly positions for P&L
+        const orderly = await getUserOrderlyClient(userId, "Main Account");
+        const orderlyPositions = await orderly.getPositions();
+        if (orderlyPositions && orderlyPositions.length > 0) {
+          orderlyPositions.forEach((pos: any) => {
+            totalUnrealizedPnl += parseFloat(pos.unrealizedPnl || pos.pnl || '0');
+          });
+        }
+      } catch (error: any) {
+        console.log('[Portfolio] Orderly positions P&L not available');
+      }
+      
+      // Calculate total margin used and risk metrics
+      portfolio.totals.totalMarginUsed = 
+        portfolio.exchanges.hyperliquid.marginUsed + 
+        portfolio.exchanges.orderly.marginUsed;
+      
+      portfolio.totals.totalUnrealizedPnl = totalUnrealizedPnl;
+      
+      // Calculate risk exposure by exchange
+      portfolio.riskMetrics = {
+        exposureByExchange: {
+          hyperliquid: {
+            percentage: portfolio.totals.totalCapital > 0 
+              ? ((portfolio.exchanges.hyperliquid.accountValue / portfolio.totals.totalCapital) * 100).toFixed(2)
+              : '0',
+            value: portfolio.exchanges.hyperliquid.accountValue,
+          },
+          orderly: {
+            percentage: portfolio.totals.totalCapital > 0 
+              ? ((portfolio.exchanges.orderly.totalValue / portfolio.totals.totalCapital) * 100).toFixed(2)
+              : '0',
+            value: portfolio.exchanges.orderly.totalValue,
+          },
+          polymarket: {
+            percentage: portfolio.totals.totalCapital > 0 
+              ? ((portfolio.polymarket.positionsValue / portfolio.totals.totalCapital) * 100).toFixed(2)
+              : '0',
+            value: portfolio.polymarket.positionsValue,
+          },
+        },
+        leverageRatio: portfolio.totals.totalAvailable > 0 
+          ? (portfolio.totals.totalMarginUsed / portfolio.totals.totalAvailable).toFixed(2)
+          : '0',
+      };
+      
+      res.json({
+        success: true,
+        portfolio,
+      });
+    } catch (error: any) {
+      console.error("Error fetching comprehensive portfolio:", error);
+      res.status(500).json({
+        success: false,
+        error: error.message || "Failed to fetch portfolio data"
       });
     }
   });
