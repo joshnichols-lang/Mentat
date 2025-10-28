@@ -36,9 +36,9 @@ export default function Dashboard() {
   const { user } = useAuth();
   const [timeframe, setTimeframe] = useState<'1D' | '1W' | '1M' | '3M' | 'ALL'>('1W');
 
-  // Fetch real data from APIs
-  const { data: userState } = useQuery<any>({
-    queryKey: ['/api/hyperliquid/user-state'],
+  // Fetch comprehensive portfolio data (all exchanges + wallets)
+  const { data: comprehensivePortfolio } = useQuery<any>({
+    queryKey: ['/api/portfolio/comprehensive'],
     refetchInterval: 30000,
   });
 
@@ -47,24 +47,25 @@ export default function Dashboard() {
     refetchInterval: 30000,
   });
 
-  const { data: positionsData } = useQuery<any>({
-    queryKey: ["/api/hyperliquid/positions"],
+  const { data: multiExchangePositions } = useQuery<any>({
+    queryKey: ["/api/multi-exchange/positions"],
     refetchInterval: 30000,
   });
 
   // No verification check needed - all users are auto-approved
 
-  // Extract real portfolio data
-  const accountValue = (userState?.userState?.marginSummary?.accountValue as number) || 0;
-  const withdrawable = (userState?.userState?.withdrawable as number) || 0;
-  const marginUsed = (userState?.userState?.marginSummary?.totalMarginUsed as number) || 0;
+  // Extract comprehensive portfolio data
+  const accountValue = comprehensivePortfolio?.totalCapital || 0;
+  const totalUnrealizedPnl = comprehensivePortfolio?.totalUnrealizedPnl || 0;
+  const marginUsed = comprehensivePortfolio?.totalMarginUsed || 0;
+  const withdrawable = accountValue - marginUsed; // Free capital
   
   const allSnapshots = snapshots?.snapshots || [];
   const latestSnapshot = allSnapshots.length > 0 ? allSnapshots[allSnapshots.length - 1] : null;
   const sharpeRatio = latestSnapshot ? Number(latestSnapshot.sharpeRatio || 0) : 0;
 
   // Transform portfolio snapshots for charts
-  const portfolioData = useMemo(() => {
+  const portfolioChartData = useMemo(() => {
     if (!allSnapshots.length) return [];
     return allSnapshots.map((snap: any) => ({
       timestamp: new Date(snap.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
@@ -97,15 +98,15 @@ export default function Dashboard() {
     });
   }, [allSnapshots]);
 
-  // Transform positions for ROE chart
+  // Transform multi-exchange positions for ROE chart
   const positionROEData = useMemo(() => {
-    const positions = positionsData?.positions || [];
+    const positions = multiExchangePositions?.positions || [];
     return positions.map((pos: any) => ({
-      symbol: pos.coin,
-      roe: (pos.returnOnEquity || 0) * 100,
-      position: `${pos.szi > 0 ? 'LONG' : 'SHORT'} ${pos.leverage?.value || 1}x`
+      symbol: pos.symbol,
+      roe: (parseFloat(pos.roe || '0')) * 100,
+      position: `${pos.side.toUpperCase()} ${pos.leverage || 1}x`
     }));
-  }, [positionsData]);
+  }, [multiExchangePositions]);
 
   // Calculate trade distribution (mock for now - would need closed trades data)
   const wins = 95;
@@ -129,9 +130,9 @@ export default function Dashboard() {
                 <PortfolioOverview />
 
                 {/* Portfolio Performance Chart */}
-                {portfolioData.length > 0 && (
+                {portfolioChartData.length > 0 && (
                   <PortfolioAreaChart 
-                    data={portfolioData}
+                    data={portfolioChartData}
                     timeframe={timeframe}
                     onTimeframeChange={(tf) => setTimeframe(tf as any)}
                   />
