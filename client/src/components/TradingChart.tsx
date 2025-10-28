@@ -192,6 +192,30 @@ export default function TradingChart({ symbol, onSymbolChange }: TradingChartPro
     candleSeriesRef.current = candleSeries;
     volumeSeriesRef.current = volumeSeries;
 
+    // Repaint existing data when chart recreates (e.g., on theme change)
+    if (candleData.size > 0) {
+      const sorted = Array.from(candleData.entries()).sort((a, b) => a[0] - b[0]);
+      
+      const sortedCandles = sorted.map(([_, data]) => data.candle);
+      candleSeries.setData(sortedCandles);
+      
+      const sortedVolumes = sorted.map(([_, data]) => {
+        const volumeColor = data.candle.close >= data.candle.open ? 
+          colors.volumeUp : colors.volumeDown;
+        
+        return {
+          time: data.candle.time,
+          value: data.volume,
+          color: volumeColor,
+        };
+      });
+      
+      volumeSeries.setData(sortedVolumes);
+      
+      // Fit content after repainting
+      chart.timeScale().fitContent();
+    }
+
     // Handle resize
     const handleResize = () => {
       if (chartContainerRef.current && chartRef.current) {
@@ -418,6 +442,26 @@ export default function TradingChart({ symbol, onSymbolChange }: TradingChartPro
       ws.close();
     };
   }, [symbol, timeframe]);
+
+  // Separate effect to update volume colors when theme changes (without clearing data)
+  useEffect(() => {
+    if (candleData.size === 0 || !volumeSeriesRef.current) return;
+    
+    // Recompute volume colors with new theme palette
+    const sorted = Array.from(candleData.entries()).sort((a, b) => a[0] - b[0]);
+    const sortedVolumes = sorted.map(([_, data]) => {
+      const volumeColor = data.candle.close >= data.candle.open ? 
+        colors.volumeUp : colors.volumeDown;
+      
+      return {
+        time: data.candle.time,
+        value: data.volume,
+        color: volumeColor,
+      };
+    });
+    
+    volumeSeriesRef.current.setData(sortedVolumes);
+  }, [colors, candleData]);
 
   const timeframes: Timeframe[] = ["1m", "5m", "15m", "1h", "4h", "1D"];
 
