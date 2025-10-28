@@ -591,52 +591,9 @@
   }
 
   body {
-    @apply font-sans antialiased text-foreground;
+    @apply bg-background font-sans antialiased text-foreground;
     position: relative;
     min-height: 100vh;
-    
-    /* Multi-layer gradient background with cyber aesthetic */
-    background: 
-      /* Top orange radial glow */
-      radial-gradient(ellipse 80% 50% at 50% 0%, rgba(176, 96, 0, 0.15) 0%, transparent 50%),
-      /* Left amber accent */
-      radial-gradient(ellipse 60% 80% at 0% 50%, rgba(255, 163, 82, 0.08) 0%, transparent 50%),
-      /* Right gold accent */
-      radial-gradient(ellipse 60% 80% at 100% 50%, rgba(218, 165, 32, 0.06) 0%, transparent 50%),
-      /* Base gradient */
-      linear-gradient(180deg, #000000 0%, #0a0604 50%, #1a0f0a 100%);
-    background-attachment: fixed;
-  }
-  
-  /* Cyber grid texture overlay */
-  body::before {
-    content: '';
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    pointer-events: none;
-    z-index: 0;
-    opacity: 0.03;
-    background-image: 
-      linear-gradient(rgba(255, 163, 82, 0.5) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255, 163, 82, 0.5) 1px, transparent 1px);
-    background-size: 50px 50px;
-  }
-  
-  /* Subtle noise texture for depth */
-  body::after {
-    content: '';
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    pointer-events: none;
-    z-index: 0;
-    opacity: 0.015;
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
   }
 
   /* Modern Roboto typography */
@@ -768,14 +725,14 @@
   .glass {
     background: linear-gradient(
       180deg,
-      rgba(41, 41, 41, 0.15) 0%,
-      rgba(25, 25, 25, 0.18) 100%
+      rgb(var(--glass-bg) / 0.15) 0%,
+      rgb(var(--glass-bg) / 0.18) 100%
     );
     backdrop-filter: blur(35px);
     -webkit-backdrop-filter: blur(35px);
-    border: 1px solid rgba(255, 163, 82, 0.1);
+    border: 1px solid rgb(var(--glass-border) / 0.1);
     box-shadow: 
-      inset 0 2px 2px 0 rgba(255, 163, 82, 0.08),
+      inset 0 2px 2px 0 rgb(var(--glass-border) / 0.08),
       inset 0 -2px 2px 0 rgba(0, 0, 0, 0.2),
       0 0 80px rgba(0, 0, 0, 0.25);
   }
@@ -784,14 +741,14 @@
   .glass-strong {
     background: linear-gradient(
       180deg,
-      rgba(41, 41, 41, 0.25) 0%,
-      rgba(25, 25, 25, 0.3) 100%
+      rgb(var(--glass-bg) / 0.25) 0%,
+      rgb(var(--glass-bg) / 0.3) 100%
     );
     backdrop-filter: blur(35px);
     -webkit-backdrop-filter: blur(35px);
-    border: 2px solid rgba(255, 163, 82, 0.12);
+    border: 2px solid rgb(var(--glass-border) / 0.12);
     box-shadow: 
-      inset 0 2px 2px 0 rgba(231, 196, 160, 0.1),
+      inset 0 2px 2px 0 rgb(var(--glass-border) / 0.1),
       inset 0 -2px 2px 0 rgba(0, 0, 0, 0.25),
       0 0 80px rgba(0, 0, 0, 0.35);
   }
@@ -800,14 +757,14 @@
   .glass-subtle {
     background: linear-gradient(
       180deg,
-      rgba(41, 41, 41, 0.08) 0%,
-      rgba(25, 25, 25, 0.1) 100%
+      rgb(var(--glass-bg) / 0.08) 0%,
+      rgb(var(--glass-bg) / 0.1) 100%
     );
     backdrop-filter: blur(25px);
     -webkit-backdrop-filter: blur(25px);
-    border: 1px solid rgba(255, 163, 82, 0.06);
+    border: 1px solid rgb(var(--glass-border) / 0.06);
     box-shadow: 
-      inset 0 1px 1px 0 rgba(255, 163, 82, 0.05),
+      inset 0 1px 1px 0 rgb(var(--glass-border) / 0.05),
       inset 0 -1px 1px 0 rgba(0, 0, 0, 0.15);
   }
 
@@ -815,15 +772,15 @@
   .glass-panel {
     background: linear-gradient(
       180deg,
-      rgba(41, 41, 41, 0.18) 0%,
-      rgba(25, 25, 25, 0.22) 50%,
-      rgba(25, 25, 25, 0.2) 100%
+      rgb(var(--glass-bg) / 0.18) 0%,
+      rgb(var(--glass-bg) / 0.22) 50%,
+      rgb(var(--glass-bg) / 0.2) 100%
     );
     backdrop-filter: blur(35px);
     -webkit-backdrop-filter: blur(35px);
-    border: 1px solid rgba(255, 163, 82, 0.11);
+    border: 1px solid rgb(var(--glass-border) / 0.11);
     box-shadow: 
-      inset 0 2px 2px 0 rgba(255, 163, 82, 0.09),
+      inset 0 2px 2px 0 rgb(var(--glass-border) / 0.09),
       inset 0 -2px 2px 0 rgba(0, 0, 0, 0.22),
       0 0 80px rgba(0, 0, 0, 0.28);
   }
@@ -832,14 +789,14 @@
   .glass-header {
     background: linear-gradient(
       180deg,
-      rgba(41, 41, 41, 0.3) 0%,
-      rgba(25, 25, 25, 0.32) 100%
+      rgb(var(--glass-bg) / 0.3) 0%,
+      rgb(var(--glass-bg) / 0.32) 100%
     );
     backdrop-filter: blur(35px);
     -webkit-backdrop-filter: blur(35px);
-    border-bottom: 1px solid rgba(255, 163, 82, 0.12);
+    border-bottom: 1px solid rgb(var(--glass-border) / 0.12);
     box-shadow: 
-      inset 0 1px 1px 0 rgba(255, 163, 82, 0.08),
+      inset 0 1px 1px 0 rgb(var(--glass-border) / 0.08),
       0 4px 8px rgba(0, 0, 0, 0.3);
   }
 
@@ -926,9 +883,9 @@
   .shimmer {
     background: linear-gradient(
       90deg,
-      rgba(255, 163, 82, 0.0) 0%,
-      rgba(255, 163, 82, 0.15) 50%,
-      rgba(255, 163, 82, 0.0) 100%
+      rgb(var(--glass-border) / 0.0) 0%,
+      rgb(var(--glass-border) / 0.15) 50%,
+      rgb(var(--glass-border) / 0.0) 100%
     );
     background-size: 200% 100%;
     animation: shimmer 2s infinite;
@@ -956,13 +913,13 @@
   .hover-illuminate:hover {
     transform: translateY(-0.2rem);
     box-shadow: 
-      inset 0 1rem 0.1rem -1rem rgba(255, 163, 82, 0.15),
+      inset 0 1rem 0.1rem -1rem rgb(var(--glass-border) / 0.15),
       inset 0 -4rem 3rem -3rem rgba(0, 0, 0, 0.2),
-      0 -1rem 0.2rem -1rem rgba(255, 163, 82, 0.15),
+      0 -1rem 0.2rem -1rem rgb(var(--glass-border) / 0.15),
       0 1rem 0.2rem -1rem rgba(0, 0, 0, 0.3),
-      0 0 0 1px rgba(255, 163, 82, 0.2),
+      0 0 0 1px rgb(var(--glass-border) / 0.2),
       0 4px 12px 0 rgba(0, 0, 0, 0.4),
-      0 0 0 1px rgba(255, 163, 82, 0.1);
+      0 0 0 1px rgb(var(--glass-border) / 0.1);
   }
 
   /* Lumen layers - creates depth with multiple light gradients */
@@ -979,10 +936,7 @@
     pointer-events: none;
     opacity: 0;
     transition: opacity 0.4s ease-in-out;
-    background: 
-      radial-gradient(ellipse 50% 30% at 50% 30%, rgba(255, 163, 82, 0.25) 0%, transparent 100%),
-      radial-gradient(ellipse 60% 40% at 50% 40%, rgba(255, 193, 7, 0.15) 0%, transparent 100%),
-      radial-gradient(ellipse 40% 50% at 50% 20%, rgba(255, 163, 82, 0.2) 0%, transparent 100%);
+    background: var(--gradient-glow);
   }
 
   .hover-illuminate:hover::after {
@@ -997,10 +951,10 @@
   .hover-lift:hover {
     transform: translateY(-0.15rem);
     box-shadow: 
-      inset 0 2px 2px 0 rgba(255, 163, 82, 0.12),
+      inset 0 2px 2px 0 rgb(var(--glass-border) / 0.12),
       inset 0 -2px 2px 0 rgba(0, 0, 0, 0.25),
       0 0 100px rgba(0, 0, 0, 0.32),
-      0 0 0 1px rgba(255, 163, 82, 0.15);
+      0 0 0 1px rgb(var(--glass-border) / 0.15);
   }
 
   /* ========== CUSTOM LEVERAGE SLIDER ========== */
@@ -1117,9 +1071,9 @@
   .leverage-slider-wrapper .leverage-input::-webkit-slider-runnable-track {
     width: 100%;
     height: 0.5rem;
-    background: rgba(255, 255, 255, 0.05);
+    background: hsl(var(--muted) / 0.3);
     border-radius: 0.25rem;
-    border: 1px solid rgba(255, 163, 82, 0.1);
+    border: 1px solid rgb(var(--glass-border) / 0.1);
     backdrop-filter: blur(4px);
   }
 
@@ -1127,9 +1081,9 @@
   .leverage-slider-wrapper .leverage-input::-moz-range-track {
     width: 100%;
     height: 0.5rem;
-    background: rgba(255, 255, 255, 0.05);
+    background: hsl(var(--muted) / 0.3);
     border-radius: 0.25rem;
-    border: 1px solid rgba(255, 163, 82, 0.1);
+    border: 1px solid rgb(var(--glass-border) / 0.1);
     backdrop-filter: blur(4px);
   }
 
@@ -1139,7 +1093,7 @@
     appearance: none;
     width: 2rem;
     height: 2rem;
-    background: linear-gradient(135deg, rgba(255, 163, 82, 0.9) 0%, rgba(255, 193, 7, 0.7) 100%);
+    background: var(--gradient-glow);
     border: 2px solid var(--lev-color, hsl(var(--primary)));
     border-radius: 50%;
     cursor: grab;
@@ -1147,14 +1101,14 @@
     margin-top: -0.75rem;
     backdrop-filter: blur(8px);
     box-shadow: 
-      inset 0 0 0 1px rgba(255, 255, 255, 0.1),
-      inset 0 2px 4px rgba(255, 163, 82, 0.3),
+      inset 0 0 0 1px hsl(var(--foreground) / 0.1),
+      inset 0 2px 4px rgb(var(--glass-border) / 0.3),
       inset 0 -2px 4px rgba(0, 0, 0, 0.3),
       0 0 0 2px rgba(0, 0, 0, 0.2),
       0 4px 8px rgba(0, 0, 0, 0.3),
       0 0 16px var(--lev-color, hsl(var(--primary) / 0.4)),
-      0.25rem -0.25rem 0.25rem rgba(42, 42, 42, 0.3),
-      -0.25rem 0.25rem 0.75rem rgba(9, 9, 9, 0.5);
+      0.25rem -0.25rem 0.25rem rgba(0, 0, 0, 0.3),
+      -0.25rem 0.25rem 0.75rem rgba(0, 0, 0, 0.5);
     transition: all 0.2s ease-out;
   }
 
@@ -1162,20 +1116,20 @@
   .leverage-slider-wrapper .leverage-input::-moz-range-thumb {
     width: 2rem;
     height: 2rem;
-    background: linear-gradient(135deg, rgba(255, 163, 82, 0.9) 0%, rgba(255, 193, 7, 0.7) 100%);
+    background: var(--gradient-glow);
     border: 2px solid var(--lev-color, hsl(var(--primary)));
     border-radius: 50%;
     cursor: grab;
     backdrop-filter: blur(8px);
     box-shadow: 
-      inset 0 0 0 1px rgba(255, 255, 255, 0.1),
-      inset 0 2px 4px rgba(255, 163, 82, 0.3),
+      inset 0 0 0 1px hsl(var(--foreground) / 0.1),
+      inset 0 2px 4px rgb(var(--glass-border) / 0.3),
       inset 0 -2px 4px rgba(0, 0, 0, 0.3),
       0 0 0 2px rgba(0, 0, 0, 0.2),
       0 4px 8px rgba(0, 0, 0, 0.3),
       0 0 16px var(--lev-color, hsl(var(--primary) / 0.4)),
-      0.25rem -0.25rem 0.25rem rgba(42, 42, 42, 0.3),
-      -0.25rem 0.25rem 0.75rem rgba(9, 9, 9, 0.5);
+      0.25rem -0.25rem 0.25rem rgba(0, 0, 0, 0.3),
+      -0.25rem 0.25rem 0.75rem rgba(0, 0, 0, 0.5);
     transition: all 0.2s ease-out;
   }
 
@@ -1183,27 +1137,27 @@
   .leverage-slider-wrapper .leverage-input:hover::-webkit-slider-thumb,
   .leverage-slider-wrapper .leverage-input.dragging::-webkit-slider-thumb {
     box-shadow: 
-      inset 0 0 0 1px rgba(255, 255, 255, 0.2),
-      inset 0 2px 8px rgba(255, 163, 82, 0.5),
+      inset 0 0 0 1px hsl(var(--foreground) / 0.2),
+      inset 0 2px 8px rgb(var(--glass-border) / 0.5),
       inset 0 -2px 8px rgba(0, 0, 0, 0.4),
       0 0 0 3px rgba(0, 0, 0, 0.3),
       0 6px 12px rgba(0, 0, 0, 0.4),
       0 0 24px var(--lev-color, hsl(var(--primary) / 0.6)),
-      0.5rem -0.5rem 0.5rem rgba(42, 42, 42, 0.4),
-      -0.5rem 0.5rem 1rem rgba(9, 9, 9, 0.6);
+      0.5rem -0.5rem 0.5rem rgba(0, 0, 0, 0.4),
+      -0.5rem 0.5rem 1rem rgba(0, 0, 0, 0.6);
   }
 
   .leverage-slider-wrapper .leverage-input:hover::-moz-range-thumb,
   .leverage-slider-wrapper .leverage-input.dragging::-moz-range-thumb {
     box-shadow: 
-      inset 0 0 0 1px rgba(255, 255, 255, 0.2),
-      inset 0 2px 8px rgba(255, 163, 82, 0.5),
+      inset 0 0 0 1px hsl(var(--foreground) / 0.2),
+      inset 0 2px 8px rgb(var(--glass-border) / 0.5),
       inset 0 -2px 8px rgba(0, 0, 0, 0.4),
       0 0 0 3px rgba(0, 0, 0, 0.3),
       0 6px 12px rgba(0, 0, 0, 0.4),
       0 0 24px var(--lev-color, hsl(var(--primary) / 0.6)),
-      0.5rem -0.5rem 0.5rem rgba(42, 42, 42, 0.4),
-      -0.5rem 0.5rem 1rem rgba(9, 9, 9, 0.6);
+      0.5rem -0.5rem 0.5rem rgba(0, 0, 0, 0.4),
+      -0.5rem 0.5rem 1rem rgba(0, 0, 0, 0.6);
   }
 
   .leverage-slider-wrapper .leverage-input.dragging::-webkit-slider-thumb {
