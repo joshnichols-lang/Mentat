@@ -1,7 +1,13 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
+import { useAccount, useSignMessage } from 'wagmi';
+import { useMutation } from '@tanstack/react-query';
+import { apiRequest, queryClient } from '@/lib/queryClient';
+import { useToast } from '@/hooks/use-toast';
+import { useEmbeddedWallet } from '@/hooks/use-embedded-wallet';
+import { RecoveryPhraseModal } from '@/components/RecoveryPhraseModal';
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ArrowRight, TrendingUp, Shield, Zap, Bot } from "lucide-react";
@@ -10,6 +16,124 @@ import logoUrl from "@assets/1fox-removebg-preview(1)_1761259210534.png";
 export default function LandingPage() {
   const [, setLocation] = useLocation();
   const { user } = useAuth();
+  const { address, isConnected, connector } = useAccount();
+  const { signMessageAsync } = useSignMessage();
+  const { toast } = useToast();
+  const [isAuthenticating, setIsAuthenticating] = useState(false);
+  const [authCompleted, setAuthCompleted] = useState(false);
+  
+  const {
+    hasEmbeddedWallet,
+    seedPhrase,
+    showRecoveryModal,
+    createEmbeddedWallet,
+    handleRecoveryConfirm,
+    handleRecoveryClose,
+    isCreating,
+  } = useEmbeddedWallet();
+
+  const walletAuthMutation = useMutation({
+    mutationFn: async ({ walletAddress, signature, message, nonce }: { 
+      walletAddress: string; 
+      signature: string; 
+      message: string;
+      nonce: string;
+    }) => {
+      const res = await apiRequest('POST', '/api/auth/wallet', {
+        walletAddress,
+        signature,
+        message,
+        nonce,
+        walletType: connector?.name || 'unknown',
+      });
+      return await res.json();
+    },
+    onSuccess: async (user) => {
+      queryClient.setQueryData(['/api/user'], user);
+      toast({
+        title: 'Connected successfully!',
+        description: `Welcome to 1fox`,
+      });
+      setAuthCompleted(true);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Authentication failed',
+        description: error.message,
+        variant: 'destructive',
+      });
+      setIsAuthenticating(false);
+    },
+  });
+
+  // Authenticate wallet when connected
+  useEffect(() => {
+    const authenticateWallet = async () => {
+      if (isConnected && address && !isAuthenticating && !walletAuthMutation.isPending) {
+        setIsAuthenticating(true);
+        
+        try {
+          // Fetch nonce from server
+          const nonceRes = await fetch(`/api/auth/wallet/nonce?address=${address}`);
+          if (!nonceRes.ok) {
+            throw new Error('Failed to fetch nonce');
+          }
+          const { nonce } = await nonceRes.json();
+
+          // Create message with nonce
+          const message = `Sign this message to authenticate with 1fox.\n\nWallet: ${address}\nNonce: ${nonce}\nTimestamp: ${Date.now()}`;
+          
+          const signature = await signMessageAsync({
+            message,
+          });
+
+          await walletAuthMutation.mutateAsync({
+            walletAddress: address,
+            signature,
+            message,
+            nonce,
+          });
+        } catch (error: any) {
+          console.error('Wallet authentication error:', error);
+          toast({
+            title: 'Signature required',
+            description: 'Please sign the message to authenticate',
+            variant: 'destructive',
+          });
+          setIsAuthenticating(false);
+        }
+      }
+    };
+
+    authenticateWallet();
+  }, [isConnected, address]);
+
+  // After external wallet auth completes, check if user needs embedded wallets
+  useEffect(() => {
+    const initializeEmbeddedWallets = async () => {
+      if (authCompleted && !hasEmbeddedWallet && !isCreating) {
+        try {
+          await createEmbeddedWallet();
+        } catch (error) {
+          console.error('Failed to create embedded wallets:', error);
+          toast({
+            title: 'Wallet Creation Failed',
+            description: 'Failed to generate embedded wallets. Please try again.',
+            variant: 'destructive',
+          });
+        }
+      }
+    };
+
+    initializeEmbeddedWallets();
+  }, [authCompleted, hasEmbeddedWallet, isCreating]);
+
+  // Navigate to terminal after recovery modal is confirmed
+  useEffect(() => {
+    if (authCompleted && hasEmbeddedWallet && !showRecoveryModal) {
+      setLocation('/terminal');
+    }
+  }, [authCompleted, hasEmbeddedWallet, showRecoveryModal, setLocation]);
 
   // Redirect authenticated users to terminal
   useEffect(() => {
@@ -19,6 +143,13 @@ export default function LandingPage() {
   }, [user, setLocation]);
 
   return (
+    <>
+      <RecoveryPhraseModal
+        isOpen={showRecoveryModal}
+        seedPhrase={seedPhrase}
+        onConfirm={handleRecoveryConfirm}
+        onClose={handleRecoveryClose}
+      />
     <div className="min-h-screen relative overflow-hidden">
       {/* Animated gradient background */}
       <div className="fixed inset-0 bg-gradient-to-br from-background via-background to-background/95">
@@ -164,5 +295,6 @@ export default function LandingPage() {
         </footer>
       </div>
     </div>
+    </>
   );
 }

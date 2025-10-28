@@ -29,17 +29,10 @@ function isAuthenticated(req: any, res: any, next: any) {
 }
 
 // Middleware to check if user is verified (approved)
+// Note: All users are now auto-approved on creation, so this just checks authentication
 function requireVerifiedUser(req: any, res: any, next: any) {
   if (!req.isAuthenticated()) {
     return res.status(401).json({ message: "Unauthorized" });
-  }
-  
-  const user = req.user!;
-  if (user.verificationStatus !== "approved") {
-    return res.status(403).json({ 
-      message: "Account pending verification", 
-      verificationStatus: user.verificationStatus 
-    });
   }
   
   return next();
