@@ -159,12 +159,36 @@ export class PolymarketClient {
         if (event.markets && Array.isArray(event.markets)) {
           // Add event context to each market for better display
           for (const market of event.markets) {
+            // Parse outcomePrices from stringified JSON array to actual array
+            let outcomePrices = market.outcomePrices;
+            if (typeof outcomePrices === 'string') {
+              try {
+                outcomePrices = JSON.parse(outcomePrices);
+              } catch (e) {
+                console.warn(`[Polymarket] Failed to parse outcomePrices for market ${market.conditionId}:`, e);
+                outcomePrices = ["0", "0"]; // Default to 0% if parsing fails
+              }
+            }
+            
+            // Parse clobTokenIds if it's stringified
+            let clobTokenIds = market.clobTokenIds;
+            if (typeof clobTokenIds === 'string') {
+              try {
+                clobTokenIds = JSON.parse(clobTokenIds);
+              } catch (e) {
+                console.warn(`[Polymarket] Failed to parse clobTokenIds for market ${market.conditionId}:`, e);
+              }
+            }
+            
             markets.push({
               ...market,
+              outcomePrices,
+              clobTokenIds,
               eventSlug: event.slug,
               eventTitle: event.title,
               eventDescription: event.description,
               eventIcon: event.icon,
+              eventTags: event.tags || [], // Preserve event-level tags
             });
           }
         }
