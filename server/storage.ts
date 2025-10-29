@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type UpsertUser, type UserWallet, type InsertUserWallet, type EmbeddedWallet, type InsertEmbeddedWallet, type Trade, type InsertTrade, type Position, type InsertPosition, type PortfolioSnapshot, type InsertPortfolioSnapshot, type AiUsageLog, type InsertAiUsageLog, type MonitoringLog, type InsertMonitoringLog, type UserApiCredential, type InsertUserApiCredential, type ApiKey, type InsertApiKey, type ContactMessage, type InsertContactMessage, type ProtectiveOrderEvent, type InsertProtectiveOrderEvent, type UserTradeHistoryImport, type InsertUserTradeHistoryImport, type UserTradeHistoryTrade, type InsertUserTradeHistoryTrade, type TradeStyleProfile, type InsertTradeStyleProfile, type TradeJournalEntry, type TradeJournalEntryWithStrategy, type InsertTradeJournalEntry, type TradingMode, type InsertTradingMode, type BudgetAlert, type InsertBudgetAlert, type PolymarketEvent, type InsertPolymarketEvent, type PolymarketPosition, type InsertPolymarketPosition, type PolymarketOrder, type InsertPolymarketOrder, type OptionsStrategy, type InsertOptionsStrategy, type OptionsPosition, type InsertOptionsPosition, type OptionsOrder, type InsertOptionsOrder, users, userWallets, embeddedWallets, trades, positions, portfolioSnapshots, aiUsageLog, monitoringLog, userApiCredentials, apiKeys, contactMessages, protectiveOrderEvents, userTradeHistoryImports, userTradeHistoryTrades, tradeStyleProfiles, tradeJournalEntries, tradingModes, budgetAlerts, polymarketEvents, polymarketPositions, polymarketOrders, optionsStrategies, optionsPositions, optionsOrders } from "@shared/schema";
+import { type User, type InsertUser, type UpsertUser, type UserWallet, type InsertUserWallet, type EmbeddedWallet, type InsertEmbeddedWallet, type Trade, type InsertTrade, type Position, type InsertPosition, type PortfolioSnapshot, type InsertPortfolioSnapshot, type AiUsageLog, type InsertAiUsageLog, type MonitoringLog, type InsertMonitoringLog, type UserApiCredential, type InsertUserApiCredential, type ApiKey, type InsertApiKey, type ContactMessage, type InsertContactMessage, type ProtectiveOrderEvent, type InsertProtectiveOrderEvent, type UserTradeHistoryImport, type InsertUserTradeHistoryImport, type UserTradeHistoryTrade, type InsertUserTradeHistoryTrade, type TradeStyleProfile, type InsertTradeStyleProfile, type TradeJournalEntry, type TradeJournalEntryWithStrategy, type InsertTradeJournalEntry, type TradingMode, type InsertTradingMode, type BudgetAlert, type InsertBudgetAlert, type PolymarketEvent, type InsertPolymarketEvent, type PolymarketPosition, type InsertPolymarketPosition, type PolymarketOrder, type InsertPolymarketOrder, type OptionsStrategy, type InsertOptionsStrategy, type OptionsPosition, type InsertOptionsPosition, type OptionsOrder, type InsertOptionsOrder, type PanelLayout, type InsertPanelLayout, users, userWallets, embeddedWallets, trades, positions, portfolioSnapshots, aiUsageLog, monitoringLog, userApiCredentials, apiKeys, contactMessages, protectiveOrderEvents, userTradeHistoryImports, userTradeHistoryTrades, tradeStyleProfiles, tradeJournalEntries, tradingModes, budgetAlerts, polymarketEvents, polymarketPositions, polymarketOrders, optionsStrategies, optionsPositions, optionsOrders, panelLayouts } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql, and, isNull, type SQL } from "drizzle-orm";
 import session from "express-session";
@@ -202,6 +202,11 @@ export interface IStorage {
   getOptionsOrders(userId: string, filters?: { strategyId?: string; status?: string }): Promise<OptionsOrder[]>;
   getOptionsOrderById(orderId: string): Promise<OptionsOrder | undefined>;
   updateOptionsOrder(orderId: string, updates: Partial<OptionsOrder>): Promise<OptionsOrder | undefined>;
+  
+  // Panel Layout methods (multi-tenant)
+  getPanelLayout(userId: string, tab: string): Promise<PanelLayout | undefined>;
+  savePanelLayout(userId: string, tab: string, layoutData: any): Promise<PanelLayout>;
+  deletePanelLayout(userId: string, tab: string): Promise<void>;
   
   // Admin methods
   getAllUsers(): Promise<User[]>;
@@ -1468,6 +1473,39 @@ export class DbStorage implements IStorage {
       .where(eq(optionsOrders.id, orderId))
       .returning();
     return result[0];
+  }
+
+  // Panel Layout methods
+  async getPanelLayout(userId: string, tab: string): Promise<PanelLayout | undefined> {
+    const result = await db.select()
+      .from(panelLayouts)
+      .where(and(eq(panelLayouts.userId, userId), eq(panelLayouts.tab, tab))!)
+      .limit(1);
+    return result[0];
+  }
+
+  async savePanelLayout(userId: string, tab: string, layoutData: any): Promise<PanelLayout> {
+    const existing = await this.getPanelLayout(userId, tab);
+    
+    if (existing) {
+      // Update existing layout
+      const result = await db.update(panelLayouts)
+        .set({ layoutData, updatedAt: new Date() })
+        .where(and(eq(panelLayouts.userId, userId), eq(panelLayouts.tab, tab))!)
+        .returning();
+      return result[0];
+    } else {
+      // Create new layout
+      const result = await db.insert(panelLayouts)
+        .values({ userId, tab, layoutData })
+        .returning();
+      return result[0];
+    }
+  }
+
+  async deletePanelLayout(userId: string, tab: string): Promise<void> {
+    await db.delete(panelLayouts)
+      .where(and(eq(panelLayouts.userId, userId), eq(panelLayouts.tab, tab))!);
   }
 
   // Admin methods
