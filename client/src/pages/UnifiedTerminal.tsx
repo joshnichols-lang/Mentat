@@ -24,6 +24,7 @@ import { CumulativeReturnsChart } from "@/components/CumulativeReturnsChart";
 import { DrawdownChart } from "@/components/DrawdownChart";
 import { PositionROEChart } from "@/components/PositionROEChart";
 import TradingChart from "@/components/TradingChart";
+import OptionsChart from "@/components/OptionsChart";
 import OrderBook from "@/components/OrderBook";
 import RecentTrades from "@/components/RecentTrades";
 import OrderEntryPanel from "@/components/OrderEntryPanel";
@@ -824,29 +825,10 @@ function OptionsInterface() {
               {/* Chart Panel (Top) */}
               <ResizablePanel defaultSize={strategyPanelCollapsed ? 100 : 65} minSize={30}>
                 <div className="h-full relative">
-                  {/* OptionsChart placeholder - will be implemented in task 7 */}
-                  <div className="h-full flex items-center justify-center glass-fade-in">
-                    <Card className="glass-strong border-glass/20 max-w-2xl">
-                      <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                          <LineChart className="h-5 w-5 text-primary" />
-                          Options Chart with P&L Visualization
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-3 text-sm text-foreground/70">
-                        <p>Real-time options pricing with strategy P&L overlays:</p>
-                        <ul className="space-y-1.5 ml-4">
-                          <li>• Breakeven points visualization</li>
-                          <li>• Profit/loss zones (green/red gradient overlays)</li>
-                          <li>• Strike prices with Greeks display</li>
-                          <li>• Max profit/max loss annotations</li>
-                        </ul>
-                        <div className="mt-3 p-2 bg-primary/10 border border-primary/20 rounded text-xs">
-                          📊 Task 7: OptionsChart.tsx component
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </div>
+                  <OptionsChart 
+                    asset={selectedAsset}
+                    selectedStrategy={null}
+                  />
                 </div>
               </ResizablePanel>
 
