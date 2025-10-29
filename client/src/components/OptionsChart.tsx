@@ -481,7 +481,7 @@ export default function OptionsChart({
   }, [selectedStrategy, colors, currentPrice, candleData]);
 
   return (
-    <div className="relative w-full h-full glass rounded-md" data-testid="chart-options">
+    <div className="h-full w-full flex flex-col" data-testid="chart-options">
       {isLoading && (
         <div className="absolute inset-0 flex items-center justify-center z-10">
           <div className="flex flex-col items-center gap-2 glass-strong p-6 rounded-md">
@@ -493,7 +493,7 @@ export default function OptionsChart({
       
       <div 
         ref={chartContainerRef} 
-        className="w-full h-full rounded-md overflow-hidden"
+        className="flex-1 relative"
         data-testid="chart-options-container"
       />
 
