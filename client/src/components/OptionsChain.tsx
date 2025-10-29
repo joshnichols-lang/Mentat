@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Loader2, TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -54,13 +54,19 @@ export default function OptionsChain({ asset, currentPrice }: OptionsChainProps)
 
   const markets = data?.markets || [];
   
-  const options = markets.filter(m => 
-    m.instrument_type === 'OPTION' && 
-    m.is_active && 
-    m.underlying_asset === asset
+  const options = useMemo(() => 
+    markets.filter(m => 
+      m.instrument_type === 'OPTION' && 
+      m.is_active && 
+      m.underlying_asset === asset
+    ),
+    [markets, asset]
   );
 
-  const expiryDates = Array.from(new Set(options.map(o => o.expiry).filter(Boolean))).sort();
+  const expiryDates = useMemo(() => 
+    Array.from(new Set(options.map(o => o.expiry).filter(Boolean))).sort(),
+    [options]
+  );
 
   useEffect(() => {
     if (expiryDates.length > 0 && !selectedExpiry) {
