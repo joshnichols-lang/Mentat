@@ -31,6 +31,8 @@ import RecentTrades from "@/components/RecentTrades";
 import OrderEntryPanel from "@/components/OrderEntryPanel";
 import OrderManagementPanel from "@/components/OrderManagementPanel";
 import MarketSelector from "@/components/MarketSelector";
+import GridDashboard from "@/components/GridDashboard";
+import Widget from "@/components/Widget";
 import { 
   Flame,
   Vote,
@@ -770,208 +772,141 @@ function PredictionMarketsInterface() {
 function OptionsInterface() {
   const [selectedAsset, setSelectedAsset] = useState("ETH");
   const [mode, setMode] = useState<"simple" | "pro">("simple");
-  const [strategyPanelCollapsed, setStrategyPanelCollapsed] = useState(false);
   const [selectedStrategy, setSelectedStrategy] = useState<any>(null);
   const [currentPrice, setCurrentPrice] = useState(4000);
 
-  return (
-    <div className="flex-1 overflow-hidden">
-      <ResizablePanelGroup direction="horizontal" className="h-full">
-        {/* Main Chart Area with Vertical Resizing */}
-        <ResizablePanel defaultSize={70} minSize={50}>
-          <div className="h-full flex flex-col">
-            {/* Options Toolbar */}
-            <div className="glass border-b border-glass/20 p-2 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Layers className="h-4 w-4 text-primary" />
-                <h3 className="text-sm font-semibold">Options Trading</h3>
-                <Badge 
-                  variant="outline" 
-                  className="bg-primary/10 text-primary border-primary/30"
-                  data-testid="badge-selected-asset"
-                >
-                  {selectedAsset}
-                </Badge>
-              </div>
+  // Default grid layouts for options panels
+  const defaultLayouts = [
+    { i: "chart", x: 0, y: 0, w: 8, h: 12 },
+    { i: "strategy", x: 0, y: 12, w: 8, h: 8 },
+    { i: "greeks", x: 8, y: 0, w: 4, h: 10 },
+    { i: "positions", x: 8, y: 10, w: 4, h: 10 },
+  ];
 
-              <div className="flex items-center gap-2">
-                <Badge 
-                  variant={mode === "simple" ? "default" : "outline"}
-                  className="cursor-pointer hover-elevate active-elevate-2"
-                  onClick={() => setMode("simple")}
-                  data-testid="badge-mode-simple"
-                >
-                  Simple
-                </Badge>
-                <Badge 
-                  variant={mode === "pro" ? "default" : "outline"}
-                  className="cursor-pointer hover-elevate active-elevate-2"
-                  onClick={() => setMode("pro")}
-                  data-testid="badge-mode-pro"
-                >
-                  Pro
-                </Badge>
-                <Button 
-                  variant="ghost" 
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={() => setStrategyPanelCollapsed(!strategyPanelCollapsed)}
-                  data-testid="button-toggle-strategy-panel"
-                >
-                  {strategyPanelCollapsed ? <Maximize2 className="h-4 w-4" /> : <Minimize2 className="h-4 w-4" />}
-                </Button>
+  return (
+    <div className="flex-1 overflow-hidden flex flex-col">
+      {/* Options Toolbar */}
+      <div className="glass border-b border-glass/20 p-2 flex items-center justify-between shrink-0">
+        <div className="flex items-center gap-2">
+          <Layers className="h-4 w-4 text-primary" />
+          <h3 className="text-sm font-semibold">Options Trading</h3>
+          <Badge 
+            variant="outline" 
+            className="bg-primary/10 text-primary border-primary/30"
+            data-testid="badge-selected-asset"
+          >
+            {selectedAsset}
+          </Badge>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Badge 
+            variant={mode === "simple" ? "default" : "outline"}
+            className="cursor-pointer hover-elevate active-elevate-2"
+            onClick={() => setMode("simple")}
+            data-testid="badge-mode-simple"
+          >
+            Simple
+          </Badge>
+          <Badge 
+            variant={mode === "pro" ? "default" : "outline"}
+            className="cursor-pointer hover-elevate active-elevate-2"
+            onClick={() => setMode("pro")}
+            data-testid="badge-mode-pro"
+          >
+            Pro
+          </Badge>
+        </div>
+      </div>
+
+      {/* Grid Dashboard with Draggable Widgets */}
+      <GridDashboard
+        tab="options"
+        defaultLayouts={defaultLayouts}
+        cols={12}
+        rowHeight={30}
+        width={1400}
+      >
+        <div key="chart">
+          <Widget id="chart" title="Options Chart">
+            <OptionsChart 
+              asset={selectedAsset}
+              selectedStrategy={selectedStrategy}
+              onPriceUpdate={setCurrentPrice}
+            />
+          </Widget>
+        </div>
+
+        <div key="strategy">
+          <Widget id="strategy" title="Strategy Builder">
+            <OptionsStrategyBuilder 
+              asset={selectedAsset}
+              currentPrice={currentPrice}
+              mode={mode}
+              onModeChange={setMode}
+              onStrategySelect={setSelectedStrategy}
+            />
+          </Widget>
+        </div>
+
+        <div key="greeks">
+          <Widget id="greeks" title="Live Greeks & Market Data">
+            <div className="space-y-3 text-sm text-foreground/70">
+              <div className="flex justify-between">
+                <span>Delta:</span>
+                <span className="font-mono">--</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Gamma:</span>
+                <span className="font-mono">--</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Theta:</span>
+                <span className="font-mono">--</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Vega:</span>
+                <span className="font-mono">--</span>
+              </div>
+              <div className="border-t border-glass/20 pt-3 mt-3 space-y-2">
+                <div className="flex justify-between">
+                  <span>IV Percentile:</span>
+                  <span className="font-mono">--</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>30D HV:</span>
+                  <span className="font-mono">--</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Put/Call Ratio:</span>
+                  <span className="font-mono">--</span>
+                </div>
+              </div>
+              <div className="text-xs text-foreground/50 mt-3">
+                📊 Task 7: Real-time Greeks from Aevo API
               </div>
             </div>
+          </Widget>
+        </div>
 
-            {/* Vertical Resizable Group: Chart + Strategy Builder */}
-            <ResizablePanelGroup direction="vertical" className="flex-1">
-              {/* Chart Panel */}
-              <ResizablePanel defaultSize={strategyPanelCollapsed ? 100 : 70} minSize={30}>
-                <div className="h-full relative">
-                  <OptionsChart 
-                    asset={selectedAsset}
-                    selectedStrategy={selectedStrategy}
-                    onPriceUpdate={setCurrentPrice}
-                  />
-                </div>
-              </ResizablePanel>
-
-              {/* Strategy Builder Panel (Resizable) */}
-              {!strategyPanelCollapsed && (
-                <>
-                  <ResizableHandle withHandle className="bg-glass-border/30" />
-                  <ResizablePanel defaultSize={30} minSize={15} maxSize={50}>
-                    <div className="h-full border-t border-glass/20 overflow-auto glass-fade-in">
-                      <OptionsStrategyBuilder 
-                        asset={selectedAsset}
-                        currentPrice={currentPrice}
-                        mode={mode}
-                        onModeChange={setMode}
-                        onStrategySelect={setSelectedStrategy}
-                      />
-                    </div>
-                  </ResizablePanel>
-                </>
-              )}
-            </ResizablePanelGroup>
-          </div>
-        </ResizablePanel>
-
-        <ResizableHandle withHandle className="bg-glass-border/30" />
-
-        {/* Right Sidebar: Greeks + Positions + AI Recommendations */}
-        <ResizablePanel defaultSize={30} minSize={20} maxSize={40}>
-          <div className="h-full flex flex-col min-h-0 glass">
-            <Tabs defaultValue="greeks" className="flex-1 flex flex-col min-h-0">
-              <TabsList className="m-2 grid grid-cols-3">
-                <TabsTrigger value="greeks" data-testid="tab-greeks">Greeks</TabsTrigger>
-                <TabsTrigger value="positions" data-testid="tab-options-positions">Positions</TabsTrigger>
-                <TabsTrigger value="ai" data-testid="tab-ai-recommendations">AI Rec</TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="greeks" className="flex-1 min-h-0 m-2 mt-0 overflow-hidden">
-                <div className="h-full overflow-auto">
-                  <Card className="glass-strong border-glass/20 h-full overflow-hidden flex flex-col">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm flex items-center gap-2">
-                      <TrendingUp className="h-4 w-4 text-primary" />
-                      Live Greeks & Market Data
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="flex-1 p-4 overflow-auto space-y-3 text-sm text-foreground/70">
-                    <div className="flex justify-between">
-                      <span>Delta:</span>
-                      <span className="font-mono">--</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Gamma:</span>
-                      <span className="font-mono">--</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Theta:</span>
-                      <span className="font-mono">--</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Vega:</span>
-                      <span className="font-mono">--</span>
-                    </div>
-                    <div className="border-t border-glass/20 pt-3 mt-3 space-y-2">
-                      <div className="flex justify-between">
-                        <span>IV Percentile:</span>
-                        <span className="font-mono">--</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>30D HV:</span>
-                        <span className="font-mono">--</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Put/Call Ratio:</span>
-                        <span className="font-mono">--</span>
-                      </div>
-                    </div>
-                    <div className="text-xs text-foreground/50 mt-3">
-                      📊 Task 7: Real-time Greeks from Aevo API
-                    </div>
-                  </CardContent>
-                </Card>
-                </div>
-              </TabsContent>
-
-              <TabsContent value="positions" className="flex-1 min-h-0 m-2 mt-0 overflow-hidden">
-                <div className="h-full overflow-auto">
-                  <Card className="glass-strong border-glass/20 h-full overflow-hidden flex flex-col">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm flex items-center gap-2">
-                      <LineChart className="h-4 w-4 text-primary" />
-                      Options Positions
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="flex-1 p-4 overflow-auto space-y-2 text-sm text-foreground/70">
-                    <p>Live positions with:</p>
-                    <ul className="space-y-1 text-xs ml-4">
-                      <li>• P&L tracking</li>
-                      <li>• Greeks by position</li>
-                      <li>• Days to expiry</li>
-                      <li>• Breakeven prices</li>
-                      <li>• Quick close buttons</li>
-                    </ul>
-                    <div className="text-xs text-foreground/50 mt-3">
-                      📋 Task 10: OptionsPositionsGrid.tsx
-                    </div>
-                  </CardContent>
-                </Card>
-                </div>
-              </TabsContent>
-
-              <TabsContent value="ai" className="flex-1 min-h-0 m-2 mt-0 overflow-hidden">
-                <div className="h-full overflow-auto">
-                  <Card className="glass-strong border-glass/20 h-full overflow-hidden flex flex-col">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm flex items-center gap-2">
-                      <Sparkles className="h-4 w-4 text-primary" />
-                      AI Strategy Recommendations
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="flex-1 p-4 overflow-auto space-y-2 text-sm text-foreground/70">
-                    <p>Mr. Fox analyzes:</p>
-                    <ul className="space-y-1 text-xs ml-4">
-                      <li>• IV regime (low/normal/high)</li>
-                      <li>• Volatility trends</li>
-                      <li>• Market microstructure</li>
-                      <li>• Optimal strategy suggestions</li>
-                      <li>• Entry timing recommendations</li>
-                    </ul>
-                    <div className="text-xs text-foreground/50 mt-3">
-                      📋 Task 9: AIStrategyRecommendations.tsx
-                    </div>
-                  </CardContent>
-                </Card>
-                </div>
-              </TabsContent>
-            </Tabs>
-          </div>
-        </ResizablePanel>
-      </ResizablePanelGroup>
+        <div key="positions">
+          <Widget id="positions" title="Options Positions">
+            <div className="space-y-2 text-sm text-foreground/70">
+              <p>Live positions with:</p>
+              <ul className="space-y-1 text-xs ml-4">
+                <li>• P&L tracking</li>
+                <li>• Greeks by position</li>
+                <li>• Days to expiry</li>
+                <li>• Breakeven prices</li>
+                <li>• Quick close buttons</li>
+              </ul>
+              <div className="text-xs text-foreground/50 mt-3">
+                📋 Task 10: OptionsPositionsGrid.tsx
+              </div>
+            </div>
+          </Widget>
+        </div>
+      </GridDashboard>
     </div>
   );
 }

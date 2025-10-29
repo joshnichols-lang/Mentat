@@ -3890,7 +3890,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Panel Layout Routes
-  app.get("/api/panel-layouts/:tab", requireAuth, async (req, res) => {
+  app.get("/api/panel-layouts/:tab", isAuthenticated, async (req, res) => {
     try {
       const userId = req.user!.id;
       const { tab } = req.params;
@@ -3914,7 +3914,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/panel-layouts/:tab", requireAuth, async (req, res) => {
+  app.post("/api/panel-layouts/:tab", isAuthenticated, async (req, res) => {
     try {
       const userId = req.user!.id;
       const { tab } = req.params;
@@ -3942,7 +3942,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/panel-layouts/:tab", requireAuth, async (req, res) => {
+  app.delete("/api/panel-layouts/:tab", isAuthenticated, async (req, res) => {
     try {
       const userId = req.user!.id;
       const { tab } = req.params;
