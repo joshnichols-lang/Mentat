@@ -64,8 +64,11 @@ export default function OptionsChain({ asset, currentPrice }: OptionsChainProps)
 
   useEffect(() => {
     if (expiryDates.length > 0 && !selectedExpiry) {
-      setSelectedExpiry(expiryDates[0] || null);
-      setExpiry(expiryDates[0] || null);
+      const firstExpiry = expiryDates[0] || null;
+      setSelectedExpiry(firstExpiry);
+      if (firstExpiry) {
+        setExpiry(firstExpiry);
+      }
     }
   }, [expiryDates, selectedExpiry, setExpiry]);
 

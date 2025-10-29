@@ -3,9 +3,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Layers, Sparkles, TrendingUp, TrendingDown, Minus, Activity, RefreshCw, ArrowUpCircle, ArrowDownCircle, Circle } from "lucide-react";
+import { Layers, Sparkles, TrendingUp, TrendingDown, Minus, Activity, RefreshCw, ArrowUpCircle, ArrowDownCircle, Circle, CheckCircle2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { OptionsStrategy, InsertOptionsStrategy } from "@shared/schema";
+import { useStrategyStore } from "@/stores/strategyStore";
 
 interface OptionsStrategyBuilderProps {
   asset: string;
@@ -230,6 +231,9 @@ export default function OptionsStrategyBuilder({
   const [selectedStrategyId, setSelectedStrategyId] = useState<string | null>(null);
   const [selectedExpiry, setSelectedExpiry] = useState<string>("");
   const [period, setPeriod] = useState<number>(7); // Days
+  
+  // Get selected market from strategy store
+  const { selectedMarket, strategyType, setStrategyType } = useStrategyStore();
   
   const { data: marketsData } = useQuery<{ success: boolean; markets: any[] }>({
     queryKey: ['/api/aevo/markets'],
@@ -496,6 +500,55 @@ export default function OptionsStrategyBuilder({
       <div className="flex-1 overflow-auto p-4 space-y-4">
         {mode === "simple" ? (
           <>
+            {/* Selected Market Display */}
+            {selectedMarket && (
+              <div className="glass-strong rounded-md p-3 border border-primary/40" data-testid="selected-market-display">
+                <div className="flex items-start justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-success" />
+                    <span className="text-xs font-semibold text-foreground">Selected Market</span>
+                  </div>
+                  <Badge 
+                    variant="outline" 
+                    className={`text-[10px] h-5 ${selectedMarket.option_type === 'call' ? 'bg-success/20 text-success border-success/30' : 'bg-destructive/20 text-destructive border-destructive/30'}`}
+                  >
+                    {selectedMarket.option_type?.toUpperCase()}
+                  </Badge>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div>
+                    <span className="text-muted-foreground">Strike:</span>
+                    <div className="font-bold text-foreground">${selectedMarket.strike}</div>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Mark:</span>
+                    <div className="font-bold text-foreground">${parseFloat(selectedMarket.mark_price).toFixed(2)}</div>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Bid:</span>
+                    <div className="font-semibold text-success">${selectedMarket.best_bid ? parseFloat(selectedMarket.best_bid).toFixed(2) : '-'}</div>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Ask:</span>
+                    <div className="font-semibold text-destructive">${selectedMarket.best_ask ? parseFloat(selectedMarket.best_ask).toFixed(2) : '-'}</div>
+                  </div>
+                  {selectedMarket.greeks?.delta && (
+                    <div>
+                      <span className="text-muted-foreground">Delta:</span>
+                      <div className="font-semibold text-foreground">{parseFloat(selectedMarket.greeks.delta).toFixed(3)}</div>
+                    </div>
+                  )}
+                  {selectedMarket.greeks?.iv && (
+                    <div>
+                      <span className="text-muted-foreground">IV:</span>
+                      <div className="font-semibold text-foreground">{(parseFloat(selectedMarket.greeks.iv) * 100).toFixed(0)}%</div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Sentiment Selector */}
             <div>
               <label className="text-xs font-medium mb-2 block text-muted-foreground">
