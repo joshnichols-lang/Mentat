@@ -48,126 +48,83 @@ import {
 
 // Perpetuals Trading Interface Component
 function PerpetualsInterface() {
-  const [orderPanelCollapsed, setOrderPanelCollapsed] = useState(false);
   const [selectedSymbol, setSelectedSymbol] = useState("BTC-USD");
 
+  // Default grid layouts for perpetuals panels
+  const defaultLayouts = [
+    { i: "chart", x: 0, y: 0, w: 8, h: 14 },
+    { i: "orderEntry", x: 0, y: 14, w: 8, h: 8 },
+    { i: "orderBook", x: 8, y: 0, w: 4, h: 11 },
+    { i: "recentTrades", x: 8, y: 11, w: 4, h: 11 },
+  ];
+
   return (
-    <div className="flex-1 overflow-hidden">
-      <ResizablePanelGroup direction="horizontal" className="h-full">
-        {/* Main Chart Area with Vertical Resizing */}
-        <ResizablePanel defaultSize={70} minSize={50}>
-          <div className="h-full flex flex-col">
-            {/* Chart Toolbar */}
-            <div className="glass border-b border-glass/20 p-2 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <MarketSelector
-                  selectedSymbol={selectedSymbol}
-                  onSymbolChange={setSelectedSymbol}
-                />
-                <Badge 
-                  variant="outline" 
-                  className="bg-long/10 text-long border-long/30"
-                  data-testid="badge-price-change"
-                >
-                  +2.4%
-                </Badge>
-              </div>
+    <div className="flex-1 overflow-hidden flex flex-col">
+      {/* Perpetuals Toolbar */}
+      <div className="glass border-b border-glass/20 p-2 flex items-center justify-between shrink-0">
+        <div className="flex items-center gap-2">
+          <Flame className="h-4 w-4 text-primary" />
+          <h3 className="text-sm font-semibold">Perpetuals Trading</h3>
+          <MarketSelector
+            selectedSymbol={selectedSymbol}
+            onSymbolChange={setSelectedSymbol}
+          />
+          <Badge 
+            variant="outline" 
+            className="bg-long/10 text-long border-long/30"
+            data-testid="badge-price-change"
+          >
+            +2.4%
+          </Badge>
+        </div>
 
-              <div className="flex items-center gap-1">
-                <Button 
-                  variant="ghost" 
-                  size="icon"
-                  className="h-8 w-8"
-                  data-testid="button-chart-settings"
-                >
-                  <Settings className="h-4 w-4" />
-                </Button>
-                <Button 
-                  variant="ghost" 
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={() => setOrderPanelCollapsed(!orderPanelCollapsed)}
-                  data-testid="button-toggle-order-panel"
-                >
-                  {orderPanelCollapsed ? <Maximize2 className="h-4 w-4" /> : <Minimize2 className="h-4 w-4" />}
-                </Button>
-              </div>
-            </div>
+        <div className="flex items-center gap-1">
+          <Button 
+            variant="ghost" 
+            size="icon"
+            className="h-8 w-8"
+            data-testid="button-chart-settings"
+          >
+            <Settings className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
 
-            {/* Vertical Resizable Group: Chart + Order Entry */}
-            <ResizablePanelGroup direction="vertical" className="flex-1">
-              {/* Chart Panel */}
-              <ResizablePanel defaultSize={orderPanelCollapsed ? 100 : 70} minSize={30}>
-                <div className="h-full relative">
-                  <TradingChart 
-                    symbol={selectedSymbol}
-                    onSymbolChange={setSelectedSymbol}
-                  />
-                </div>
-              </ResizablePanel>
+      {/* Grid Dashboard with Draggable Widgets */}
+      <GridDashboard
+        tab="perpetuals"
+        defaultLayouts={defaultLayouts}
+        cols={12}
+        rowHeight={30}
+        width={1400}
+      >
+        <div key="chart">
+          <Widget id="chart" title="Trading Chart">
+            <TradingChart 
+              symbol={selectedSymbol}
+              onSymbolChange={setSelectedSymbol}
+            />
+          </Widget>
+        </div>
 
-              {/* Order Entry Panel (Resizable) */}
-              {!orderPanelCollapsed && (
-                <>
-                  <ResizableHandle withHandle className="bg-glass-border/30" />
-                  <ResizablePanel defaultSize={30} minSize={15} maxSize={50}>
-                    <div className="h-full border-t border-glass/20 overflow-auto glass-fade-in">
-                      <OrderEntryPanel symbol={selectedSymbol} />
-                    </div>
-                  </ResizablePanel>
-                </>
-              )}
-            </ResizablePanelGroup>
-          </div>
-        </ResizablePanel>
+        <div key="orderEntry">
+          <Widget id="orderEntry" title="Order Entry">
+            <OrderEntryPanel symbol={selectedSymbol} />
+          </Widget>
+        </div>
 
-        <ResizableHandle withHandle className="bg-glass-border/30" />
+        <div key="orderBook">
+          <Widget id="orderBook" title="Order Book">
+            <OrderBook symbol={selectedSymbol} />
+          </Widget>
+        </div>
 
-        {/* Right Sidebar: Order Book + Recent Trades */}
-        <ResizablePanel defaultSize={30} minSize={20} maxSize={40}>
-          <div className="h-full flex flex-col glass">
-            <Tabs defaultValue="orderbook" className="flex-1 flex flex-col">
-              <TabsList className="m-2 grid grid-cols-3">
-                <TabsTrigger value="orderbook" data-testid="tab-orderbook">Book</TabsTrigger>
-                <TabsTrigger value="trades" data-testid="tab-recent-trades">Trades</TabsTrigger>
-                <TabsTrigger value="orders" data-testid="tab-orders">Orders</TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="orderbook" className="flex-1 m-2 mt-0 overflow-hidden">
-                <Card className="glass-strong border-glass/20 h-full overflow-hidden flex flex-col">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm flex items-center gap-2">
-                      <TrendingUp className="h-4 w-4 text-primary" />
-                      Order Book
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="flex-1 p-0 overflow-hidden">
-                    <OrderBook symbol={selectedSymbol} />
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="trades" className="flex-1 m-2 mt-0 overflow-hidden">
-                <Card className="glass-strong border-glass/20 h-full overflow-hidden flex flex-col">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm flex items-center gap-2">
-                      <LineChart className="h-4 w-4 text-primary" />
-                      Recent Trades
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="flex-1 p-0 overflow-hidden">
-                    <RecentTrades symbol={selectedSymbol} />
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="orders" className="flex-1 m-2 mt-0 overflow-auto">
-                <OrderManagementPanel />
-              </TabsContent>
-            </Tabs>
-          </div>
-        </ResizablePanel>
-      </ResizablePanelGroup>
+        <div key="recentTrades">
+          <Widget id="recentTrades" title="Recent Trades">
+            <RecentTrades symbol={selectedSymbol} />
+          </Widget>
+        </div>
+      </GridDashboard>
     </div>
   );
 }
