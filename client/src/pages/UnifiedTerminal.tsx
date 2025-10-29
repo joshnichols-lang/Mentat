@@ -827,7 +827,7 @@ function OptionsInterface() {
             <ResizablePanelGroup direction="vertical" className="flex-1">
               {/* Chart Panel (Top) */}
               <ResizablePanel defaultSize={strategyPanelCollapsed ? 100 : 50} minSize={30}>
-                <div className="h-full w-full relative p-2">
+                <div className="h-full w-full">
                   <OptionsChart 
                     asset={selectedAsset}
                     selectedStrategy={selectedStrategy}
@@ -841,7 +841,7 @@ function OptionsInterface() {
                 <>
                   <ResizableHandle withHandle className="bg-glass-border/30" />
                   <ResizablePanel defaultSize={50} minSize={30} maxSize={70}>
-                    <div className="h-full border-t border-glass/20 overflow-auto p-4">
+                    <div className="h-full border-t border-glass/20">
                       <OptionsStrategyBuilder 
                         asset={selectedAsset}
                         currentPrice={currentPrice}
