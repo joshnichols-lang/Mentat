@@ -861,16 +861,17 @@ function OptionsInterface() {
 
         {/* Right Sidebar: Greeks + Positions + AI Recommendations */}
         <ResizablePanel defaultSize={30} minSize={20} maxSize={40}>
-          <div className="h-full flex flex-col glass">
-            <Tabs defaultValue="greeks" className="flex-1 flex flex-col overflow-hidden">
+          <div className="h-full flex flex-col min-h-0 glass">
+            <Tabs defaultValue="greeks" className="flex-1 flex flex-col min-h-0">
               <TabsList className="m-2 grid grid-cols-3">
                 <TabsTrigger value="greeks" data-testid="tab-greeks">Greeks</TabsTrigger>
                 <TabsTrigger value="positions" data-testid="tab-options-positions">Positions</TabsTrigger>
                 <TabsTrigger value="ai" data-testid="tab-ai-recommendations">AI Rec</TabsTrigger>
               </TabsList>
 
-              <TabsContent value="greeks" className="h-full m-2 mt-0 overflow-hidden">
-                <Card className="glass-strong border-glass/20 h-full overflow-hidden flex flex-col">
+              <TabsContent value="greeks" className="flex-1 min-h-0 m-2 mt-0 overflow-hidden">
+                <div className="h-full overflow-auto">
+                  <Card className="glass-strong border-glass/20 h-full overflow-hidden flex flex-col">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm flex items-center gap-2">
                       <TrendingUp className="h-4 w-4 text-primary" />
@@ -913,10 +914,12 @@ function OptionsInterface() {
                     </div>
                   </CardContent>
                 </Card>
+                </div>
               </TabsContent>
 
-              <TabsContent value="positions" className="h-full m-2 mt-0 overflow-hidden">
-                <Card className="glass-strong border-glass/20 h-full overflow-hidden flex flex-col">
+              <TabsContent value="positions" className="flex-1 min-h-0 m-2 mt-0 overflow-hidden">
+                <div className="h-full overflow-auto">
+                  <Card className="glass-strong border-glass/20 h-full overflow-hidden flex flex-col">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm flex items-center gap-2">
                       <LineChart className="h-4 w-4 text-primary" />
@@ -937,10 +940,12 @@ function OptionsInterface() {
                     </div>
                   </CardContent>
                 </Card>
+                </div>
               </TabsContent>
 
-              <TabsContent value="ai" className="h-full m-2 mt-0 overflow-hidden">
-                <Card className="glass-strong border-glass/20 h-full overflow-hidden flex flex-col">
+              <TabsContent value="ai" className="flex-1 min-h-0 m-2 mt-0 overflow-hidden">
+                <div className="h-full overflow-auto">
+                  <Card className="glass-strong border-glass/20 h-full overflow-hidden flex flex-col">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm flex items-center gap-2">
                       <Sparkles className="h-4 w-4 text-primary" />
@@ -961,6 +966,7 @@ function OptionsInterface() {
                     </div>
                   </CardContent>
                 </Card>
+                </div>
               </TabsContent>
             </Tabs>
           </div>
