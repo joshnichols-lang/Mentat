@@ -862,14 +862,14 @@ function OptionsInterface() {
         {/* Right Sidebar: Greeks + Positions + AI Recommendations */}
         <ResizablePanel defaultSize={30} minSize={20} maxSize={40}>
           <div className="h-full flex flex-col glass">
-            <Tabs defaultValue="greeks" className="flex-1 flex flex-col">
+            <Tabs defaultValue="greeks" className="flex-1 flex flex-col overflow-hidden">
               <TabsList className="m-2 grid grid-cols-3">
                 <TabsTrigger value="greeks" data-testid="tab-greeks">Greeks</TabsTrigger>
                 <TabsTrigger value="positions" data-testid="tab-options-positions">Positions</TabsTrigger>
                 <TabsTrigger value="ai" data-testid="tab-ai-recommendations">AI Rec</TabsTrigger>
               </TabsList>
 
-              <TabsContent value="greeks" className="flex-1 m-2 mt-0 overflow-hidden">
+              <TabsContent value="greeks" className="h-full m-2 mt-0 overflow-hidden">
                 <Card className="glass-strong border-glass/20 h-full overflow-hidden flex flex-col">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm flex items-center gap-2">
@@ -915,7 +915,7 @@ function OptionsInterface() {
                 </Card>
               </TabsContent>
 
-              <TabsContent value="positions" className="flex-1 m-2 mt-0 overflow-hidden">
+              <TabsContent value="positions" className="h-full m-2 mt-0 overflow-hidden">
                 <Card className="glass-strong border-glass/20 h-full overflow-hidden flex flex-col">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm flex items-center gap-2">
@@ -939,7 +939,7 @@ function OptionsInterface() {
                 </Card>
               </TabsContent>
 
-              <TabsContent value="ai" className="flex-1 m-2 mt-0 overflow-hidden">
+              <TabsContent value="ai" className="h-full m-2 mt-0 overflow-hidden">
                 <Card className="glass-strong border-glass/20 h-full overflow-hidden flex flex-col">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm flex items-center gap-2">
