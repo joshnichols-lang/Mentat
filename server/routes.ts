@@ -3017,6 +3017,175 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Execute multi-leg options strategy
+  app.post("/api/aevo/execute-strategy", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      
+      // Validate request body
+      const schema = z.object({
+        strategyName: z.string(),
+        strategyType: z.string(),
+        asset: z.string(),
+        underlyingPrice: z.number().positive(),
+        legs: z.array(z.object({
+          instrumentId: z.string(),
+          instrumentName: z.string(),
+          optionType: z.enum(["call", "put"]),
+          strike: z.number().positive(),
+          expiry: z.string(),
+          side: z.enum(["buy", "sell"]),
+          size: z.number().positive(),
+          estimatedPrice: z.number().positive(),
+          greeks: z.object({
+            delta: z.number().optional(),
+            gamma: z.number().optional(),
+            theta: z.number().optional(),
+            vega: z.number().optional(),
+            iv: z.number().optional(),
+          }).optional(),
+        })),
+        totalCost: z.number().positive(),
+        maxProfit: z.number().positive().nullable(),
+        maxLoss: z.number().positive(),
+        upperBreakeven: z.number().positive().nullable(),
+        lowerBreakeven: z.number().positive().nullable(),
+      });
+      
+      const strategyData = schema.parse(req.body);
+      
+      // TODO: Get user's Aevo API credentials from encrypted storage
+      // For now, we'll create the strategy and mock the execution
+      
+      // 1. Create strategy record
+      const strategy = await storage.createOptionsStrategy(userId, {
+        name: strategyData.strategyName,
+        type: strategyData.strategyType,
+        asset: strategyData.asset,
+        strike: strategyData.legs[0]?.strike.toString() || null,
+        expiry: new Date(strategyData.legs[0]?.expiry || Date.now()),
+        totalCost: strategyData.totalCost.toString(),
+        maxProfit: strategyData.maxProfit?.toString() || null,
+        maxLoss: strategyData.maxLoss.toString(),
+        upperBreakeven: strategyData.upperBreakeven?.toString() || null,
+        lowerBreakeven: strategyData.lowerBreakeven?.toString() || null,
+        underlyingPrice: strategyData.underlyingPrice.toString(),
+        status: "active",
+        currentValue: "0",
+        unrealizedPnl: "0",
+      });
+      
+      // 2. Execute each leg sequentially with error recovery
+      const results = [];
+      const errors = [];
+      
+      for (let i = 0; i < strategyData.legs.length; i++) {
+        const leg = strategyData.legs[i];
+        
+        try {
+          // Create order record
+          const order = await storage.createOptionsOrder(userId, {
+            strategyId: strategy.id,
+            instrumentId: leg.instrumentId,
+            instrumentName: leg.instrumentName,
+            asset: strategyData.asset,
+            optionType: leg.optionType,
+            strike: leg.strike.toString(),
+            expiry: new Date(leg.expiry),
+            side: leg.side,
+            orderType: "market", // Start with market orders for simplicity
+            size: leg.size.toString(),
+            filledSize: "0",
+            status: "pending",
+          });
+          
+          // TODO: Place actual order via AevoClient
+          // const aevoClient = await getAevoClient(userId);
+          // const aevoOrder = await aevoClient.placeOrder({
+          //   instrument: leg.instrumentId,
+          //   is_buy: leg.side === "buy",
+          //   amount: (leg.size * 1_000_000).toString(), // Convert to 6 decimals
+          //   order_type: "market",
+          // });
+          
+          // Mock successful execution for now
+          await storage.updateOptionsOrder(order.id, {
+            status: "filled",
+            filledSize: leg.size.toString(),
+            averageFillPrice: leg.estimatedPrice.toString(),
+            filledAt: new Date(),
+          });
+          
+          // Create position record
+          const position = await storage.createOptionsPosition(userId, {
+            strategyId: strategy.id,
+            instrumentId: leg.instrumentId,
+            instrumentName: leg.instrumentName,
+            asset: strategyData.asset,
+            optionType: leg.optionType,
+            strike: leg.strike.toString(),
+            expiry: new Date(leg.expiry),
+            side: leg.side === "buy" ? "long" : "short",
+            size: leg.size.toString(),
+            entryPrice: leg.estimatedPrice.toString(),
+            currentPrice: leg.estimatedPrice.toString(),
+            delta: leg.greeks?.delta?.toString() || null,
+            gamma: leg.greeks?.gamma?.toString() || null,
+            theta: leg.greeks?.theta?.toString() || null,
+            vega: leg.greeks?.vega?.toString() || null,
+            impliedVolatility: leg.greeks?.iv?.toString() || null,
+            unrealizedPnl: "0",
+            unrealizedPnlPercent: "0",
+            status: "open",
+          });
+          
+          results.push({
+            legIndex: i,
+            orderId: order.id,
+            positionId: position.id,
+            status: "filled",
+            fillPrice: leg.estimatedPrice,
+          });
+          
+        } catch (legError: any) {
+          console.error(`Error executing leg ${i}:`, legError);
+          errors.push({
+            legIndex: i,
+            error: legError.message,
+          });
+          
+          // If a leg fails, mark strategy as failed and stop execution
+          await storage.updateOptionsStrategy(userId, strategy.id, {
+            status: "closed",
+          });
+          
+          throw new Error(`Leg ${i + 1} failed: ${legError.message}`);
+        }
+      }
+      
+      // 3. Update strategy with current values
+      const currentValue = results.reduce((sum, r) => sum + r.fillPrice * strategyData.legs[r.legIndex].size, 0);
+      await storage.updateOptionsStrategy(userId, strategy.id, {
+        currentValue: currentValue.toString(),
+        unrealizedPnl: (currentValue - strategyData.totalCost).toString(),
+      });
+      
+      res.json({ 
+        success: true, 
+        strategy,
+        results,
+        message: `Successfully executed ${results.length} legs` 
+      });
+      
+    } catch (error: any) {
+      console.error("Error executing options strategy:", error);
+      res.status(500).json({ 
+        success: false, 
+        error: error.message || "Failed to execute strategy" 
+      });
+    }
+  });
+
   // Contact Admin routes
   app.post("/api/contact", isAuthenticated, async (req, res) => {
     try {
