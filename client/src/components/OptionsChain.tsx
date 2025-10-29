@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import { Loader2, TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useStrategyStore } from "@/stores/strategyStore";
+import { useToast } from "@/hooks/use-toast";
 
 interface OptionsChainProps {
   asset: string;
@@ -42,6 +44,8 @@ interface GroupedOption {
 
 export default function OptionsChain({ asset, currentPrice }: OptionsChainProps) {
   const [selectedExpiry, setSelectedExpiry] = useState<string | null>(null);
+  const { selectMarket, setExpiry, setCurrentSpotPrice } = useStrategyStore();
+  const { toast } = useToast();
 
   const { data, isLoading, error } = useQuery<{ success: boolean; markets: AevoMarket[] }>({
     queryKey: [`/api/aevo/markets?asset=${asset}&instrument_type=OPTION`],
@@ -61,8 +65,23 @@ export default function OptionsChain({ asset, currentPrice }: OptionsChainProps)
   useEffect(() => {
     if (expiryDates.length > 0 && !selectedExpiry) {
       setSelectedExpiry(expiryDates[0] || null);
+      setExpiry(expiryDates[0] || null);
     }
-  }, [expiryDates, selectedExpiry]);
+  }, [expiryDates, selectedExpiry, setExpiry]);
+
+  useEffect(() => {
+    if (currentPrice) {
+      setCurrentSpotPrice(currentPrice);
+    }
+  }, [currentPrice, setCurrentSpotPrice]);
+
+  const handleMarketClick = (market: AevoMarket) => {
+    selectMarket(market);
+    toast({
+      title: "Option Selected",
+      description: `${market.option_type?.toUpperCase()} $${market.strike} - ${market.expiry && formatExpiry(market.expiry)}`,
+    });
+  };
 
   const filteredOptions = selectedExpiry 
     ? options.filter(o => o.expiry === selectedExpiry)
@@ -209,27 +228,47 @@ export default function OptionsChain({ asset, currentPrice }: OptionsChainProps)
                   data-testid={`strike-row-${row.strike}`}
                 >
                   {/* Call Bid */}
-                  <td className="py-1.5 px-1.5 text-success/90">
+                  <td 
+                    className={`py-1.5 px-1.5 text-success/90 ${row.call ? 'cursor-pointer hover-elevate active-elevate-2' : ''}`}
+                    onClick={() => row.call && handleMarketClick(row.call)}
+                    data-testid={`call-bid-${row.strike}`}
+                  >
                     {row.call?.best_bid ? `$${formatNumber(row.call.best_bid)}` : '-'}
                   </td>
                   {/* Call Ask */}
-                  <td className="py-1.5 px-1.5 text-success font-medium">
+                  <td 
+                    className={`py-1.5 px-1.5 text-success font-medium ${row.call ? 'cursor-pointer hover-elevate active-elevate-2' : ''}`}
+                    onClick={() => row.call && handleMarketClick(row.call)}
+                    data-testid={`call-ask-${row.strike}`}
+                  >
                     {row.call?.best_ask ? `$${formatNumber(row.call.best_ask)}` : '-'}
                   </td>
                   {/* Call OI */}
-                  <td className="py-1.5 px-1.5 text-success/70 text-[10px]">
+                  <td 
+                    className={`py-1.5 px-1.5 text-success/70 text-[10px] ${row.call ? 'cursor-pointer hover-elevate active-elevate-2' : ''}`}
+                    onClick={() => row.call && handleMarketClick(row.call)}
+                  >
                     {formatVolume(row.call?.open_interest)}
                   </td>
                   {/* Call Volume */}
-                  <td className="py-1.5 px-1.5 text-success/70 text-[10px]">
+                  <td 
+                    className={`py-1.5 px-1.5 text-success/70 text-[10px] ${row.call ? 'cursor-pointer hover-elevate active-elevate-2' : ''}`}
+                    onClick={() => row.call && handleMarketClick(row.call)}
+                  >
                     {formatVolume(row.call?.volume_24h)}
                   </td>
                   {/* Call Delta */}
-                  <td className="py-1.5 px-1.5 text-success/80">
+                  <td 
+                    className={`py-1.5 px-1.5 text-success/80 ${row.call ? 'cursor-pointer hover-elevate active-elevate-2' : ''}`}
+                    onClick={() => row.call && handleMarketClick(row.call)}
+                  >
                     {row.call?.greeks?.delta ? formatNumber(row.call.greeks.delta, 2) : '-'}
                   </td>
                   {/* Call IV */}
-                  <td className="py-1.5 px-1.5 text-success/70">
+                  <td 
+                    className={`py-1.5 px-1.5 text-success/70 ${row.call ? 'cursor-pointer hover-elevate active-elevate-2' : ''}`}
+                    onClick={() => row.call && handleMarketClick(row.call)}
+                  >
                     {row.call?.greeks?.iv ? `${formatNumber(parseFloat(row.call.greeks.iv) * 100, 0)}%` : '-'}
                   </td>
 
@@ -244,27 +283,47 @@ export default function OptionsChain({ asset, currentPrice }: OptionsChainProps)
                   </td>
 
                   {/* Put IV */}
-                  <td className="py-1.5 px-1.5 text-right text-destructive/70">
+                  <td 
+                    className={`py-1.5 px-1.5 text-right text-destructive/70 ${row.put ? 'cursor-pointer hover-elevate active-elevate-2' : ''}`}
+                    onClick={() => row.put && handleMarketClick(row.put)}
+                  >
                     {row.put?.greeks?.iv ? `${formatNumber(parseFloat(row.put.greeks.iv) * 100, 0)}%` : '-'}
                   </td>
                   {/* Put Delta */}
-                  <td className="py-1.5 px-1.5 text-right text-destructive/80">
+                  <td 
+                    className={`py-1.5 px-1.5 text-right text-destructive/80 ${row.put ? 'cursor-pointer hover-elevate active-elevate-2' : ''}`}
+                    onClick={() => row.put && handleMarketClick(row.put)}
+                  >
                     {row.put?.greeks?.delta ? formatNumber(row.put.greeks.delta, 2) : '-'}
                   </td>
                   {/* Put Volume */}
-                  <td className="py-1.5 px-1.5 text-right text-destructive/70 text-[10px]">
+                  <td 
+                    className={`py-1.5 px-1.5 text-right text-destructive/70 text-[10px] ${row.put ? 'cursor-pointer hover-elevate active-elevate-2' : ''}`}
+                    onClick={() => row.put && handleMarketClick(row.put)}
+                  >
                     {formatVolume(row.put?.volume_24h)}
                   </td>
                   {/* Put OI */}
-                  <td className="py-1.5 px-1.5 text-right text-destructive/70 text-[10px]">
+                  <td 
+                    className={`py-1.5 px-1.5 text-right text-destructive/70 text-[10px] ${row.put ? 'cursor-pointer hover-elevate active-elevate-2' : ''}`}
+                    onClick={() => row.put && handleMarketClick(row.put)}
+                  >
                     {formatVolume(row.put?.open_interest)}
                   </td>
                   {/* Put Bid */}
-                  <td className="py-1.5 px-1.5 text-right text-destructive font-medium">
+                  <td 
+                    className={`py-1.5 px-1.5 text-right text-destructive font-medium ${row.put ? 'cursor-pointer hover-elevate active-elevate-2' : ''}`}
+                    onClick={() => row.put && handleMarketClick(row.put)}
+                    data-testid={`put-bid-${row.strike}`}
+                  >
                     {row.put?.best_bid ? `$${formatNumber(row.put.best_bid)}` : '-'}
                   </td>
                   {/* Put Ask */}
-                  <td className="py-1.5 px-1.5 text-right text-destructive/90">
+                  <td 
+                    className={`py-1.5 px-1.5 text-right text-destructive/90 ${row.put ? 'cursor-pointer hover-elevate active-elevate-2' : ''}`}
+                    onClick={() => row.put && handleMarketClick(row.put)}
+                    data-testid={`put-ask-${row.strike}`}
+                  >
                     {row.put?.best_ask ? `$${formatNumber(row.put.best_ask)}` : '-'}
                   </td>
                 </tr>
