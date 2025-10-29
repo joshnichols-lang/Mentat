@@ -2791,6 +2791,245 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Aevo Options API Routes
+  
+  // Get Aevo markets (options and perpetuals)
+  app.get("/api/aevo/markets", async (req, res) => {
+    try {
+      const asset = req.query.asset as string | undefined;
+      const instrumentType = req.query.instrument_type as 'OPTION' | 'PERPETUAL' | undefined;
+      
+      // For now, return mock data until we have live Aevo integration
+      // In production, this would call AevoClient.getMarkets()
+      const mockMarkets = [
+        {
+          instrument_id: "1",
+          instrument_name: "ETH-31MAR25-2000-C",
+          instrument_type: "OPTION",
+          option_type: "call",
+          underlying_asset: "ETH",
+          strike: "2000",
+          expiry: Date.now() + (30 * 24 * 60 * 60 * 1000), // 30 days from now
+          mark_price: "125.50",
+          is_active: true,
+          greeks: {
+            delta: "0.65",
+            gamma: "0.003",
+            theta: "-1.2",
+            vega: "0.45",
+            rho: "0.02",
+          },
+        },
+      ];
+      
+      res.json({ success: true, markets: mockMarkets });
+    } catch (error: any) {
+      console.error("Error fetching Aevo markets:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch markets" });
+    }
+  });
+  
+  // Get user's options strategies
+  app.get("/api/aevo/strategies", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const status = req.query.status as string | undefined;
+      
+      const strategies = await storage.getOptionsStrategies(userId, { status });
+      
+      res.json({ success: true, strategies });
+    } catch (error: any) {
+      console.error("Error fetching options strategies:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch strategies" });
+    }
+  });
+  
+  // Get user's options positions
+  app.get("/api/aevo/positions", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const strategyId = req.query.strategyId as string | undefined;
+      const status = req.query.status as string | undefined;
+      
+      const positions = await storage.getOptionsPositions(userId, { strategyId, status });
+      
+      res.json({ success: true, positions });
+    } catch (error: any) {
+      console.error("Error fetching options positions:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch positions" });
+    }
+  });
+  
+  // Get user's options orders
+  app.get("/api/aevo/orders", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const strategyId = req.query.strategyId as string | undefined;
+      const status = req.query.status as string | undefined;
+      
+      const orders = await storage.getOptionsOrders(userId, { strategyId, status });
+      
+      res.json({ success: true, orders });
+    } catch (error: any) {
+      console.error("Error fetching options orders:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch orders" });
+    }
+  });
+  
+  // Create a new options strategy (Straddle, Strap, Strip, etc.)
+  app.post("/api/aevo/strategies", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      
+      // Validate request body
+      const schema = z.object({
+        name: z.string(), // "Straddle", "Strap", "Strip"
+        type: z.enum(["pre_built", "custom"]),
+        asset: z.string(), // "ETH", "BTC"
+        strike: z.number().positive().optional(),
+        expiry: z.string(), // ISO timestamp
+        legs: z.array(z.object({
+          instrumentId: z.string(),
+          instrumentName: z.string(),
+          optionType: z.enum(["call", "put"]),
+          side: z.enum(["long", "short"]),
+          size: z.number().positive(),
+        })),
+      });
+      
+      const strategyData = schema.parse(req.body);
+      
+      // Calculate strategy parameters (breakevens, max profit/loss)
+      // This would use AevoClient helper methods
+      const totalCost = 0; // Calculate from legs
+      const upperBreakeven = strategyData.strike || 0;
+      const lowerBreakeven = strategyData.strike || 0;
+      
+      // Create strategy in database
+      const strategy = await storage.createOptionsStrategy(userId, {
+        name: strategyData.name,
+        type: strategyData.type,
+        asset: strategyData.asset,
+        strike: strategyData.strike?.toString(),
+        expiry: new Date(strategyData.expiry),
+        totalCost: totalCost.toString(),
+        maxProfit: null, // Unlimited for most strategies
+        maxLoss: totalCost.toString(),
+        upperBreakeven: upperBreakeven.toString(),
+        lowerBreakeven: lowerBreakeven.toString(),
+        underlyingPrice: "0", // Fetch current price
+        status: "active",
+        currentValue: "0",
+        unrealizedPnl: "0",
+      });
+      
+      res.json({ success: true, strategy });
+    } catch (error: any) {
+      console.error("Error creating options strategy:", error);
+      res.status(500).json({ 
+        success: false, 
+        error: error.message || "Failed to create strategy" 
+      });
+    }
+  });
+  
+  // Place an options order
+  app.post("/api/aevo/orders", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      
+      // Validate request body
+      const schema = z.object({
+        instrumentId: z.string(),
+        instrumentName: z.string(),
+        strategyId: z.string().optional(),
+        asset: z.string(),
+        optionType: z.enum(["call", "put"]),
+        strike: z.number().positive(),
+        expiry: z.string(),
+        side: z.enum(["buy", "sell"]),
+        orderType: z.enum(["market", "limit"]),
+        size: z.number().positive(),
+        limitPrice: z.number().positive().optional(),
+      });
+      
+      const orderData = schema.parse(req.body);
+      
+      // Get user's Aevo API credentials
+      // For now, return mock response until live integration
+      // In production, this would:
+      // 1. Get user's Aevo API key from encrypted storage
+      // 2. Initialize AevoClient
+      // 3. Place order via AevoClient.placeOrder()
+      
+      // Store order in database
+      const order = await storage.createOptionsOrder(userId, {
+        strategyId: orderData.strategyId || null,
+        instrumentId: orderData.instrumentId,
+        instrumentName: orderData.instrumentName,
+        asset: orderData.asset,
+        optionType: orderData.optionType,
+        strike: orderData.strike.toString(),
+        expiry: new Date(orderData.expiry),
+        side: orderData.side,
+        orderType: orderData.orderType,
+        size: orderData.size.toString(),
+        filledSize: "0",
+        limitPrice: orderData.limitPrice?.toString(),
+        status: "pending",
+      });
+      
+      res.json({ 
+        success: true, 
+        order,
+        message: "Order placed successfully (mock response)" 
+      });
+    } catch (error: any) {
+      console.error("Error placing options order:", error);
+      res.status(500).json({ 
+        success: false, 
+        error: error.message || "Failed to place order" 
+      });
+    }
+  });
+  
+  // Cancel an options order
+  app.delete("/api/aevo/orders/:orderId", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const { orderId } = req.params;
+      
+      // Get order to verify ownership
+      const order = await storage.getOptionsOrderById(orderId);
+      if (!order || order.userId !== userId) {
+        return res.status(404).json({ 
+          success: false, 
+          error: "Order not found" 
+        });
+      }
+      
+      // Cancel order via Aevo API (mock for now)
+      // In production: aevoClient.cancelOrder(order.aevoOrderId)
+      
+      // Update order status in database
+      await storage.updateOptionsOrder(orderId, { 
+        status: "cancelled",
+        cancelledAt: new Date(),
+      });
+      
+      res.json({ 
+        success: true, 
+        message: "Order cancelled successfully" 
+      });
+    } catch (error: any) {
+      console.error("Error cancelling options order:", error);
+      res.status(500).json({ 
+        success: false, 
+        error: error.message || "Failed to cancel order" 
+      });
+    }
+  });
+
   // Contact Admin routes
   app.post("/api/contact", isAuthenticated, async (req, res) => {
     try {

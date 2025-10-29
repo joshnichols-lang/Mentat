@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type UpsertUser, type UserWallet, type InsertUserWallet, type EmbeddedWallet, type InsertEmbeddedWallet, type Trade, type InsertTrade, type Position, type InsertPosition, type PortfolioSnapshot, type InsertPortfolioSnapshot, type AiUsageLog, type InsertAiUsageLog, type MonitoringLog, type InsertMonitoringLog, type UserApiCredential, type InsertUserApiCredential, type ApiKey, type InsertApiKey, type ContactMessage, type InsertContactMessage, type ProtectiveOrderEvent, type InsertProtectiveOrderEvent, type UserTradeHistoryImport, type InsertUserTradeHistoryImport, type UserTradeHistoryTrade, type InsertUserTradeHistoryTrade, type TradeStyleProfile, type InsertTradeStyleProfile, type TradeJournalEntry, type TradeJournalEntryWithStrategy, type InsertTradeJournalEntry, type TradingMode, type InsertTradingMode, type BudgetAlert, type InsertBudgetAlert, type PolymarketEvent, type InsertPolymarketEvent, type PolymarketPosition, type InsertPolymarketPosition, type PolymarketOrder, type InsertPolymarketOrder, users, userWallets, embeddedWallets, trades, positions, portfolioSnapshots, aiUsageLog, monitoringLog, userApiCredentials, apiKeys, contactMessages, protectiveOrderEvents, userTradeHistoryImports, userTradeHistoryTrades, tradeStyleProfiles, tradeJournalEntries, tradingModes, budgetAlerts, polymarketEvents, polymarketPositions, polymarketOrders } from "@shared/schema";
+import { type User, type InsertUser, type UpsertUser, type UserWallet, type InsertUserWallet, type EmbeddedWallet, type InsertEmbeddedWallet, type Trade, type InsertTrade, type Position, type InsertPosition, type PortfolioSnapshot, type InsertPortfolioSnapshot, type AiUsageLog, type InsertAiUsageLog, type MonitoringLog, type InsertMonitoringLog, type UserApiCredential, type InsertUserApiCredential, type ApiKey, type InsertApiKey, type ContactMessage, type InsertContactMessage, type ProtectiveOrderEvent, type InsertProtectiveOrderEvent, type UserTradeHistoryImport, type InsertUserTradeHistoryImport, type UserTradeHistoryTrade, type InsertUserTradeHistoryTrade, type TradeStyleProfile, type InsertTradeStyleProfile, type TradeJournalEntry, type TradeJournalEntryWithStrategy, type InsertTradeJournalEntry, type TradingMode, type InsertTradingMode, type BudgetAlert, type InsertBudgetAlert, type PolymarketEvent, type InsertPolymarketEvent, type PolymarketPosition, type InsertPolymarketPosition, type PolymarketOrder, type InsertPolymarketOrder, type OptionsStrategy, type InsertOptionsStrategy, type OptionsPosition, type InsertOptionsPosition, type OptionsOrder, type InsertOptionsOrder, users, userWallets, embeddedWallets, trades, positions, portfolioSnapshots, aiUsageLog, monitoringLog, userApiCredentials, apiKeys, contactMessages, protectiveOrderEvents, userTradeHistoryImports, userTradeHistoryTrades, tradeStyleProfiles, tradeJournalEntries, tradingModes, budgetAlerts, polymarketEvents, polymarketPositions, polymarketOrders, optionsStrategies, optionsPositions, optionsOrders } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql, and, isNull, type SQL } from "drizzle-orm";
 import session from "express-session";
@@ -184,6 +184,24 @@ export interface IStorage {
   getPolymarketOrders(userId: string, filters?: { eventId?: string; status?: string; limit?: number }): Promise<PolymarketOrder[]>;
   getPolymarketOrder(userId: string, id: string): Promise<PolymarketOrder | undefined>;
   updatePolymarketOrder(userId: string, id: string, updates: Partial<PolymarketOrder>): Promise<PolymarketOrder | undefined>;
+  
+  // Options Strategy methods (multi-tenant)
+  createOptionsStrategy(userId: string, data: InsertOptionsStrategy): Promise<OptionsStrategy>;
+  getOptionsStrategies(userId: string, filters?: { status?: string }): Promise<OptionsStrategy[]>;
+  getOptionsStrategy(userId: string, id: string): Promise<OptionsStrategy | undefined>;
+  updateOptionsStrategy(userId: string, id: string, updates: Partial<OptionsStrategy>): Promise<OptionsStrategy | undefined>;
+  
+  // Options Position methods (multi-tenant)
+  createOptionsPosition(userId: string, data: InsertOptionsPosition): Promise<OptionsPosition>;
+  getOptionsPositions(userId: string, filters?: { strategyId?: string; status?: string }): Promise<OptionsPosition[]>;
+  getOptionsPosition(userId: string, id: string): Promise<OptionsPosition | undefined>;
+  updateOptionsPosition(userId: string, id: string, updates: Partial<OptionsPosition>): Promise<OptionsPosition | undefined>;
+  
+  // Options Order methods (multi-tenant)
+  createOptionsOrder(userId: string, data: InsertOptionsOrder): Promise<OptionsOrder>;
+  getOptionsOrders(userId: string, filters?: { strategyId?: string; status?: string }): Promise<OptionsOrder[]>;
+  getOptionsOrderById(orderId: string): Promise<OptionsOrder | undefined>;
+  updateOptionsOrder(orderId: string, updates: Partial<OptionsOrder>): Promise<OptionsOrder | undefined>;
   
   // Admin methods
   getAllUsers(): Promise<User[]>;
@@ -1328,6 +1346,126 @@ export class DbStorage implements IStorage {
     const result = await db.update(polymarketOrders)
       .set(updates)
       .where(withUserFilter(polymarketOrders, userId, eq(polymarketOrders.id, id)))
+      .returning();
+    return result[0];
+  }
+
+  // Options Strategy methods
+  async createOptionsStrategy(userId: string, data: InsertOptionsStrategy): Promise<OptionsStrategy> {
+    const result = await db.insert(optionsStrategies).values({
+      ...data,
+      userId,
+    }).returning();
+    return result[0];
+  }
+
+  async getOptionsStrategies(userId: string, filters?: { status?: string }): Promise<OptionsStrategy[]> {
+    const conditions = [eq(optionsStrategies.userId, userId)];
+    
+    if (filters?.status) {
+      conditions.push(eq(optionsStrategies.status, filters.status));
+    }
+    
+    return await db.select()
+      .from(optionsStrategies)
+      .where(and(...conditions)!)
+      .orderBy(desc(optionsStrategies.createdAt));
+  }
+
+  async getOptionsStrategy(userId: string, id: string): Promise<OptionsStrategy | undefined> {
+    const result = await db.select()
+      .from(optionsStrategies)
+      .where(withUserFilter(optionsStrategies, userId, eq(optionsStrategies.id, id)))
+      .limit(1);
+    return result[0];
+  }
+
+  async updateOptionsStrategy(userId: string, id: string, updates: Partial<OptionsStrategy>): Promise<OptionsStrategy | undefined> {
+    const result = await db.update(optionsStrategies)
+      .set(updates)
+      .where(withUserFilter(optionsStrategies, userId, eq(optionsStrategies.id, id)))
+      .returning();
+    return result[0];
+  }
+
+  // Options Position methods
+  async createOptionsPosition(userId: string, data: InsertOptionsPosition): Promise<OptionsPosition> {
+    const result = await db.insert(optionsPositions).values({
+      ...data,
+      userId,
+    }).returning();
+    return result[0];
+  }
+
+  async getOptionsPositions(userId: string, filters?: { strategyId?: string; status?: string }): Promise<OptionsPosition[]> {
+    const conditions = [eq(optionsPositions.userId, userId)];
+    
+    if (filters?.strategyId) {
+      conditions.push(eq(optionsPositions.strategyId, filters.strategyId));
+    }
+    if (filters?.status) {
+      conditions.push(eq(optionsPositions.status, filters.status));
+    }
+    
+    return await db.select()
+      .from(optionsPositions)
+      .where(and(...conditions)!)
+      .orderBy(desc(optionsPositions.openedAt));
+  }
+
+  async getOptionsPosition(userId: string, id: string): Promise<OptionsPosition | undefined> {
+    const result = await db.select()
+      .from(optionsPositions)
+      .where(withUserFilter(optionsPositions, userId, eq(optionsPositions.id, id)))
+      .limit(1);
+    return result[0];
+  }
+
+  async updateOptionsPosition(userId: string, id: string, updates: Partial<OptionsPosition>): Promise<OptionsPosition | undefined> {
+    const result = await db.update(optionsPositions)
+      .set(updates)
+      .where(withUserFilter(optionsPositions, userId, eq(optionsPositions.id, id)))
+      .returning();
+    return result[0];
+  }
+
+  // Options Order methods
+  async createOptionsOrder(userId: string, data: InsertOptionsOrder): Promise<OptionsOrder> {
+    const result = await db.insert(optionsOrders).values({
+      ...data,
+      userId,
+    }).returning();
+    return result[0];
+  }
+
+  async getOptionsOrders(userId: string, filters?: { strategyId?: string; status?: string }): Promise<OptionsOrder[]> {
+    const conditions = [eq(optionsOrders.userId, userId)];
+    
+    if (filters?.strategyId) {
+      conditions.push(eq(optionsOrders.strategyId, filters.strategyId));
+    }
+    if (filters?.status) {
+      conditions.push(eq(optionsOrders.status, filters.status));
+    }
+    
+    return await db.select()
+      .from(optionsOrders)
+      .where(and(...conditions)!)
+      .orderBy(desc(optionsOrders.createdAt));
+  }
+
+  async getOptionsOrderById(orderId: string): Promise<OptionsOrder | undefined> {
+    const result = await db.select()
+      .from(optionsOrders)
+      .where(eq(optionsOrders.id, orderId))
+      .limit(1);
+    return result[0];
+  }
+
+  async updateOptionsOrder(orderId: string, updates: Partial<OptionsOrder>): Promise<OptionsOrder | undefined> {
+    const result = await db.update(optionsOrders)
+      .set(updates)
+      .where(eq(optionsOrders.id, orderId))
       .returning();
     return result[0];
   }
