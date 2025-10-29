@@ -3889,6 +3889,78 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Panel Layout Routes
+  app.get("/api/panel-layouts/:tab", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const { tab } = req.params;
+      
+      const layout = await storage.getPanelLayout(userId, tab);
+      
+      if (!layout) {
+        return res.status(404).json({
+          success: false,
+          error: "Layout not found"
+        });
+      }
+      
+      res.json(layout);
+    } catch (error: any) {
+      console.error("Error getting panel layout:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to get panel layout"
+      });
+    }
+  });
+
+  app.post("/api/panel-layouts/:tab", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const { tab } = req.params;
+      const { layoutData } = req.body;
+      
+      if (!layoutData) {
+        return res.status(400).json({
+          success: false,
+          error: "layoutData is required"
+        });
+      }
+      
+      const layout = await storage.savePanelLayout(userId, tab, layoutData);
+      
+      res.json({
+        success: true,
+        layout
+      });
+    } catch (error: any) {
+      console.error("Error saving panel layout:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to save panel layout"
+      });
+    }
+  });
+
+  app.delete("/api/panel-layouts/:tab", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const { tab } = req.params;
+      
+      await storage.deletePanelLayout(userId, tab);
+      
+      res.json({
+        success: true
+      });
+    } catch (error: any) {
+      console.error("Error deleting panel layout:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to delete panel layout"
+      });
+    }
+  });
+
   app.get("/api/admin/budget", requireAdmin, async (req, res) => {
     try {
       const budget = await storage.getBudgetAlert();
