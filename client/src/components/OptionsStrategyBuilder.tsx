@@ -7,6 +7,7 @@ import { Layers, Sparkles, TrendingUp, TrendingDown, Minus, Activity, RefreshCw,
 import { useQuery } from "@tanstack/react-query";
 import { OptionsStrategy, InsertOptionsStrategy } from "@shared/schema";
 import { useStrategyStore } from "@/stores/strategyStore";
+import { OrderConfirmationModal } from "@/components/OrderConfirmationModal";
 
 interface OptionsStrategyBuilderProps {
   asset: string;
@@ -231,6 +232,8 @@ export default function OptionsStrategyBuilder({
   const [selectedStrategyId, setSelectedStrategyId] = useState<string | null>(null);
   const [selectedExpiry, setSelectedExpiry] = useState<string>("");
   const [period, setPeriod] = useState<number>(7); // Days
+  const [showConfirmation, setShowConfirmation] = useState(false);
+  const [confirmationData, setConfirmationData] = useState<any>(null);
   
   // Get selected market from strategy store
   const { selectedMarket, strategyType, setStrategyType } = useStrategyStore();
@@ -460,6 +463,72 @@ export default function OptionsStrategyBuilder({
     if (strategy) {
       onStrategySelect(strategy);
     }
+  };
+
+  const handleExecuteStrategy = () => {
+    if (!selectedStrategyId || !selectedExpiry) return;
+    
+    const strategy = buildSimpleStrategy(selectedStrategyId);
+    if (!strategy) return;
+    
+    const atmStrike = Math.round(currentPrice / 100) * 100;
+    const daysToExpiry = Math.ceil((new Date(selectedExpiry).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+    const timeFactor = Math.sqrt(daysToExpiry / 365);
+    const estimatedCallPremium = currentPrice * 0.03 * timeFactor;
+    const estimatedPutPremium = currentPrice * 0.03 * timeFactor;
+    
+    // Build legs array based on strategy type
+    const legs: any[] = [];
+    
+    switch (selectedStrategyId) {
+      case "long-call":
+        legs.push({
+          instrumentId: `${asset}-${atmStrike}-C-${selectedExpiry}`,
+          instrumentName: `${asset} $${atmStrike} Call`,
+          optionType: "call" as const,
+          strike: atmStrike,
+          expiry: selectedExpiry,
+          side: "buy" as const,
+          size: 1,
+          estimatedPrice: estimatedCallPremium,
+          greeks: { delta: 0.5, gamma: 0.05, theta: -0.02, vega: 0.1, iv: 0.6 }
+        });
+        break;
+      
+      case "long-put":
+        legs.push({
+          instrumentId: `${asset}-${atmStrike}-P-${selectedExpiry}`,
+          instrumentName: `${asset} $${atmStrike} Put`,
+          optionType: "put" as const,
+          strike: atmStrike,
+          expiry: selectedExpiry,
+          side: "buy" as const,
+          size: 1,
+          estimatedPrice: estimatedPutPremium,
+          greeks: { delta: -0.5, gamma: 0.05, theta: -0.02, vega: 0.1, iv: 0.6 }
+        });
+        break;
+        
+      // TODO: Add other strategy types with multiple legs
+      default:
+        break;
+    }
+    
+    if (legs.length === 0) return;
+    
+    setConfirmationData({
+      strategyName: strategy.name!,
+      strategyType: selectedStrategyId,
+      asset,
+      underlyingPrice: currentPrice,
+      legs,
+      totalCost: parseFloat(strategy.totalCost || "0"),
+      maxProfit: strategy.maxProfit ? parseFloat(strategy.maxProfit) : null,
+      maxLoss: parseFloat(strategy.maxLoss || "0"),
+      upperBreakeven: strategy.upperBreakeven ? parseFloat(strategy.upperBreakeven) : null,
+      lowerBreakeven: strategy.lowerBreakeven ? parseFloat(strategy.lowerBreakeven) : null,
+    });
+    setShowConfirmation(true);
   };
 
   const filteredStrategies = SIMPLE_STRATEGIES.filter(s => s.sentiment === selectedSentiment);
@@ -736,9 +805,10 @@ export default function OptionsStrategyBuilder({
                   <Button 
                     size="sm" 
                     className="w-full mt-3 h-8 text-xs"
-                    data-testid="button-connect-wallet"
+                    onClick={handleExecuteStrategy}
+                    data-testid="button-execute-strategy"
                   >
-                    Connect
+                    Execute Strategy
                   </Button>
                 </div>
               );
@@ -777,6 +847,15 @@ export default function OptionsStrategyBuilder({
           </>
         )}
       </div>
+      
+      {/* Order Confirmation Modal */}
+      {confirmationData && (
+        <OrderConfirmationModal
+          open={showConfirmation}
+          onOpenChange={setShowConfirmation}
+          {...confirmationData}
+        />
+      )}
     </div>
   );
 }
