@@ -1,7 +1,7 @@
 # 1fox
 
 ## Overview
-1fox is an AI-powered cryptocurrency trading platform providing a comprehensive "one stop shop" for three market types: Perpetuals, Prediction Markets, and Spot Discovery (coming soon). The platform enables users to interact with an AI trading agent, "Mr. Fox," using natural language for automated strategy execution across perpetual futures (Hyperliquid, Orderly Network) and prediction markets (Polymarket). Features a glassmorphic "Fantastic Mr. Fox" themed interface with tab-based navigation, real-time market data, portfolio tracking, comprehensive trading controls, and institutional-grade advanced order types (TWAP, Limit Chase, Scaled, Iceberg, OCO, Trailing TP) matching and exceeding Insilico Terminal's capabilities. Users authenticate with external wallets, and the platform auto-generates a multi-chain wallet (EVM, Solana, Polygon) for seamless cross-chain trading. 1fox aims to provide a professional AI trading experience focused on Sharpe ratio maximization through optimal trading actions and continuous risk management, delivered as a multi-tenant SaaS.
+1fox is an AI-powered cryptocurrency trading platform offering a "one-stop shop" for four market types: Perpetuals, Prediction Markets, Onchain Options, and Spot Discovery (coming soon). It enables users to interact with an AI trading agent, "Mr. Fox," using natural language for automated strategy execution across perpetual futures (Hyperliquid, Orderly Network), prediction markets (Polymarket), and onchain options (Aevo). The platform features a glassmorphic "Fantastic Mr. Fox" themed interface, real-time market data, portfolio tracking, comprehensive trading controls, and institutional-grade advanced order types. 1fox aims to deliver a professional AI trading experience focused on Sharpe ratio maximization and continuous risk management as a multi-tenant SaaS.
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
@@ -10,66 +10,52 @@ Preferred communication style: Simple, everyday language.
 
 ### Frontend
 **Technology Stack:** React with TypeScript, Vite, Wouter, TanStack Query, Tailwind CSS, shadcn/ui, and lightweight-charts.
-**Design System:** Glassmorphic dark trading terminal with orange/amber/gold/sepia palette. Features frosted glass effects with backdrop blur (35px), semi-transparent backgrounds (10-20% opacity for panels, 30% for header), pure black gradient backgrounds for contrast, gradient overlays (orange → amber → gold), and hover illumination effects. Dark brown/black backgrounds (hsl(18 33% 8%)), orange primary (#B06000 / hsl(33 100% 35%)), yellow for longs (#FFC107 / hsl(45 100% 51%)), red for shorts (#F54E2E / hsl(9 84% 57%)). Modern Roboto typography, rounded corners (8px). Custom glassmorphism utilities: `.glass`, `.glass-strong`, `.glass-header`, `.gradient-border`, `.glow-orange`, `.glow-amber`, `.glow-gold`, `.hover-illuminate`, `.hover-lift`, shimmer animations.
-**Hover Illumination:** Interactive card effects with subtle lift (0.2rem translateY), enhanced border glow, and lumen layers (radial gradients creating internal illumination). All Cards automatically have hover effects applied. Uses ::after pseudo-element for layered orange/amber radial gradients (0→50% opacity on hover) over 0.4s smooth transitions.
-**Unified Terminal Architecture:** Single-page terminal interface (`UnifiedTerminal.tsx`) consolidating all trading and analytics features. Four main tabs (Perpetuals | Prediction Markets | Spot Discovery | Analytics) with persistent right sidebar containing AI chat, conversation history, positions grid, and AI usage tracker. Resizable panels (70/30 default split) for optimal workflow. Both `/terminal` and `/trade` routes render the unified terminal for backward compatibility.
-**Layout & Components:**
-- **Perpetuals Tab:** Complete trading interface with TradingChart, MarketSelector, collapsible OrderEntryPanel, and right sidebar containing OrderBook, RecentTrades, and OrderManagementPanel. Vertical resizable split between chart and order entry.
-- **Prediction Markets Tab:** Grid-based market browser with category tabs (Trending, Politics, Sports, Finance, Crypto, Culture, World, Elections), search, dynamic tag filters, and trading modal for market/limit orders with real-time cost/profit calculations. Connects to Polymarket via Polygon network.
-- **Spot Discovery Tab:** Placeholder for upcoming multi-exchange spot market aggregation feature.
-- **Analytics Tab:** Comprehensive performance dashboard with PortfolioOverview (all 7 capital sources), PortfolioAreaChart, CumulativeReturnsChart, DrawdownChart, SharpeGauge, MarginUsageBar, TradeDistributionDonut, and PositionROEChart.
-- **Persistent Right Panel:** AI Prompt Panel, Conversation History, PositionsGrid (multi-exchange), and AI Usage Tracker accessible across all tabs.
-**TradingChart:** Implemented with lightweight-charts library for perpetuals. Loads up to 1000 historical candles before WebSocket connection for complete price history visualization. Supports multiple timeframes (1m, 5m, 15m, 1h, 4h, 1d, 1w). Symbol normalization strips -USD/-PERP/-SPOT suffixes before Hyperliquid API requests. Real-time updates via WebSocket overlay on historical data.
-**MarketSelector:** Searchable dialog component for browsing all Hyperliquid perpetual and spot markets. Displays real-time prices, 24h change percentages, and market type badges. Filters by search query and market type. Integrated into Perpetuals tab header for quick market switching.
-**Auto-Bridging System:** Seamless cross-chain bridging for Polymarket trades. Automatically detects insufficient Polygon balance (USDC + MATIC for gas) before order placement and triggers Router Nitro bridge widget with pre-filled asset and amount. Supports both single-asset and multi-step bridging flows. Balance monitoring with 10-second refresh interval ensures trades execute once funds arrive.
+**Design System:** Glassmorphic dark trading terminal with an orange/amber/gold/sepia palette, frosted glass effects, semi-transparent backgrounds, gradient overlays, and hover illumination effects. Uses Roboto typography and rounded corners.
+**Unified Terminal Architecture:** Single-page interface consolidating all trading and analytics features across five main tabs (Perpetuals, Prediction Markets, Options, Spot Discovery, Analytics) with a persistent right sidebar for AI chat, conversation history, positions grid, and AI usage tracker.
+**Key Layouts:**
+- **Perpetuals Tab:** TradingChart, MarketSelector, OrderEntryPanel, OrderBook, RecentTrades, OrderManagementPanel.
+- **Prediction Markets Tab:** Grid-based market browser with category filters, search, and a trading modal (Polymarket integration).
+- **Options Tab:** 3-panel interface (UI structure complete, components in progress). Backend fully implemented: Aevo REST API client (HMAC-SHA256), WebSocket service (ticker/Greeks/fills), database schema (optionsStrategies, optionsPositions, optionsOrders), storage layer, and 8 authenticated routes. Frontend placeholders ready for: OptionsChart (strategy P&L overlays), StrategyBuilder (Simple/Pro modes), live Greeks dashboard, options positions grid, AI strategy recommendations.
+- **Analytics Tab:** Comprehensive performance dashboard including PortfolioOverview, various charts (Cumulative Returns, Drawdown, Sharpe), and trade distribution.
+**Auto-Bridging System:** Automatically detects insufficient Polygon balance for Polymarket trades and triggers Router Nitro bridge widget.
 
 ### Backend
 **Server:** Express.js with TypeScript.
-**Database:** PostgreSQL with Drizzle ORM for storing trading data, portfolio snapshots, AI logs, and trade history.
-**API:** RESTful endpoints for trading, database operations, and exchange interactions.
-**Authentication & Security:** Streamlined multi-tenant architecture with Passport.js and PostgreSQL session persistence. All users are auto-approved on creation (verificationStatus defaults to "approved"). Wallet-based authentication flow: Landing page (/) → Connect wallet via RainbowKit → Automatic signature request → Session creation → Embedded wallet generation → Recovery phrase confirmation → Redirect to /terminal. The LandingPage component includes integrated authentication logic with useAccount, useSignMessage, and useEmbeddedWallet hooks. Complete flow happens automatically after wallet connection without manual approval steps. AES-256-GCM encryption for API keys.
-**Multi-Chain Wallet System:** Non-custodial, BIP39-derived multi-chain wallet generation for deposits and trading; seed phrases are shown once and never stored.
-**Hyperliquid API Wallet Architecture:** A separate, encrypted API wallet (from a different seed) is used for Hyperliquid trading, authorized by the user's connected wallet via EIP-712 signature. This API wallet has no withdrawal permissions and executes all trades under 1fox's referral code.
+**Database:** PostgreSQL with Drizzle ORM.
+**API:** RESTful endpoints for trading, data, and exchange interactions.
+**Authentication & Security:** Passport.js with PostgreSQL session persistence, wallet-based authentication via RainbowKit, and automatic signature requests for session and embedded wallet generation. AES-256-GCM encryption for API keys.
+**Multi-Chain Wallet System:** Non-custodial, BIP39-derived multi-chain wallet generation; seed phrases are shown once and never stored. A separate, encrypted API wallet is used for Hyperliquid trading.
 **AI Integration:**
-- **Tiered AI Provider System:** Supports Platform AI and Personal AI Keys (Perplexity, OpenAI, xAI), with a multi-provider router handling credentials and usage. Defaults to xAI Grok 4.
-- **Unified Conversational AI:** AI responds naturally, answers questions, and generates structured trading actions in JSON based on conversational context, maintaining awareness of active strategy parameters and account data.
-- **Strategy-Scoped Context:** Each trading strategy has independent conversation history and AI context.
+- **Tiered AI Provider System:** Supports Platform AI and Personal AI Keys (Perplexity, OpenAI, xAI), defaulting to xAI Grok 4.
+- **Unified Conversational AI:** AI responds naturally, answers questions, and generates structured JSON trading actions based on conversational context.
+- **Strategy-Scoped Context:** Independent conversation history and AI context per trading strategy.
 - **Custom Rules Priority:** User-defined rules guide AI behavior and risk management.
-**Agent Modes:**
-- **Passive Mode (Default):** AI generates actions for discussion; execution is blocked.
-- **Active Mode:** AI-generated actions are executed with critical safety constraints (e.g., minimum notional, mandatory protective brackets, Terminal Safety Guard, leverage caps).
-**Order Management & Strategy Enforcement:** Enforces max positions, per-symbol entry limits, and uses Hyperliquid's bracket orders for immediate TP/SL protection. Manages unfilled orders and ensures one stop loss per position.
-**Comprehensive Safety System:** Mandatory protective brackets, liquidation protection (1.5% buffer), manual override protection, Terminal Safety Guard (20% maximum order distance), and protective order validation.
-**Trade Performance Evaluation & Learning System:** Automates trade evaluation and provides learnings to the AI.
-**Market Data & Indicators:** Dual WebSocket service for real-time data, CVD Calculator, and Volume Profile Calculator.
-**Trade History Import:** CSV upload for AI-powered analysis.
-**Multi-Exchange Integration:** Full REST API and WebSocket integration for Orderly Network and Hyperliquid. Polymarket integration via @polymarket/clob-client with market/limit order support. AI can specify the target exchange and market type.
-**Polymarket Integration:** Complete backend wrapper for @polymarket/clob-client with market data fetching from Gamma API (`/events?closed=false` endpoint for live markets), order placement (market/limit), position tracking, and order history. Event-to-market transformation flattens nested API structure and parses stringified `outcomePrices` arrays to enable real-time YES/NO probability display. Dynamic subcategory filtering extracts unique tags from `eventTags` field for granular market browsing. User-scoped positions and orders with shared global event catalog. Polygon wallet credentials managed via encrypted storage. Auto-bridging system checks Polygon USDC + MATIC balances before trades and automatically triggers Router Nitro bridge with correct asset if insufficient.
-**Trade Journal System:** Automatically documents trade entries with AI reasoning and updates on close with AI-generated analysis.
-**Trading Modes:** User-defined strategies with customizable parameters.
-**Core Features:** Autonomous trading engine, order management, configurable monitoring frequency, and enhanced performance metrics calculated from cumulative portfolio snapshots.
-**Monitoring & Resource Management:** Intelligent monitoring frequency and proper cleanup on user deletion.
-**Hyperliquid SDK Defensive Guards:** Comprehensive error handling, flexible verification, and production safety.
-**Advanced Order System:** Institutional-grade order execution engine supporting TWAP (Time-Weighted Average Price), Limit Chase, Scaled/Ladder Orders, Iceberg Orders, OCO (One-Cancels-Other), and Trailing Take-Profit. Features per-user execution engines with state management, progress tracking, and execution analytics. **Exceeds Insilico Terminal** through three production-ready AI-powered enhancements with graceful degradation: (1) **Smart Order Router (SOR)**: Analyzes real-time liquidity across Hyperliquid/Orderly, intelligently routes orders to optimal venue with AI-predicted fill quality, handles missing market data gracefully with degraded decisions; (2) **AI Execution Optimizer**: Dynamically tunes TWAP/Chase/Scaled parameters based on volatility regime (low/medium/high/extreme), order flow imbalance, market microstructure, and trend detection, returns safe defaults when book data unavailable; (3) **Predictive Execution Timing**: Analyzes 7-day historical intraday patterns (hourly volatility, spread, liquidity, volume) to predict optimal execution windows with lowest slippage, returns neutral windows when data missing. All AI features integrate seamlessly with Mr. Fox conversational interface via toggle in AdvancedOrderEntry UI, expose three authenticated endpoints (/api/ai/optimize-route, /api/ai/optimize-execution, /api/ai/predict-timing), and implement comprehensive defensive programming against API failures.
+**Agent Modes:** Passive Mode (discussion, no execution) and Active Mode (execution with critical safety constraints).
+**Order Management & Strategy Enforcement:** Enforces max positions, entry limits, and utilizes Hyperliquid's bracket orders for TP/SL protection.
+**Comprehensive Safety System:** Mandatory protective brackets, liquidation protection, manual override, Terminal Safety Guard (20% max order distance), and protective order validation.
+**Multi-Exchange Integration:** Full REST API and WebSocket integration for Orderly Network, Hyperliquid, and Aevo. Polymarket integration via `@polymarket/clob-client`.
+**Advanced Order System:** Institutional-grade order execution engine supporting TWAP, Limit Chase, Scaled/Ladder Orders, Iceberg Orders, OCO, and Trailing Take-Profit. Enhanced with AI-powered Smart Order Router, AI Execution Optimizer, and Predictive Execution Timing.
 
 ## External Dependencies
 
 **Trading Infrastructure:**
-- **Hyperliquid Exchange:** Integrated via the `hyperliquid` npm package.
+- **Hyperliquid Exchange:** `hyperliquid` npm package.
 - **Orderly Network:** Custom REST API client and WebSocket service.
-- **Polymarket:** Integrated via `@polymarket/clob-client` for prediction market trading on Polygon.
+- **Polymarket:** `@polymarket/clob-client`.
+- **Aevo:** Custom REST API client and WebSocket service.
 
 **UI Component Libraries:**
-- **Radix UI:** UI primitives.
-- **RainbowKit + wagmi + viem:** Wallet connection and authentication for EVM wallets.
+- **Radix UI**
+- **RainbowKit + wagmi + viem:** Wallet connection for EVM.
+- **lightweight-charts:** Trading charts.
 - **Recharts, Victory, D3, react-sparklines:** Data visualization.
 - **react-countup:** Number animations.
 - **Lucide React:** Iconography.
 - **Embla Carousel:** Carousels.
 
 **Database & ORM:**
-- `pg` (node-postgres) for PostgreSQL.
-- **Drizzle ORM:** Type-safe database interactions.
+- `pg` (node-postgres)
+- **Drizzle ORM**
 
 **AI/LLM:**
 - **OpenAI SDK:** Used for Perplexity API integration.
@@ -77,4 +63,4 @@ Preferred communication style: Simple, everyday language.
 **Development Tools:**
 - **Vite:** Frontend build.
 - **ESBuild:** Server bundling.
-- **TypeScript:** With strict mode.
+- **TypeScript**
