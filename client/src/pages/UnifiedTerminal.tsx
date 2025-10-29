@@ -39,6 +39,7 @@ import {
   Settings,
   Maximize2,
   Minimize2,
+  Layers,
 } from "lucide-react";
 
 // Perpetuals Trading Interface Component
@@ -763,6 +764,259 @@ function PredictionMarketsInterface() {
   );
 }
 
+// Options Trading Interface Component
+function OptionsInterface() {
+  const [selectedAsset, setSelectedAsset] = useState("ETH");
+  const [mode, setMode] = useState<"simple" | "pro">("simple");
+  const [strategyPanelCollapsed, setStrategyPanelCollapsed] = useState(false);
+
+  return (
+    <div className="flex-1 overflow-hidden">
+      <ResizablePanelGroup direction="horizontal" className="h-full">
+        {/* Left Panel: Chart + Strategy Builder (3-panel: chart 60%, strategy 20%, data 20%) */}
+        <ResizablePanel defaultSize={60} minSize={40}>
+          <div className="h-full flex flex-col">
+            {/* Options Toolbar */}
+            <div className="glass border-b border-glass/20 p-2 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Layers className="h-4 w-4 text-primary" />
+                <h3 className="text-sm font-semibold">Options Trading</h3>
+                <Badge 
+                  variant="outline" 
+                  className="bg-primary/10 text-primary border-primary/30"
+                  data-testid="badge-selected-asset"
+                >
+                  {selectedAsset}
+                </Badge>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Badge 
+                  variant={mode === "simple" ? "default" : "outline"}
+                  className="cursor-pointer hover-elevate active-elevate-2"
+                  onClick={() => setMode("simple")}
+                  data-testid="badge-mode-simple"
+                >
+                  Simple
+                </Badge>
+                <Badge 
+                  variant={mode === "pro" ? "default" : "outline"}
+                  className="cursor-pointer hover-elevate active-elevate-2"
+                  onClick={() => setMode("pro")}
+                  data-testid="badge-mode-pro"
+                >
+                  Pro
+                </Badge>
+                <Button 
+                  variant="ghost" 
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => setStrategyPanelCollapsed(!strategyPanelCollapsed)}
+                  data-testid="button-toggle-strategy-panel"
+                >
+                  {strategyPanelCollapsed ? <Maximize2 className="h-4 w-4" /> : <Minimize2 className="h-4 w-4" />}
+                </Button>
+              </div>
+            </div>
+
+            {/* Vertical Split: Chart + Strategy Builder */}
+            <ResizablePanelGroup direction="vertical" className="flex-1">
+              {/* Chart Panel (Top) */}
+              <ResizablePanel defaultSize={strategyPanelCollapsed ? 100 : 65} minSize={30}>
+                <div className="h-full relative">
+                  {/* OptionsChart placeholder - will be implemented in task 7 */}
+                  <div className="h-full flex items-center justify-center glass-fade-in">
+                    <Card className="glass-strong border-glass/20 max-w-2xl">
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          <LineChart className="h-5 w-5 text-primary" />
+                          Options Chart with P&L Visualization
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-3 text-sm text-foreground/70">
+                        <p>Real-time options pricing with strategy P&L overlays:</p>
+                        <ul className="space-y-1.5 ml-4">
+                          <li>• Breakeven points visualization</li>
+                          <li>• Profit/loss zones (green/red gradient overlays)</li>
+                          <li>• Strike prices with Greeks display</li>
+                          <li>• Max profit/max loss annotations</li>
+                        </ul>
+                        <div className="mt-3 p-2 bg-primary/10 border border-primary/20 rounded text-xs">
+                          📊 Task 7: OptionsChart.tsx component
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                </div>
+              </ResizablePanel>
+
+              {/* Strategy Builder Panel (Bottom, collapsible) */}
+              {!strategyPanelCollapsed && (
+                <>
+                  <ResizableHandle withHandle className="bg-glass-border/30" />
+                  <ResizablePanel defaultSize={35} minSize={20} maxSize={60}>
+                    <div className="h-full border-t border-glass/20 overflow-auto">
+                      {/* OptionsStrategyBuilder placeholder - will be implemented in task 8 */}
+                      <div className="p-4">
+                        <Card className="glass border-glass/20">
+                          <CardHeader className="pb-3">
+                            <CardTitle className="text-sm flex items-center gap-2">
+                              <Layers className="h-4 w-4 text-primary" />
+                              Strategy Builder ({mode === "simple" ? "Simple Mode" : "Pro Mode"})
+                            </CardTitle>
+                          </CardHeader>
+                          <CardContent className="space-y-3 text-sm text-foreground/70">
+                            {mode === "simple" ? (
+                              <div className="space-y-2">
+                                <p>One-click strategy execution:</p>
+                                <div className="grid grid-cols-3 gap-2 mt-2">
+                                  <Button variant="outline" size="sm" disabled data-testid="button-strategy-straddle">
+                                    Straddle
+                                  </Button>
+                                  <Button variant="outline" size="sm" disabled data-testid="button-strategy-strap">
+                                    Strap
+                                  </Button>
+                                  <Button variant="outline" size="sm" disabled data-testid="button-strategy-strip">
+                                    Strip
+                                  </Button>
+                                </div>
+                                <div className="text-xs text-foreground/50 mt-3">
+                                  📋 Task 8: Simple mode - auto-filled parameters
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="space-y-2">
+                                <p>Manual strike/expiry selection:</p>
+                                <div className="space-y-2 mt-2">
+                                  <div className="text-xs text-foreground/50">Strike: --</div>
+                                  <div className="text-xs text-foreground/50">Expiry: --</div>
+                                  <div className="text-xs text-foreground/50">Size: --</div>
+                                </div>
+                                <div className="text-xs text-foreground/50 mt-3">
+                                  📋 Task 8: Pro mode - full customization
+                                </div>
+                              </div>
+                            )}
+                          </CardContent>
+                        </Card>
+                      </div>
+                    </div>
+                  </ResizablePanel>
+                </>
+              )}
+            </ResizablePanelGroup>
+          </div>
+        </ResizablePanel>
+
+        <ResizableHandle withHandle className="bg-glass-border/30" />
+
+        {/* Right Panel: Options-Specific Data & AI Recommendations */}
+        <ResizablePanel defaultSize={40} minSize={25} maxSize={50}>
+          <div className="h-full flex flex-col glass">
+            <Tabs defaultValue="greeks" className="flex-1 flex flex-col">
+              <TabsList className="m-2 grid grid-cols-3">
+                <TabsTrigger value="greeks" data-testid="tab-greeks">Greeks</TabsTrigger>
+                <TabsTrigger value="positions" data-testid="tab-options-positions">Positions</TabsTrigger>
+                <TabsTrigger value="ai" data-testid="tab-ai-recommendations">AI Rec</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="greeks" className="flex-1 m-2 mt-0 overflow-auto">
+                <Card className="glass-strong border-glass/20">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm">Live Greeks & Market Data</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3 text-sm text-foreground/70">
+                    <div className="flex justify-between">
+                      <span>Delta:</span>
+                      <span className="font-mono">--</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Gamma:</span>
+                      <span className="font-mono">--</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Theta:</span>
+                      <span className="font-mono">--</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Vega:</span>
+                      <span className="font-mono">--</span>
+                    </div>
+                    <div className="border-t border-glass/20 pt-3 mt-3 space-y-2">
+                      <div className="flex justify-between">
+                        <span>IV Percentile:</span>
+                        <span className="font-mono">--</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>30D HV:</span>
+                        <span className="font-mono">--</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Put/Call Ratio:</span>
+                        <span className="font-mono">--</span>
+                      </div>
+                    </div>
+                    <div className="text-xs text-foreground/50 mt-3">
+                      📊 Task 7: Real-time Greeks from Aevo API
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="positions" className="flex-1 m-2 mt-0 overflow-auto">
+                {/* OptionsPositionsGrid placeholder - will be implemented in task 10 */}
+                <Card className="glass-strong border-glass/20">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm">Options Positions</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2 text-sm text-foreground/70">
+                    <p>Live positions with:</p>
+                    <ul className="space-y-1 text-xs ml-4">
+                      <li>• P&L tracking</li>
+                      <li>• Greeks by position</li>
+                      <li>• Days to expiry</li>
+                      <li>• Breakeven prices</li>
+                      <li>• Quick close buttons</li>
+                    </ul>
+                    <div className="text-xs text-foreground/50 mt-3">
+                      📋 Task 10: OptionsPositionsGrid.tsx
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="ai" className="flex-1 m-2 mt-0 overflow-auto">
+                {/* AIStrategyRecommendations placeholder - will be implemented in task 9 */}
+                <Card className="glass-strong border-glass/20">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <Sparkles className="h-4 w-4 text-primary" />
+                      AI Strategy Recommendations
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2 text-sm text-foreground/70">
+                    <p>Mr. Fox analyzes:</p>
+                    <ul className="space-y-1 text-xs ml-4">
+                      <li>• IV regime (low/normal/high)</li>
+                      <li>• Volatility trends</li>
+                      <li>• Market microstructure</li>
+                      <li>• Optimal strategy suggestions</li>
+                      <li>• Entry timing recommendations</li>
+                    </ul>
+                    <div className="text-xs text-foreground/50 mt-3">
+                      📋 Task 9: AIStrategyRecommendations.tsx
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
+          </div>
+        </ResizablePanel>
+      </ResizablePanelGroup>
+    </div>
+  );
+}
+
 // Spot Discovery Interface Placeholder
 function SpotDiscoveryInterface() {
   return (
@@ -944,7 +1198,7 @@ export default function UnifiedTerminal() {
               <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col h-full">
                 {/* Tab Navigation Header */}
                 <div className="glass-header border-b border-glass/20 px-4 py-2">
-                  <TabsList className="grid w-full max-w-2xl grid-cols-4 bg-glass/50">
+                  <TabsList className="grid w-full max-w-3xl grid-cols-5 bg-glass/50">
                     <TabsTrigger 
                       value="perpetuals" 
                       className="flex items-center gap-2"
@@ -960,6 +1214,14 @@ export default function UnifiedTerminal() {
                     >
                       <Vote className="h-4 w-4" />
                       Prediction Markets
+                    </TabsTrigger>
+                    <TabsTrigger 
+                      value="options" 
+                      className="flex items-center gap-2"
+                      data-testid="tab-options"
+                    >
+                      <Layers className="h-4 w-4" />
+                      Options
                     </TabsTrigger>
                     <TabsTrigger 
                       value="spot" 
@@ -987,6 +1249,10 @@ export default function UnifiedTerminal() {
 
                 <TabsContent value="prediction" className="m-0 flex-1 flex flex-col">
                   <PredictionMarketsInterface />
+                </TabsContent>
+
+                <TabsContent value="options" className="m-0 flex-1 flex flex-col">
+                  <OptionsInterface />
                 </TabsContent>
 
                 <TabsContent value="spot" className="m-0 flex-1 flex flex-col">
