@@ -774,11 +774,161 @@ export const advancedOrderExecutions = pgTable("advanced_order_executions", {
   index("idx_advanced_order_executions_parent").on(table.advancedOrderId),
 ]);
 
+// Options Trading - Aevo integration for onchain options
+// Options Strategies - Pre-built (Straddle, Strap, Strip) and custom strategies
+export const optionsStrategies = pgTable("options_strategies", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  
+  // Strategy definition
+  name: text("name").notNull(), // "Straddle", "Strap", "Strip", "Long Call", "Long Put", "Iron Condor", etc.
+  type: text("type").notNull(), // "pre_built" or "custom"
+  description: text("description"), // User-defined description for custom strategies
+  
+  // Market and timing
+  asset: text("asset").notNull(), // "ETH", "BTC"
+  strike: decimal("strike", { precision: 18, scale: 2 }), // Strike price (for ATM strategies, calculated dynamically)
+  expiry: timestamp("expiry").notNull(), // Expiration timestamp
+  expiryLabel: text("expiry_label"), // Human-readable: "31MAR25", "7DTE", etc.
+  
+  // Strategy parameters
+  totalCost: decimal("total_cost", { precision: 18, scale: 6 }).notNull(), // Total premium paid (sum of all legs)
+  maxProfit: decimal("max_profit", { precision: 18, scale: 6 }), // Max possible profit (null for unlimited)
+  maxLoss: decimal("max_loss", { precision: 18, scale: 6 }).notNull(), // Max possible loss
+  upperBreakeven: decimal("upper_breakeven", { precision: 18, scale: 2 }), // Upper breakeven price
+  lowerBreakeven: decimal("lower_breakeven", { precision: 18, scale: 2 }), // Lower breakeven price (null for single-sided)
+  
+  // Market conditions at entry
+  impliedVolatility: decimal("implied_volatility", { precision: 10, scale: 6 }), // IV at entry
+  underlyingPrice: decimal("underlying_price", { precision: 18, scale: 2 }).notNull(), // Spot price at entry
+  volatilityRegime: text("volatility_regime"), // "low", "medium", "high", "extreme" (for AI recommendations)
+  
+  // Status and P&L tracking
+  status: text("status").notNull().default("active"), // "active", "closed", "expired"
+  currentValue: decimal("current_value", { precision: 18, scale: 6 }).notNull().default("0"), // Current value of all legs
+  unrealizedPnl: decimal("unrealized_pnl", { precision: 18, scale: 6 }).notNull().default("0"), // Current P&L
+  realizedPnl: decimal("realized_pnl", { precision: 18, scale: 6 }), // P&L at close
+  
+  // AI suggestions
+  aiRecommended: integer("ai_recommended").notNull().default(0), // 1 = suggested by Mr. Fox
+  aiReasoning: text("ai_reasoning"), // AI's reasoning for recommending this strategy
+  
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  closedAt: timestamp("closed_at"),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+}, (table) => [
+  index("idx_options_strategies_user_status").on(table.userId, table.status),
+  index("idx_options_strategies_asset").on(table.asset),
+  index("idx_options_strategies_expiry").on(table.expiry),
+]);
+
+// Options Positions - Individual option legs (calls/puts) within strategies
+export const optionsPositions = pgTable("options_positions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  strategyId: varchar("strategy_id").references(() => optionsStrategies.id, { onDelete: "set null" }), // Null for standalone options
+  apiKeyId: varchar("api_key_id").references(() => apiKeys.id, { onDelete: "set null" }), // Aevo API credentials used
+  
+  // Aevo instrument details
+  instrumentId: text("instrument_id").notNull(), // Aevo's instrument ID
+  instrumentName: text("instrument_name").notNull(), // e.g., "ETH-31MAR25-2000-C"
+  
+  // Option specification
+  asset: text("asset").notNull(), // "ETH", "BTC"
+  optionType: text("option_type").notNull(), // "call" or "put"
+  strike: decimal("strike", { precision: 18, scale: 2 }).notNull(),
+  expiry: timestamp("expiry").notNull(),
+  
+  // Position details
+  side: text("side").notNull(), // "long" or "short"
+  size: decimal("size", { precision: 18, scale: 6 }).notNull(), // Number of contracts
+  entryPrice: decimal("entry_price", { precision: 18, scale: 6 }).notNull(), // Premium paid/received per contract
+  currentPrice: decimal("current_price", { precision: 18, scale: 6 }).notNull(), // Current option price
+  
+  // Greeks (updated in real-time from Aevo)
+  delta: decimal("delta", { precision: 10, scale: 6 }),
+  gamma: decimal("gamma", { precision: 10, scale: 6 }),
+  theta: decimal("theta", { precision: 10, scale: 6 }),
+  vega: decimal("vega", { precision: 10, scale: 6 }),
+  rho: decimal("rho", { precision: 10, scale: 6 }),
+  impliedVolatility: decimal("implied_volatility", { precision: 10, scale: 6 }),
+  
+  // P&L tracking
+  unrealizedPnl: decimal("unrealized_pnl", { precision: 18, scale: 6 }).notNull().default("0"),
+  unrealizedPnlPercent: decimal("unrealized_pnl_percent", { precision: 10, scale: 6 }).notNull().default("0"),
+  realizedPnl: decimal("realized_pnl", { precision: 18, scale: 6 }),
+  
+  // Status
+  status: text("status").notNull().default("open"), // "open", "closed", "expired"
+  
+  // Metadata
+  openedAt: timestamp("opened_at").notNull().defaultNow(),
+  closedAt: timestamp("closed_at"),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+}, (table) => [
+  index("idx_options_positions_user").on(table.userId),
+  index("idx_options_positions_strategy").on(table.strategyId),
+  index("idx_options_positions_status").on(table.status),
+  index("idx_options_positions_expiry").on(table.expiry),
+]);
+
+// Options Orders - Orders placed on Aevo
+export const optionsOrders = pgTable("options_orders", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  strategyId: varchar("strategy_id").references(() => optionsStrategies.id, { onDelete: "set null" }),
+  positionId: varchar("position_id").references(() => optionsPositions.id, { onDelete: "set null" }),
+  apiKeyId: varchar("api_key_id").references(() => apiKeys.id, { onDelete: "set null" }),
+  
+  // Aevo order details
+  aevoOrderId: text("aevo_order_id").unique(), // Aevo's order ID
+  instrumentId: text("instrument_id").notNull(),
+  instrumentName: text("instrument_name").notNull(),
+  
+  // Order specification
+  asset: text("asset").notNull(),
+  optionType: text("option_type").notNull(), // "call" or "put"
+  strike: decimal("strike", { precision: 18, scale: 2 }).notNull(),
+  expiry: timestamp("expiry").notNull(),
+  
+  // Order details
+  side: text("side").notNull(), // "buy" or "sell"
+  orderType: text("order_type").notNull(), // "market" or "limit"
+  size: decimal("size", { precision: 18, scale: 6 }).notNull(),
+  filledSize: decimal("filled_size", { precision: 18, scale: 6 }).notNull().default("0"),
+  limitPrice: decimal("limit_price", { precision: 18, scale: 6 }), // For limit orders
+  averageFillPrice: decimal("average_fill_price", { precision: 18, scale: 6 }),
+  
+  // Status and execution
+  status: text("status").notNull().default("pending"), // "pending", "open", "filled", "partial", "cancelled", "rejected"
+  
+  // EIP-712 signature (for audit trail)
+  signature: text("signature"), // EIP-712 signature of the order
+  
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  filledAt: timestamp("filled_at"),
+  cancelledAt: timestamp("cancelled_at"),
+}, (table) => [
+  index("idx_options_orders_user").on(table.userId),
+  index("idx_options_orders_strategy").on(table.strategyId),
+  index("idx_options_orders_status").on(table.status),
+  index("idx_options_orders_aevo").on(table.aevoOrderId),
+]);
+
 // Zod schemas and types
 export const insertAdvancedOrderSchema = createInsertSchema(advancedOrders).omit({ id: true, createdAt: true });
 export const insertAdvancedOrderExecutionSchema = createInsertSchema(advancedOrderExecutions).omit({ id: true, timestamp: true });
+export const insertOptionsStrategySchema = createInsertSchema(optionsStrategies).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertOptionsPositionSchema = createInsertSchema(optionsPositions).omit({ id: true, openedAt: true, updatedAt: true });
+export const insertOptionsOrderSchema = createInsertSchema(optionsOrders).omit({ id: true, createdAt: true });
 
 export type InsertAdvancedOrder = z.infer<typeof insertAdvancedOrderSchema>;
 export type AdvancedOrder = typeof advancedOrders.$inferSelect;
 export type InsertAdvancedOrderExecution = z.infer<typeof insertAdvancedOrderExecutionSchema>;
 export type AdvancedOrderExecution = typeof advancedOrderExecutions.$inferSelect;
+export type InsertOptionsStrategy = z.infer<typeof insertOptionsStrategySchema>;
+export type OptionsStrategy = typeof optionsStrategies.$inferSelect;
+export type InsertOptionsPosition = z.infer<typeof insertOptionsPositionSchema>;
+export type OptionsPosition = typeof optionsPositions.$inferSelect;
+export type InsertOptionsOrder = z.infer<typeof insertOptionsOrderSchema>;
+export type OptionsOrder = typeof optionsOrders.$inferSelect;
