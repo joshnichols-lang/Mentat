@@ -70,8 +70,10 @@ export class AevoWebSocketService {
       path: "/aevo-market-data"
     });
 
-    this.wss.on("connection", (ws: WebSocket) => {
-      console.log("[Aevo WS] Client connected");
+    console.log("[Aevo WS] WebSocket server created on path: /aevo-market-data");
+
+    this.wss.on("connection", (ws: WebSocket, req) => {
+      console.log("[Aevo WS] Client connected from:", req.url, req.headers.origin);
       this.clients.set(ws, new Map());
 
       ws.on("message", (data: string) => {
@@ -91,6 +93,10 @@ export class AevoWebSocketService {
       ws.on("error", (error) => {
         console.error("[Aevo WS] Client error:", error);
       });
+    });
+
+    this.wss.on("error", (error) => {
+      console.error("[Aevo WS] Server error:", error);
     });
 
     // Connect to Aevo WebSocket

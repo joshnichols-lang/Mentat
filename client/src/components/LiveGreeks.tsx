@@ -94,13 +94,16 @@ const LiveGreeks = ({ asset, instrumentName }: LiveGreeksProps) => {
       }
     };
 
-    ws.onclose = () => {
+    ws.onclose = (event) => {
       console.log("[LiveGreeks] Disconnected from Aevo WebSocket");
+      console.log("[LiveGreeks] Close event - Code:", event.code, "Reason:", event.reason, "Clean:", event.wasClean);
       setIsConnected(false);
     };
 
     ws.onerror = (error) => {
       console.error("[LiveGreeks] WebSocket error:", error);
+      console.error("[LiveGreeks] WebSocket readyState:", ws.readyState);
+      console.error("[LiveGreeks] WebSocket url:", ws.url);
     };
 
     return () => {
