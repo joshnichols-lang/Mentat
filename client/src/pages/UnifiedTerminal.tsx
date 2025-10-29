@@ -779,7 +779,7 @@ function OptionsInterface() {
       <ResizablePanelGroup direction="horizontal" className="h-full">
         {/* Left Panel: Chart + Strategy Builder (3-panel: chart 60%, strategy 20%, data 20%) */}
         <ResizablePanel defaultSize={60} minSize={40}>
-          <div className="h-full flex flex-col">
+          <div className="h-full flex flex-col min-h-0">
             {/* Options Toolbar */}
             <div className="glass border-b border-glass/20 p-2 flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -824,7 +824,7 @@ function OptionsInterface() {
             </div>
 
             {/* Vertical Split: Chart + Strategy Builder */}
-            <ResizablePanelGroup direction="vertical" className="flex-1">
+            <ResizablePanelGroup direction="vertical" className="flex-1 min-h-0">
               {/* Chart Panel (Top) */}
               <ResizablePanel defaultSize={strategyPanelCollapsed ? 100 : 50} minSize={30}>
                 <div className="h-full relative">
