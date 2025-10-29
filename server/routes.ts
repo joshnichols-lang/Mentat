@@ -4019,6 +4019,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Initialize market data WebSocket service
   initializeMarketDataWebSocket(httpServer);
 
+  // Initialize Aevo WebSocket service for options data
+  const { AevoWebSocketService } = await import("./aevo/websocket");
+  const aevoWsService = new AevoWebSocketService(httpServer, false); // false = mainnet
+  console.log("[Server] Aevo WebSocket service initialized on /aevo-market-data");
+
   // Initialize CVD calculator
   // In Replit, connect to localhost since everything runs on the same server
   const marketDataWsUrl = "ws://localhost:5000/market-data";

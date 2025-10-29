@@ -26,7 +26,7 @@ const LiveGreeks = ({ asset, instrumentName }: LiveGreeksProps) => {
   useEffect(() => {
     // Connect to Aevo WebSocket for real-time Greeks data
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const wsUrl = `${protocol}//${window.location.host}/aevo-data`;
+    const wsUrl = `${protocol}//${window.location.host}/aevo-market-data`;
     
     console.log(`[LiveGreeks] Connecting to ${wsUrl}`);
     
@@ -39,16 +39,16 @@ const LiveGreeks = ({ asset, instrumentName }: LiveGreeksProps) => {
 
       // Subscribe to index price for the asset
       ws.send(JSON.stringify({
-        type: "subscribe",
-        channel: "index",
-        asset: asset
+        action: "subscribe",
+        type: "index",
+        instrument: asset
       }));
 
       // If we have a specific instrument, subscribe to its ticker for Greeks
       if (instrumentName) {
         ws.send(JSON.stringify({
-          type: "subscribe",
-          channel: "ticker",
+          action: "subscribe",
+          type: "ticker",
           instrument: instrumentName
         }));
       }
@@ -107,15 +107,15 @@ const LiveGreeks = ({ asset, instrumentName }: LiveGreeksProps) => {
       if (ws.readyState === WebSocket.OPEN) {
         // Unsubscribe before closing
         ws.send(JSON.stringify({
-          type: "unsubscribe",
-          channel: "index",
-          asset: asset
+          action: "unsubscribe",
+          type: "index",
+          instrument: asset
         }));
         
         if (instrumentName) {
           ws.send(JSON.stringify({
-            type: "unsubscribe",
-            channel: "ticker",
+            action: "unsubscribe",
+            type: "ticker",
             instrument: instrumentName
           }));
         }

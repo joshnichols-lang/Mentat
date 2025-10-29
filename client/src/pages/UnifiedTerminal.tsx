@@ -33,6 +33,7 @@ import OrderManagementPanel from "@/components/OrderManagementPanel";
 import MarketSelector from "@/components/MarketSelector";
 import GridDashboard from "@/components/GridDashboard";
 import Widget from "@/components/Widget";
+import LiveGreeks from "@/components/LiveGreeks";
 import { 
   Flame,
   Vote,
@@ -808,41 +809,10 @@ function OptionsInterface() {
 
         <div key="greeks">
           <Widget id="greeks" title="Live Greeks & Market Data">
-            <div className="space-y-3 text-sm text-foreground/70">
-              <div className="flex justify-between">
-                <span>Delta:</span>
-                <span className="font-mono">--</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Gamma:</span>
-                <span className="font-mono">--</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Theta:</span>
-                <span className="font-mono">--</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Vega:</span>
-                <span className="font-mono">--</span>
-              </div>
-              <div className="border-t border-glass/20 pt-3 mt-3 space-y-2">
-                <div className="flex justify-between">
-                  <span>IV Percentile:</span>
-                  <span className="font-mono">--</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>30D HV:</span>
-                  <span className="font-mono">--</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Put/Call Ratio:</span>
-                  <span className="font-mono">--</span>
-                </div>
-              </div>
-              <div className="text-xs text-foreground/50 mt-3">
-                📊 Task 7: Real-time Greeks from Aevo API
-              </div>
-            </div>
+            <LiveGreeks 
+              asset={selectedAsset}
+              instrumentName={selectedStrategy?.instrumentName}
+            />
           </Widget>
         </div>
 
