@@ -772,13 +772,13 @@ function OptionsInterface() {
   const [mode, setMode] = useState<"simple" | "pro">("simple");
   const [strategyPanelCollapsed, setStrategyPanelCollapsed] = useState(false);
   const [selectedStrategy, setSelectedStrategy] = useState<any>(null);
-  const [currentPrice, setCurrentPrice] = useState(4000); // Default ETH price, will update from chart
+  const [currentPrice, setCurrentPrice] = useState(4000);
 
   return (
     <div className="flex-1 overflow-hidden">
       <ResizablePanelGroup direction="horizontal" className="h-full">
-        {/* Left Panel: Chart + Strategy Builder (3-panel: chart 60%, strategy 20%, data 20%) */}
-        <ResizablePanel defaultSize={60} minSize={40}>
+        {/* Main Chart Area with Vertical Resizing */}
+        <ResizablePanel defaultSize={70} minSize={50}>
           <div className="h-full flex flex-col">
             {/* Options Toolbar */}
             <div className="glass border-b border-glass/20 p-2 flex items-center justify-between">
@@ -823,11 +823,11 @@ function OptionsInterface() {
               </div>
             </div>
 
-            {/* Vertical Split: Chart + Strategy Builder */}
-            <ResizablePanelGroup direction="vertical" className="flex-1 min-h-0">
-              {/* Chart Panel (Top) */}
+            {/* Vertical Resizable Group: Chart + Strategy Builder */}
+            <ResizablePanelGroup direction="vertical" className="flex-1">
+              {/* Chart Panel */}
               <ResizablePanel defaultSize={strategyPanelCollapsed ? 100 : 70} minSize={30}>
-                <div className="h-full relative min-h-0">
+                <div className="h-full relative">
                   <OptionsChart 
                     asset={selectedAsset}
                     selectedStrategy={selectedStrategy}
@@ -836,12 +836,12 @@ function OptionsInterface() {
                 </div>
               </ResizablePanel>
 
-              {/* Strategy Builder Panel (Bottom, collapsible) */}
+              {/* Strategy Builder Panel (Resizable) */}
               {!strategyPanelCollapsed && (
                 <>
                   <ResizableHandle withHandle className="bg-glass-border/30" />
                   <ResizablePanel defaultSize={30} minSize={15} maxSize={50}>
-                    <div className="h-full border-t border-glass/20 min-h-0">
+                    <div className="h-full border-t border-glass/20 overflow-auto glass-fade-in">
                       <OptionsStrategyBuilder 
                         asset={selectedAsset}
                         currentPrice={currentPrice}
@@ -859,22 +859,25 @@ function OptionsInterface() {
 
         <ResizableHandle withHandle className="bg-glass-border/30" />
 
-        {/* Right Panel: Options-Specific Data & AI Recommendations */}
-        <ResizablePanel defaultSize={40} minSize={25} maxSize={50}>
-          <div className="h-full flex flex-col glass min-h-0">
-            <Tabs defaultValue="greeks" className="flex-1 flex flex-col min-h-0">
-              <TabsList className="m-2 grid grid-cols-3 shrink-0">
+        {/* Right Sidebar: Greeks + Positions + AI Recommendations */}
+        <ResizablePanel defaultSize={30} minSize={20} maxSize={40}>
+          <div className="h-full flex flex-col glass">
+            <Tabs defaultValue="greeks" className="flex-1 flex flex-col">
+              <TabsList className="m-2 grid grid-cols-3">
                 <TabsTrigger value="greeks" data-testid="tab-greeks">Greeks</TabsTrigger>
                 <TabsTrigger value="positions" data-testid="tab-options-positions">Positions</TabsTrigger>
                 <TabsTrigger value="ai" data-testid="tab-ai-recommendations">AI Rec</TabsTrigger>
               </TabsList>
 
-              <TabsContent value="greeks" className="flex-1 m-2 mt-0 overflow-auto min-h-0">
-                <Card className="glass-strong border-glass/20">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm">Live Greeks & Market Data</CardTitle>
+              <TabsContent value="greeks" className="flex-1 m-2 mt-0 overflow-hidden">
+                <Card className="glass-strong border-glass/20 h-full overflow-hidden flex flex-col">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <TrendingUp className="h-4 w-4 text-primary" />
+                      Live Greeks & Market Data
+                    </CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-3 text-sm text-foreground/70">
+                  <CardContent className="flex-1 p-4 overflow-auto space-y-3 text-sm text-foreground/70">
                     <div className="flex justify-between">
                       <span>Delta:</span>
                       <span className="font-mono">--</span>
@@ -912,13 +915,15 @@ function OptionsInterface() {
                 </Card>
               </TabsContent>
 
-              <TabsContent value="positions" className="flex-1 m-2 mt-0 overflow-auto min-h-0">
-                {/* OptionsPositionsGrid placeholder - will be implemented in task 10 */}
-                <Card className="glass-strong border-glass/20">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm">Options Positions</CardTitle>
+              <TabsContent value="positions" className="flex-1 m-2 mt-0 overflow-hidden">
+                <Card className="glass-strong border-glass/20 h-full overflow-hidden flex flex-col">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <LineChart className="h-4 w-4 text-primary" />
+                      Options Positions
+                    </CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-2 text-sm text-foreground/70">
+                  <CardContent className="flex-1 p-4 overflow-auto space-y-2 text-sm text-foreground/70">
                     <p>Live positions with:</p>
                     <ul className="space-y-1 text-xs ml-4">
                       <li>• P&L tracking</li>
@@ -934,16 +939,15 @@ function OptionsInterface() {
                 </Card>
               </TabsContent>
 
-              <TabsContent value="ai" className="flex-1 m-2 mt-0 overflow-auto min-h-0">
-                {/* AIStrategyRecommendations placeholder - will be implemented in task 9 */}
-                <Card className="glass-strong border-glass/20">
-                  <CardHeader className="pb-3">
+              <TabsContent value="ai" className="flex-1 m-2 mt-0 overflow-hidden">
+                <Card className="glass-strong border-glass/20 h-full overflow-hidden flex flex-col">
+                  <CardHeader className="pb-2">
                     <CardTitle className="text-sm flex items-center gap-2">
                       <Sparkles className="h-4 w-4 text-primary" />
                       AI Strategy Recommendations
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-2 text-sm text-foreground/70">
+                  <CardContent className="flex-1 p-4 overflow-auto space-y-2 text-sm text-foreground/70">
                     <p>Mr. Fox analyzes:</p>
                     <ul className="space-y-1 text-xs ml-4">
                       <li>• IV regime (low/normal/high)</li>
