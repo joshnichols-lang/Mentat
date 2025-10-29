@@ -14,6 +14,7 @@ import {
 import { useTheme } from "@/components/ThemeProvider";
 import { Loader2 } from "lucide-react";
 import { OptionsStrategy } from "@shared/schema";
+import { calculateNetPnL } from "@/lib/optionsCalculations";
 
 interface OptionsChartProps {
   asset: string; // Underlying asset (BTC, ETH, etc.)
@@ -123,6 +124,9 @@ export default function OptionsChart({
   const strikeLinesRef = useRef<IPriceLine[]>([]);
   const breakevenLinesRef = useRef<IPriceLine[]>([]);
   const maxProfitLineRef = useRef<IPriceLine | null>(null);
+  const expectedPriceLineRef = useRef<IPriceLine | null>(null);
+  
+  const [expectedPrice, setExpectedPrice] = useState<number | null>(null);
   const maxLossLineRef = useRef<IPriceLine | null>(null);
   
   const { themeName, mode } = useTheme();
@@ -536,6 +540,40 @@ export default function OptionsChart({
 
   }, [selectedStrategy, colors, currentPrice, candleData]);
 
+  // Initialize expected price when strategy changes
+  useEffect(() => {
+    if (selectedStrategy && currentPrice && !expectedPrice) {
+      setExpectedPrice(currentPrice);
+    }
+  }, [selectedStrategy, currentPrice, expectedPrice]);
+
+  // Add/update expected price line on chart
+  useEffect(() => {
+    if (!chartRef.current || !candleSeriesRef.current || !selectedStrategy || !expectedPrice) {
+      return;
+    }
+
+    // Remove old expected price line
+    if (expectedPriceLineRef.current) {
+      candleSeriesRef.current.removePriceLine(expectedPriceLineRef.current);
+    }
+
+    // Add new expected price line
+    expectedPriceLineRef.current = candleSeriesRef.current.createPriceLine({
+      price: expectedPrice,
+      color: 'rgba(251, 146, 60, 0.8)',
+      lineWidth: 2,
+      lineStyle: 2, // Dashed
+      axisLabelVisible: true,
+      title: `Expected: $${expectedPrice.toLocaleString()}`,
+    });
+  }, [expectedPrice, selectedStrategy]);
+
+  // Calculate Net P&L based on expected price using shared helper
+  const netPnL = selectedStrategy && expectedPrice && currentPrice
+    ? calculateNetPnL(selectedStrategy, expectedPrice, currentPrice)
+    : null;
+
   return (
     <div className="h-full w-full flex flex-col" data-testid="chart-options">
       {isLoading && (
@@ -554,7 +592,7 @@ export default function OptionsChart({
       />
 
       {/* Current price indicator */}
-      {currentPrice && (
+      {currentPrice && !selectedStrategy && (
         <div className="absolute top-2 left-2 glass-strong px-3 py-1.5 rounded-md">
           <div className="flex items-center gap-2">
             <span className="text-xs text-muted-foreground">Current Price:</span>
@@ -565,9 +603,62 @@ export default function OptionsChart({
         </div>
       )}
 
-      {/* Strategy info */}
+      {/* Expected Price & Net P&L Panel (Hegic Style) */}
+      {selectedStrategy && expectedPrice && netPnL && (
+        <div className="absolute top-2 left-2 right-2 flex items-center justify-between gap-4">
+          <div className="glass-strong px-4 py-2 rounded-md border border-glass/30 flex-1">
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="text-xs text-muted-foreground block mb-1">Expected Price</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-lg font-bold text-foreground" data-testid="text-expected-price">
+                    ${expectedPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </span>
+                  <input
+                    type="range"
+                    min={(currentPrice || 0) * 0.7}
+                    max={(currentPrice || 0) * 1.3}
+                    step={(currentPrice || 0) * 0.001}
+                    value={expectedPrice}
+                    onChange={(e) => setExpectedPrice(parseFloat(e.target.value))}
+                    className="w-32 h-1 bg-glass/30 rounded-lg appearance-none cursor-pointer slider"
+                    data-testid="slider-expected-price"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <span className="text-xs text-muted-foreground block mb-1">Your Net P&L</span>
+                <div className="flex items-center gap-2">
+                  <span 
+                    className={`text-lg font-bold ${netPnL.pnl >= 0 ? 'text-success' : 'text-destructive'}`}
+                    data-testid="text-net-pnl"
+                  >
+                    {netPnL.pnl >= 0 ? '+' : ''}${netPnL.pnl.toFixed(2)}
+                  </span>
+                  <span 
+                    className={`text-sm font-semibold ${netPnL.percentage >= 0 ? 'text-success' : 'text-destructive'}`}
+                    data-testid="text-pnl-percentage"
+                  >
+                    {netPnL.percentage >= 0 ? '+' : ''}{netPnL.percentage.toFixed(1)}%
+                  </span>
+                </div>
+              </div>
+
+              <div className="text-right">
+                <span className="text-xs text-muted-foreground block mb-1">Current Price</span>
+                <span className="text-sm font-semibold text-foreground">
+                  ${(currentPrice || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Strategy info (compact when Expected Price panel is shown) */}
       {selectedStrategy && (
-        <div className="absolute top-2 right-2 glass-strong px-3 py-1.5 rounded-md max-w-xs">
+        <div className={`absolute ${expectedPrice ? 'top-16 right-2' : 'top-2 right-2'} glass-strong px-3 py-1.5 rounded-md max-w-xs`}>
           <div className="flex flex-col gap-1">
             <div className="flex items-center gap-2">
               <span className="text-xs font-semibold text-primary">{selectedStrategy.name}</span>

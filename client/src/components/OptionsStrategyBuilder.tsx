@@ -247,7 +247,7 @@ export default function OptionsStrategyBuilder({
           const date = new Date(parseInt(m.expiry) / 1_000_000);
           return date.toISOString().split('T')[0];
         })
-        .filter(Boolean)
+        .filter((date): date is string => date !== null)
     )
   ).sort();
 
@@ -350,7 +350,7 @@ export default function OptionsStrategyBuilder({
       case "short-straddle":
         const shortStraddleCredit = estimatedCallPremium + estimatedPutPremium;
         strategy.totalCost = "0";
-        strategy.maxLoss = null;
+        strategy.maxLoss = undefined;
         strategy.maxProfit = shortStraddleCredit.toFixed(6);
         strategy.lowerBreakeven = (atmStrike - shortStraddleCredit).toFixed(2);
         strategy.upperBreakeven = (atmStrike + shortStraddleCredit).toFixed(2);
@@ -359,7 +359,7 @@ export default function OptionsStrategyBuilder({
       case "short-strangle":
         const shortStrangleCredit = (estimatedCallPremium * 0.7) + (estimatedPutPremium * 0.7);
         strategy.totalCost = "0";
-        strategy.maxLoss = null;
+        strategy.maxLoss = undefined;
         strategy.maxProfit = shortStrangleCredit.toFixed(6);
         strategy.lowerBreakeven = (atmStrike - strikeOffset - shortStrangleCredit).toFixed(2);
         strategy.upperBreakeven = (atmStrike + strikeOffset + shortStrangleCredit).toFixed(2);

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { OptionsStrategy } from "@shared/schema";
+import { calculateStrategyPnL } from "@/lib/optionsCalculations";
 
 interface PayoffDiagramProps {
   strategy: Partial<OptionsStrategy> | null;
@@ -40,79 +41,15 @@ export default function PayoffDiagram({ strategy, currentPrice, asset }: PayoffD
     const maxPrice = currentPrice + priceRange;
     const priceStep = (maxPrice - minPrice) / 100;
 
-    // Calculate P&L for each price point
+    // Calculate P&L for each price point using shared helper
     const points: { price: number; pnl: number }[] = [];
     const strike = parseFloat(strategy.strike || "0");
-    const totalCost = parseFloat(strategy.totalCost || "0");
-    const maxProfit = strategy.maxProfit ? parseFloat(strategy.maxProfit) : null;
-    const maxLoss = strategy.maxLoss ? parseFloat(strategy.maxLoss) : null;
     const lowerBreakeven = strategy.lowerBreakeven ? parseFloat(strategy.lowerBreakeven) : null;
     const upperBreakeven = strategy.upperBreakeven ? parseFloat(strategy.upperBreakeven) : null;
 
-    // Generate P&L curve based on strategy type
+    // Generate P&L curve for all price points
     for (let price = minPrice; price <= maxPrice; price += priceStep) {
-      let pnl = 0;
-
-      switch (strategy.type) {
-        case "long-call":
-          pnl = Math.max(0, price - strike) - totalCost;
-          break;
-        case "long-put":
-          pnl = Math.max(0, strike - price) - totalCost;
-          break;
-        case "long-straddle":
-        case "straddle":
-          pnl = Math.max(price - strike, strike - price) - totalCost;
-          break;
-        case "long-strangle":
-          const strangleUpperStrike = strike + (currentPrice * 0.05);
-          const strangleLowerStrike = strike - (currentPrice * 0.05);
-          pnl = Math.max(
-            Math.max(0, price - strangleUpperStrike),
-            Math.max(0, strangleLowerStrike - price)
-          ) - totalCost;
-          break;
-        case "bull-call-spread":
-          const upperStrike = strike + (currentPrice * 0.05);
-          pnl = Math.max(0, Math.min(price - strike, upperStrike - strike)) - totalCost;
-          break;
-        case "bear-put-spread":
-          const lowerStrike = strike - (currentPrice * 0.05);
-          pnl = Math.max(0, Math.min(strike - price, strike - lowerStrike)) - totalCost;
-          break;
-        case "iron-condor":
-        case "butterfly":
-        case "long-condor":
-          // Simplified butterfly/condor P&L
-          const distance = Math.abs(price - strike);
-          const maxWidth = currentPrice * 0.1;
-          if (distance < maxWidth / 2) {
-            pnl = (maxProfit || totalCost) * (1 - (distance / (maxWidth / 2)));
-          } else {
-            pnl = -(maxLoss || totalCost);
-          }
-          break;
-        case "strap":
-          pnl = Math.max(2 * Math.max(0, price - strike), Math.max(0, strike - price)) - totalCost;
-          break;
-        case "strip":
-          pnl = Math.max(Math.max(0, price - strike), 2 * Math.max(0, strike - price)) - totalCost;
-          break;
-        case "short-straddle":
-          pnl = totalCost - Math.max(price - strike, strike - price);
-          break;
-        case "short-strangle":
-          const shortStrangleUpper = strike + (currentPrice * 0.05);
-          const shortStrangleLower = strike - (currentPrice * 0.05);
-          pnl = (maxProfit || 0) - Math.max(
-            Math.max(0, price - shortStrangleUpper),
-            Math.max(0, shortStrangleLower - price)
-          );
-          break;
-        default:
-          pnl = 0;
-      }
-
+      const pnl = calculateStrategyPnL(strategy, price, currentPrice);
       points.push({ price, pnl });
     }
 
@@ -314,17 +251,8 @@ export default function PayoffDiagram({ strategy, currentPrice, asset }: PayoffD
     
     const price = minPrice + ((x - padding.left) / chartWidth) * (maxPrice - minPrice);
     
-    // Calculate P&L at this price (simplified)
-    const strike = parseFloat(strategy.strike || "0");
-    const totalCost = parseFloat(strategy.totalCost || "0");
-    let pnl = 0;
-
-    // Basic P&L calculation for hover
-    if (strategy.type?.includes("call")) {
-      pnl = Math.max(0, price - strike) - totalCost;
-    } else if (strategy.type?.includes("put")) {
-      pnl = Math.max(0, strike - price) - totalCost;
-    }
+    // Calculate P&L at this price using shared helper
+    const pnl = calculateStrategyPnL(strategy, price, currentPrice);
 
     setHoveredPoint({ price, pnl });
   };
