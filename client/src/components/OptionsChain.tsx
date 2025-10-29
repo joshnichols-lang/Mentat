@@ -40,14 +40,18 @@ export default function OptionsChain({ asset, currentPrice }: OptionsChainProps)
   const [selectedExpiry, setSelectedExpiry] = useState<string | null>(null);
 
   const { data, isLoading, error } = useQuery<{ success: boolean; markets: AevoMarket[] }>({
-    queryKey: ["/api/aevo/markets", asset],
+    queryKey: [`/api/aevo/markets?asset=${asset}&instrument_type=OPTION`],
     enabled: !!asset,
   });
 
   const markets = data?.markets || [];
   
-  // Filter for options only
-  const options = markets.filter(m => m.instrument_type === 'OPTION' && m.is_active);
+  // Filter for active options matching the selected asset
+  const options = markets.filter(m => 
+    m.instrument_type === 'OPTION' && 
+    m.is_active && 
+    m.underlying_asset === asset
+  );
 
   // Get unique expiry dates
   const expiryDates = Array.from(new Set(options.map(o => o.expiry).filter(Boolean))).sort();
