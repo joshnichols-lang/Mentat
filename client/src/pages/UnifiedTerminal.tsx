@@ -861,15 +861,15 @@ function OptionsInterface() {
 
         {/* Right Panel: Options-Specific Data & AI Recommendations */}
         <ResizablePanel defaultSize={40} minSize={25} maxSize={50}>
-          <div className="h-full flex flex-col glass">
-            <Tabs defaultValue="greeks" className="flex-1 flex flex-col">
-              <TabsList className="m-2 grid grid-cols-3">
+          <div className="h-full flex flex-col glass min-h-0">
+            <Tabs defaultValue="greeks" className="flex-1 flex flex-col min-h-0">
+              <TabsList className="m-2 grid grid-cols-3 shrink-0">
                 <TabsTrigger value="greeks" data-testid="tab-greeks">Greeks</TabsTrigger>
                 <TabsTrigger value="positions" data-testid="tab-options-positions">Positions</TabsTrigger>
                 <TabsTrigger value="ai" data-testid="tab-ai-recommendations">AI Rec</TabsTrigger>
               </TabsList>
 
-              <TabsContent value="greeks" className="flex-1 m-2 mt-0 overflow-auto">
+              <TabsContent value="greeks" className="flex-1 m-2 mt-0 overflow-auto min-h-0">
                 <Card className="glass-strong border-glass/20">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-sm">Live Greeks & Market Data</CardTitle>
@@ -912,7 +912,7 @@ function OptionsInterface() {
                 </Card>
               </TabsContent>
 
-              <TabsContent value="positions" className="flex-1 m-2 mt-0 overflow-auto">
+              <TabsContent value="positions" className="flex-1 m-2 mt-0 overflow-auto min-h-0">
                 {/* OptionsPositionsGrid placeholder - will be implemented in task 10 */}
                 <Card className="glass-strong border-glass/20">
                   <CardHeader className="pb-3">
@@ -934,7 +934,7 @@ function OptionsInterface() {
                 </Card>
               </TabsContent>
 
-              <TabsContent value="ai" className="flex-1 m-2 mt-0 overflow-auto">
+              <TabsContent value="ai" className="flex-1 m-2 mt-0 overflow-auto min-h-0">
                 {/* AIStrategyRecommendations placeholder - will be implemented in task 9 */}
                 <Card className="glass-strong border-glass/20">
                   <CardHeader className="pb-3">

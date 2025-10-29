@@ -29,8 +29,8 @@ const themeColors = {
       crosshair: "rgba(255, 163, 82, 0.4)",
       crosshairBg: "#B06000",
       border: "rgba(255, 163, 82, 0.1)",
-      upColor: "#22C55E",
-      downColor: "#EF4444",
+      upColor: "#FFA352",
+      downColor: "#FF6B35",
       profitZone: "rgba(34, 197, 94, 0.15)", // Green for profit
       lossZone: "rgba(239, 68, 68, 0.15)", // Red for loss
       strikePrice: "rgba(147, 197, 253, 0.6)", // Blue for strikes
@@ -42,8 +42,8 @@ const themeColors = {
       crosshair: "rgba(176, 96, 0, 0.5)",
       crosshairBg: "#B06000",
       border: "rgba(176, 96, 0, 0.15)",
-      upColor: "#16A34A",
-      downColor: "#DC2626",
+      upColor: "#D4A500",
+      downColor: "#D64324",
       profitZone: "rgba(34, 197, 94, 0.2)",
       lossZone: "rgba(220, 38, 38, 0.2)",
       strikePrice: "rgba(59, 130, 246, 0.7)",
