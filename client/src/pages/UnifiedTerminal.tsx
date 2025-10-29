@@ -779,7 +779,7 @@ function OptionsInterface() {
       <ResizablePanelGroup direction="horizontal" className="h-full">
         {/* Left Panel: Chart + Strategy Builder (3-panel: chart 60%, strategy 20%, data 20%) */}
         <ResizablePanel defaultSize={60} minSize={40}>
-          <div className="h-full flex flex-col min-h-0">
+          <div className="h-full flex flex-col">
             {/* Options Toolbar */}
             <div className="glass border-b border-glass/20 p-2 flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -826,8 +826,8 @@ function OptionsInterface() {
             {/* Vertical Split: Chart + Strategy Builder */}
             <ResizablePanelGroup direction="vertical" className="flex-1 min-h-0">
               {/* Chart Panel (Top) */}
-              <ResizablePanel defaultSize={strategyPanelCollapsed ? 100 : 50} minSize={30}>
-                <div className="h-full relative">
+              <ResizablePanel defaultSize={strategyPanelCollapsed ? 100 : 70} minSize={30}>
+                <div className="h-full relative min-h-0">
                   <OptionsChart 
                     asset={selectedAsset}
                     selectedStrategy={selectedStrategy}
@@ -840,8 +840,8 @@ function OptionsInterface() {
               {!strategyPanelCollapsed && (
                 <>
                   <ResizableHandle withHandle className="bg-glass-border/30" />
-                  <ResizablePanel defaultSize={50} minSize={30} maxSize={70}>
-                    <div className="h-full border-t border-glass/20">
+                  <ResizablePanel defaultSize={30} minSize={15} maxSize={50}>
+                    <div className="h-full border-t border-glass/20 min-h-0">
                       <OptionsStrategyBuilder 
                         asset={selectedAsset}
                         currentPrice={currentPrice}

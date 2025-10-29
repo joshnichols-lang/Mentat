@@ -493,7 +493,7 @@ export default function OptionsChart({
       
       <div 
         ref={chartContainerRef} 
-        className="flex-1 relative"
+        className="flex-1 relative min-h-0"
         data-testid="chart-options-container"
       />
 
