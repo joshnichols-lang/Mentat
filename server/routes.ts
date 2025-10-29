@@ -2799,30 +2799,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const asset = req.query.asset as string | undefined;
       const instrumentType = req.query.instrument_type as 'OPTION' | 'PERPETUAL' | undefined;
       
-      // For now, return mock data until we have live Aevo integration
-      // In production, this would call AevoClient.getMarkets()
-      const mockMarkets = [
-        {
-          instrument_id: "1",
-          instrument_name: "ETH-31MAR25-2000-C",
-          instrument_type: "OPTION",
-          option_type: "call",
-          underlying_asset: "ETH",
-          strike: "2000",
-          expiry: Date.now() + (30 * 24 * 60 * 60 * 1000), // 30 days from now
-          mark_price: "125.50",
-          is_active: true,
-          greeks: {
-            delta: "0.65",
-            gamma: "0.003",
-            theta: "-1.2",
-            vega: "0.45",
-            rho: "0.02",
-          },
-        },
-      ];
+      // Fetch live markets from Aevo public API
+      const axios = (await import('axios')).default;
+      const baseUrl = 'https://api.aevo.xyz';
+      const params: any = {};
+      if (asset) params.asset = asset;
+      if (instrumentType) params.instrument_type = instrumentType;
       
-      res.json({ success: true, markets: mockMarkets });
+      const response = await axios.get<any[]>(`${baseUrl}/markets`, { params });
+      const markets = response.data;
+      
+      res.json({ success: true, markets });
     } catch (error: any) {
       console.error("Error fetching Aevo markets:", error);
       res.status(500).json({ success: false, error: "Failed to fetch markets" });

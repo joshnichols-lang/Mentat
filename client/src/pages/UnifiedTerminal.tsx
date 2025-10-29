@@ -34,6 +34,8 @@ import MarketSelector from "@/components/MarketSelector";
 import GridDashboard from "@/components/GridDashboard";
 import Widget from "@/components/Widget";
 import LiveGreeks from "@/components/LiveGreeks";
+import AssetSelector from "@/components/AssetSelector";
+import OptionsChain from "@/components/OptionsChain";
 import { 
   Flame,
   Vote,
@@ -735,10 +737,11 @@ function OptionsInterface() {
 
   // Default grid layouts for options panels
   const defaultLayouts = [
-    { i: "chart", x: 0, y: 0, w: 8, h: 12 },
-    { i: "strategy", x: 0, y: 12, w: 8, h: 8 },
-    { i: "greeks", x: 8, y: 0, w: 4, h: 10 },
-    { i: "positions", x: 8, y: 10, w: 4, h: 10 },
+    { i: "chart", x: 0, y: 0, w: 8, h: 14 },
+    { i: "strategy", x: 0, y: 14, w: 8, h: 10 },
+    { i: "optionsChain", x: 8, y: 0, w: 4, h: 11 },
+    { i: "greeks", x: 8, y: 11, w: 4, h: 7 },
+    { i: "positions", x: 8, y: 18, w: 4, h: 6 },
   ];
 
   return (
@@ -748,13 +751,10 @@ function OptionsInterface() {
         <div className="flex items-center gap-2">
           <Layers className="h-4 w-4 text-primary" />
           <h3 className="text-sm font-semibold">Options Trading</h3>
-          <Badge 
-            variant="outline" 
-            className="bg-primary/10 text-primary border-primary/30"
-            data-testid="badge-selected-asset"
-          >
-            {selectedAsset}
-          </Badge>
+          <AssetSelector
+            selectedAsset={selectedAsset}
+            onAssetChange={setSelectedAsset}
+          />
         </div>
 
         <div className="flex items-center gap-2">
@@ -807,8 +807,17 @@ function OptionsInterface() {
           </Widget>
         </div>
 
+        <div key="optionsChain">
+          <Widget id="optionsChain" title="Options Chain">
+            <OptionsChain 
+              asset={selectedAsset}
+              currentPrice={currentPrice}
+            />
+          </Widget>
+        </div>
+
         <div key="greeks">
-          <Widget id="greeks" title="Live Greeks & Market Data">
+          <Widget id="greeks" title="Live Greeks">
             <LiveGreeks 
               asset={selectedAsset}
               instrumentName={selectedStrategy?.instrumentName}
