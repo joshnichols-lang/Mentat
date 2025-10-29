@@ -53,34 +53,66 @@ const SENTIMENT_OPTIONS = [
 ];
 
 const SIMPLE_STRATEGIES = [
+  // Bullish Strategies
   {
-    id: "long-straddle",
-    name: "Long Straddle",
-    sentiment: "volatile" as Sentiment,
-    description: "Buy Call + Put at same strike",
-    expectedMove: "High profits if price rises or falls significantly",
-    icon: <Minus className="h-4 w-4" />,
-    color: "bg-primary/10 text-primary border-primary/30",
+    id: "long-call",
+    name: "Call",
+    sentiment: "bullish" as Sentiment,
+    description: "Buy Call",
+    expectedMove: "High profits if the price rises sharply",
+    icon: <TrendingUp className="h-4 w-4" />,
+    color: "bg-long/10 text-long border-long/30",
     discount: null,
   },
   {
-    id: "long-strangle",
-    name: "Long Strangle",
-    sentiment: "volatile" as Sentiment,
-    description: "Buy OTM Call + OTM Put",
-    expectedMove: "Low cost, very high profits if explosive moves",
-    icon: <RefreshCw className="h-4 w-4" />,
-    color: "bg-accent/10 text-accent border-accent/30",
-    discount: "10% discount",
+    id: "strap",
+    name: "Strap",
+    sentiment: "bullish" as Sentiment,
+    description: "2 Calls + 1 Put",
+    expectedMove: "High profits if the price rises sharply, reasonable profits if the price falls",
+    icon: <TrendingUp className="h-4 w-4" />,
+    color: "bg-long/10 text-long border-long/30",
+    discount: null,
   },
   {
     id: "bull-call-spread",
     name: "Bull Call Spread",
     sentiment: "bullish" as Sentiment,
     description: "Buy Call + Sell higher Call",
-    expectedMove: "Decent profits if price rises to certain level",
+    expectedMove: "Low cost, decent profits if the price rises to a certain level",
     icon: <TrendingUp className="h-4 w-4" />,
     color: "bg-long/10 text-long border-long/30",
+    discount: null,
+  },
+  {
+    id: "bull-put-spread",
+    name: "Bull Put Spread",
+    sentiment: "bullish" as Sentiment,
+    description: "Sell Put + Buy lower Put",
+    expectedMove: "Low cost, decent profits if the price stays at a certain level or rises",
+    icon: <TrendingUp className="h-4 w-4" />,
+    color: "bg-long/10 text-long border-long/30",
+    discount: null,
+  },
+  // Bearish Strategies
+  {
+    id: "long-put",
+    name: "Put",
+    sentiment: "bearish" as Sentiment,
+    description: "Buy Put",
+    expectedMove: "High profits if the price falls sharply",
+    icon: <TrendingDown className="h-4 w-4" />,
+    color: "bg-short/10 text-short border-short/30",
+    discount: null,
+  },
+  {
+    id: "strip",
+    name: "Strip",
+    sentiment: "bearish" as Sentiment,
+    description: "1 Call + 2 Puts",
+    expectedMove: "High profits if the price falls sharply, reasonable profits if the price rises",
+    icon: <TrendingDown className="h-4 w-4" />,
+    color: "bg-short/10 text-short border-short/30",
     discount: null,
   },
   {
@@ -88,9 +120,81 @@ const SIMPLE_STRATEGIES = [
     name: "Bear Put Spread",
     sentiment: "bearish" as Sentiment,
     description: "Buy Put + Sell lower Put",
-    expectedMove: "Decent profits if price stays at certain level or rises",
+    expectedMove: "Low cost, decent profits if the price falls to a certain level",
     icon: <TrendingDown className="h-4 w-4" />,
     color: "bg-short/10 text-short border-short/30",
+    discount: null,
+  },
+  {
+    id: "bear-call-spread",
+    name: "Bear Call Spread",
+    sentiment: "bearish" as Sentiment,
+    description: "Sell Call + Buy higher Call",
+    expectedMove: "Low cost, decent profits if the price stays at a certain level or falls",
+    icon: <TrendingDown className="h-4 w-4" />,
+    color: "bg-short/10 text-short border-short/30",
+    discount: null,
+  },
+  // High Volatility Strategies
+  {
+    id: "long-straddle",
+    name: "Straddle",
+    sentiment: "volatile" as Sentiment,
+    description: "Buy Call + Put at same strike",
+    expectedMove: "High profits if the price rises or falls sharply during the period of holding",
+    icon: <Activity className="h-4 w-4" />,
+    color: "bg-primary/10 text-primary border-primary/30",
+    discount: "10% discount",
+  },
+  {
+    id: "long-strangle",
+    name: "Strangle",
+    sentiment: "volatile" as Sentiment,
+    description: "Buy OTM Call + OTM Put",
+    expectedMove: "Low cost, very high profits if the price rises or falls significantly",
+    icon: <RefreshCw className="h-4 w-4" />,
+    color: "bg-accent/10 text-accent border-accent/30",
+    discount: null,
+  },
+  {
+    id: "short-straddle",
+    name: "Short Straddle",
+    sentiment: "volatile" as Sentiment,
+    description: "Sell Call + Put at same strike",
+    expectedMove: "Profit if price stays near strike, unlimited risk if price moves sharply",
+    icon: <Activity className="h-4 w-4" />,
+    color: "bg-destructive/10 text-destructive border-destructive/30",
+    discount: null,
+  },
+  {
+    id: "short-strangle",
+    name: "Short Strangle",
+    sentiment: "volatile" as Sentiment,
+    description: "Sell OTM Call + OTM Put",
+    expectedMove: "Profit if price stays in range, high risk if price breaks out",
+    icon: <RefreshCw className="h-4 w-4" />,
+    color: "bg-destructive/10 text-destructive border-destructive/30",
+    discount: null,
+  },
+  // Low Volatility / Neutral Strategies
+  {
+    id: "butterfly",
+    name: "Long Butterfly",
+    sentiment: "neutral" as Sentiment,
+    description: "ATM + 2 OTM",
+    expectedMove: "Low cost, high profits if the price is about a strike price",
+    icon: <Sparkles className="h-4 w-4" />,
+    color: "bg-primary/10 text-primary border-primary/30",
+    discount: null,
+  },
+  {
+    id: "long-condor",
+    name: "Long Condor",
+    sentiment: "neutral" as Sentiment,
+    description: "4 strikes spread",
+    expectedMove: "Decent profits if the price changes slightly",
+    icon: <Layers className="h-4 w-4" />,
+    color: "bg-muted/10 text-muted-foreground border-muted/30",
     discount: null,
   },
   {
@@ -98,19 +202,19 @@ const SIMPLE_STRATEGIES = [
     name: "Iron Condor",
     sentiment: "neutral" as Sentiment,
     description: "OTM Call + Put spreads",
-    expectedMove: "Low cost, decent profits if price stays at certain level or rises",
+    expectedMove: "Low cost, decent profits if price stays in a range",
     icon: <Minus className="h-4 w-4" />,
     color: "bg-muted/10 text-muted-foreground border-muted/30",
     discount: null,
   },
   {
-    id: "butterfly",
-    name: "Long Butterfly",
+    id: "iron-butterfly",
+    name: "Iron Butterfly",
     sentiment: "neutral" as Sentiment,
-    description: "ATM + 2 OTM",
-    expectedMove: "High profits if price falls to certain level",
+    description: "ATM straddle + OTM strangle",
+    expectedMove: "Maximum profit if price stays at strike, limited risk",
     icon: <Sparkles className="h-4 w-4" />,
-    color: "bg-primary/10 text-primary border-primary/30",
+    color: "bg-muted/10 text-muted-foreground border-muted/30",
     discount: null,
   },
 ];
@@ -185,8 +289,45 @@ export default function OptionsStrategyBuilder({
     };
 
     switch (strategyId) {
+      // Simple Calls and Puts
+      case "long-call":
+        strategy.totalCost = estimatedCallPremium.toFixed(6);
+        strategy.maxLoss = estimatedCallPremium.toFixed(6);
+        strategy.maxProfit = null;
+        strategy.lowerBreakeven = null;
+        strategy.upperBreakeven = (atmStrike + estimatedCallPremium).toFixed(2);
+        break;
+
+      case "long-put":
+        strategy.totalCost = estimatedPutPremium.toFixed(6);
+        strategy.maxLoss = estimatedPutPremium.toFixed(6);
+        strategy.maxProfit = (atmStrike - estimatedPutPremium).toFixed(6);
+        strategy.lowerBreakeven = (atmStrike - estimatedPutPremium).toFixed(2);
+        strategy.upperBreakeven = null;
+        break;
+
+      // Straps and Strips
+      case "strap":
+        const strapCost = (2 * estimatedCallPremium) + estimatedPutPremium;
+        strategy.totalCost = strapCost.toFixed(6);
+        strategy.maxLoss = strapCost.toFixed(6);
+        strategy.maxProfit = null;
+        strategy.lowerBreakeven = (atmStrike - (strapCost / 1.5)).toFixed(2);
+        strategy.upperBreakeven = (atmStrike + (strapCost / 2.5)).toFixed(2);
+        break;
+
+      case "strip":
+        const stripCost = estimatedCallPremium + (2 * estimatedPutPremium);
+        strategy.totalCost = stripCost.toFixed(6);
+        strategy.maxLoss = stripCost.toFixed(6);
+        strategy.maxProfit = null;
+        strategy.lowerBreakeven = (atmStrike - (stripCost / 2.5)).toFixed(2);
+        strategy.upperBreakeven = (atmStrike + (stripCost / 1.5)).toFixed(2);
+        break;
+
+      // Straddles and Strangles
       case "long-straddle":
-        const straddleCost = estimatedCallPremium + estimatedPutPremium;
+        const straddleCost = (estimatedCallPremium + estimatedPutPremium) * 0.9; // 10% discount
         strategy.totalCost = straddleCost.toFixed(6);
         strategy.maxLoss = straddleCost.toFixed(6);
         strategy.maxProfit = null;
@@ -197,7 +338,7 @@ export default function OptionsStrategyBuilder({
       case "long-strangle":
         const otmCallStrike = atmStrike + strikeOffset;
         const otmPutStrike = atmStrike - strikeOffset;
-        const strangleCost = (estimatedCallPremium * 0.7 + estimatedPutPremium * 0.7) * 0.9; // 10% discount
+        const strangleCost = estimatedCallPremium * 0.7 + estimatedPutPremium * 0.7;
         strategy.strike = atmStrike.toString();
         strategy.totalCost = strangleCost.toFixed(6);
         strategy.maxLoss = strangleCost.toFixed(6);
@@ -206,6 +347,25 @@ export default function OptionsStrategyBuilder({
         strategy.upperBreakeven = (otmCallStrike + strangleCost).toFixed(2);
         break;
 
+      case "short-straddle":
+        const shortStraddleCredit = estimatedCallPremium + estimatedPutPremium;
+        strategy.totalCost = "0";
+        strategy.maxLoss = null;
+        strategy.maxProfit = shortStraddleCredit.toFixed(6);
+        strategy.lowerBreakeven = (atmStrike - shortStraddleCredit).toFixed(2);
+        strategy.upperBreakeven = (atmStrike + shortStraddleCredit).toFixed(2);
+        break;
+
+      case "short-strangle":
+        const shortStrangleCredit = (estimatedCallPremium * 0.7) + (estimatedPutPremium * 0.7);
+        strategy.totalCost = "0";
+        strategy.maxLoss = null;
+        strategy.maxProfit = shortStrangleCredit.toFixed(6);
+        strategy.lowerBreakeven = (atmStrike - strikeOffset - shortStrangleCredit).toFixed(2);
+        strategy.upperBreakeven = (atmStrike + strikeOffset + shortStrangleCredit).toFixed(2);
+        break;
+
+      // Spreads
       case "bull-call-spread":
         const spreadWidth = strikeOffset;
         const spreadCost = estimatedCallPremium - (estimatedCallPremium * 0.5);
@@ -214,6 +374,16 @@ export default function OptionsStrategyBuilder({
         strategy.maxProfit = (spreadWidth - spreadCost).toFixed(6);
         strategy.lowerBreakeven = (atmStrike + spreadCost).toFixed(2);
         strategy.upperBreakeven = (atmStrike + spreadWidth).toFixed(2);
+        break;
+
+      case "bull-put-spread":
+        const bullPutCredit = estimatedPutPremium - (estimatedPutPremium * 0.5);
+        const bullPutWidth = strikeOffset;
+        strategy.totalCost = "0";
+        strategy.maxLoss = (bullPutWidth - bullPutCredit).toFixed(6);
+        strategy.maxProfit = bullPutCredit.toFixed(6);
+        strategy.lowerBreakeven = (atmStrike - bullPutWidth).toFixed(2);
+        strategy.upperBreakeven = (atmStrike - bullPutCredit).toFixed(2);
         break;
 
       case "bear-put-spread":
@@ -226,6 +396,36 @@ export default function OptionsStrategyBuilder({
         strategy.upperBreakeven = (atmStrike - putSpreadCost).toFixed(2);
         break;
 
+      case "bear-call-spread":
+        const bearCallCredit = estimatedCallPremium - (estimatedCallPremium * 0.5);
+        const bearCallWidth = strikeOffset;
+        strategy.totalCost = "0";
+        strategy.maxLoss = (bearCallWidth - bearCallCredit).toFixed(6);
+        strategy.maxProfit = bearCallCredit.toFixed(6);
+        strategy.lowerBreakeven = (atmStrike + bearCallCredit).toFixed(2);
+        strategy.upperBreakeven = (atmStrike + bearCallWidth).toFixed(2);
+        break;
+
+      // Complex Strategies
+      case "butterfly":
+        const butterflyDebit = estimatedCallPremium * 0.25;
+        strategy.totalCost = butterflyDebit.toFixed(6);
+        strategy.maxLoss = butterflyDebit.toFixed(6);
+        strategy.maxProfit = (strikeOffset - butterflyDebit).toFixed(6);
+        strategy.lowerBreakeven = (atmStrike - (strikeOffset - butterflyDebit)).toFixed(2);
+        strategy.upperBreakeven = (atmStrike + (strikeOffset - butterflyDebit)).toFixed(2);
+        break;
+
+      case "long-condor":
+        const condorDebit = estimatedCallPremium * 0.15;
+        const condorRange = strikeOffset * 1.5;
+        strategy.totalCost = condorDebit.toFixed(6);
+        strategy.maxLoss = condorDebit.toFixed(6);
+        strategy.maxProfit = (strikeOffset - condorDebit).toFixed(6);
+        strategy.lowerBreakeven = (atmStrike - condorRange + condorDebit).toFixed(2);
+        strategy.upperBreakeven = (atmStrike + condorRange - condorDebit).toFixed(2);
+        break;
+
       case "iron-condor":
         const condorCredit = estimatedCallPremium * 0.4 + estimatedPutPremium * 0.4;
         const condorWidth = strikeOffset * 0.5;
@@ -236,13 +436,14 @@ export default function OptionsStrategyBuilder({
         strategy.upperBreakeven = (atmStrike + strikeOffset + condorCredit).toFixed(2);
         break;
 
-      case "butterfly":
-        const butterflyDebit = estimatedCallPremium * 0.25;
-        strategy.totalCost = butterflyDebit.toFixed(6);
-        strategy.maxLoss = butterflyDebit.toFixed(6);
-        strategy.maxProfit = (strikeOffset - butterflyDebit).toFixed(6);
-        strategy.lowerBreakeven = (atmStrike - (strikeOffset - butterflyDebit)).toFixed(2);
-        strategy.upperBreakeven = (atmStrike + (strikeOffset - butterflyDebit)).toFixed(2);
+      case "iron-butterfly":
+        const ironButterflyCredit = estimatedCallPremium * 0.3 + estimatedPutPremium * 0.3;
+        const ironButterflyWidth = strikeOffset;
+        strategy.totalCost = "0";
+        strategy.maxLoss = (ironButterflyWidth - ironButterflyCredit).toFixed(6);
+        strategy.maxProfit = ironButterflyCredit.toFixed(6);
+        strategy.lowerBreakeven = (atmStrike - ironButterflyCredit).toFixed(2);
+        strategy.upperBreakeven = (atmStrike + ironButterflyCredit).toFixed(2);
         break;
     }
 
