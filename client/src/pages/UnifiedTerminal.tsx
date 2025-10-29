@@ -25,6 +25,7 @@ import { DrawdownChart } from "@/components/DrawdownChart";
 import { PositionROEChart } from "@/components/PositionROEChart";
 import TradingChart from "@/components/TradingChart";
 import OptionsChart from "@/components/OptionsChart";
+import OptionsStrategyBuilder from "@/components/OptionsStrategyBuilder";
 import OrderBook from "@/components/OrderBook";
 import RecentTrades from "@/components/RecentTrades";
 import OrderEntryPanel from "@/components/OrderEntryPanel";
@@ -770,6 +771,8 @@ function OptionsInterface() {
   const [selectedAsset, setSelectedAsset] = useState("ETH");
   const [mode, setMode] = useState<"simple" | "pro">("simple");
   const [strategyPanelCollapsed, setStrategyPanelCollapsed] = useState(false);
+  const [selectedStrategy, setSelectedStrategy] = useState<any>(null);
+  const [currentPrice, setCurrentPrice] = useState(4000); // Default ETH price, will update from chart
 
   return (
     <div className="flex-1 overflow-hidden">
@@ -827,7 +830,8 @@ function OptionsInterface() {
                 <div className="h-full w-full relative p-2">
                   <OptionsChart 
                     asset={selectedAsset}
-                    selectedStrategy={null}
+                    selectedStrategy={selectedStrategy}
+                    onPriceUpdate={setCurrentPrice}
                   />
                 </div>
               </ResizablePanel>
@@ -837,51 +841,14 @@ function OptionsInterface() {
                 <>
                   <ResizableHandle withHandle className="bg-glass-border/30" />
                   <ResizablePanel defaultSize={35} minSize={20} maxSize={60}>
-                    <div className="h-full border-t border-glass/20 overflow-auto">
-                      {/* OptionsStrategyBuilder placeholder - will be implemented in task 8 */}
-                      <div className="p-4">
-                        <Card className="glass border-glass/20">
-                          <CardHeader className="pb-3">
-                            <CardTitle className="text-sm flex items-center gap-2">
-                              <Layers className="h-4 w-4 text-primary" />
-                              Strategy Builder ({mode === "simple" ? "Simple Mode" : "Pro Mode"})
-                            </CardTitle>
-                          </CardHeader>
-                          <CardContent className="space-y-3 text-sm text-foreground/70">
-                            {mode === "simple" ? (
-                              <div className="space-y-2">
-                                <p>One-click strategy execution:</p>
-                                <div className="grid grid-cols-3 gap-2 mt-2">
-                                  <Button variant="outline" size="sm" disabled data-testid="button-strategy-straddle">
-                                    Straddle
-                                  </Button>
-                                  <Button variant="outline" size="sm" disabled data-testid="button-strategy-strap">
-                                    Strap
-                                  </Button>
-                                  <Button variant="outline" size="sm" disabled data-testid="button-strategy-strip">
-                                    Strip
-                                  </Button>
-                                </div>
-                                <div className="text-xs text-foreground/50 mt-3">
-                                  📋 Task 8: Simple mode - auto-filled parameters
-                                </div>
-                              </div>
-                            ) : (
-                              <div className="space-y-2">
-                                <p>Manual strike/expiry selection:</p>
-                                <div className="space-y-2 mt-2">
-                                  <div className="text-xs text-foreground/50">Strike: --</div>
-                                  <div className="text-xs text-foreground/50">Expiry: --</div>
-                                  <div className="text-xs text-foreground/50">Size: --</div>
-                                </div>
-                                <div className="text-xs text-foreground/50 mt-3">
-                                  📋 Task 8: Pro mode - full customization
-                                </div>
-                              </div>
-                            )}
-                          </CardContent>
-                        </Card>
-                      </div>
+                    <div className="h-full border-t border-glass/20 overflow-auto p-2">
+                      <OptionsStrategyBuilder 
+                        asset={selectedAsset}
+                        currentPrice={currentPrice}
+                        mode={mode}
+                        onModeChange={setMode}
+                        onStrategySelect={setSelectedStrategy}
+                      />
                     </div>
                   </ResizablePanel>
                 </>
