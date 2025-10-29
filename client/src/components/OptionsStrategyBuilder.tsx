@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -203,13 +202,13 @@ export default function OptionsStrategyBuilder({
   };
 
   return (
-    <Card className="glass border-glass/20 h-full flex flex-col">
-      <CardHeader className="pb-3 border-b border-glass/20">
+    <div className="h-full flex flex-col glass">
+      <div className="p-4 pb-3 border-b border-glass/20">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-sm flex items-center gap-2">
+          <h3 className="text-sm font-semibold flex items-center gap-2">
             <Layers className="h-4 w-4 text-primary" />
             Strategy Builder
-          </CardTitle>
+          </h3>
           
           {/* Mode Toggle */}
           <Tabs value={mode} onValueChange={(v) => onModeChange(v as "simple" | "pro")}>
@@ -225,9 +224,9 @@ export default function OptionsStrategyBuilder({
             </TabsList>
           </Tabs>
         </div>
-      </CardHeader>
+      </div>
 
-      <CardContent className="flex-1 overflow-auto p-4 space-y-4">
+      <div className="flex-1 overflow-auto p-4 space-y-4">
         {mode === "simple" ? (
           // SIMPLE MODE: One-click strategy selection
           <>
@@ -444,7 +443,7 @@ export default function OptionsStrategyBuilder({
             </p>
           </>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
