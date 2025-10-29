@@ -824,7 +824,7 @@ function OptionsInterface() {
             <ResizablePanelGroup direction="vertical" className="flex-1">
               {/* Chart Panel (Top) */}
               <ResizablePanel defaultSize={strategyPanelCollapsed ? 100 : 65} minSize={30}>
-                <div className="h-full relative">
+                <div className="h-full w-full relative p-2">
                   <OptionsChart 
                     asset={selectedAsset}
                     selectedStrategy={null}
