@@ -915,12 +915,26 @@ export const optionsOrders = pgTable("options_orders", {
   index("idx_options_orders_aevo").on(table.aevoOrderId),
 ]);
 
+// Panel Layouts - Stores user's customizable dashboard layouts
+export const panelLayouts = pgTable("panel_layouts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  tab: text("tab").notNull(), // "perpetuals", "options", "predictions", "analytics"
+  layoutData: jsonb("layout_data").notNull(), // Array of {i, x, y, w, h, minW, minH} for react-grid-layout
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+}, (table) => [
+  uniqueIndex("unique_user_tab_layout").on(table.userId, table.tab),
+  index("idx_panel_layouts_user").on(table.userId),
+]);
+
 // Zod schemas and types
 export const insertAdvancedOrderSchema = createInsertSchema(advancedOrders).omit({ id: true, createdAt: true });
 export const insertAdvancedOrderExecutionSchema = createInsertSchema(advancedOrderExecutions).omit({ id: true, timestamp: true });
 export const insertOptionsStrategySchema = createInsertSchema(optionsStrategies).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertOptionsPositionSchema = createInsertSchema(optionsPositions).omit({ id: true, openedAt: true, updatedAt: true });
 export const insertOptionsOrderSchema = createInsertSchema(optionsOrders).omit({ id: true, createdAt: true });
+export const insertPanelLayoutSchema = createInsertSchema(panelLayouts).omit({ id: true, createdAt: true, updatedAt: true });
 
 export type InsertAdvancedOrder = z.infer<typeof insertAdvancedOrderSchema>;
 export type AdvancedOrder = typeof advancedOrders.$inferSelect;
@@ -932,3 +946,5 @@ export type InsertOptionsPosition = z.infer<typeof insertOptionsPositionSchema>;
 export type OptionsPosition = typeof optionsPositions.$inferSelect;
 export type InsertOptionsOrder = z.infer<typeof insertOptionsOrderSchema>;
 export type OptionsOrder = typeof optionsOrders.$inferSelect;
+export type InsertPanelLayout = z.infer<typeof insertPanelLayoutSchema>;
+export type PanelLayout = typeof panelLayouts.$inferSelect;
