@@ -775,8 +775,8 @@ function OptionsInterface() {
   const [currentPrice, setCurrentPrice] = useState(4000); // Default ETH price, will update from chart
 
   return (
-    <div className="flex-1 overflow-hidden">
-      <ResizablePanelGroup direction="horizontal" className="h-full">
+    <div className="h-full w-full overflow-hidden">
+      <ResizablePanelGroup direction="horizontal" className="h-full w-full">
         {/* Left Panel: Chart + Strategy Builder (3-panel: chart 60%, strategy 20%, data 20%) */}
         <ResizablePanel defaultSize={60} minSize={40}>
           <div className="h-full flex flex-col">
