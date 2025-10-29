@@ -775,8 +775,8 @@ function OptionsInterface() {
   const [currentPrice, setCurrentPrice] = useState(4000); // Default ETH price, will update from chart
 
   return (
-    <div className="flex flex-col flex-1 min-h-0">
-      <ResizablePanelGroup direction="horizontal" className="flex-1 min-h-0">
+    <div className="flex-1 overflow-hidden">
+      <ResizablePanelGroup direction="horizontal" className="h-full">
         {/* Left Panel: Chart + Strategy Builder (3-panel: chart 60%, strategy 20%, data 20%) */}
         <ResizablePanel defaultSize={60} minSize={40}>
           <div className="h-full flex flex-col">
@@ -1200,7 +1200,7 @@ export default function UnifiedTerminal() {
                   <PredictionMarketsInterface />
                 </TabsContent>
 
-                <TabsContent value="options" className="m-0 flex-1 flex flex-col overflow-hidden min-h-0">
+                <TabsContent value="options" className="m-0 flex-1 flex flex-col">
                   <OptionsInterface />
                 </TabsContent>
 
