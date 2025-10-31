@@ -64,14 +64,26 @@ export class AevoWebSocketService {
   }
 
   private initializeWebSocketServer() {
-    // Create WebSocket server for client connections
+    // Create WebSocket server WITHOUT automatic server binding
+    // We'll manually handle upgrade events to avoid conflicts with Vite HMR
     this.wss = new WebSocketServer({ 
-      server: this.server,
-      path: "/aevo-market-data",
+      noServer: true,
       perMessageDeflate: false
     });
 
     console.log("[Aevo WS] WebSocket server created on path: /aevo-market-data");
+
+    // Manually handle upgrade requests for /aevo-market-data path only
+    this.server.on("upgrade", (req, socket, head) => {
+      console.log("[Aevo WS] Upgrade request for:", req.url);
+      if (req.url === "/aevo-market-data") {
+        console.log("[Aevo WS] Handling upgrade for /aevo-market-data");
+        this.wss!.handleUpgrade(req, socket, head, (ws) => {
+          this.wss!.emit("connection", ws, req);
+        });
+      }
+      // Otherwise, let other handlers (Vite HMR, Market Data WS) handle it
+    });
 
     this.wss.on("connection", (ws: WebSocket, req) => {
       console.log("[Aevo WS] Client connected from:", req.url, req.headers.origin);

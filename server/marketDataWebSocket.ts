@@ -53,11 +53,23 @@ export class MarketDataWebSocketService {
   }
 
   private initializeWebSocketServer() {
-    // Create WebSocket server for client connections
+    // Create WebSocket server WITHOUT automatic server binding
+    // We'll manually handle upgrade events to avoid conflicts with Vite HMR
     this.wss = new WebSocketServer({ 
-      server: this.server,
-      path: "/market-data",
+      noServer: true,
       perMessageDeflate: false
+    });
+
+    // Manually handle upgrade requests for /market-data path only
+    this.server.on("upgrade", (req, socket, head) => {
+      console.log("[Market Data WS] Upgrade request for:", req.url);
+      if (req.url === "/market-data") {
+        console.log("[Market Data WS] Handling upgrade for /market-data");
+        this.wss!.handleUpgrade(req, socket, head, (ws) => {
+          this.wss!.emit("connection", ws, req);
+        });
+      }
+      // Otherwise, let other handlers (Vite HMR, Aevo WS) handle it
     });
 
     this.wss.on("connection", (ws: WebSocket) => {
