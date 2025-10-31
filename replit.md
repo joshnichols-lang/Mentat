@@ -24,7 +24,7 @@ Preferred communication style: Simple, everyday language.
 **Server:** Express.js with TypeScript.
 **Database:** PostgreSQL with Drizzle ORM.
 **API:** RESTful endpoints for trading, data, and exchange interactions.
-**Authentication & Security:** Passport.js with PostgreSQL session persistence, wallet-based authentication via RainbowKit, and automatic signature requests for session and embedded wallet generation. AES-256-GCM encryption for API keys.
+**Authentication & Security:** Passport.js with PostgreSQL session persistence, wallet-based authentication via RainbowKit with enhanced visual feedback and error handling. Features phased authentication flow with status tracking ('idle' → 'signing' → 'creating_wallet' → 'complete'), user-controlled retry mechanism with race condition prevention (`isManualRetrying` guard), and automatic signature requests for session and embedded wallet generation. AES-256-GCM encryption for API keys. **Recent Improvements (Oct 31, 2025):** Fixed infinite loop in embedded wallet creation by implementing single-attempt enforcement with `walletCreationAttempted` guard, added visual loading indicators for each auth phase, enhanced error messages (signature rejection, nonce fetch failure, wallet creation errors), and implemented manual retry with clear user control.
 **Multi-Chain Wallet System:** Non-custodial, BIP39-derived multi-chain wallet generation; seed phrases are shown once and never stored. A separate, encrypted API wallet is used for Hyperliquid trading.
 **AI Integration:**
 - **Tiered AI Provider System:** Supports Platform AI and Personal AI Keys (Perplexity, OpenAI, xAI), defaulting to xAI Grok 4.
