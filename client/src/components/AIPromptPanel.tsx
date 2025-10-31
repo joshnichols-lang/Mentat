@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { Send, CheckCircle2, AlertCircle, Info, Image, X, Target } from "lucide-react";
+import { Send, CheckCircle2, AlertCircle, Info, Image, X, Target, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
@@ -11,6 +11,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import logoUrl from "@assets/1fox-removebg-preview(1)_1761259210534.png";
 
 interface ExecutionResult {
@@ -45,6 +46,8 @@ export default function AIPromptPanel() {
   const [renameDialogOpen, setRenameDialogOpen] = useState(false);
   const [newStrategyName, setNewStrategyName] = useState("");
   const [strategyToRename, setStrategyToRename] = useState<any>(null);
+  const [portfolioAnalysisOpen, setPortfolioAnalysisOpen] = useState(false);
+  const [portfolioAnalysis, setPortfolioAnalysis] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -98,6 +101,43 @@ export default function AIPromptPanel() {
         variant: "destructive",
         title: "Error",
         description: error.message || "Failed to rename strategy",
+      });
+    },
+  });
+
+  const analyzePortfolioMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/ai/analyze-portfolio", {});
+      return await res.json();
+    },
+    onSuccess: (data: any) => {
+      console.log("Portfolio analysis response:", data);
+      setPortfolioAnalysis(data.analysis);
+      setPortfolioAnalysisOpen(true);
+      
+      // Refresh AI usage data
+      queryClient.invalidateQueries({ queryKey: ["/api/ai/usage"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/ai/cost"] });
+      
+      toast({
+        title: "Portfolio Analysis Complete",
+        description: `Analyzed ${data.portfolio.positionCounts.perpetuals + data.portfolio.positionCounts.options + data.portfolio.positionCounts.predictions} positions across all exchanges`,
+      });
+    },
+    onError: (error: any) => {
+      console.error("Portfolio analysis error:", error);
+      
+      let errorMessage = "Failed to analyze portfolio";
+      if (error.data?.error) {
+        errorMessage = error.data.error;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      toast({
+        title: "Analysis Failed",
+        description: errorMessage,
+        variant: "destructive",
       });
     },
   });
@@ -256,6 +296,17 @@ export default function AIPromptPanel() {
 
   return (
     <div className="space-y-3">
+      <Button 
+        variant="outline" 
+        className="w-full justify-start gap-2" 
+        onClick={() => analyzePortfolioMutation.mutate()}
+        disabled={analyzePortfolioMutation.isPending}
+        data-testid="button-analyze-portfolio"
+      >
+        <TrendingUp className="h-4 w-4" />
+        {analyzePortfolioMutation.isPending ? "Analyzing Portfolio..." : "Analyze Complete Portfolio"}
+      </Button>
+      
       <Card className="p-4">
         <div className="mb-3 flex items-center gap-2 justify-between">
           <div className="flex items-center gap-2">
@@ -484,6 +535,44 @@ export default function AIPromptPanel() {
               data-testid="button-confirm-rename"
             >
               {renameStrategyMutation.isPending ? "Renaming..." : "Rename"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={portfolioAnalysisOpen} onOpenChange={setPortfolioAnalysisOpen}>
+        <DialogContent className="max-w-3xl max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <TrendingUp className="h-5 w-5 text-primary" />
+              Multi-Instrument Portfolio Analysis
+            </DialogTitle>
+            <DialogDescription>
+              Comprehensive risk assessment across perpetuals, options, and prediction markets
+            </DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="max-h-[60vh] pr-4">
+            <div className="space-y-4 py-4">
+              {portfolioAnalysis ? (
+                <div className="prose prose-sm dark:prose-invert max-w-none">
+                  <div className="whitespace-pre-wrap text-sm">
+                    {portfolioAnalysis}
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center text-muted-foreground py-8">
+                  No analysis available
+                </div>
+              )}
+            </div>
+          </ScrollArea>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setPortfolioAnalysisOpen(false)}
+              data-testid="button-close-analysis"
+            >
+              Close
             </Button>
           </DialogFooter>
         </DialogContent>

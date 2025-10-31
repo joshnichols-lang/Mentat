@@ -222,6 +222,124 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // AI Portfolio Analysis endpoint - analyzes entire portfolio across all exchanges
+  app.post("/api/ai/analyze-portfolio", requireVerifiedUser, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      
+      const schema = z.object({
+        model: z.string().optional(),
+        preferredProvider: z.enum(["perplexity", "openai", "xai"]).optional(),
+      });
+      
+      const { model, preferredProvider } = schema.parse(req.body);
+      
+      // Import portfolio aggregator
+      const { getUnifiedPortfolio, formatPortfolioForAI } = await import("./portfolioAggregator");
+      const { makeAIRequest } = await import("./aiRouter");
+      
+      // Fetch unified portfolio across all exchanges
+      console.log("[Portfolio Analysis] Fetching unified portfolio for user:", userId);
+      const portfolio = await getUnifiedPortfolio(userId);
+      
+      // Format portfolio for AI context
+      const portfolioContext = formatPortfolioForAI(portfolio);
+      
+      // Build AI prompt for multi-instrument analysis
+      const systemPrompt = `You are an expert multi-instrument portfolio analyst specializing in cryptocurrency trading across perpetual futures, options, and prediction markets. Analyze the user's portfolio and provide comprehensive insights.
+
+CRITICAL ANALYSIS AREAS:
+1. **Delta Exposure**: Calculate total portfolio delta across perpetuals and options. Identify concentration risks.
+2. **Correlation Analysis**: Identify correlated positions (e.g., long ETH perp + long ETH call = doubled exposure).
+3. **Hedging Opportunities**: Suggest specific hedges using:
+   - Options to protect perp positions
+   - Opposite perps on correlated assets
+   - Prediction market bets that counter-balance exposure
+4. **Greek Risk** (if options present): Analyze theta decay, vega exposure to volatility changes.
+5. **Risk Warnings**: Flag over-concentration, unhedged directional bets, liquidation risks.
+6. **Cross-Platform Arbitrage**: Identify opportunities where prediction market prices diverge from perp funding rates.
+
+${portfolioContext}
+
+Provide a clear, actionable analysis with specific recommendations. Format your response as:
+
+**Portfolio Summary**
+[Brief overview of total exposure and key metrics]
+
+**Risk Assessment**
+[Major risks identified - concentration, correlation, Greeks, liquidation]
+
+**Hedging Recommendations**
+[Specific trades to reduce risk - be precise with strikes, sizes, platforms]
+
+**Opportunities**
+[Arbitrage or optimization strategies across instruments]
+
+**Action Items**
+[Prioritized list of what the user should do next]`;
+
+      const userMessage = "Analyze my complete portfolio across all instruments and provide risk assessment with hedging recommendations.";
+      
+      // Call AI with portfolio context
+      const aiResponse = await makeAIRequest(userId, {
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userMessage },
+        ],
+        model,
+        temperature: 0.7,
+        max_tokens: 2500,
+      }, preferredProvider);
+      
+      res.json({
+        success: true,
+        analysis: aiResponse.content,
+        portfolio: {
+          summary: portfolio.summary,
+          positionCounts: {
+            perpetuals: portfolio.perpetuals.length,
+            options: portfolio.options.length,
+            predictions: portfolio.predictions.length,
+          },
+          lastUpdated: portfolio.lastUpdated,
+        },
+        usage: {
+          promptTokens: aiResponse.usage.promptTokens,
+          completionTokens: aiResponse.usage.completionTokens,
+          totalTokens: aiResponse.usage.totalTokens,
+          cost: aiResponse.cost,
+          provider: aiResponse.provider,
+          model: aiResponse.model,
+        },
+      });
+    } catch (error: any) {
+      console.error("Error analyzing portfolio:", error);
+      
+      // Handle AI errors
+      if (error?.status === 400 && error?.code === 'content_filter') {
+        return res.status(400).json({
+          success: false,
+          error: "Content filtered by AI provider",
+          code: "content_filter",
+        });
+      }
+      
+      if (error?.status === 429) {
+        return res.status(429).json({
+          success: false,
+          error: "Too many requests. Please wait a moment and try again.",
+          code: "rate_limit",
+        });
+      }
+      
+      // Generic error
+      res.status(500).json({
+        success: false,
+        error: error.message || "Failed to analyze portfolio",
+      });
+    }
+  });
+
   // Update user agent mode (passive/active)
   app.patch("/api/user/agent-mode", isAuthenticated, async (req, res) => {
     try {

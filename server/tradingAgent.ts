@@ -156,18 +156,151 @@ ${promptHistory.map((h, i) => `${i + 1}. "${h.prompt}"`).join('\n')}
 Use this to understand recent discussions and any strategy modifications the user has requested.`;
     }
 
+    // Fetch options positions - try live API first, fall back to database
+    let optionsContext = "";
+    try {
+      let openOptions: any[] = [];
+      
+      // Try live Aevo API first
+      try {
+        const aevoApiKey = await storage.getActiveApiKeyByProvider(userId, "exchange", "aevo");
+        if (aevoApiKey) {
+          const { decryptCredential } = await import("./encryption");
+          const apiKey = decryptCredential(
+            aevoApiKey.encryptedApiKey,
+            aevoApiKey.apiKeyIv,
+            aevoApiKey.encryptedDek,
+            aevoApiKey.dekIv
+          );
+          const apiSecret = aevoApiKey.metadata && typeof aevoApiKey.metadata === 'object' && 'apiSecret' in aevoApiKey.metadata
+            ? String((aevoApiKey.metadata as any).apiSecret)
+            : '';
+          const signingKey = aevoApiKey.metadata && typeof aevoApiKey.metadata === 'object' && 'signingKey' in aevoApiKey.metadata
+            ? String((aevoApiKey.metadata as any).signingKey)
+            : '';
+          
+          if (apiSecret && signingKey) {
+            const { AevoClient } = await import("./aevo/client");
+            const aevoClient = new AevoClient({
+              apiKey,
+              apiSecret,
+              signingKey,
+              testnet: false,
+            });
+            
+            const aevoPortfolio = await aevoClient.getPortfolio();
+            
+            // Convert Aevo positions to unified format for context
+            openOptions = aevoPortfolio.positions
+              .filter(p => p.instrument_type === "OPTION" && Math.abs(parseFloat(p.amount)) >= 0.001)
+              .map(p => {
+                // Parse instrument name (e.g., "ETH-31MAR25-2000-C" -> asset: ETH, expiry: Mar 31 2025, strike: 2000, type: call)
+                const nameParts = p.instrument_name.split('-');
+                const asset = nameParts[0] || "UNKNOWN";
+                const expiryStr = nameParts.length >= 2 ? nameParts[1] : "";
+                const strikeStr = nameParts.length >= 3 ? nameParts[nameParts.length - 2] : "0";
+                const optionTypeChar = nameParts.length >= 4 ? nameParts[nameParts.length - 1] : "C";
+                const strike = strikeStr;
+                const optionType = optionTypeChar.toUpperCase() === "C" ? "call" : "put";
+                
+                // Parse expiry date from format "31MAR25" -> March 31, 2025
+                let expiry = new Date();
+                if (expiryStr && expiryStr.length >= 5) {
+                  const day = parseInt(expiryStr.substring(0, 2));
+                  const monthStr = expiryStr.substring(2, 5).toUpperCase();
+                  const year = 2000 + parseInt(expiryStr.substring(5));
+                  
+                  const monthMap: { [key: string]: number } = {
+                    JAN: 0, FEB: 1, MAR: 2, APR: 3, MAY: 4, JUN: 5,
+                    JUL: 6, AUG: 7, SEP: 8, OCT: 9, NOV: 10, DEC: 11
+                  };
+                  const month = monthMap[monthStr] ?? 0;
+                  expiry = new Date(year, month, day);
+                }
+                
+                return {
+                  instrumentName: p.instrument_name,
+                  side: p.side,
+                  size: p.amount,
+                  optionType,
+                  entryPrice: p.entry_price,
+                  strike,
+                  expiry,
+                  delta: p.greeks?.delta || "0",
+                };
+              });
+            
+            console.log(`[Trading Agent] Found ${openOptions.length} live Aevo options`);
+          }
+        }
+      } catch (liveError) {
+        console.log("[Trading Agent] Failed to fetch live Aevo positions, trying database fallback");
+      }
+      
+      // Fall back to database if live fetch failed or returned no results
+      if (openOptions.length === 0) {
+        const optionsPositions = await storage.getOptionsPositions(userId);
+        openOptions = optionsPositions.filter(p => p.status === "open");
+        console.log(`[Trading Agent] Found ${openOptions.length} database Aevo options`);
+      }
+      
+      if (openOptions.length > 0) {
+        optionsContext = `\n\nOPTIONS POSITIONS (Aevo - ${openOptions.length} open):\n${openOptions.map(opt => 
+          `- ${opt.instrumentName}: ${opt.side} ${opt.size} ${opt.optionType}s @ $${opt.entryPrice} (strike: $${opt.strike}, expires: ${opt.expiry ? new Date(opt.expiry).toISOString().split('T')[0] : 'TBD'})`
+        ).join('\n')}`;
+        
+        // Add delta exposure if available
+        const totalOptionsDelta = openOptions.reduce((sum: number, opt: any) => {
+          const delta = opt.delta ? parseFloat(opt.delta) : 0;
+          const size = parseFloat(opt.size);
+          const adjustedDelta = opt.side === "long" ? delta * size : -delta * size;
+          return sum + adjustedDelta;
+        }, 0);
+        if (Math.abs(totalOptionsDelta) > 0.01) {
+          optionsContext += `\nTotal Options Delta: ${totalOptionsDelta > 0 ? '+' : ''}${totalOptionsDelta.toFixed(2)}`;
+        }
+      }
+    } catch (error) {
+      console.error("Failed to fetch options positions:", error);
+    }
+
+    // Fetch prediction market positions
+    let predictionContext = "";
+    try {
+      const { getPolymarketClient } = await import("./polymarket/client");
+      const pmClient = await getPolymarketClient(userId, storage);
+      const pmPositions = await pmClient.getPositions();
+      if (pmPositions.length > 0) {
+        predictionContext = `\n\nPREDICTION MARKETS (Polymarket - ${pmPositions.length} open):\n${pmPositions.slice(0, 5).map(pred => 
+          `- "${pred.marketQuestion || 'Unknown'}": ${pred.side} ${parseFloat(pred.size || '0').toFixed(2)} shares @ $${parseFloat(pred.averagePrice || pred.entryPrice || '0').toFixed(2)}`
+        ).join('\n')}${pmPositions.length > 5 ? `\n... and ${pmPositions.length - 5} more` : ''}`;
+      }
+    } catch (error) {
+      console.error("Failed to fetch Polymarket positions:", error);
+    }
+
     // Build the unified conversational system prompt
-    const systemPrompt = `You are Grok, an AI assistant helping with cryptocurrency trading across multiple decentralized exchanges (Hyperliquid and Orderly Network). You respond naturally and conversationally to all questions - trading, markets, math, science, current events, or casual conversation.${strategyContext}${conversationContext}
+    const systemPrompt = `You are Grok, an AI assistant helping with cryptocurrency trading across multiple instruments: perpetual futures (Hyperliquid, Orderly Network), options (Aevo), and prediction markets (Polymarket). You respond naturally and conversationally to all questions - trading, markets, math, science, current events, or casual conversation.${strategyContext}${conversationContext}
 
 TRADING ACCOUNT STATUS (HYPERLIQUID):
 - Portfolio Value: $${userState?.marginSummary?.accountValue || '0'}
 - Available Balance: $${userState?.withdrawable || '0'}
 - Margin Used: $${userState?.marginSummary?.totalMarginUsed || '0'}
 - Open Positions: ${currentPositions.length > 0 ? `${currentPositions.length} position(s) - ${currentPositions.map((p: any) => `${p.symbol} ${p.side} ${p.size} @ $${p.entryPrice}`).join(', ')}` : 'None'}
-- Open Orders: ${openOrders.length > 0 ? `${openOrders.length} order(s)` : 'None'}
+- Open Orders: ${openOrders.length > 0 ? `${openOrders.length} order(s)` : 'None'}${optionsContext}${predictionContext}
 
 MARKET CONDITIONS:
 ${marketTrends}
+
+MULTI-INSTRUMENT STRATEGY GUIDELINES:
+When the user has positions across multiple instruments (perps, options, predictions), consider:
+1. **Delta Correlation**: Long ETH perp + long ETH calls = doubled ETH exposure. Suggest hedges if over-exposed.
+2. **Directional Hedging**: Use options to protect perp positions (e.g., buy puts to hedge long perp).
+3. **Cross-Market Arbitrage**: Compare prediction market probabilities with perp funding rates.
+4. **Greek Risk**: If user has options, warn about theta decay and suggest rolling or closing near expiry.
+5. **Concentration Risk**: Flag if user is heavily exposed to one asset across multiple instruments.
+
+You can suggest trades across any platform (Hyperliquid, Orderly, Aevo, Polymarket) when analyzing hedging or optimization opportunities.
 
 WHEN TO INCLUDE TRADING ACTIONS IN YOUR RESPONSE:
 - User explicitly asks to trade, buy, sell, or close positions
