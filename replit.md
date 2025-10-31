@@ -31,6 +31,7 @@ Preferred communication style: Simple, everyday language.
 - **Unified Conversational AI:** AI responds naturally, answers questions, and generates structured JSON trading actions based on conversational context.
 - **Strategy-Scoped Context:** Independent conversation history and AI context per trading strategy.
 - **Custom Rules Priority:** User-defined rules guide AI behavior and risk management.
+- **Multi-Instrument Portfolio Analysis:** Unified portfolio aggregator (`server/portfolioAggregator.ts`) fetches live positions from all exchanges (Hyperliquid, Orderly, Aevo, Polymarket) with database fallback. AI endpoint `/api/ai/analyze-portfolio` provides cross-platform hedging recommendations, correlation analysis, and total delta exposure calculations. Trading agent context includes all position types (perpetuals, options, prediction markets) for comprehensive strategy guidance. UI features "Analyze Portfolio" button in AI panel for one-click multi-instrument risk analysis.
 **Agent Modes:** Passive Mode (discussion, no execution) and Active Mode (execution with critical safety constraints).
 **Order Management & Strategy Enforcement:** Enforces max positions, entry limits, and utilizes Hyperliquid's bracket orders for TP/SL protection.
 **Comprehensive Safety System:** Mandatory protective brackets, liquidation protection, manual override, Terminal Safety Guard (20% max order distance), and protective order validation.
