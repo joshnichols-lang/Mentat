@@ -37,7 +37,7 @@ Preferred communication style: Simple, everyday language.
 **Comprehensive Safety System:** Mandatory protective brackets, liquidation protection, manual override, Terminal Safety Guard (20% max order distance), and protective order validation.
 **Multi-Exchange Integration:** Full REST API and WebSocket integration for Orderly Network, Hyperliquid, and Aevo. Polymarket integration via `@polymarket/clob-client`.
 **Advanced Order System:** Institutional-grade order execution engine supporting TWAP, Limit Chase, Scaled/Ladder Orders, Iceberg Orders, OCO, and Trailing Take-Profit. Enhanced with AI-powered Smart Order Router, AI Execution Optimizer, and Predictive Execution Timing.
-**WebSocket Infrastructure:** Market Data and Aevo WebSocket services operational with `perMessageDeflate: false` configuration to ensure compatibility. CVD Calculator and Volume Profile services temporarily disabled via feature flag (`ENABLE_CVD_VOLUME_PROFILE=false`) due to infrastructure-level RSV1 compression incompatibility between ws library and Hyperliquid's server (known issue in ws library GitHub issues #2109, #2282). Services can be re-enabled by setting environment variable once upstream fix is available.
+**WebSocket Infrastructure:** Market Data and Aevo WebSocket services operational with `perMessageDeflate: false` configuration to ensure compatibility.
 
 ## External Dependencies
 
