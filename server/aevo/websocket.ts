@@ -67,7 +67,8 @@ export class AevoWebSocketService {
     // Create WebSocket server for client connections
     this.wss = new WebSocketServer({ 
       server: this.server,
-      path: "/aevo-market-data"
+      path: "/aevo-market-data",
+      perMessageDeflate: false
     });
 
     console.log("[Aevo WS] WebSocket server created on path: /aevo-market-data");
@@ -114,7 +115,9 @@ export class AevoWebSocketService {
       
     console.log("[Aevo WS] Connecting to Aevo...");
 
-    this.aevoWs = new WebSocket(wsUrl);
+    this.aevoWs = new WebSocket(wsUrl, {
+      perMessageDeflate: false
+    });
 
     this.aevoWs.on("open", () => {
       console.log("[Aevo WS] Connected to Aevo");

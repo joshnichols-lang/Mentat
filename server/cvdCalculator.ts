@@ -35,7 +35,9 @@ export class CVDCalculator {
   }
 
   private connect() {
-    this.ws = new WebSocket(this.marketDataWsUrl);
+    this.ws = new WebSocket(this.marketDataWsUrl, {
+      perMessageDeflate: false
+    });
 
     this.ws.on("open", () => {
       console.log("[CVD Calculator] Connected to market data WebSocket");

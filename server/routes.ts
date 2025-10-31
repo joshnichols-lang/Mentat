@@ -4298,16 +4298,18 @@ Provide a clear, actionable analysis with specific recommendations. Format your 
   const aevoWsService = new AevoWebSocketService(httpServer, false); // false = mainnet
   console.log("[Server] Aevo WebSocket service initialized on /aevo-market-data");
 
-  // Initialize CVD calculator
-  // In Replit, connect to localhost since everything runs on the same server
-  const marketDataWsUrl = "ws://localhost:5000/market-data";
-  cvdCalculator = new CVDCalculator(marketDataWsUrl);
-  console.log(`[CVD Calculator] Initialized with market data URL: ${marketDataWsUrl}`);
-
-  // Initialize Volume Profile calculator
-  // Use 1.0 tick size for better price level granularity
-  volumeProfileCalculator = new VolumeProfileCalculator(marketDataWsUrl, 1.0);
-  console.log(`[Volume Profile] Initialized with market data URL: ${marketDataWsUrl}, tick size: 1.0`);
+  // Store httpServer reference for later initialization of internal WebSocket clients
+  (httpServer as any).initializeInternalWebSocketClients = () => {
+    // DISABLED: CVD Calculator and Volume Profile due to RSV1 WebSocket compression incompatibility
+    // with Hyperliquid's WebSocket server. This is a known issue with the ws library.
+    // TODO: Re-enable once a workaround is found or library is updated.
+    console.log(`[CVD Calculator] Disabled due to WebSocket compression compatibility issues`);
+    console.log(`[Volume Profile] Disabled due to WebSocket compression compatibility issues`);
+    
+    // const marketDataWsUrl = "ws://localhost:5000/market-data";
+    // cvdCalculator = new CVDCalculator(marketDataWsUrl);
+    // volumeProfileCalculator = new VolumeProfileCalculator(marketDataWsUrl, 1.0);
+  };
 
   return httpServer;
 }

@@ -75,6 +75,14 @@ app.use((req, res, next) => {
   }, async () => {
     log(`serving on port ${port}`);
     
+    // Initialize internal WebSocket clients after server is fully listening
+    if ((server as any).initializeInternalWebSocketClients) {
+      // Wait a bit to ensure WebSocket server is fully ready
+      setTimeout(() => {
+        (server as any).initializeInternalWebSocketClients();
+      }, 1000);
+    }
+    
     // Initialize autonomous trading for all active users
     try {
       const users = await storage.getAllUsers();

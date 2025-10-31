@@ -58,7 +58,9 @@ export class OrderlyWebSocketService extends EventEmitter {
     console.log(`[Orderly WS] Connecting to ${this.wsUrl}`);
 
     try {
-      this.ws = new WebSocket(this.wsUrl);
+      this.ws = new WebSocket(this.wsUrl, {
+        perMessageDeflate: false
+      });
 
       this.ws.on('open', () => {
         console.log('[Orderly WS] Connected successfully');

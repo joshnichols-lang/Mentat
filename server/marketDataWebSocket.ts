@@ -56,7 +56,8 @@ export class MarketDataWebSocketService {
     // Create WebSocket server for client connections
     this.wss = new WebSocketServer({ 
       server: this.server,
-      path: "/market-data"
+      path: "/market-data",
+      perMessageDeflate: false
     });
 
     this.wss.on("connection", (ws: WebSocket) => {
@@ -94,7 +95,9 @@ export class MarketDataWebSocketService {
     const wsUrl = "wss://api.hyperliquid.xyz/ws";
     console.log("[Market Data WS] Connecting to Hyperliquid...");
 
-    this.hlWs = new WebSocket(wsUrl);
+    this.hlWs = new WebSocket(wsUrl, {
+      perMessageDeflate: false
+    });
 
     this.hlWs.on("open", () => {
       console.log("[Market Data WS] Connected to Hyperliquid");

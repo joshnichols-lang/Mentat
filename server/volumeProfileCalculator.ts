@@ -56,7 +56,9 @@ export class VolumeProfileCalculator {
   }
 
   private connect() {
-    this.ws = new WebSocket(this.marketDataWsUrl);
+    this.ws = new WebSocket(this.marketDataWsUrl, {
+      perMessageDeflate: false
+    });
 
     this.ws.on("open", () => {
       console.log("[Volume Profile] Connected to market data WebSocket");
