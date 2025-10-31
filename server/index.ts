@@ -63,6 +63,16 @@ app.use((req, res, next) => {
     serveStatic(app);
   }
 
+  // Initialize WebSocket services AFTER Vite HMR is set up
+  // This ensures Vite's HMR upgrade handler is registered first,
+  // preventing conflicts with our WebSocket upgrade handlers
+  const { initializeMarketDataWebSocket } = await import("./marketDataWebSocket");
+  initializeMarketDataWebSocket(server);
+
+  const { AevoWebSocketService } = await import("./aevo/websocket");
+  const aevoWsService = new AevoWebSocketService(server, false); // false = mainnet
+  console.log("[Server] Aevo WebSocket service initialized on /aevo-market-data");
+
   // ALWAYS serve the app on the port specified in the environment variable PORT
   // Other ports are firewalled. Default to 5000 if not specified.
   // this serves both the API and the client.

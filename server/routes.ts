@@ -4115,13 +4115,7 @@ Provide a clear, actionable analysis with specific recommendations. Format your 
 
   const httpServer = createServer(app);
 
-  // Initialize market data WebSocket service
-  initializeMarketDataWebSocket(httpServer);
-
-  // Initialize Aevo WebSocket service for options data
-  const { AevoWebSocketService } = await import("./aevo/websocket");
-  const aevoWsService = new AevoWebSocketService(httpServer, false); // false = mainnet
-  console.log("[Server] Aevo WebSocket service initialized on /aevo-market-data");
-
+  // NOTE: WebSocket services will be initialized AFTER Vite HMR is set up
+  // to ensure proper upgrade request handling order
   return httpServer;
 }
