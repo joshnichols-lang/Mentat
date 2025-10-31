@@ -4300,15 +4300,21 @@ Provide a clear, actionable analysis with specific recommendations. Format your 
 
   // Store httpServer reference for later initialization of internal WebSocket clients
   (httpServer as any).initializeInternalWebSocketClients = () => {
-    // DISABLED: CVD Calculator and Volume Profile due to RSV1 WebSocket compression incompatibility
-    // with Hyperliquid's WebSocket server. This is a known issue with the ws library.
-    // TODO: Re-enable once a workaround is found or library is updated.
-    console.log(`[CVD Calculator] Disabled due to WebSocket compression compatibility issues`);
-    console.log(`[Volume Profile] Disabled due to WebSocket compression compatibility issues`);
+    // Feature flag: Disable CVD Calculator and Volume Profile due to RSV1 WebSocket compression incompatibility
+    // with Hyperliquid's WebSocket server. This is a known issue in the ws library (GitHub issues #2109, #2282).
+    // Set ENABLE_CVD_VOLUME_PROFILE=true in environment to re-enable (not recommended until upstream fix).
+    const enableCvdVolumeProfile = process.env.ENABLE_CVD_VOLUME_PROFILE === "true";
     
-    // const marketDataWsUrl = "ws://localhost:5000/market-data";
-    // cvdCalculator = new CVDCalculator(marketDataWsUrl);
-    // volumeProfileCalculator = new VolumeProfileCalculator(marketDataWsUrl, 1.0);
+    if (enableCvdVolumeProfile) {
+      console.log(`[CVD Calculator] Feature flag enabled - initializing (WARNING: may cause RSV1 errors)`);
+      console.log(`[Volume Profile] Feature flag enabled - initializing (WARNING: may cause RSV1 errors)`);
+      const marketDataWsUrl = "ws://localhost:5000/market-data";
+      cvdCalculator = new CVDCalculator(marketDataWsUrl);
+      volumeProfileCalculator = new VolumeProfileCalculator(marketDataWsUrl, 1.0);
+    } else {
+      console.log(`[CVD Calculator] Disabled via feature flag (ENABLE_CVD_VOLUME_PROFILE) due to WebSocket compression incompatibility`);
+      console.log(`[Volume Profile] Disabled via feature flag (ENABLE_CVD_VOLUME_PROFILE) due to WebSocket compression incompatibility`);
+    }
   };
 
   return httpServer;
