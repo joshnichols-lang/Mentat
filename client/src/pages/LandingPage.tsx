@@ -10,8 +10,10 @@ import { useEmbeddedWallet } from '@/hooks/use-embedded-wallet';
 import { RecoveryPhraseModal } from '@/components/RecoveryPhraseModal';
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ArrowRight, TrendingUp, Shield, Zap, Bot } from "lucide-react";
+import { ArrowRight, TrendingUp, Shield, Zap, Bot, Loader2 } from "lucide-react";
 import logoUrl from "@assets/1fox-removebg-preview(1)_1761259210534.png";
+
+type AuthStep = 'idle' | 'connecting' | 'signing' | 'creating_wallet' | 'complete';
 
 export default function LandingPage() {
   const [, setLocation] = useLocation();
@@ -21,6 +23,10 @@ export default function LandingPage() {
   const { toast } = useToast();
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [authCompleted, setAuthCompleted] = useState(false);
+  const [authStep, setAuthStep] = useState<AuthStep>('idle');
+  const [walletCreationAttempted, setWalletCreationAttempted] = useState(false);
+  const [walletCreationFailed, setWalletCreationFailed] = useState(false);
+  const [isManualRetrying, setIsManualRetrying] = useState(false);
   
   const {
     hasEmbeddedWallet,
@@ -55,6 +61,8 @@ export default function LandingPage() {
         description: `Welcome to 1fox`,
       });
       setAuthCompleted(true);
+      setAuthStep('complete');
+      setIsAuthenticating(false);
     },
     onError: (error: Error) => {
       toast({
@@ -63,6 +71,7 @@ export default function LandingPage() {
         variant: 'destructive',
       });
       setIsAuthenticating(false);
+      setAuthStep('idle');
     },
   });
 
@@ -71,22 +80,25 @@ export default function LandingPage() {
     const authenticateWallet = async () => {
       if (isConnected && address && !isAuthenticating && !walletAuthMutation.isPending && !authCompleted) {
         setIsAuthenticating(true);
+        setAuthStep('signing');
         
         try {
           // Fetch nonce from server
           const nonceRes = await fetch(`/api/auth/wallet/nonce?address=${address}`);
           if (!nonceRes.ok) {
-            throw new Error('Failed to fetch nonce');
+            throw new Error('Failed to fetch authentication nonce from server');
           }
           const { nonce } = await nonceRes.json();
 
           // Create message with nonce
           const message = `Sign this message to authenticate with 1fox.\n\nWallet: ${address}\nNonce: ${nonce}\nTimestamp: ${Date.now()}`;
           
+          // Request signature
           const signature = await signMessageAsync({
             message,
           });
 
+          // Authenticate with backend
           await walletAuthMutation.mutateAsync({
             walletAddress: address,
             signature,
@@ -95,12 +107,30 @@ export default function LandingPage() {
           });
         } catch (error: any) {
           console.error('Wallet authentication error:', error);
-          toast({
-            title: 'Signature required',
-            description: 'Please sign the message to authenticate',
-            variant: 'destructive',
-          });
+          
+          // Handle specific error cases
+          if (error.message?.includes('User rejected') || error.message?.includes('denied')) {
+            toast({
+              title: 'Signature Rejected',
+              description: 'You must sign the message to authenticate with 1fox',
+              variant: 'destructive',
+            });
+          } else if (error.message?.includes('nonce')) {
+            toast({
+              title: 'Authentication Error',
+              description: 'Failed to fetch authentication nonce. Please try again.',
+              variant: 'destructive',
+            });
+          } else {
+            toast({
+              title: 'Authentication Failed',
+              description: error.message || 'An unexpected error occurred. Please try again.',
+              variant: 'destructive',
+            });
+          }
+          
           setIsAuthenticating(false);
+          setAuthStep('idle');
         }
       }
     };
@@ -111,22 +141,57 @@ export default function LandingPage() {
   // After external wallet auth completes, check if user needs embedded wallets
   useEffect(() => {
     const initializeEmbeddedWallets = async () => {
-      if (authCompleted && !hasEmbeddedWallet && !isCreating) {
+      // Don't run if manual retry is in progress
+      if (authCompleted && !hasEmbeddedWallet && !isCreating && !walletCreationAttempted && !isManualRetrying) {
+        setAuthStep('creating_wallet');
+        setWalletCreationAttempted(true);
         try {
           await createEmbeddedWallet();
         } catch (error) {
           console.error('Failed to create embedded wallets:', error);
+          setWalletCreationFailed(true);
           toast({
             title: 'Wallet Creation Failed',
-            description: 'Failed to generate embedded wallets. Please try again.',
+            description: 'Failed to generate embedded wallets. Please click retry to try again.',
             variant: 'destructive',
           });
+          setAuthStep('idle');
         }
       }
     };
 
     initializeEmbeddedWallets();
-  }, [authCompleted, hasEmbeddedWallet, isCreating, createEmbeddedWallet, toast]);
+  }, [authCompleted, hasEmbeddedWallet, isCreating, walletCreationAttempted, isManualRetrying, createEmbeddedWallet, toast]);
+
+  // Retry wallet creation handler - user-controlled retry with clear ownership
+  const retryWalletCreation = async () => {
+    setIsManualRetrying(true);
+    setWalletCreationFailed(false);
+    setAuthStep('creating_wallet');
+    
+    try {
+      await createEmbeddedWallet();
+      // Success handled by hasEmbeddedWallet effect
+    } catch (error) {
+      console.error('Manual retry failed:', error);
+      setWalletCreationFailed(true);
+      setAuthStep('idle');
+      toast({
+        title: 'Wallet Creation Failed',
+        description: 'Failed to generate embedded wallets. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsManualRetrying(false);
+    }
+  };
+
+  // Mark auth complete when embedded wallet is created
+  useEffect(() => {
+    if (hasEmbeddedWallet && authStep === 'creating_wallet') {
+      setAuthStep('complete');
+    }
+  }, [hasEmbeddedWallet, authStep]);
 
   // Navigate to terminal after recovery modal is confirmed
   useEffect(() => {
@@ -230,6 +295,48 @@ export default function LandingPage() {
                   );
                 }}
               </ConnectButton.Custom>
+
+              {/* Authentication Status Indicator */}
+              {authStep !== 'idle' && authStep !== 'complete' && !walletCreationFailed && (
+                <Card className="glass max-w-md mx-auto mt-6 p-6 border-border/40" data-testid="card-auth-status">
+                  <div className="flex items-center gap-4">
+                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                    <div className="flex-1 text-left">
+                      <h3 className="font-semibold text-lg mb-1" data-testid="text-auth-status-title">
+                        {authStep === 'signing' && 'Authenticating Wallet'}
+                        {authStep === 'creating_wallet' && 'Creating Trading Account'}
+                      </h3>
+                      <p className="text-sm text-muted-foreground" data-testid="text-auth-status-description">
+                        {authStep === 'signing' && 'Please sign the message in your wallet to verify ownership'}
+                        {authStep === 'creating_wallet' && 'Generating secure multi-chain wallets for trading...'}
+                      </p>
+                    </div>
+                  </div>
+                </Card>
+              )}
+
+              {/* Wallet Creation Retry */}
+              {walletCreationFailed && (
+                <Card className="glass max-w-md mx-auto mt-6 p-6 border-destructive/40" data-testid="card-wallet-retry">
+                  <div className="space-y-4">
+                    <div>
+                      <h3 className="font-semibold text-lg mb-1 text-destructive" data-testid="text-wallet-retry-title">
+                        Wallet Creation Failed
+                      </h3>
+                      <p className="text-sm text-muted-foreground" data-testid="text-wallet-retry-description">
+                        We encountered an error while creating your trading wallets. Please try again.
+                      </p>
+                    </div>
+                    <Button
+                      onClick={retryWalletCreation}
+                      className="w-full"
+                      data-testid="button-retry-wallet"
+                    >
+                      Retry Wallet Creation
+                    </Button>
+                  </div>
+                </Card>
+              )}
             </div>
 
             {/* Feature Cards */}
