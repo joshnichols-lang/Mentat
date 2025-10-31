@@ -62,9 +62,7 @@ export class MarketDataWebSocketService {
 
     // Manually handle upgrade requests for /market-data path only
     this.server.on("upgrade", (req, socket, head) => {
-      console.log("[Market Data WS] Upgrade request for:", req.url);
       if (req.url === "/market-data") {
-        console.log("[Market Data WS] Handling upgrade for /market-data");
         this.wss!.handleUpgrade(req, socket, head, (ws) => {
           this.wss!.emit("connection", ws, req);
         });

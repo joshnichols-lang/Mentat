@@ -75,9 +75,7 @@ export class AevoWebSocketService {
 
     // Manually handle upgrade requests for /aevo-market-data path only
     this.server.on("upgrade", (req, socket, head) => {
-      console.log("[Aevo WS] Upgrade request for:", req.url);
       if (req.url === "/aevo-market-data") {
-        console.log("[Aevo WS] Handling upgrade for /aevo-market-data");
         this.wss!.handleUpgrade(req, socket, head, (ws) => {
           this.wss!.emit("connection", ws, req);
         });

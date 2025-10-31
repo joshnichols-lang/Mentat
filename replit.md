@@ -37,7 +37,7 @@ Preferred communication style: Simple, everyday language.
 **Comprehensive Safety System:** Mandatory protective brackets, liquidation protection, manual override, Terminal Safety Guard (20% max order distance), and protective order validation.
 **Multi-Exchange Integration:** Full REST API and WebSocket integration for Orderly Network, Hyperliquid, and Aevo. Polymarket integration via `@polymarket/clob-client`.
 **Advanced Order System:** Institutional-grade order execution engine supporting TWAP, Limit Chase, Scaled/Ladder Orders, Iceberg Orders, OCO, and Trailing Take-Profit. Enhanced with AI-powered Smart Order Router, AI Execution Optimizer, and Predictive Execution Timing.
-**WebSocket Infrastructure:** Market Data and Aevo WebSocket services operational with `perMessageDeflate: false` configuration to ensure compatibility.
+**WebSocket Infrastructure:** Market Data and Aevo WebSocket services operational with `perMessageDeflate: false` configuration. Uses `noServer: true` pattern with manual upgrade handlers for path-specific routing (`/market-data`, `/aevo-market-data`). WebSocket services initialize after Vite HMR setup to prevent upgrade handler conflicts. Each service handles only its designated path, allowing Vite HMR and custom WebSocket servers to coexist without interference.
 
 ## External Dependencies
 
