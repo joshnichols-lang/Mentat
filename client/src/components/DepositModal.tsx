@@ -24,10 +24,20 @@ export function DepositModal({ open, onOpenChange }: DepositModalProps) {
   const [copied, setCopied] = useState(false);
 
   // Get embedded wallet address
-  const { data: embeddedWallet, isLoading, error } = useQuery<{ hyperliquidAddress: string }>({
+  const { data, isLoading, error } = useQuery<{
+    success: boolean;
+    wallet: {
+      hyperliquidAddress: string;
+      solanaAddress: string;
+      evmAddress: string;
+      polygonAddress: string;
+    };
+  }>({
     queryKey: ["/api/wallets/embedded"],
     enabled: open && isConnected,
   });
+  
+  const embeddedWallet = data?.wallet;
 
   const copyAddress = async () => {
     if (embeddedWallet?.hyperliquidAddress) {
