@@ -244,7 +244,10 @@ export async function makeAIRequest(
     if (providerName === "xai") {
       requestConfig.search_parameters = {
         mode: "on", // Force web search for real-time market data
-        sources: ["web", "news"], // Simplified array format per xAI docs
+        sources: [
+          { type: "web" },
+          { type: "news" }
+        ], // Internally tagged enum format per xAI API
         return_citations: true
       };
       console.log("[AI Router] Enabled Grok Live Search (forced mode) with web and news sources");
