@@ -6,7 +6,7 @@ import { initHyperliquidClient, getHyperliquidClient, getUserHyperliquidClient }
 import { PolymarketClient } from "./polymarket/client";
 import { executeTradeStrategy } from "./tradeExecutor";
 import { createPortfolioSnapshot } from "./portfolioSnapshotService";
-import { restartMonitoring } from "./monitoringService";
+import { restartMonitoring, getAiUsageStats } from "./monitoringService";
 import { startUserMonitoring, stopUserMonitoring, restartUserMonitoring } from "./userMonitoringManager";
 import { setupAuth } from "./auth";
 import { storeUserCredentials, getUserPrivateKey, deleteUserCredentials, hasUserCredentials } from "./credentialService";
@@ -416,6 +416,76 @@ Provide a clear, actionable analysis with specific recommendations. Format your 
       res.status(500).json({ 
         success: false, 
         error: "Failed to update agent mode" 
+      });
+    }
+  });
+
+  // Update AI cost control settings (max calls per hour)
+  app.patch("/api/user/ai-settings", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      
+      const schema = z.object({
+        maxAiCallsPerHour: z.number().int().min(0).max(1000).nullable(),
+      });
+      
+      const { maxAiCallsPerHour } = schema.parse(req.body);
+      
+      const updatedUser = await storage.updateUserAiSettings(userId, maxAiCallsPerHour);
+      
+      if (!updatedUser) {
+        return res.status(404).json({ success: false, error: "User not found" });
+      }
+      
+      console.log(`[AI Settings] Updated max AI calls per hour for user ${userId}: ${maxAiCallsPerHour === null ? 'unlimited' : maxAiCallsPerHour}`);
+      
+      res.json({ 
+        success: true, 
+        maxAiCallsPerHour: updatedUser.maxAiCallsPerHour 
+      });
+    } catch (error: any) {
+      console.error("Error updating AI settings:", error);
+      
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({
+          success: false,
+          error: "Invalid request data",
+          details: error.errors
+        });
+      }
+      
+      res.status(500).json({ 
+        success: false, 
+        error: "Failed to update AI settings" 
+      });
+    }
+  });
+
+  // Get AI usage statistics
+  app.get("/api/user/ai-usage", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      
+      // Get user to check their limit
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ success: false, error: "User not found" });
+      }
+      
+      // Get current usage stats from monitoring service
+      const usageStats = getAiUsageStats(userId, user.maxAiCallsPerHour);
+      
+      res.json({ 
+        success: true, 
+        usage: usageStats
+      });
+    } catch (error: any) {
+      console.error("Error getting AI usage:", error);
+      
+      res.status(500).json({ 
+        success: false, 
+        error: "Failed to get AI usage statistics" 
       });
     }
   });

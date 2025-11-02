@@ -29,6 +29,7 @@ export interface IStorage {
   upsertUser(user: UpsertUser): Promise<User>;
   updateUserMonitoringFrequency(userId: string, minutes: number): Promise<User | undefined>;
   updateUserAgentMode(userId: string, mode: "passive" | "active"): Promise<User | undefined>;
+  updateUserAiSettings(userId: string, maxAiCallsPerHour: number | null): Promise<User | undefined>;
   updateUserPassword(userId: string, hashedPassword: string): Promise<User | undefined>;
   updateUserWalletAddress(userId: string, walletAddress: string): Promise<User | undefined>;
   updateUserVerificationStatus(userId: string, status: "pending" | "approved" | "rejected"): Promise<User | undefined>;
@@ -280,6 +281,18 @@ export class DbStorage implements IStorage {
       .update(users)
       .set({ 
         agentMode: mode,
+        updatedAt: sql`now()`,
+      })
+      .where(eq(users.id, userId))
+      .returning();
+    return result[0];
+  }
+
+  async updateUserAiSettings(userId: string, maxAiCallsPerHour: number | null): Promise<User | undefined> {
+    const result = await db
+      .update(users)
+      .set({ 
+        maxAiCallsPerHour,
         updatedAt: sql`now()`,
       })
       .where(eq(users.id, userId))
