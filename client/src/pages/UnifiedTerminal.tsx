@@ -508,11 +508,31 @@ function PredictionMarketsInterface() {
   const filteredMarkets = useMemo(() => {
     let filtered = markets;
     
-    // Apply search filter
+    // Apply search filter with crypto abbreviation expansion
     if (searchQuery) {
-      filtered = filtered.filter((market: any) => 
-        market.question?.toLowerCase().includes(searchQuery.toLowerCase())
-      );
+      const query = searchQuery.toLowerCase().trim();
+      
+      // Map common crypto abbreviations to full names
+      const cryptoAliases: Record<string, string[]> = {
+        'btc': ['bitcoin', 'btc'],
+        'eth': ['ethereum', 'eth'],
+        'sol': ['solana', 'sol'],
+        'ada': ['cardano', 'ada'],
+        'dot': ['polkadot', 'dot'],
+        'matic': ['polygon', 'matic'],
+        'link': ['chainlink', 'link'],
+        'avax': ['avalanche', 'avax'],
+        'uni': ['uniswap', 'uni'],
+        'atom': ['cosmos', 'atom'],
+      };
+      
+      // Get expanded search terms (include both abbreviation and full name)
+      const searchTerms = cryptoAliases[query] || [query];
+      
+      filtered = filtered.filter((market: any) => {
+        const questionLower = market.question?.toLowerCase() || '';
+        return searchTerms.some(term => questionLower.includes(term));
+      });
     }
     
     // Apply tag filter
