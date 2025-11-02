@@ -49,6 +49,20 @@ export function AIUsageTracker() {
     refetchInterval: 30000, // Refresh every 30 seconds
   });
 
+  // Get current AI usage (hourly call limiting)
+  const { data: usageData } = useQuery<{
+    success: boolean;
+    usage: {
+      callsThisHour: number;
+      limit: number | null;
+      remaining: number;
+      resetInMinutes: number;
+    };
+  }>({
+    queryKey: ['/api/user/ai-usage'],
+    refetchInterval: 60000, // Refresh every minute
+  });
+
   const updateFrequencyMutation = useMutation({
     mutationFn: async (frequency: string) => {
       const res = await apiRequest('POST', '/api/monitoring/frequency', { 
@@ -122,6 +136,11 @@ export function AIUsageTracker() {
   const totalCost = stats?.totalCost || "0";
   const totalRequests = stats?.totalRequests || 0;
   const totalTokens = stats?.totalTokens || 0;
+  
+  const usage = usageData?.usage;
+  const isUnlimited = usage?.limit === null;
+  const isNearLimit = usage && !isUnlimited && usage.remaining <= 5;
+  const atLimit = usage && !isUnlimited && usage.remaining === 0;
 
   // Hide AI usage stats for platform AI users
   if (statsData?.hasPersonalAiKeys === false) {
@@ -156,6 +175,35 @@ export function AIUsageTracker() {
               </p>
             </div>
           </div>
+
+          {usage && (
+            <div className="pt-2 border-t">
+              <div className="flex items-center justify-between mb-1">
+                <p className="text-xs text-muted-foreground">Calls this hour</p>
+                {usage.resetInMinutes > 0 && !isUnlimited && (
+                  <p className="text-[10px] text-muted-foreground">
+                    <Clock className="h-3 w-3 inline mr-0.5" />
+                    Resets in {usage.resetInMinutes}m
+                  </p>
+                )}
+              </div>
+              <div className="flex items-baseline gap-2">
+                <p className={`text-lg font-semibold ${atLimit ? 'text-red-500' : isNearLimit ? 'text-yellow-500' : ''}`} data-testid="text-calls-this-hour">
+                  {isUnlimited ? (
+                    <span className="text-muted-foreground text-sm">Unlimited</span>
+                  ) : (
+                    `${usage.callsThisHour} / ${usage.limit}`
+                  )}
+                </p>
+                {isNearLimit && !atLimit && (
+                  <span className="text-[10px] text-yellow-500">Near limit</span>
+                )}
+                {atLimit && (
+                  <span className="text-[10px] text-red-500">Limit reached</span>
+                )}
+              </div>
+            </div>
+          )}
 
           <div className="pt-2 border-t space-y-2">
             <div className="flex items-center gap-1 text-xs text-muted-foreground">
