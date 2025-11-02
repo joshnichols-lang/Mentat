@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { AlertCircle, ExternalLink, Copy, Check } from "lucide-react";
+import { AlertCircle, ExternalLink, Copy, Check, Zap, TrendingUp, Coins, DollarSign } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 
@@ -21,7 +21,7 @@ interface DepositModalProps {
 export function DepositModal({ open, onOpenChange }: DepositModalProps) {
   const { isConnected } = useAccount();
   const { toast } = useToast();
-  const [copied, setCopied] = useState(false);
+  const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
 
   // Get embedded wallet address
   const { data, isLoading, error } = useQuery<{
@@ -40,22 +40,20 @@ export function DepositModal({ open, onOpenChange }: DepositModalProps) {
   
   const embeddedWallet = data?.wallet;
 
-  const copyAddress = async () => {
-    if (embeddedWallet?.hyperliquidAddress) {
-      await navigator.clipboard.writeText(embeddedWallet.hyperliquidAddress);
-      setCopied(true);
-      toast({
-        title: "Address copied",
-        description: "Embedded wallet address copied to clipboard",
-      });
-      setTimeout(() => setCopied(false), 2000);
-    }
+  const copyAddress = async (address: string, label: string) => {
+    await navigator.clipboard.writeText(address);
+    setCopiedAddress(address);
+    toast({
+      title: "Address copied",
+      description: `${label} address copied to clipboard`,
+    });
+    setTimeout(() => setCopiedAddress(null), 2000);
   };
 
   // Reset copied state when modal closes
   useEffect(() => {
     if (!open) {
-      setCopied(false);
+      setCopiedAddress(null);
     }
   }, [open]);
 
@@ -80,13 +78,48 @@ export function DepositModal({ open, onOpenChange }: DepositModalProps) {
     }
   };
 
+  const wallets = [
+    {
+      icon: TrendingUp,
+      name: "Hyperliquid",
+      address: embeddedWallet?.hyperliquidAddress,
+      depositInfo: "Deposit: USDC on Arbitrum only",
+      description: "Perpetual futures trading",
+      testId: "hyperliquid",
+    },
+    {
+      icon: Zap,
+      name: "Polymarket",
+      address: embeddedWallet?.polygonAddress,
+      depositInfo: "Deposit: USDC on Polygon",
+      description: "Prediction markets",
+      testId: "polymarket",
+    },
+    {
+      icon: Coins,
+      name: "Solana",
+      address: embeddedWallet?.solanaAddress,
+      depositInfo: "Deposit: SOL or SPL tokens",
+      description: "Solana DeFi & spot markets",
+      testId: "solana",
+    },
+    {
+      icon: DollarSign,
+      name: "BNB Chain",
+      address: embeddedWallet?.bnbAddress,
+      depositInfo: "Deposit: BNB or BEP-20 tokens",
+      description: "Spot market trading",
+      testId: "bnb",
+    },
+  ];
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md" data-testid="dialog-deposit">
+      <DialogContent className="sm:max-w-2xl max-h-[80vh] overflow-y-auto" data-testid="dialog-deposit">
         <DialogHeader>
           <DialogTitle>Deposit Funds</DialogTitle>
           <DialogDescription>
-            Bridge USDC to Arbitrum for your Hyperliquid wallet using Router Nitro
+            Your wallet addresses for each trading platform
           </DialogDescription>
         </DialogHeader>
 
@@ -125,49 +158,62 @@ export function DepositModal({ open, onOpenChange }: DepositModalProps) {
 
         {isConnected && !isLoading && !error && embeddedWallet && (
           <div className="space-y-4">
-            <div className="rounded-lg border p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Destination Address</span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={copyAddress}
-                  data-testid="button-copy-address"
-                >
-                  {copied ? (
-                    <Check className="h-4 w-4 text-green-500" />
-                  ) : (
-                    <Copy className="h-4 w-4" />
-                  )}
-                </Button>
-              </div>
-              <div className="font-mono text-xs break-all bg-muted p-2 rounded" data-testid="text-wallet-address">
-                {embeddedWallet.hyperliquidAddress}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                This is your embedded Hyperliquid wallet where funds will be deposited
-              </p>
-            </div>
-
-            <Alert variant="destructive" data-testid="alert-usdc-arbitrum-only">
+            <Alert variant="destructive" data-testid="alert-critical-warning">
               <AlertCircle className="h-4 w-4" />
               <AlertDescription className="text-xs">
-                <strong>IMPORTANT:</strong> Hyperliquid only accepts USDC on Arbitrum. 
-                Bridge USDC to Arbitrum (Chain ID: 42161) only. Other tokens or chains will result in lost funds.
+                <strong>CRITICAL:</strong> Each platform only accepts specific tokens on specific chains. 
+                Sending the wrong token or using the wrong chain will result in permanent loss of funds. 
+                Double-check the deposit requirements below before sending.
               </AlertDescription>
             </Alert>
 
-            <Alert>
+            <div className="grid gap-3">
+              {wallets.map((wallet) => (
+                <div
+                  key={wallet.testId}
+                  className="rounded-lg border p-4 space-y-3"
+                  data-testid={`wallet-card-${wallet.testId}`}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-3 flex-1 min-w-0">
+                      <wallet.icon className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-sm">{wallet.name}</h3>
+                        <p className="text-xs text-muted-foreground">{wallet.description}</p>
+                        <p className="text-xs font-medium text-orange-600 dark:text-orange-400 mt-1">
+                          {wallet.depositInfo}
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => wallet.address && copyAddress(wallet.address, wallet.name)}
+                      data-testid={`button-copy-${wallet.testId}`}
+                      className="shrink-0"
+                    >
+                      {copiedAddress === wallet.address ? (
+                        <Check className="h-4 w-4 text-green-500" />
+                      ) : (
+                        <Copy className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
+                  <div
+                    className="font-mono text-xs break-all bg-muted p-2 rounded"
+                    data-testid={`text-address-${wallet.testId}`}
+                  >
+                    {wallet.address}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <Alert data-testid="alert-bridge-info">
               <AlertCircle className="h-4 w-4" />
               <AlertDescription className="text-xs">
-                <strong>How it works:</strong>
-                <ol className="list-decimal list-inside mt-2 space-y-1">
-                  <li>Click "Open Bridge Widget" to launch Router Nitro</li>
-                  <li>Select source chain and token (supports 30+ chains)</li>
-                  <li>Bridge to USDC on Arbitrum (destination is pre-filled)</li>
-                  <li>Confirm transaction in your wallet</li>
-                  <li>Funds will arrive at your embedded Hyperliquid address</li>
-                </ol>
+                <strong>Need to bridge?</strong> Use Router Nitro to bridge from 30+ chains to the correct destination. 
+                The bridge widget below auto-fills Hyperliquid's address (USDC on Arbitrum).
               </AlertDescription>
             </Alert>
 
@@ -178,7 +224,7 @@ export function DepositModal({ open, onOpenChange }: DepositModalProps) {
                 data-testid="button-open-bridge"
               >
                 <ExternalLink className="h-4 w-4 mr-2" />
-                Open Bridge Widget
+                Open Bridge Widget (Hyperliquid)
               </Button>
               
               <Button
@@ -189,10 +235,6 @@ export function DepositModal({ open, onOpenChange }: DepositModalProps) {
                 Close
               </Button>
             </div>
-
-            <p className="text-xs text-muted-foreground text-center">
-              Bridge from 30+ chains including Ethereum, Polygon, Base, Optimism. Router Nitro will convert to USDC on Arbitrum automatically.
-            </p>
           </div>
         )}
       </DialogContent>
