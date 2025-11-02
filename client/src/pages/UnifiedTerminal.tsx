@@ -448,8 +448,7 @@ function PolymarketTradingModal({ event, onClose }: { event: any; onClose: () =>
 // Prediction Markets Interface
 function PredictionMarketsInterface() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<string>("Trending");
-  const [selectedFilter, setSelectedFilter] = useState<string>("All");
+  const [selectedTag, setSelectedTag] = useState<string>("All");
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
 
   // Fetch Polymarket markets (500 markets to include short-term predictions)
@@ -459,116 +458,61 @@ function PredictionMarketsInterface() {
 
   const markets = marketsData?.markets || [];
 
-  // Main category tabs (Polymarket style)
-  const mainCategories = [
-    "Trending",
-    "Politics", 
-    "Sports",
-    "Finance",
-    "Crypto",
-    "Culture",
-    "World",
-    "Elections"
-  ];
-
-  // Category keyword mapping for flexible filtering (MUST be before getFilterTags)
-  const getCategoryKeywords = (category: string): string[] => {
-    const keywords: { [key: string]: string[] } = {
-      "Trending": [],
-      "Politics": ["congress", "senate", "house", "government", "biden", "republican", "democrat", "political", "policy", "governor", "mayor", "administration"],
-      "Sports": ["nfl", "nba", "mlb", "nhl", "soccer", "football", "basketball", "baseball", "hockey", "world series", "super bowl", "championship", "playoffs", "athlete", "player"],
-      "Finance": ["fed", "federal reserve", "interest rate", "stock market", "dow", "s&p", "nasdaq", "inflation", "gdp", "recession", "treasury", "bonds"],
-      "Crypto": ["bitcoin", "btc", "ethereum", "eth", "crypto", "cryptocurrency", "blockchain", "solana", "sol", "defi", "nft", "web3", "token", "15 min", "hourly", "4 hour", "daily", "weekly", "monthly", "price will", "hit", "above", "below", "minute"],
-      "Culture": ["celebrity", "entertainment", "movie", "film", "music", "artist", "award", "oscar", "grammy", "emmy", "actor", "actress"],
-      "World": ["international", "global", "ukraine", "china", "russia", "europe", "middle east", "war", "conflict", "united nations"],
-      "Elections": ["election", "vote", "ballot", "candidate", "primary", "presidential", "2024", "2025", "campaign", "trump", "governor race"]
-    };
-    return keywords[category] || [];
-  };
-
-  // Dynamic filter tags extracted from markets' eventTags based on selected category
-  const getFilterTags = () => {
-    // First filter markets by main category
-    const categoryFilteredMarkets = markets.filter((market: any) => {
-      if (selectedCategory === "Trending") return true;
-      
-      const categoryKeywords = getCategoryKeywords(selectedCategory);
-      const question = market.question?.toLowerCase() || "";
-      const tags = (market.tags || []).map((t: string) => t.toLowerCase()).join(" ");
-      const eventTags = (market.eventTags || []).map((t: any) => t.label?.toLowerCase() || "").join(" ");
-      const category = market.category?.toLowerCase() || "";
-      const searchText = `${question} ${tags} ${eventTags} ${category}`;
-      
-      return categoryKeywords.some(keyword => searchText.includes(keyword));
-    });
-    
-    // Extract unique tags from filtered markets
+  // Extract all unique tags from markets (Polymarket's actual tag structure)
+  const allTags = useMemo(() => {
     const tagCounts = new Map<string, number>();
-    categoryFilteredMarkets.forEach((market: any) => {
+    
+    markets.forEach((market: any) => {
       const eventTags = market.eventTags || [];
       eventTags.forEach((tag: any) => {
         const label = tag.label || tag;
-        if (label) {
+        if (label && typeof label === 'string') {
           tagCounts.set(label, (tagCounts.get(label) || 0) + 1);
         }
       });
     });
     
-    // Sort tags by frequency and take top ones
-    const topTags = Array.from(tagCounts.entries())
+    // Sort by frequency and return top tags
+    const sortedTags = Array.from(tagCounts.entries())
       .sort((a, b) => b[1] - a[1])
-      .slice(0, 10)
       .map(([tag]) => tag);
     
-    return ["All", ...topTags];
-  };
+    return ["All", ...sortedTags.slice(0, 30)]; // Top 30 tags + "All"
+  }, [markets]);
 
-  const filterTags = getFilterTags();
-
-  // Apply search/category filters
-  let filteredMarkets = markets.filter((market: any) => {
-    const matchesSearch = searchQuery === "" || market.question?.toLowerCase().includes(searchQuery.toLowerCase());
+  // Apply search and tag filters
+  const filteredMarkets = useMemo(() => {
+    let filtered = markets;
     
-    // Category matching using keyword matching
-    let matchesCategory = true;
-    if (selectedCategory !== "Trending") {
-      const categoryKeywords = getCategoryKeywords(selectedCategory);
-      const question = market.question?.toLowerCase() || "";
-      const tags = (market.tags || []).map((t: string) => t.toLowerCase()).join(" ");
-      const category = market.category?.toLowerCase() || "";
-      const searchText = `${question} ${tags} ${category}`;
-      
-      matchesCategory = categoryKeywords.some(keyword => searchText.includes(keyword));
+    // Apply search filter
+    if (searchQuery) {
+      filtered = filtered.filter((market: any) => 
+        market.question?.toLowerCase().includes(searchQuery.toLowerCase())
+      );
     }
     
-    // Subcategory tag matching
-    let matchesFilter = selectedFilter === "All";
-    if (!matchesFilter) {
-      const question = market.question?.toLowerCase() || "";
-      const tags = (market.tags || []).map((t: string) => t.toLowerCase()).join(" ");
-      const eventTags = (market.eventTags || []).map((t: any) => {
-        const label = t.label || t;
-        return typeof label === 'string' ? label.toLowerCase() : '';
-      }).join(" ");
-      const searchText = `${question} ${tags} ${eventTags}`;
-      matchesFilter = searchText.includes(selectedFilter.toLowerCase());
+    // Apply tag filter
+    if (selectedTag !== "All") {
+      filtered = filtered.filter((market: any) => {
+        const eventTags = market.eventTags || [];
+        return eventTags.some((tag: any) => {
+          const label = tag.label || tag;
+          return label === selectedTag;
+        });
+      });
     }
     
-    return matchesSearch && matchesCategory && matchesFilter;
-  });
-
-  // Sort by volume for Trending tab
-  if (selectedCategory === "Trending") {
-    filteredMarkets = [...filteredMarkets].sort((a, b) => {
+    // Sort by volume (trending) - clone array to avoid mutating React Query cache
+    return [...filtered].sort((a, b) => {
       const volumeA = parseFloat(a.volume || "0");
       const volumeB = parseFloat(b.volume || "0");
       return volumeB - volumeA;
     });
-  }
+  }, [markets, searchQuery, selectedTag]);
 
   return (
     <div className="flex-1 overflow-hidden flex flex-col">
-      {/* Header with Category Tabs */}
+      {/* Header with Tag-Based Navigation (Polymarket Style) */}
       <div className="glass-header border-b border-glass/20">
         <div className="flex items-center gap-3 px-4 py-3 border-b border-glass/10">
           <Vote className="h-5 w-5 text-primary" />
@@ -578,45 +522,26 @@ function PredictionMarketsInterface() {
           </Badge>
         </div>
 
-        {/* Main Category Tabs */}
-        <div className="flex items-center gap-1 px-4 py-2 overflow-x-auto scrollbar-hide">
-          {mainCategories.map((cat) => (
-            <Button
-              key={cat}
-              variant={selectedCategory === cat ? "default" : "ghost"}
-              size="sm"
-              onClick={() => {
-                setSelectedCategory(cat);
-                setSelectedFilter("All");
-              }}
-              className={selectedCategory === cat ? "" : "text-foreground/70 hover:text-foreground"}
-              data-testid={`button-category-${cat.toLowerCase()}`}
-            >
-              {cat}
-            </Button>
-          ))}
-        </div>
-
-        {/* Quick Filter Tags */}
-        <div className="flex items-center gap-2 px-4 py-2 border-t border-glass/10">
+        {/* Search and Tag Filters */}
+        <div className="flex items-center gap-2 px-4 py-3">
           <input
             type="text"
             placeholder="Search markets..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="px-3 py-1.5 text-sm bg-glass/30 border border-glass/20 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50 w-48"
+            className="px-3 py-1.5 text-sm bg-glass/30 border border-glass/20 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50 w-48 shrink-0"
             data-testid="input-search-markets"
           />
-          <div className="flex gap-1.5 flex-wrap">
-            {filterTags.map((tag) => (
+          <div className="flex gap-1.5 flex-wrap overflow-x-auto scrollbar-hide max-h-24">
+            {allTags.map((tag) => (
               <Badge
                 key={tag}
-                variant={selectedFilter === tag ? "default" : "outline"}
-                className={`cursor-pointer hover-elevate active-elevate-2 ${
-                  selectedFilter === tag ? "" : "bg-glass/20 text-foreground/70 hover:text-foreground"
+                variant={selectedTag === tag ? "default" : "outline"}
+                className={`cursor-pointer hover-elevate active-elevate-2 shrink-0 ${
+                  selectedTag === tag ? "" : "bg-glass/20 text-foreground/70 hover:text-foreground"
                 }`}
-                onClick={() => setSelectedFilter(tag)}
-                data-testid={`badge-filter-${tag.toLowerCase()}`}
+                onClick={() => setSelectedTag(tag)}
+                data-testid={`badge-tag-${tag.toLowerCase().replace(/\s+/g, '-')}`}
               >
                 {tag}
               </Badge>
