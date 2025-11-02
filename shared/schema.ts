@@ -30,6 +30,7 @@ export const users = pgTable("users", {
   onboardingStep: text("onboarding_step").notNull().default("auth"), // "auth", "ai_provider", "trading_accounts", "complete"
   agentMode: text("agent_mode").notNull().default("passive"), // "passive", "active"
   monitoringFrequencyMinutes: integer("monitoring_frequency_minutes").notNull().default(0), // 0 = disabled, per-user monitoring frequency
+  maxAiCallsPerHour: integer("max_ai_calls_per_hour"), // null = unlimited, integer = max AI calls per hour for cost control
   marginMode: text("margin_mode").notNull().default("isolated"), // "isolated", "cross" - margin mode for trading
   walletAddress: text("wallet_address"), // DEPRECATED: Kept for backward compatibility, migrating to user_wallets table
   verificationStatus: text("verification_status").notNull().default("approved"), // "pending", "approved", "rejected" - Auto-approved for all users
