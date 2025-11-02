@@ -280,14 +280,27 @@ Use this to understand recent discussions and any strategy modifications the use
     }
 
     // Build the unified conversational system prompt
+    const credentialsStatus = userState 
+      ? `TRADING ACCOUNT STATUS (HYPERLIQUID):
+- Portfolio Value: $${userState.marginSummary?.accountValue || '0'}
+- Available Balance: $${userState.withdrawable || '0'}
+- Margin Used: $${userState.marginSummary?.totalMarginUsed || '0'}
+- Open Positions: ${currentPositions.length > 0 ? `${currentPositions.length} position(s) - ${currentPositions.map((p: any) => `${p.symbol} ${p.side} ${p.size} @ $${p.entryPrice}`).join(', ')}` : 'None'}
+- Open Orders: ${openOrders.length > 0 ? `${openOrders.length} order(s)` : 'None'}${optionsContext}${predictionContext}`
+      : `⚠️ TRADING SETUP REQUIRED:
+The user has NOT completed API wallet setup yet. You can still answer questions about trading, markets, and strategies, but you CANNOT execute any trades.
+
+When the user asks about trading or mentions wanting to execute trades:
+1. Explain they need to complete the one-time API wallet approval (takes 30 seconds)
+2. Tell them to look for the orange "Setup Now" button at the top of the screen
+3. Reassure them their funds stay in THEIR wallet - the API wallet can only sign trades, not withdraw
+4. After setup, they can chat with you AND execute trades automatically
+
+For now, focus on: market analysis, strategy discussion, education, and answering questions.`;
+    
     const systemPrompt = `You are Grok, an AI assistant helping with cryptocurrency trading across multiple instruments: perpetual futures (Hyperliquid, Orderly Network), options (Aevo), and prediction markets (Polymarket). You respond naturally and conversationally to all questions - trading, markets, math, science, current events, or casual conversation.${strategyContext}${conversationContext}
 
-TRADING ACCOUNT STATUS (HYPERLIQUID):
-- Portfolio Value: $${userState?.marginSummary?.accountValue || '0'}
-- Available Balance: $${userState?.withdrawable || '0'}
-- Margin Used: $${userState?.marginSummary?.totalMarginUsed || '0'}
-- Open Positions: ${currentPositions.length > 0 ? `${currentPositions.length} position(s) - ${currentPositions.map((p: any) => `${p.symbol} ${p.side} ${p.size} @ $${p.entryPrice}`).join(', ')}` : 'None'}
-- Open Orders: ${openOrders.length > 0 ? `${openOrders.length} order(s)` : 'None'}${optionsContext}${predictionContext}
+${credentialsStatus}
 
 MARKET CONDITIONS:
 ${marketTrends}

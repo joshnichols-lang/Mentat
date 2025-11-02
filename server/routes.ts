@@ -116,11 +116,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      // Fetch user account state to include portfolio value
-      const hyperliquid = await getUserHyperliquidClient(userId);
-      const userState = await hyperliquid.getUserState();
-      const openOrders = await hyperliquid.getOpenOrders();
-      console.log("[Trading Prompt] User state:", JSON.stringify(userState, null, 2));
+      // Check if user has Hyperliquid credentials before fetching account state
+      const { getUserHyperliquidCredentials } = await import("./credentialService");
+      const hasCredentials = !!(await getUserHyperliquidCredentials(userId));
+      
+      let userState = null;
+      let openOrders = [];
+      
+      if (hasCredentials) {
+        // Fetch user account state only if credentials exist
+        const hyperliquid = await getUserHyperliquidClient(userId);
+        userState = await hyperliquid.getUserState();
+        openOrders = await hyperliquid.getOpenOrders();
+        console.log("[Trading Prompt] User state:", JSON.stringify(userState, null, 2));
+      } else {
+        console.log("[Trading Prompt] No Hyperliquid credentials found - AI will work in conversation-only mode");
+      }
 
       const strategy = await processTradingPrompt(userId, prompt, marketData, currentPositions, userState, openOrders, model, preferredProvider, screenshots, strategyId);
       
@@ -130,8 +141,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = await storage.getUser(userId);
       const isActiveMode = user?.agentMode === "active";
       
-      // Only execute trades if in active mode AND autoExecute is enabled
-      if (isActiveMode && autoExecute && strategy.actions && strategy.actions.length > 0) {
+      // Only execute trades if in active mode AND autoExecute is enabled AND user has credentials
+      if (isActiveMode && autoExecute && strategy.actions && strategy.actions.length > 0 && hasCredentials) {
         try {
           executionSummary = await executeTradeStrategy(userId, strategy.actions, strategyId || null);
           console.log(`Executed ${executionSummary.successfulExecutions}/${executionSummary.totalActions} trades successfully`);
