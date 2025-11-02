@@ -31,6 +31,7 @@ export function DepositModal({ open, onOpenChange }: DepositModalProps) {
       solanaAddress: string;
       evmAddress: string;
       polygonAddress: string;
+      bnbAddress: string;
     };
   }>({
     queryKey: ["/api/wallets/embedded"],
@@ -85,7 +86,7 @@ export function DepositModal({ open, onOpenChange }: DepositModalProps) {
         <DialogHeader>
           <DialogTitle>Deposit Funds</DialogTitle>
           <DialogDescription>
-            Bridge funds from 30+ chains to your embedded Hyperliquid wallet using Router Nitro
+            Bridge USDC to Arbitrum for your Hyperliquid wallet using Router Nitro
           </DialogDescription>
         </DialogHeader>
 
@@ -148,6 +149,14 @@ export function DepositModal({ open, onOpenChange }: DepositModalProps) {
               </p>
             </div>
 
+            <Alert variant="destructive" data-testid="alert-usdc-arbitrum-only">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription className="text-xs">
+                <strong>IMPORTANT:</strong> Hyperliquid only accepts USDC on Arbitrum. 
+                Bridge USDC to Arbitrum (Chain ID: 42161) only. Other tokens or chains will result in lost funds.
+              </AlertDescription>
+            </Alert>
+
             <Alert>
               <AlertCircle className="h-4 w-4" />
               <AlertDescription className="text-xs">
@@ -155,7 +164,8 @@ export function DepositModal({ open, onOpenChange }: DepositModalProps) {
                 <ol className="list-decimal list-inside mt-2 space-y-1">
                   <li>Click "Open Bridge Widget" to launch Router Nitro</li>
                   <li>Select source chain and token (supports 30+ chains)</li>
-                  <li>Enter amount and confirm transaction in your wallet</li>
+                  <li>Bridge to USDC on Arbitrum (destination is pre-filled)</li>
+                  <li>Confirm transaction in your wallet</li>
                   <li>Funds will arrive at your embedded Hyperliquid address</li>
                 </ol>
               </AlertDescription>
@@ -181,7 +191,7 @@ export function DepositModal({ open, onOpenChange }: DepositModalProps) {
             </div>
 
             <p className="text-xs text-muted-foreground text-center">
-              Router Nitro supports bridging from Ethereum, Arbitrum, Polygon, Base, Optimism, and 25+ other chains
+              Bridge from 30+ chains including Ethereum, Polygon, Base, Optimism. Router Nitro will convert to USDC on Arbitrum automatically.
             </p>
           </div>
         )}

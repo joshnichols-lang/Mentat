@@ -29,6 +29,7 @@ export function useEmbeddedWallet() {
       evmAddress: string;
       polygonAddress: string;
       hyperliquidAddress: string;
+      bnbAddress: string;
     }) => {
       const res = await apiRequest('POST', '/api/wallets/embedded', addresses);
       return await res.json();
@@ -70,6 +71,7 @@ export function useEmbeddedWallet() {
       evmAddress: wallets.evm.address,
       polygonAddress: wallets.polygon.address,
       hyperliquidAddress: wallets.hyperliquid.address,
+      bnbAddress: wallets.bnb.address,
     });
     
     // Show recovery modal

@@ -33,6 +33,10 @@ export interface GeneratedWallets {
     address: string; // Same as EVM address
     privateKey: string; // Same as EVM private key
   };
+  bnb: {
+    address: string; // Same as EVM address (BNB Chain/BSC is EVM-compatible)
+    privateKey: string; // Same as EVM private key
+  };
 }
 
 /**
@@ -76,6 +80,11 @@ export function generateEmbeddedWallets(): GeneratedWallets {
       address: evmWallet.address,
       privateKey: evmWallet.privateKey,
     },
+    bnb: {
+      // BNB Chain (BSC) uses the same EVM wallet (EVM-compatible)
+      address: evmWallet.address,
+      privateKey: evmWallet.privateKey,
+    },
   };
 }
 
@@ -116,6 +125,10 @@ export function recoverWalletsFromSeed(seedPhrase: string): GeneratedWallets {
       address: evmWallet.address,
       privateKey: evmWallet.privateKey,
     },
+    bnb: {
+      address: evmWallet.address,
+      privateKey: evmWallet.privateKey,
+    },
   };
 }
 
@@ -134,4 +147,5 @@ export function clearWalletData(wallets: GeneratedWallets): void {
   (wallets as any).evm.privateKey = '';
   (wallets as any).polygon.privateKey = '';
   (wallets as any).hyperliquid.privateKey = '';
+  (wallets as any).bnb.privateKey = '';
 }

@@ -71,6 +71,7 @@ export const embeddedWallets = pgTable("embedded_wallets", {
   evmAddress: text("evm_address").notNull(), // EVM address (Arbitrum, Ethereum, etc)
   polygonAddress: text("polygon_address").notNull(), // Polygon address (same as EVM, for Polymarket)
   hyperliquidAddress: text("hyperliquid_address").notNull(), // Hyperliquid trading address (same as EVM)
+  bnbAddress: text("bnb_address").notNull(), // BNB Chain address (same as EVM, BSC is EVM-compatible)
   // API wallet for Hyperliquid trading - separate wallet with limited permissions
   apiWalletAddress: text("api_wallet_address"), // API wallet public address (private key stored encrypted in apiKeys table)
   apiWalletApproved: integer("api_wallet_approved").notNull().default(0), // 1 = user has signed approveAgent transaction

@@ -1905,9 +1905,10 @@ Provide a clear, actionable analysis with specific recommendations. Format your 
         evmAddress: z.string().min(1),
         polygonAddress: z.string().min(1),
         hyperliquidAddress: z.string().min(1),
+        bnbAddress: z.string().min(1),
       });
       
-      const { solanaAddress, evmAddress, polygonAddress, hyperliquidAddress } = schema.parse(req.body);
+      const { solanaAddress, evmAddress, polygonAddress, hyperliquidAddress, bnbAddress } = schema.parse(req.body);
       
       // Check if user already has embedded wallets
       const existingWallet = await storage.getEmbeddedWallet(userId);
@@ -1924,6 +1925,7 @@ Provide a clear, actionable analysis with specific recommendations. Format your 
         evmAddress,
         polygonAddress,
         hyperliquidAddress,
+        bnbAddress,
       });
       
       res.json({
