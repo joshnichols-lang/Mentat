@@ -2583,11 +2583,12 @@ Provide a clear, actionable analysis with specific recommendations. Format your 
 
   // Polymarket API Routes
   
-  // Get Polymarket markets (public endpoint)
+  // Get Polymarket markets (public endpoint) - includes both regular and LIVE markets
   app.get("/api/polymarket/markets", async (req, res) => {
     try {
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 100;
       const active = req.query.active === "true";
+      const includeLive = req.query.live !== "false"; // Include LIVE markets by default
       
       // Fetch markets from Polymarket Gamma API via client
       // This is public data, no user context needed
@@ -2595,9 +2596,21 @@ Provide a clear, actionable analysis with specific recommendations. Format your 
         privateKey: "0x0000000000000000000000000000000000000000000000000000000000000001" // Dummy key for public API
       });
       
-      const markets = await tempClient.getMarkets({ limit, active });
+      // Fetch regular event-based markets
+      const regularMarkets = await tempClient.getMarkets({ limit, active });
       
-      res.json({ success: true, markets });
+      // Fetch LIVE trading markets (short-term rolling price predictions)
+      let liveMarkets: any[] = [];
+      if (includeLive) {
+        liveMarkets = await tempClient.getLiveMarkets();
+      }
+      
+      // Merge both types of markets
+      const allMarkets = [...regularMarkets, ...liveMarkets];
+      
+      console.log(`[Polymarket API] Returning ${regularMarkets.length} regular + ${liveMarkets.length} LIVE = ${allMarkets.length} total markets`);
+      
+      res.json({ success: true, markets: allMarkets });
     } catch (error: any) {
       console.error("Error fetching Polymarket markets:", error);
       res.status(500).json({ success: false, error: "Failed to fetch Polymarket markets" });

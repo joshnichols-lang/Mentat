@@ -203,6 +203,74 @@ export class PolymarketClient {
   }
 
   /**
+   * Get LIVE trading markets (short-term rolling price predictions)
+   * These are separate from regular event markets and use a different API endpoint
+   */
+  public async getLiveMarkets(params?: {
+    symbols?: string[]; // e.g., ['BTC', 'ETH', 'SOL']
+  }): Promise<any[]> {
+    try {
+      // Fetch from the live-markets endpoint
+      const url = 'https://gamma-api.polymarket.com/live-markets';
+      console.log(`[Polymarket] Fetching LIVE markets from: ${url}`);
+      
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`Live markets API returned ${response.status}: ${response.statusText}`);
+      }
+      
+      const liveData = await response.json();
+      
+      // Transform live markets to match our standard market structure
+      const markets: any[] = [];
+      
+      // Live markets are organized differently - they have a "series" structure
+      if (Array.isArray(liveData)) {
+        for (const series of liveData) {
+          // Each series represents a trading window (e.g., BTC 15m, BTC 1h, ETH 15m)
+          if (series.markets && Array.isArray(series.markets)) {
+            for (const market of series.markets) {
+              // Add synthetic tags for filtering
+              const underlying = series.underlying || series.symbol || 'Unknown';
+              const interval = series.intervalMinutes || series.interval || '?';
+              
+              markets.push({
+                ...market,
+                // Normalize structure to match regular markets
+                question: market.question || `${underlying} Up or Down - ${interval} minute${interval !== 1 ? 's' : ''}`,
+                eventSlug: series.slug || `live-${underlying.toLowerCase()}-${interval}m`,
+                eventTitle: `LIVE: ${underlying} ${interval}m`,
+                eventDescription: market.description || `Short-term price prediction for ${underlying}`,
+                eventIcon: '📊',
+                // Add synthetic tags for easy filtering
+                eventTags: [
+                  { label: 'Live' },
+                  { label: underlying.toUpperCase() },
+                  { label: `${interval}m` },
+                  { label: 'Crypto' }
+                ],
+                // Mark as live market
+                marketType: 'live_trading',
+                resolutionStyle: 'rolling',
+                underlying: underlying,
+                intervalMinutes: interval,
+                windowCloseTime: market.windowCloseTime || market.endDate,
+              });
+            }
+          }
+        }
+      }
+      
+      console.log(`[Polymarket] Transformed live data into ${markets.length} LIVE markets`);
+      return markets;
+    } catch (error) {
+      console.error("[Polymarket] Failed to fetch LIVE markets:", error);
+      // Don't throw - return empty array to allow regular markets to still work
+      return [];
+    }
+  }
+
+  /**
    * Get detailed market information by condition ID
    */
   public async getMarket(conditionId: string): Promise<any> {
