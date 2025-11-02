@@ -89,35 +89,35 @@ export function MyWallets() {
       label: "Hyperliquid",
       address: embeddedWallet.hyperliquidAddress,
       chain: "Arbitrum",
-      description: "For USDC deposits and perpetual futures trading",
+      description: "Deposit: USDC on Arbitrum only. Perpetual futures trading.",
       icon: "zap",
     },
     {
       label: "Polymarket",
       address: embeddedWallet.polygonAddress,
       chain: "Polygon",
-      description: "For prediction market trading",
+      description: "Deposit: USDC on Polygon. Prediction markets.",
       icon: "circle",
     },
     {
       label: "Solana",
       address: embeddedWallet.solanaAddress,
       chain: "Solana",
-      description: "For Solana-based trading",
+      description: "Deposit: SOL or SPL tokens. Solana DeFi & spot markets.",
       icon: "server",
     },
     {
       label: "EVM",
       address: embeddedWallet.evmAddress,
       chain: "Multi-chain",
-      description: "For Ethereum and all EVM-compatible chains",
+      description: "Universal address for all EVM chains (Ethereum, Arbitrum, etc.)",
       icon: "boxes",
     },
     {
       label: "BNB Chain",
       address: embeddedWallet.bnbAddress,
       chain: "BSC",
-      description: "For BNB Chain (Binance Smart Chain) trading",
+      description: "Deposit: BNB or BEP-20 tokens. Spot market trading.",
       icon: "diamond",
     },
   ];
@@ -190,11 +190,11 @@ export function MyWallets() {
           })}
         </div>
 
-        <Alert>
+        <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription className="text-xs">
-            <strong>Important:</strong> Only send supported tokens to these addresses. 
-            For Hyperliquid, only USDC on Arbitrum is accepted. Sending other tokens may result in permanent loss.
+            <strong>Critical:</strong> Hyperliquid requires USDC on Arbitrum. Polymarket requires USDC on Polygon. 
+            BNB Chain uses BNB. Solana uses SOL. Sending wrong tokens or wrong chains causes permanent loss.
           </AlertDescription>
         </Alert>
       </CardContent>

@@ -31,8 +31,20 @@ export function useEmbeddedWallet() {
       hyperliquidAddress: string;
       bnbAddress: string;
     }) => {
-      const res = await apiRequest('POST', '/api/wallets/embedded', addresses);
-      return await res.json();
+      try {
+        const res = await apiRequest('POST', '/api/wallets/embedded', addresses);
+        return await res.json();
+      } catch (error: any) {
+        // Check if this is a "wallet already exists" error (400 with specific message)
+        // apiRequest throws Error objects with message, status, and data properties
+        const errorMessage = error.message || error.data?.error || '';
+        if (errorMessage.includes('already exist')) {
+          console.log('[Wallet] Embedded wallets already exist, fetching existing wallet');
+          await queryClient.invalidateQueries({ queryKey: ['/api/wallets/embedded'] });
+          throw new Error('WALLET_EXISTS'); // Special error to handle gracefully
+        }
+        throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/wallets/embedded'] });
@@ -59,23 +71,41 @@ export function useEmbeddedWallet() {
 
   // Function to initiate embedded wallet creation
   const createEmbeddedWallet = async () => {
-    // Generate wallets client-side
+    // Generate wallets client-side BEFORE try block to ensure cleanup access
     const wallets = generateEmbeddedWallets();
     
-    // Store temporarily for recovery modal display
-    setGeneratedWallets(wallets);
-    
-    // Save public addresses to database (NO PRIVATE KEYS)
-    await createWalletMutation.mutateAsync({
-      solanaAddress: wallets.solana.publicKey,
-      evmAddress: wallets.evm.address,
-      polygonAddress: wallets.polygon.address,
-      hyperliquidAddress: wallets.hyperliquid.address,
-      bnbAddress: wallets.bnb.address,
-    });
-    
-    // Show recovery modal
-    setShowRecoveryModal(true);
+    try {
+      // Store temporarily for recovery modal display
+      setGeneratedWallets(wallets);
+      
+      // Save public addresses to database (NO PRIVATE KEYS)
+      await createWalletMutation.mutateAsync({
+        solanaAddress: wallets.solana.publicKey,
+        evmAddress: wallets.evm.address,
+        polygonAddress: wallets.polygon.address,
+        hyperliquidAddress: wallets.hyperliquid.address,
+        bnbAddress: wallets.bnb.address,
+      });
+      
+      // Show recovery modal
+      setShowRecoveryModal(true);
+    } catch (error: any) {
+      // If wallet already exists, just refetch and don't show error
+      if (error.message === 'WALLET_EXISTS') {
+        console.log('[Wallet] Using existing embedded wallets, cleaning up generated data');
+        // CRITICAL: Clean up freshly generated wallets immediately
+        clearWalletData(wallets);
+        setGeneratedWallets(null);
+        await refetch();
+        return; // Silent success
+      }
+      // For any other error, still clean up generated wallets
+      console.error('[Wallet] Error creating embedded wallets:', error);
+      clearWalletData(wallets);
+      setGeneratedWallets(null);
+      // Re-throw other errors
+      throw error;
+    }
   };
 
   const handleRecoveryConfirm = () => {
