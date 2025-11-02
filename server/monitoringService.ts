@@ -52,6 +52,80 @@ const previousVolumeData = new Map<string, Map<string, number>>();
 // Track monitoring cycles per user to implement time-based triggers
 const userMonitoringCycles = new Map<string, number>();
 
+// Track AI calls per user for rate limiting (rolling hourly window)
+const userAiCallHistory = new Map<string, number[]>(); // userId -> array of timestamps (ms)
+
+/**
+ * Check if user has exceeded their hourly AI call limit
+ * Returns { allowed: boolean, remaining: number, resetIn: number (minutes) }
+ */
+function checkAiCallLimit(userId: string, maxCallsPerHour: number | null): { 
+  allowed: boolean; 
+  remaining: number; 
+  resetIn: number;
+  currentCount: number;
+} {
+  // If no limit configured, allow unlimited calls
+  if (!maxCallsPerHour) {
+    return { allowed: true, remaining: Infinity, resetIn: 0, currentCount: 0 };
+  }
+
+  const now = Date.now();
+  const oneHourAgo = now - (60 * 60 * 1000);
+
+  // Get or initialize call history for user
+  if (!userAiCallHistory.has(userId)) {
+    userAiCallHistory.set(userId, []);
+  }
+
+  const callHistory = userAiCallHistory.get(userId)!;
+
+  // Remove calls older than 1 hour (rolling window)
+  const recentCalls = callHistory.filter(timestamp => timestamp > oneHourAgo);
+  userAiCallHistory.set(userId, recentCalls);
+
+  const currentCount = recentCalls.length;
+  const allowed = currentCount < maxCallsPerHour;
+  const remaining = Math.max(0, maxCallsPerHour - currentCount);
+
+  // Calculate when the oldest call will expire (when limit resets)
+  const resetIn = recentCalls.length > 0 
+    ? Math.ceil((recentCalls[0] + (60 * 60 * 1000) - now) / (60 * 1000))
+    : 0;
+
+  return { allowed, remaining, resetIn, currentCount };
+}
+
+/**
+ * Record an AI call for rate limiting tracking
+ */
+function recordAiCall(userId: string): void {
+  if (!userAiCallHistory.has(userId)) {
+    userAiCallHistory.set(userId, []);
+  }
+
+  userAiCallHistory.get(userId)!.push(Date.now());
+}
+
+/**
+ * Get current AI usage stats for a user
+ */
+export function getAiUsageStats(userId: string, maxCallsPerHour: number | null): {
+  callsThisHour: number;
+  limit: number | null;
+  remaining: number;
+  resetInMinutes: number;
+} {
+  const { currentCount, remaining, resetIn } = checkAiCallLimit(userId, maxCallsPerHour);
+  
+  return {
+    callsThisHour: currentCount,
+    limit: maxCallsPerHour,
+    remaining: maxCallsPerHour ? remaining : Infinity,
+    resetInMinutes: resetIn
+  };
+}
+
 /**
  * Discover existing positions and track their protective orders if not already tracked
  * This ensures positions opened manually or during server downtime are tracked
@@ -487,6 +561,36 @@ export async function developAutonomousStrategy(userId: string): Promise<void> {
     console.log(`[Trigger Evaluation] Proceeding with AI call - triggers fired:`, triggerResult.triggeredBy);
     // ====================================================================
     // END TRIGGER EVALUATION
+    // ====================================================================
+    
+    // ====================================================================
+    // AI CALL RATE LIMITING - Cost Control
+    // ====================================================================
+    // Check if user has exceeded their hourly AI call limit
+    const aiCallLimit = checkAiCallLimit(userId, user.maxAiCallsPerHour);
+    
+    if (!aiCallLimit.allowed) {
+      console.log(`[AI Rate Limit] User ${userId} has exceeded hourly limit (${aiCallLimit.currentCount}/${user.maxAiCallsPerHour}) - skipping AI call`);
+      console.log(`[AI Rate Limit] Next AI call available in ${aiCallLimit.resetIn} minutes`);
+      
+      // Log rate limit hit
+      await storage.createMonitoringLog(userId, {
+        analysis: JSON.stringify({
+          mode: "rate_limited",
+          message: `AI call skipped - hourly limit reached (${aiCallLimit.currentCount}/${user.maxAiCallsPerHour} calls). Next call available in ${aiCallLimit.resetIn} minutes.`,
+          triggeredBy: triggerResult.triggeredBy,
+          cycle: currentCycle,
+          resetInMinutes: aiCallLimit.resetIn
+        }),
+        alertLevel: "warning"
+      });
+      
+      return; // Skip AI call - snapshot will be created in finally block
+    }
+    
+    console.log(`[AI Rate Limit] User ${userId} within limit (${aiCallLimit.currentCount}/${user.maxAiCallsPerHour || 'unlimited'} calls this hour, ${aiCallLimit.remaining} remaining)`);
+    // ====================================================================
+    // END AI CALL RATE LIMITING
     // ====================================================================
     
     const prompt = `You are Mr. Fox, an autonomous AI trader. Develop a complete trade thesis and execute trades based on current market conditions.
@@ -1180,6 +1284,10 @@ PRICE VALIDATION CHECKLIST for every limit order:
       ],
       temperature: 0.7,
     });
+
+    // Record AI call for rate limiting
+    recordAiCall(userId);
+    console.log(`[AI Rate Limit] Recorded AI call for user ${userId}`);
 
     const content = aiResponse.content;
     if (!content) {

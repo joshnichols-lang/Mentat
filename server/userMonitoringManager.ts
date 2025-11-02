@@ -2,6 +2,7 @@ import { storage } from "./storage";
 import { developAutonomousStrategy } from "./monitoringService";
 import { getUserHyperliquidClient } from "./hyperliquid/client";
 import { createPortfolioSnapshot } from "./portfolioSnapshotService";
+import { analyzeStrategyForMonitoring } from "./strategyParser";
 
 /**
  * Per-user monitoring state
@@ -21,6 +22,7 @@ const activeMonitoring = new Map<string, UserMonitoring>();
 
 /**
  * Start autonomous trading monitoring for a specific user
+ * Automatically analyzes strategy to optimize monitoring intervals
  */
 export async function startUserMonitoring(userId: string, intervalMinutes: number, runImmediately: boolean = true): Promise<void> {
   // Stop existing monitoring if running
@@ -32,6 +34,32 @@ export async function startUserMonitoring(userId: string, intervalMinutes: numbe
   if (intervalMinutes === 0) {
     console.log(`[User Monitoring] Monitoring disabled for user ${userId} (interval: 0)`);
     return;
+  }
+
+  // Analyze active strategy to recommend optimal monitoring settings
+  try {
+    const tradingModes = await storage.getTradingModes(userId);
+    const activeMode = tradingModes.find(mode => mode.isActive);
+    
+    if (activeMode && activeMode.strategyDescription) {
+      const analysis = analyzeStrategyForMonitoring(activeMode.strategyDescription);
+      console.log(`[User Monitoring] Strategy Analysis for user ${userId}:`, {
+        timeframe: analysis.detectedTimeframe,
+        style: analysis.detectedStyle,
+        recommendedMonitoringMinutes: analysis.recommendedMonitoringMinutes,
+        reasoning: analysis.reasoning
+      });
+      
+      // If user's configured frequency is very different from recommendation, log a note
+      if (intervalMinutes > analysis.recommendedMonitoringMinutes * 3) {
+        console.log(`[User Monitoring] ⚠️ User's configured frequency (${intervalMinutes} min) is much slower than recommended (${analysis.recommendedMonitoringMinutes} min) for their ${analysis.detectedStyle} strategy`);
+      } else if (intervalMinutes < analysis.recommendedMonitoringMinutes / 2) {
+        console.log(`[User Monitoring] ⚠️ User's configured frequency (${intervalMinutes} min) is faster than recommended (${analysis.recommendedMonitoringMinutes} min) - may increase AI costs`);
+      }
+    }
+  } catch (error) {
+    console.error(`[User Monitoring] Error analyzing strategy:`, error);
+    // Continue with monitoring even if analysis fails
   }
 
   console.log(`[User Monitoring] Starting monitoring for user ${userId} (every ${intervalMinutes} minutes)`);
