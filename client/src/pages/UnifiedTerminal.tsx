@@ -452,9 +452,9 @@ function PredictionMarketsInterface() {
   const [selectedFilter, setSelectedFilter] = useState<string>("All");
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
 
-  // Fetch Polymarket markets
+  // Fetch Polymarket markets (500 markets to include short-term predictions)
   const { data: marketsData, isLoading } = useQuery<{ success: boolean; markets: any[] }>({
-    queryKey: ['/api/polymarket/markets?limit=100&active=true'],
+    queryKey: ['/api/polymarket/markets?limit=500&active=true'],
   });
 
   const markets = marketsData?.markets || [];
@@ -470,6 +470,21 @@ function PredictionMarketsInterface() {
     "World",
     "Elections"
   ];
+
+  // Category keyword mapping for flexible filtering (MUST be before getFilterTags)
+  const getCategoryKeywords = (category: string): string[] => {
+    const keywords: { [key: string]: string[] } = {
+      "Trending": [],
+      "Politics": ["congress", "senate", "house", "government", "biden", "republican", "democrat", "political", "policy", "governor", "mayor", "administration"],
+      "Sports": ["nfl", "nba", "mlb", "nhl", "soccer", "football", "basketball", "baseball", "hockey", "world series", "super bowl", "championship", "playoffs", "athlete", "player"],
+      "Finance": ["fed", "federal reserve", "interest rate", "stock market", "dow", "s&p", "nasdaq", "inflation", "gdp", "recession", "treasury", "bonds"],
+      "Crypto": ["bitcoin", "btc", "ethereum", "eth", "crypto", "cryptocurrency", "blockchain", "solana", "sol", "defi", "nft", "web3", "token", "15 min", "hourly", "4 hour", "daily", "weekly", "monthly", "price will", "hit", "above", "below", "minute"],
+      "Culture": ["celebrity", "entertainment", "movie", "film", "music", "artist", "award", "oscar", "grammy", "emmy", "actor", "actress"],
+      "World": ["international", "global", "ukraine", "china", "russia", "europe", "middle east", "war", "conflict", "united nations"],
+      "Elections": ["election", "vote", "ballot", "candidate", "primary", "presidential", "2024", "2025", "campaign", "trump", "governor race"]
+    };
+    return keywords[category] || [];
+  };
 
   // Dynamic filter tags extracted from markets' eventTags based on selected category
   const getFilterTags = () => {
@@ -509,21 +524,6 @@ function PredictionMarketsInterface() {
   };
 
   const filterTags = getFilterTags();
-
-  // Category keyword mapping for flexible filtering
-  const getCategoryKeywords = (category: string): string[] => {
-    const keywords: { [key: string]: string[] } = {
-      "Trending": [],
-      "Politics": ["congress", "senate", "house", "government", "biden", "republican", "democrat", "political", "policy", "governor", "mayor", "administration"],
-      "Sports": ["nfl", "nba", "mlb", "nhl", "soccer", "football", "basketball", "baseball", "hockey", "world series", "super bowl", "championship", "playoffs", "athlete", "player"],
-      "Finance": ["fed", "federal reserve", "interest rate", "stock market", "dow", "s&p", "nasdaq", "inflation", "gdp", "recession", "treasury", "bonds"],
-      "Crypto": ["bitcoin", "btc", "ethereum", "eth", "crypto", "cryptocurrency", "blockchain", "solana", "sol", "defi", "nft", "web3", "token"],
-      "Culture": ["celebrity", "entertainment", "movie", "film", "music", "artist", "award", "oscar", "grammy", "emmy", "actor", "actress"],
-      "World": ["international", "global", "ukraine", "china", "russia", "europe", "middle east", "war", "conflict", "united nations"],
-      "Elections": ["election", "vote", "ballot", "candidate", "primary", "presidential", "2024", "2025", "campaign", "trump", "governor race"]
-    };
-    return keywords[category] || [];
-  };
 
   // Apply search/category filters
   let filteredMarkets = markets.filter((market: any) => {

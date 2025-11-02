@@ -240,19 +240,14 @@ export async function makeAIRequest(
       max_tokens: request.max_tokens,
     };
     
-    // Add Live Search capabilities for Grok 4 Fast via extra_body
+    // Add Live Search capabilities for Grok 4 Fast (correct xAI API format)
     if (providerName === "xai") {
-      requestConfig.extra_body = {
-        search_parameters: {
-          mode: "auto", // Let AI decide when to search
-          return_citations: true,
-          sources: [
-            { type: "web" },
-            { type: "news" }
-          ]
-        }
+      requestConfig.search_parameters = {
+        mode: "on", // Force web search for real-time market data
+        sources: ["web", "news"], // Simplified array format per xAI docs
+        return_citations: true
       };
-      console.log("[AI Router] Enabled Grok Live Search with web and news sources");
+      console.log("[AI Router] Enabled Grok Live Search (forced mode) with web and news sources");
     }
     
     const completion = await client.chat.completions.create(requestConfig);
