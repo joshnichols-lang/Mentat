@@ -446,123 +446,6 @@ function PolymarketTradingModal({ event, onClose }: { event: any; onClose: () =>
   );
 }
 
-// LIVE Markets Interface - Shows short-term rolling price predictions
-function LiveMarketsInterface() {
-  // Fetch Polymarket markets
-  const { data: marketsData, isLoading } = useQuery<{ success: boolean; markets: any[] }>({
-    queryKey: ['/api/polymarket/markets?limit=2000&active=true'],
-  });
-
-  const allMarkets = marketsData?.markets || [];
-  
-  // Filter for LIVE markets only (identified by marketType property or "Live" tag)
-  const liveMarkets = allMarkets.filter((m: any) => 
-    m.marketType === 'live_trading' || 
-    m.resolutionStyle === 'rolling' ||
-    m.eventTags?.some((tag: any) => tag.label === 'Live')
-  );
-
-  // DEBUG: Log what we found
-  useEffect(() => {
-    console.log("[LiveMarkets] Total markets fetched:", allMarkets.length);
-    console.log("[LiveMarkets] LIVE markets found:", liveMarkets.length);
-    if (liveMarkets.length > 0) {
-      console.log("[LiveMarkets] First 5 LIVE markets:", liveMarkets.slice(0, 5).map((m: any) => ({
-        question: m.question,
-        marketType: m.marketType,
-        resolutionStyle: m.resolutionStyle,
-        intervalMinutes: m.intervalMinutes,
-        eventTags: m.eventTags
-      })));
-    }
-  }, [allMarkets.length, liveMarkets.length]);
-
-  return (
-    <div className="flex-1 overflow-hidden flex flex-col">
-      {/* Header */}
-      <div className="glass-header border-b border-glass/20">
-        <div className="flex items-center gap-3 px-4 py-3">
-          <Zap className="h-5 w-5 text-primary" />
-          <h2 className="text-lg font-semibold">LIVE Markets</h2>
-          <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30">
-            {liveMarkets.length}
-          </Badge>
-        </div>
-      </div>
-
-      {/* Content */}
-      <div className="flex-1 overflow-auto p-4">
-        {isLoading ? (
-          <div className="flex items-center justify-center h-full">
-            <div className="text-center space-y-2">
-              <div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full mx-auto"></div>
-              <p className="text-sm text-foreground/70">Loading LIVE markets...</p>
-            </div>
-          </div>
-        ) : liveMarkets.length === 0 ? (
-          <div className="flex items-center justify-center h-full">
-            <Card className="bg-glass/50 border-glass/20 max-w-md">
-              <CardContent className="p-6 text-center space-y-2">
-                <Zap className="h-12 w-12 text-foreground/30 mx-auto mb-2" />
-                <h3 className="font-semibold">No LIVE Markets Found</h3>
-                <p className="text-sm text-foreground/70">
-                  {allMarkets.length > 0 
-                    ? `Searched ${allMarkets.length} markets but found no LIVE trading markets. These may not be available via the public API.`
-                    : "No markets loaded from Polymarket API."}
-                </p>
-                <p className="text-xs text-foreground/50 mt-2">
-                  Check browser console for debug logs
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-        ) : (
-          <div className="grid gap-3">
-            {liveMarkets.map((market: any) => (
-              <Card 
-                key={market.id || market.conditionId} 
-                className="bg-glass/50 border-glass/20 hover-elevate cursor-pointer"
-              >
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <CardTitle className="text-sm font-medium">
-                      {market.question || market.eventTitle}
-                    </CardTitle>
-                    <Badge className="bg-primary/20 text-primary border-primary/30 shrink-0">
-                      LIVE
-                    </Badge>
-                  </div>
-                  {market.intervalMinutes && (
-                    <p className="text-xs text-foreground/60">
-                      Window: {market.intervalMinutes} minutes
-                    </p>
-                  )}
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  {market.description && (
-                    <p className="text-xs text-foreground/70">{market.description}</p>
-                  )}
-                  <div className="flex gap-2 flex-wrap">
-                    {market.eventTags?.map((tag: any, idx: number) => (
-                      <Badge 
-                        key={idx} 
-                        variant="outline" 
-                        className="text-xs bg-glass/30"
-                      >
-                        {tag.label || tag}
-                      </Badge>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
 // Prediction Markets Interface
 function PredictionMarketsInterface() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -1115,7 +998,7 @@ export default function UnifiedTerminal() {
               <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col h-full">
                 {/* Tab Navigation Header */}
                 <div className="glass-header border-b border-glass/20 px-4 py-2">
-                  <TabsList className="grid w-full max-w-4xl grid-cols-6 bg-glass/50">
+                  <TabsList className="grid w-full max-w-3xl grid-cols-5 bg-glass/50">
                     <TabsTrigger 
                       value="perpetuals" 
                       className="flex items-center gap-2"
@@ -1130,15 +1013,7 @@ export default function UnifiedTerminal() {
                       data-testid="tab-prediction-markets"
                     >
                       <Vote className="h-4 w-4" />
-                      Prediction
-                    </TabsTrigger>
-                    <TabsTrigger 
-                      value="live" 
-                      className="flex items-center gap-2"
-                      data-testid="tab-live-markets"
-                    >
-                      <Zap className="h-4 w-4" />
-                      LIVE
+                      Prediction Markets
                     </TabsTrigger>
                     <TabsTrigger 
                       value="options" 
@@ -1154,7 +1029,7 @@ export default function UnifiedTerminal() {
                       data-testid="tab-spot-discovery"
                     >
                       <Sparkles className="h-4 w-4" />
-                      Spot
+                      Spot Discovery
                     </TabsTrigger>
                     <TabsTrigger 
                       value="analytics" 
@@ -1174,10 +1049,6 @@ export default function UnifiedTerminal() {
 
                 <TabsContent value="prediction" className="m-0 flex-1 flex flex-col">
                   <PredictionMarketsInterface />
-                </TabsContent>
-
-                <TabsContent value="live" className="m-0 flex-1 flex flex-col">
-                  <LiveMarketsInterface />
                 </TabsContent>
 
                 <TabsContent value="options" className="m-0 flex-1 flex flex-col">
