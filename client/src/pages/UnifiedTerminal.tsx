@@ -451,12 +451,36 @@ function PredictionMarketsInterface() {
   const [selectedTag, setSelectedTag] = useState<string>("All");
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
 
-  // Fetch Polymarket markets (500 markets to include short-term predictions)
+  // Fetch Polymarket markets (increased limit to capture LIVE crypto markets)
   const { data: marketsData, isLoading } = useQuery<{ success: boolean; markets: any[] }>({
-    queryKey: ['/api/polymarket/markets?limit=500&active=true'],
+    queryKey: ['/api/polymarket/markets?limit=2000&active=true'],
   });
 
   const markets = marketsData?.markets || [];
+
+  // DEBUG: Log first few markets to see what we're getting
+  useEffect(() => {
+    if (markets.length > 0) {
+      console.log("[PredictionMarkets] Total markets:", markets.length);
+      console.log("[PredictionMarkets] First 5 markets:", markets.slice(0, 5).map((m: any) => ({
+        question: m.question,
+        eventTags: m.eventTags?.map((t: any) => t.label),
+        active: m.active,
+        closed: m.closed
+      })));
+      // Look for Bitcoin/Ethereum markets
+      const cryptoMarkets = markets.filter((m: any) => 
+        m.question?.toLowerCase().includes('bitcoin') || 
+        m.question?.toLowerCase().includes('ethereum') ||
+        m.question?.toLowerCase().includes('btc') ||
+        m.question?.toLowerCase().includes('eth')
+      );
+      console.log("[PredictionMarkets] Found", cryptoMarkets.length, "crypto markets");
+      if (cryptoMarkets.length > 0) {
+        console.log("[PredictionMarkets] First 3 crypto markets:", cryptoMarkets.slice(0, 3).map((m: any) => m.question));
+      }
+    }
+  }, [markets]);
 
   // Extract all unique tags from markets (Polymarket's actual tag structure)
   const allTags = useMemo(() => {
