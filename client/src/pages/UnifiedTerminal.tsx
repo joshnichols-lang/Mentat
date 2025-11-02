@@ -47,7 +47,6 @@ import {
   Maximize2,
   Minimize2,
   Layers,
-  Zap,
 } from "lucide-react";
 
 // Perpetuals Trading Interface Component
