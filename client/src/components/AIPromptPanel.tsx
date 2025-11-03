@@ -554,10 +554,8 @@ export default function AIPromptPanel() {
           <ScrollArea className="max-h-[60vh] pr-4">
             <div className="space-y-4 py-4">
               {portfolioAnalysis ? (
-                <div className="prose prose-sm dark:prose-invert max-w-none">
-                  <div className="whitespace-pre-wrap text-sm">
-                    {portfolioAnalysis}
-                  </div>
+                <div className="whitespace-pre-wrap text-sm text-foreground leading-relaxed">
+                  {portfolioAnalysis}
                 </div>
               ) : (
                 <div className="text-center text-muted-foreground py-8">
