@@ -2783,6 +2783,29 @@ Provide a clear, actionable analysis with specific recommendations. Format your 
     }
   });
   
+  // Get order book for a Polymarket token
+  app.get("/api/polymarket/orderbook/:tokenId", isAuthenticated, async (req, res) => {
+    try {
+      const { tokenId } = req.params;
+      
+      if (!tokenId) {
+        return res.status(400).json({ success: false, error: "Token ID is required" });
+      }
+      
+      // Get Polymarket client
+      const { PolymarketClient } = await import("./polymarket/client");
+      const polymarketClient = PolymarketClient.getInstance();
+      
+      // Fetch order book
+      const orderBook = await polymarketClient.getOrderBook(tokenId);
+      
+      res.json({ success: true, orderBook });
+    } catch (error: any) {
+      console.error("Error fetching order book:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch order book" });
+    }
+  });
+  
   // Get user's Polymarket orders
   app.get("/api/polymarket/orders", isAuthenticated, async (req, res) => {
     try {

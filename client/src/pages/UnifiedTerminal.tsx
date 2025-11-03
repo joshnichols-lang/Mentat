@@ -162,6 +162,50 @@ function PolymarketTradingModal({ event, onClose }: { event: any; onClose: () =>
   const selectedTokenId = selectedOutcome === "Yes" ? yesTokenId : noTokenId;
   const currentPrice = selectedOutcome === "Yes" ? yesPrice : noPrice;
 
+  // Fetch order book for liquidity/price impact analysis
+  const { data: orderBookData } = useQuery<{ success: boolean; orderBook: any }>({
+    queryKey: ['/api/polymarket/orderbook', selectedTokenId],
+    enabled: !!selectedTokenId,
+    refetchInterval: 5000, // Refresh every 5 seconds
+  });
+
+  // Calculate liquidity and price impact
+  const calculatePriceImpact = () => {
+    if (!orderBookData?.orderBook || !size || parseFloat(size) <= 0) {
+      return { availableLiquidity: 0, priceImpact: 0, avgFillPrice: currentPrice };
+    }
+
+    const orderSize = parseFloat(size);
+    const asks = orderBookData.orderBook.asks || [];
+    
+    // Sort asks by price (lowest first)
+    const sortedAsks = [...asks].sort((a: any, b: any) => parseFloat(a.price) - parseFloat(b.price));
+    
+    let remaining = orderSize;
+    let totalCost = 0;
+    let totalShares = 0;
+    
+    for (const ask of sortedAsks) {
+      const askPrice = parseFloat(ask.price);
+      const askSize = parseFloat(ask.size);
+      
+      if (remaining <= 0) break;
+      
+      const fillSize = Math.min(remaining, askSize);
+      totalCost += fillSize * askPrice;
+      totalShares += fillSize;
+      remaining -= fillSize;
+    }
+    
+    const avgFillPrice = totalShares > 0 ? totalCost / totalShares : currentPrice;
+    const priceImpact = currentPrice > 0 ? ((avgFillPrice - currentPrice) / currentPrice) * 100 : 0;
+    const availableLiquidity = sortedAsks.reduce((sum: number, ask: any) => sum + parseFloat(ask.size), 0);
+    
+    return { availableLiquidity, priceImpact, avgFillPrice };
+  };
+
+  const { availableLiquidity, priceImpact, avgFillPrice } = calculatePriceImpact();
+
   // Order placement mutation
   const placeMutation = useMutation({
     mutationFn: async (orderData: any) => {
@@ -418,6 +462,31 @@ function PolymarketTradingModal({ event, onClose }: { event: any; onClose: () =>
                 {estimatedCost > 0 ? `${((potentialProfit / estimatedCost) * 100).toFixed(1)}%` : '0%'}
               </span>
             </div>
+
+            {/* Liquidity & Price Impact */}
+            {orderBookData && (
+              <>
+                <div className="border-t border-glass/10 my-2 pt-2" />
+                <div className="flex justify-between text-sm">
+                  <span className="text-foreground/70">Available Liquidity</span>
+                  <span className="font-medium">{availableLiquidity.toLocaleString()} shares</span>
+                </div>
+                {parseFloat(size) > 0 && (
+                  <>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-foreground/70">Price Impact</span>
+                      <span className={`font-medium ${Math.abs(priceImpact) > 5 ? 'text-destructive' : Math.abs(priceImpact) > 2 ? 'text-yellow-500' : ''}`}>
+                        {priceImpact > 0 ? '+' : ''}{priceImpact.toFixed(2)}%
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-foreground/70">Avg Fill Price</span>
+                      <span className="font-medium">${avgFillPrice.toFixed(4)}</span>
+                    </div>
+                  </>
+                )}
+              </>
+            )}
           </div>
 
           {/* Action Buttons */}
