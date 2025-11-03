@@ -2786,15 +2786,16 @@ Provide a clear, actionable analysis with specific recommendations. Format your 
   // Get order book for a Polymarket token
   app.get("/api/polymarket/orderbook/:tokenId", isAuthenticated, async (req, res) => {
     try {
+      const userId = getUserId(req);
       const { tokenId } = req.params;
       
       if (!tokenId) {
         return res.status(400).json({ success: false, error: "Token ID is required" });
       }
       
-      // Get Polymarket client
-      const { PolymarketClient } = await import("./polymarket/client");
-      const polymarketClient = PolymarketClient.getInstance();
+      // Get Polymarket client for user
+      const { getPolymarketClient } = await import("./polymarket/client");
+      const polymarketClient = await getPolymarketClient(userId, storage);
       
       // Fetch order book
       const orderBook = await polymarketClient.getOrderBook(tokenId);
