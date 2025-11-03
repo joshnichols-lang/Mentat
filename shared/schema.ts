@@ -481,6 +481,34 @@ export const tradingModes = pgTable("trading_modes", {
   //   triggerSensitivity: "conservative" | "moderate" | "aggressive", // AI call frequency (5%, 10%, 20%)
   // }
   
+  // AI-analyzed strategy configuration (auto-generated from custom rules)
+  strategyConfig: jsonb("strategy_config"), // {
+  //   strategyType: "technical_indicator" | "order_flow" | "market_profile" | "price_action" | "hybrid",
+  //   detectedIndicators: ["RSI", "MACD", "BollingerBands", "Stochastic"],
+  //   indicatorConfig: {
+  //     rsi: { period: 14, oversold: 30, overbought: 70 },
+  //     macd: { fast: 12, slow: 26, signal: 9 },
+  //     bollingerBands: { period: 20, stdDev: 2 },
+  //     stochastic: { kPeriod: 14, dPeriod: 3, oversold: 20, overbought: 80 }
+  //   },
+  //   orderFlowConfig: {
+  //     imbalanceRatio: 3.0, // Trigger when bid/ask imbalance >= 3x
+  //     minImbalanceVolume: 1000, // Minimum volume for imbalance detection
+  //     deltaThreshold: 30, // Delta % threshold for buy/sell pressure
+  //     depthImbalanceRatio: 1.5 // Order book depth imbalance ratio
+  //   },
+  //   marketProfileConfig: {
+  //     tickSize: 1,
+  //     detectVABreakouts: true, // Detect Value Area breakouts
+  //     detectIBBreakouts: true, // Detect Initial Balance breakouts
+  //     detectPOCTests: true, // Detect Point of Control tests
+  //     pocTolerance: 0.5 // % tolerance for POC test detection
+  //   },
+  //   monitoringFrequencyMinutes: 5, // Optimal monitoring frequency
+  //   requiresRealtimeData: false, // true for order flow strategies
+  //   triggerMode: "indicator" | "time_based" | "hybrid"
+  // }
+  
   isActive: integer("is_active").notNull().default(0), // Only one mode can be active at a time per user
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),

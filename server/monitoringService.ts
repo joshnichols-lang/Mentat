@@ -505,41 +505,149 @@ export async function developAutonomousStrategy(userId: string): Promise<void> {
     const currentCycle = (userMonitoringCycles.get(userId) || 0) + 1;
     userMonitoringCycles.set(userId, currentCycle);
     
-    // Get trigger configuration from strategy (defaults to moderate if not set)
-    const triggerSensitivity = (activeTradingMode.parameters.triggerSensitivity || 'moderate') as 'conservative' | 'moderate' | 'aggressive';
-    const triggerConfig = getDefaultTriggerConfig(triggerSensitivity);
+    // Check if strategy has auto-configured triggers
+    const strategyConfig = activeTradingMode.strategyConfig;
+    let triggerResult: any;
+    let triggerContext = '';
     
-    // Get or initialize volume tracking for this user
-    if (!previousVolumeData.has(userId)) {
-      previousVolumeData.set(userId, new Map<string, number>());
+    if (strategyConfig && (strategyConfig.triggerMode === 'indicator' || strategyConfig.triggerMode === 'hybrid')) {
+      // STRATEGY-SPECIFIC TRIGGERS (Indicator/Order Flow/TPO)
+      console.log(`[Trigger Evaluation] Using strategy-specific triggers for ${strategyConfig.strategyType} strategy`);
+      
+      try {
+        // Import strategy trigger evaluation
+        const { evaluateStrategyTriggers, formatTriggersForAI } = await import('./strategyTriggers');
+        const { Candle } = await import('./indicators');
+        
+        // Get primary symbol for data fetching
+        const symbol = activeTradingMode.parameters.preferredAssets?.[0] || 
+                      currentPositions[0]?.symbol || 
+                      'BTC';
+        
+        // Fetch candles for indicator/TPO calculations
+        let candles: typeof Candle[] = [];
+        if (strategyConfig.strategyType === 'technical_indicator' || 
+            strategyConfig.strategyType === 'market_profile' || 
+            strategyConfig.strategyType === 'hybrid') {
+          
+          const interval = strategyConfig.monitoringFrequencyMinutes >= 60 ? '1h' : 
+                          strategyConfig.monitoringFrequencyMinutes >= 15 ? '15m' : 
+                          strategyConfig.monitoringFrequencyMinutes >= 5 ? '5m' : '1m';
+          
+          try {
+            const candleData = await hyperliquidClient.getCandles(symbol, interval, 100);
+            if (candleData && Array.isArray(candleData)) {
+              candles = candleData.map((c: any) => ({
+                timestamp: c.t,
+                open: parseFloat(c.o),
+                high: parseFloat(c.h),
+                low: parseFloat(c.l),
+                close: parseFloat(c.c),
+                volume: parseFloat(c.v || '0')
+              }));
+            }
+          } catch (candleError) {
+            console.error(`[Strategy Triggers] Failed to fetch candles:`, candleError);
+          }
+        }
+        
+        // Fetch orderbook and trades for order flow calculations
+        let orderBook: any = undefined;
+        let trades: any = undefined;
+        if (strategyConfig.strategyType === 'order_flow' || strategyConfig.strategyType === 'hybrid') {
+          try {
+            // Fetch L2 orderbook from Hyperliquid
+            const l2Data = await hyperliquidClient.getL2Snapshot(symbol);
+            if (l2Data && l2Data.levels) {
+              // Transform Hyperliquid orderbook format to our format
+              orderBook = {
+                symbol,
+                timestamp: Date.now(),
+                bids: l2Data.levels[0]?.map((level: any) => ({
+                  price: parseFloat(level.px),
+                  bidSize: parseFloat(level.sz),
+                  askSize: 0
+                })) || [],
+                asks: l2Data.levels[1]?.map((level: any) => ({
+                  price: parseFloat(level.px),
+                  bidSize: 0,
+                  askSize: parseFloat(level.sz)
+                })) || []
+              };
+            }
+            
+            // TODO: Fetch recent trades for delta calculation
+            // Hyperliquid doesn't provide trade history in the same format we need
+            // For now, order flow will work with orderbook depth/imbalance only
+            console.log(`[Strategy Triggers] Fetched orderbook for ${symbol} - ${orderBook?.bids?.length || 0} bids, ${orderBook?.asks?.length || 0} asks`);
+            
+          } catch (orderFlowError) {
+            console.error(`[Strategy Triggers] Failed to fetch order flow data:`, orderFlowError);
+            // Continue without order flow data - triggers will degrade gracefully
+          }
+        }
+        
+        // Evaluate strategy triggers with all available data
+        const strategyTriggerResult = await evaluateStrategyTriggers(strategyConfig, candles, orderBook, trades);
+        
+        triggerResult = {
+          shouldCallAI: strategyTriggerResult.shouldCallAI,
+          triggeredBy: strategyTriggerResult.triggeredBy,
+          context: strategyTriggerResult.context
+        };
+        
+        // Format signals for AI context
+        if (strategyTriggerResult.signals.length > 0) {
+          triggerContext = formatTriggersForAI(strategyTriggerResult.signals);
+        }
+        
+        console.log(`[Strategy Triggers] Evaluated ${strategyConfig.strategyType} triggers - shouldCallAI: ${triggerResult.shouldCallAI}`);
+        console.log(`[Strategy Triggers] Triggered by: ${triggerResult.triggeredBy.join(', ') || 'none'}`);
+        
+      } catch (error) {
+        console.error('[Strategy Triggers] Error evaluating strategy triggers:', error);
+        // Fall back to generic triggers on error
+        triggerResult = { shouldCallAI: true, triggeredBy: ['fallback_error'], context: {} };
+      }
+      
+    } else {
+      // GENERIC TRIGGERS (Volume/Price/Position Risk)
+      console.log(`[Trigger Evaluation] Using generic market triggers`);
+      
+      const triggerSensitivity = (activeTradingMode.parameters.triggerSensitivity || 'moderate') as 'conservative' | 'moderate' | 'aggressive';
+      const triggerConfig = getDefaultTriggerConfig(triggerSensitivity);
+      
+      // Get or initialize volume tracking for this user
+      if (!previousVolumeData.has(userId)) {
+        previousVolumeData.set(userId, new Map<string, number>());
+      }
+      const userVolumeData = previousVolumeData.get(userId)!;
+      
+      // Evaluate generic triggers
+      triggerResult = evaluateTriggers(
+        triggerConfig,
+        marketData,
+        currentPositions,
+        currentCycle,
+        userVolumeData
+      );
+      
+      console.log(`[Trigger Evaluation] User ${userId} - Cycle ${currentCycle} - Sensitivity: ${triggerSensitivity}`);
+      console.log(`[Trigger Evaluation] Should call AI: ${triggerResult.shouldCallAI}`);
+      console.log(`[Trigger Evaluation] Triggered by: ${triggerResult.triggeredBy.join(', ') || 'none'}`);
     }
-    const userVolumeData = previousVolumeData.get(userId)!;
-    
-    // Evaluate triggers
-    const triggerResult = evaluateTriggers(
-      triggerConfig,
-      marketData,
-      currentPositions,
-      currentCycle,
-      userVolumeData
-    );
-    
-    // Log trigger evaluation
-    console.log(`[Trigger Evaluation] User ${userId} - Cycle ${currentCycle} - Sensitivity: ${triggerSensitivity}`);
-    console.log(`[Trigger Evaluation] Should call AI: ${triggerResult.shouldCallAI}`);
-    console.log(`[Trigger Evaluation] Triggered by: ${triggerResult.triggeredBy.join(', ') || 'none'}`);
     
     // If no triggers fired, skip AI call and just create snapshot
     if (!triggerResult.shouldCallAI) {
-      console.log(`[Trigger Evaluation] No significant market events - skipping AI call (cost saving)`);
+      console.log(`[Trigger Evaluation] No significant events - skipping AI call (cost saving)`);
       
       // Log that we're monitoring but no action needed
       await storage.createMonitoringLog(userId, {
         analysis: JSON.stringify({
           mode: "monitoring",
-          message: `Monitoring active (cycle ${currentCycle}) - No significant market events detected. AI call skipped to reduce costs.`,
-          sensitivity: triggerSensitivity,
-          nextExpectedTrigger: `Cycle ${currentCycle + triggerConfig.timeBasedCycles - (currentCycle % triggerConfig.timeBasedCycles)}`,
+          message: `Monitoring active (cycle ${currentCycle}) - No significant events detected. AI call skipped to reduce costs.`,
+          strategyType: strategyConfig?.strategyType || 'generic',
+          triggerMode: strategyConfig?.triggerMode || 'time_based'
         }),
         alertLevel: "info"
       });
@@ -602,7 +710,7 @@ ACCOUNT INFORMATION (CRITICAL - READ THIS FIRST):
 
 ${activeTradingMode ? `🎯 ACTIVE TRADING STRATEGY: "${activeTradingMode.name}"
 **YOU MUST FOLLOW THIS STRATEGY - IT IS THE USER'S EXPLICIT INSTRUCTIONS**
-
+${triggerContext ? `\n${triggerContext}\n` : ''}
 Strategy Configuration:
 - Timeframe: ${activeTradingMode.parameters.timeframe || 'not specified'}
 - Risk Per Trade: ${activeTradingMode.parameters.riskPercentage || 2}% of account

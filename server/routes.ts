@@ -3986,11 +3986,30 @@ Provide a clear, actionable analysis with specific recommendations. Format your 
         });
       }
       
+      // Auto-analyze strategy if custom rules provided
+      let strategyConfig: any = null;
+      if (parameters?.customRules) {
+        try {
+          const { analyzeStrategy } = await import('./strategyAnalyzer');
+          console.log('[Strategy Auto-Config] Analyzing custom rules for new strategy...');
+          strategyConfig = await analyzeStrategy(parameters.customRules, description || '');
+          console.log('[Strategy Auto-Config] Analysis complete:', {
+            strategyType: strategyConfig.strategyType,
+            monitoringFrequency: strategyConfig.monitoringFrequencyMinutes,
+            triggerMode: strategyConfig.triggerMode
+          });
+        } catch (analyzeError) {
+          console.error('[Strategy Auto-Config] Failed to analyze strategy:', analyzeError);
+          // Continue without strategyConfig - it's optional
+        }
+      }
+      
       const mode = await storage.createTradingMode(userId, {
         name,
         type: type || "custom", // Default to "custom" if not provided
         description: description || null,
         parameters: parameters || {},
+        strategyConfig,
         isActive: 0
       });
       
@@ -4018,6 +4037,24 @@ Provide a clear, actionable analysis with specific recommendations. Format your 
       if (type !== undefined) updates.type = type;
       if (description !== undefined) updates.description = description;
       if (parameters !== undefined) updates.parameters = parameters;
+      
+      // Auto-analyze strategy if custom rules were updated
+      if (parameters?.customRules) {
+        try {
+          const { analyzeStrategy } = await import('./strategyAnalyzer');
+          console.log('[Strategy Auto-Config] Re-analyzing custom rules for updated strategy...');
+          const strategyConfig = await analyzeStrategy(parameters.customRules, description || '');
+          updates.strategyConfig = strategyConfig;
+          console.log('[Strategy Auto-Config] Re-analysis complete:', {
+            strategyType: strategyConfig.strategyType,
+            monitoringFrequency: strategyConfig.monitoringFrequencyMinutes,
+            triggerMode: strategyConfig.triggerMode
+          });
+        } catch (analyzeError) {
+          console.error('[Strategy Auto-Config] Failed to re-analyze strategy:', analyzeError);
+          // Continue without updating strategyConfig
+        }
+      }
       
       const mode = await storage.updateTradingMode(userId, id, updates);
       
