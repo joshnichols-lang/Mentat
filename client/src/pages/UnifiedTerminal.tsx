@@ -55,10 +55,10 @@ function PerpetualsInterface() {
 
   // Default grid layouts for perpetuals panels
   const defaultLayouts = [
-    { i: "chart", x: 0, y: 0, w: 8, h: 14 },
-    { i: "orderEntry", x: 0, y: 14, w: 8, h: 8 },
-    { i: "orderBook", x: 8, y: 0, w: 4, h: 11 },
-    { i: "recentTrades", x: 8, y: 11, w: 4, h: 11 },
+    { i: "chart", x: 0, y: 0, w: 8, h: 12 },
+    { i: "orderEntry", x: 0, y: 12, w: 8, h: 6 },
+    { i: "orderBook", x: 8, y: 0, w: 4, h: 9 },
+    { i: "recentTrades", x: 8, y: 9, w: 4, h: 9 },
   ];
 
   return (
