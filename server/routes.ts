@@ -300,9 +300,17 @@ Provide a clear, actionable analysis with specific recommendations. Format your 
         max_tokens: 2500,
       }, preferredProvider);
       
+      // Save portfolio analysis to history
+      const savedAnalysis = await storage.createPortfolioAnalysis(userId, {
+        analysis: aiResponse.content,
+        portfolioSnapshot: portfolio as any,
+        userId,
+      });
+      
       res.json({
         success: true,
         analysis: aiResponse.content,
+        analysisId: savedAnalysis.id,
         portfolio: {
           summary: portfolio.summary,
           positionCounts: {
@@ -345,6 +353,61 @@ Provide a clear, actionable analysis with specific recommendations. Format your 
       res.status(500).json({
         success: false,
         error: error.message || "Failed to analyze portfolio",
+      });
+    }
+  });
+
+  // Get portfolio analysis history
+  app.get("/api/ai/portfolio-analyses", requireVerifiedUser, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
+      
+      const analyses = await storage.getPortfolioAnalyses(userId, limit);
+      
+      res.json({
+        success: true,
+        analyses: analyses.map(a => ({
+          id: a.id,
+          createdAt: a.createdAt,
+          preview: a.analysis.substring(0, 150) + (a.analysis.length > 150 ? '...' : ''),
+        })),
+      });
+    } catch (error: any) {
+      console.error("Error fetching portfolio analyses:", error);
+      res.status(500).json({
+        success: false,
+        error: error.message || "Failed to fetch portfolio analyses",
+      });
+    }
+  });
+
+  // Get a specific portfolio analysis
+  app.get("/api/ai/portfolio-analyses/:id", requireVerifiedUser, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const { id } = req.params;
+      
+      const analysis = await storage.getPortfolioAnalysis(userId, id);
+      
+      if (!analysis) {
+        return res.status(404).json({
+          success: false,
+          error: "Analysis not found",
+        });
+      }
+      
+      res.json({
+        success: true,
+        analysis: analysis.analysis,
+        portfolioSnapshot: analysis.portfolioSnapshot,
+        createdAt: analysis.createdAt,
+      });
+    } catch (error: any) {
+      console.error("Error fetching portfolio analysis:", error);
+      res.status(500).json({
+        success: false,
+        error: error.message || "Failed to fetch portfolio analysis",
       });
     }
   });

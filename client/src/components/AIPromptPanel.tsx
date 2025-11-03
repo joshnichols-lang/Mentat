@@ -48,8 +48,17 @@ export default function AIPromptPanel() {
   const [strategyToRename, setStrategyToRename] = useState<any>(null);
   const [portfolioAnalysisOpen, setPortfolioAnalysisOpen] = useState(false);
   const [portfolioAnalysis, setPortfolioAnalysis] = useState<string | null>(null);
+  const [selectedAnalysisId, setSelectedAnalysisId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { toast } = useToast();
+  const { toast} = useToast();
+
+  // Fetch portfolio analysis history
+  const { data: portfolioAnalysesData } = useQuery<{
+    analyses: Array<{ id: string; createdAt: string; preview: string }>;
+  }>({
+    queryKey: ["/api/ai/portfolio-analyses"],
+    enabled: portfolioAnalysisOpen,
+  });
 
   const { data: tradingModesData } = useQuery<{ modes: any[] }>({
     queryKey: ["/api/trading-modes"],
@@ -105,6 +114,23 @@ export default function AIPromptPanel() {
     },
   });
 
+  const loadAnalysisMutation = useMutation({
+    mutationFn: async (analysisId: string) => {
+      const res = await apiRequest("GET", `/api/ai/portfolio-analyses/${analysisId}`, {});
+      return await res.json();
+    },
+    onSuccess: (data: any) => {
+      setPortfolioAnalysis(data.analysis);
+    },
+    onError: (error: any) => {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to load analysis",
+      });
+    },
+  });
+
   const analyzePortfolioMutation = useMutation({
     mutationFn: async () => {
       const res = await apiRequest("POST", "/api/ai/analyze-portfolio", {});
@@ -113,11 +139,13 @@ export default function AIPromptPanel() {
     onSuccess: (data: any) => {
       console.log("Portfolio analysis response:", data);
       setPortfolioAnalysis(data.analysis);
+      setSelectedAnalysisId(data.analysisId);
       setPortfolioAnalysisOpen(true);
       
-      // Refresh AI usage data
+      // Refresh AI usage data and analysis history
       queryClient.invalidateQueries({ queryKey: ["/api/ai/usage"] });
       queryClient.invalidateQueries({ queryKey: ["/api/ai/cost"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/ai/portfolio-analyses"] });
       
       toast({
         title: "Portfolio Analysis Complete",
@@ -551,6 +579,31 @@ export default function AIPromptPanel() {
               Comprehensive risk assessment across perpetuals, options, and prediction markets
             </DialogDescription>
           </DialogHeader>
+
+          {portfolioAnalysesData && portfolioAnalysesData.analyses.length > 0 && (
+            <div className="space-y-2">
+              <label className="text-sm font-medium">View Past Analysis</label>
+              <Select 
+                value={selectedAnalysisId || ""} 
+                onValueChange={(value) => {
+                  setSelectedAnalysisId(value);
+                  loadAnalysisMutation.mutate(value);
+                }}
+              >
+                <SelectTrigger data-testid="select-analysis-history">
+                  <SelectValue placeholder="Select a past analysis" />
+                </SelectTrigger>
+                <SelectContent>
+                  {portfolioAnalysesData.analyses.map((analysis) => (
+                    <SelectItem key={analysis.id} value={analysis.id}>
+                      {new Date(analysis.createdAt).toLocaleString()} - {analysis.preview}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
           <ScrollArea className="max-h-[60vh] pr-4">
             <div className="space-y-4 py-4">
               {portfolioAnalysis ? (

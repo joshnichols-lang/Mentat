@@ -930,6 +930,18 @@ export const panelLayouts = pgTable("panel_layouts", {
   index("idx_panel_layouts_user").on(table.userId),
 ]);
 
+// Portfolio Analysis History - Stores past AI portfolio analyses
+export const portfolioAnalyses = pgTable("portfolio_analyses", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  analysis: text("analysis").notNull(), // The AI-generated analysis text
+  portfolioSnapshot: jsonb("portfolio_snapshot").notNull(), // Portfolio data at time of analysis
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => [
+  index("idx_portfolio_analyses_user").on(table.userId),
+  index("idx_portfolio_analyses_created").on(table.createdAt),
+]);
+
 // Zod schemas and types
 export const insertAdvancedOrderSchema = createInsertSchema(advancedOrders).omit({ id: true, createdAt: true });
 export const insertAdvancedOrderExecutionSchema = createInsertSchema(advancedOrderExecutions).omit({ id: true, timestamp: true });
@@ -937,6 +949,7 @@ export const insertOptionsStrategySchema = createInsertSchema(optionsStrategies)
 export const insertOptionsPositionSchema = createInsertSchema(optionsPositions).omit({ id: true, userId: true, openedAt: true, updatedAt: true });
 export const insertOptionsOrderSchema = createInsertSchema(optionsOrders).omit({ id: true, userId: true, createdAt: true });
 export const insertPanelLayoutSchema = createInsertSchema(panelLayouts).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertPortfolioAnalysisSchema = createInsertSchema(portfolioAnalyses).omit({ id: true, createdAt: true });
 
 export type InsertAdvancedOrder = z.infer<typeof insertAdvancedOrderSchema>;
 export type AdvancedOrder = typeof advancedOrders.$inferSelect;
@@ -950,3 +963,5 @@ export type InsertOptionsOrder = z.infer<typeof insertOptionsOrderSchema>;
 export type OptionsOrder = typeof optionsOrders.$inferSelect;
 export type InsertPanelLayout = z.infer<typeof insertPanelLayoutSchema>;
 export type PanelLayout = typeof panelLayouts.$inferSelect;
+export type InsertPortfolioAnalysis = z.infer<typeof insertPortfolioAnalysisSchema>;
+export type PortfolioAnalysis = typeof portfolioAnalyses.$inferSelect;
