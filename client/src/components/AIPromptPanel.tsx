@@ -541,7 +541,7 @@ export default function AIPromptPanel() {
       </Dialog>
 
       <Dialog open={portfolioAnalysisOpen} onOpenChange={setPortfolioAnalysisOpen}>
-        <DialogContent className="max-w-3xl max-h-[80vh]">
+        <DialogContent className="max-w-3xl max-h-[80vh] bg-card/95">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <TrendingUp className="h-5 w-5 text-primary" />
