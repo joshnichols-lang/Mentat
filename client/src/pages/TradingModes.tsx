@@ -47,11 +47,11 @@ type ModeFormData = {
 
 const getStrategyTypeLabel = (type: string) => {
   const labels: Record<string, string> = {
-    technical_indicator: "📊 Technical Indicators",
-    order_flow: "📈 Order Flow Analysis",
-    market_profile: "📉 Market Profile/TPO",
-    hybrid: "🔀 Hybrid Strategy",
-    generic: "🎯 Generic"
+    technical_indicator: "Technical Indicators",
+    order_flow: "Order Flow Analysis",
+    market_profile: "Market Profile/TPO",
+    hybrid: "Hybrid Strategy",
+    generic: "Generic"
   };
   return labels[type] || type;
 };
@@ -402,24 +402,24 @@ export default function TradingModes() {
                         data-testid="input-custom-rules"
                       />
                       <div className="text-xs text-muted-foreground space-y-1">
-                        <p className="font-medium">💡 Tips: The AI will analyze your rules and auto-configure monitoring!</p>
+                        <p className="font-medium">Tip: The AI will analyze your rules and auto-configure monitoring!</p>
                         <details className="mt-2">
                           <summary className="cursor-pointer hover:text-foreground">Show Examples</summary>
                           <div className="mt-2 space-y-2 pl-2 border-l-2 border-primary/20">
                             <div>
-                              <p className="font-medium">📊 Indicator Strategy:</p>
+                              <p className="font-medium">Indicator Strategy:</p>
                               <p className="italic">"Scalp reversals when RSI &lt; 30 on 5m chart. Take profit when RSI &gt; 70."</p>
                             </div>
                             <div>
-                              <p className="font-medium">📈 Order Flow Strategy:</p>
+                              <p className="font-medium">Order Flow Strategy:</p>
                               <p className="italic">"Enter when bid/ask imbalance exceeds 70% for 3+ consecutive snapshots. Monitor orderbook depth."</p>
                             </div>
                             <div>
-                              <p className="font-medium">📉 Market Profile Strategy:</p>
+                              <p className="font-medium">Market Profile Strategy:</p>
                               <p className="italic">"Buy breakouts above Value Area High. Exit below Point of Control."</p>
                             </div>
                             <div>
-                              <p className="font-medium">🔀 Hybrid Strategy:</p>
+                              <p className="font-medium">Hybrid Strategy:</p>
                               <p className="italic">"Enter when RSI &lt; 30 AND strong bid pressure (&gt;65% imbalance). Combine MACD crossover with TPO levels."</p>
                             </div>
                           </div>
@@ -478,21 +478,34 @@ export default function TradingModes() {
                 </div>
 
                 {activeMode.strategyConfig && (
+                  activeMode.strategyConfig.strategyType || 
+                  activeMode.strategyConfig.monitoringFrequencyMinutes || 
+                  activeMode.strategyConfig.triggerMode ||
+                  activeMode.strategyConfig.indicators?.length ||
+                  activeMode.strategyConfig.orderFlowMetrics?.length ||
+                  activeMode.strategyConfig.tpoLevels?.length
+                ) && (
                   <div className="p-3 bg-muted/50 rounded-lg border border-primary/20">
-                    <p className="text-xs font-semibold text-primary mb-2">🤖 AI-Detected Configuration</p>
+                    <p className="text-xs font-semibold text-primary mb-2">AI-Detected Configuration</p>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
-                      <div>
-                        <p className="text-xs text-muted-foreground">Strategy Type</p>
-                        <p className="font-medium" data-testid="text-strategy-type">{getStrategyTypeLabel(activeMode.strategyConfig.strategyType)}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-muted-foreground">Monitoring Frequency</p>
-                        <p className="font-medium" data-testid="text-monitoring-freq">{activeMode.strategyConfig.monitoringFrequencyMinutes} min</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-muted-foreground">Trigger Mode</p>
-                        <p className="font-medium" data-testid="text-trigger-mode">{getTriggerModeLabel(activeMode.strategyConfig.triggerMode)}</p>
-                      </div>
+                      {activeMode.strategyConfig.strategyType && (
+                        <div>
+                          <p className="text-xs text-muted-foreground">Strategy Type</p>
+                          <p className="font-medium" data-testid="text-strategy-type">{getStrategyTypeLabel(activeMode.strategyConfig.strategyType)}</p>
+                        </div>
+                      )}
+                      {activeMode.strategyConfig.monitoringFrequencyMinutes && (
+                        <div>
+                          <p className="text-xs text-muted-foreground">Monitoring Frequency</p>
+                          <p className="font-medium" data-testid="text-monitoring-freq">{activeMode.strategyConfig.monitoringFrequencyMinutes} min</p>
+                        </div>
+                      )}
+                      {activeMode.strategyConfig.triggerMode && (
+                        <div>
+                          <p className="text-xs text-muted-foreground">Trigger Mode</p>
+                          <p className="font-medium" data-testid="text-trigger-mode">{getTriggerModeLabel(activeMode.strategyConfig.triggerMode)}</p>
+                        </div>
+                      )}
                     </div>
                     {(activeMode.strategyConfig.indicators?.length || activeMode.strategyConfig.orderFlowMetrics?.length || activeMode.strategyConfig.tpoLevels?.length) && (
                       <div className="mt-3 pt-3 border-t border-primary/10">
@@ -617,13 +630,30 @@ export default function TradingModes() {
                   )}
                   
                   {mode.strategyConfig && (
+                    mode.strategyConfig.strategyType || 
+                    mode.strategyConfig.monitoringFrequencyMinutes || 
+                    mode.strategyConfig.triggerMode ||
+                    mode.strategyConfig.indicators?.length ||
+                    mode.strategyConfig.orderFlowMetrics?.length ||
+                    mode.strategyConfig.tpoLevels?.length
+                  ) && (
                     <div className="mb-4 p-2 bg-muted/30 rounded border border-primary/10 text-xs">
-                      <span className="font-semibold text-primary">🤖 AI Config:</span>{" "}
-                      <span>{getStrategyTypeLabel(mode.strategyConfig.strategyType)}</span>
-                      <span className="mx-2">•</span>
-                      <span>{mode.strategyConfig.monitoringFrequencyMinutes}min monitoring</span>
-                      <span className="mx-2">•</span>
-                      <span>{getTriggerModeLabel(mode.strategyConfig.triggerMode)}</span>
+                      <span className="font-semibold text-primary">AI Config:</span>{" "}
+                      {mode.strategyConfig.strategyType && (
+                        <span>{getStrategyTypeLabel(mode.strategyConfig.strategyType)}</span>
+                      )}
+                      {mode.strategyConfig.strategyType && mode.strategyConfig.monitoringFrequencyMinutes && (
+                        <span className="mx-2">•</span>
+                      )}
+                      {mode.strategyConfig.monitoringFrequencyMinutes && (
+                        <span>{mode.strategyConfig.monitoringFrequencyMinutes}min monitoring</span>
+                      )}
+                      {(mode.strategyConfig.strategyType || mode.strategyConfig.monitoringFrequencyMinutes) && mode.strategyConfig.triggerMode && (
+                        <span className="mx-2">•</span>
+                      )}
+                      {mode.strategyConfig.triggerMode && (
+                        <span>{getTriggerModeLabel(mode.strategyConfig.triggerMode)}</span>
+                      )}
                     </div>
                   )}
                   
