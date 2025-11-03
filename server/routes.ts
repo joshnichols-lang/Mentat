@@ -2783,22 +2783,18 @@ Provide a clear, actionable analysis with specific recommendations. Format your 
     }
   });
   
-  // Get order book for a Polymarket token
-  app.get("/api/polymarket/orderbook/:tokenId", isAuthenticated, async (req, res) => {
+  // Get order book for a Polymarket token (public data, no auth required)
+  app.get("/api/polymarket/orderbook/:tokenId", async (req, res) => {
     try {
-      const userId = getUserId(req);
       const { tokenId } = req.params;
       
       if (!tokenId) {
         return res.status(400).json({ success: false, error: "Token ID is required" });
       }
       
-      // Get Polymarket client for user
-      const { getPolymarketClient } = await import("./polymarket/client");
-      const polymarketClient = await getPolymarketClient(userId, storage);
-      
-      // Fetch order book
-      const orderBook = await polymarketClient.getOrderBook(tokenId);
+      // Fetch order book from public API (no wallet required)
+      const { PolymarketClient } = await import("./polymarket/client");
+      const orderBook = await PolymarketClient.getPublicOrderBook(tokenId);
       
       res.json({ success: true, orderBook });
     } catch (error: any) {

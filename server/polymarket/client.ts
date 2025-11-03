@@ -291,7 +291,7 @@ export class PolymarketClient {
   }
 
   /**
-   * Get order book for a specific token
+   * Get order book for a specific token (requires authentication)
    */
   public async getOrderBook(tokenId: string): Promise<any> {
     await this.ensureInitialized();
@@ -306,6 +306,28 @@ export class PolymarketClient {
       return orderBook;
     } catch (error) {
       console.error(`[Polymarket] Failed to fetch order book for ${tokenId}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get order book for a specific token (public, no authentication required)
+   * This is a static method that fetches orderbook data from the public API
+   */
+  public static async getPublicOrderBook(tokenId: string): Promise<any> {
+    try {
+      const url = `https://clob.polymarket.com/book?token_id=${tokenId}`;
+      console.log(`[Polymarket] Fetching public order book from: ${url}`);
+      
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`OrderBook API returned ${response.status}: ${response.statusText}`);
+      }
+      
+      const orderBook = await response.json();
+      return orderBook;
+    } catch (error) {
+      console.error(`[Polymarket] Failed to fetch public order book for ${tokenId}:`, error);
       throw error;
     }
   }
