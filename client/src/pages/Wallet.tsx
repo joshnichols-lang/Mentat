@@ -8,32 +8,14 @@ import SendModal from "@/components/SendModal";
 import WithdrawalHistory from "@/components/WithdrawalHistory";
 
 const CHAIN_NAMES = {
-  solana: "Solana",
-  arbitrum: "Arbitrum",
-  polygon: "Polygon",
-  ethereum: "Ethereum",
-  bnb: "BNB Chain",
+  polygon: "Polymarket",
   hyperliquid: "Hyperliquid"
 };
 
 const CHAIN_TOKENS: Record<string, { symbol: string; name: string }[]> = {
-  solana: [
-    { symbol: "SOL", name: "Solana" },
-    { symbol: "USDC", name: "USD Coin" },
-  ],
-  arbitrum: [
-    { symbol: "ETH", name: "Ethereum" },
-    { symbol: "USDC", name: "USD Coin" },
-  ],
   polygon: [
     { symbol: "MATIC", name: "Polygon" },
     { symbol: "USDC", name: "USD Coin" },
-  ],
-  ethereum: [
-    { symbol: "ETH", name: "Ethereum" },
-  ],
-  bnb: [
-    { symbol: "BNB", name: "BNB" },
   ],
   hyperliquid: [
     { symbol: "ETH", name: "Ethereum" },
@@ -138,7 +120,9 @@ export default function Wallet() {
         <WithdrawalHistory />
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
-          {Object.entries(balances).map(([chain, data]) => {
+          {Object.entries(balances)
+            .filter(([chain]) => chain === 'polygon' || chain === 'hyperliquid')
+            .map(([chain, data]) => {
             const tokens = getChainTokens(chain, data);
             return (
               <Card key={chain} data-testid={`card-chain-${chain}`}>
@@ -183,43 +167,6 @@ export default function Wallet() {
               </Card>
             );
           })}
-
-          {wallet && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Wallet Addresses</CardTitle>
-                <CardDescription>Your embedded wallet addresses across all chains</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  {wallet.solanaAddress && (
-                    <div>
-                      <div className="text-xs text-muted-foreground">Solana</div>
-                      <div className="font-mono text-sm truncate">{wallet.solanaAddress}</div>
-                    </div>
-                  )}
-                  {wallet.evmAddress && (
-                    <div>
-                      <div className="text-xs text-muted-foreground">EVM (Ethereum, Arbitrum, BNB)</div>
-                      <div className="font-mono text-sm truncate">{wallet.evmAddress}</div>
-                    </div>
-                  )}
-                  {wallet.polygonAddress && (
-                    <div>
-                      <div className="text-xs text-muted-foreground">Polygon</div>
-                      <div className="font-mono text-sm truncate">{wallet.polygonAddress}</div>
-                    </div>
-                  )}
-                  {wallet.hyperliquidAddress && (
-                    <div>
-                      <div className="text-xs text-muted-foreground">Hyperliquid</div>
-                      <div className="font-mono text-sm truncate">{wallet.hyperliquidAddress}</div>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          )}
         </div>
       )}
 

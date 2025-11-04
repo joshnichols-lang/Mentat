@@ -7,6 +7,12 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import ThemeToggle from "./ThemeToggle";
 import ThemeSelector from "./ThemeSelector";
 import AgentModeToggle from "./AgentModeToggle";
@@ -44,140 +50,191 @@ export default function Header() {
           </Badge>
         </div>
         
-        <div className="flex items-center gap-2">
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={() => setLocation("/")}
-            data-testid="button-dashboard"
-          >
-            <Home className="h-4 w-4 mr-2" />
-            Dashboard
-          </Button>
-          <AgentModeToggle />
-          {user?.role === "admin" && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
+        <TooltipProvider>
+          <div className="flex items-center gap-2">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => setLocation("/")}
+              data-testid="button-dashboard"
+            >
+              <Home className="h-4 w-4 mr-2" />
+              Dashboard
+            </Button>
+            <AgentModeToggle />
+            {user?.role === "admin" && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    data-testid="button-admin-menu"
+                  >
+                    <UserCheck className="h-4 w-4 mr-2" />
+                    Admin
+                    <ChevronDown className="h-3 w-3 ml-1" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem 
+                    onClick={() => setLocation("/admin")}
+                    data-testid="menu-item-admin-dashboard"
+                  >
+                    <BarChart3 className="h-4 w-4 mr-2" />
+                    Dashboard
+                  </DropdownMenuItem>
+                  <DropdownMenuItem 
+                    onClick={() => setLocation("/admin/verification")}
+                    data-testid="menu-item-verification"
+                  >
+                    <UserCheck className="h-4 w-4 mr-2" />
+                    Verify Users
+                  </DropdownMenuItem>
+                  <DropdownMenuItem 
+                    onClick={() => setLocation("/admin/users")}
+                    data-testid="menu-item-users"
+                  >
+                    <Users className="h-4 w-4 mr-2" />
+                    Manage Users
+                  </DropdownMenuItem>
+                  <DropdownMenuItem 
+                    onClick={() => setLocation("/admin/messages")}
+                    data-testid="menu-item-messages"
+                  >
+                    <MessageSquare className="h-4 w-4 mr-2" />
+                    Contact Messages
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+            <ChainSwitcher />
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => setDepositModalOpen(true)}
+              data-testid="button-deposit"
+            >
+              <ArrowDownToLine className="h-4 w-4 mr-2" />
+              Deposit
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => setLocation("/wallet")}
+              data-testid="button-wallet"
+            >
+              <Wallet className="h-4 w-4 mr-2" />
+              Wallet
+            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
                 <Button 
-                  variant="outline" 
-                  size="sm" 
-                  data-testid="button-admin-menu"
+                  variant="ghost" 
+                  size="icon" 
+                  onClick={() => setContactDialogOpen(true)}
+                  data-testid="button-contact-admin"
                 >
-                  <UserCheck className="h-4 w-4 mr-2" />
-                  Admin
-                  <ChevronDown className="h-3 w-3 ml-1" />
+                  <MessageSquare className="h-4 w-4" />
                 </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem 
-                  onClick={() => setLocation("/admin")}
-                  data-testid="menu-item-admin-dashboard"
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Contact Admin</p>
+              </TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  onClick={() => window.open("https://dex.orderly.network/1fox-4617/perp/PERP_ETH_USDC", "_blank")}
+                  data-testid="button-dex-trading"
                 >
-                  <BarChart3 className="h-4 w-4 mr-2" />
-                  Dashboard
-                </DropdownMenuItem>
-                <DropdownMenuItem 
-                  onClick={() => setLocation("/admin/verification")}
-                  data-testid="menu-item-verification"
+                  <LineChart className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Orderly DEX Trading</p>
+              </TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  onClick={() => setLocation("/trade-history")}
+                  data-testid="button-trade-history"
                 >
-                  <UserCheck className="h-4 w-4 mr-2" />
-                  Verify Users
-                </DropdownMenuItem>
-                <DropdownMenuItem 
-                  onClick={() => setLocation("/admin/users")}
-                  data-testid="menu-item-users"
+                  <History className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Trade History</p>
+              </TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  onClick={() => setLocation("/trade-journal")}
+                  data-testid="button-trade-journal"
                 >
-                  <Users className="h-4 w-4 mr-2" />
-                  Manage Users
-                </DropdownMenuItem>
-                <DropdownMenuItem 
-                  onClick={() => setLocation("/admin/messages")}
-                  data-testid="menu-item-messages"
+                  <BookOpen className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Trade Journal</p>
+              </TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  onClick={() => setLocation("/trading-modes")}
+                  data-testid="button-trading-modes"
                 >
-                  <MessageSquare className="h-4 w-4 mr-2" />
-                  Contact Messages
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
-          <ChainSwitcher />
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={() => setDepositModalOpen(true)}
-            data-testid="button-deposit"
-          >
-            <ArrowDownToLine className="h-4 w-4 mr-2" />
-            Deposit
-          </Button>
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={() => setLocation("/wallet")}
-            data-testid="button-wallet"
-          >
-            <Wallet className="h-4 w-4 mr-2" />
-            Wallet
-          </Button>
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            onClick={() => setContactDialogOpen(true)}
-            data-testid="button-contact-admin"
-          >
-            <MessageSquare className="h-4 w-4" />
-          </Button>
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            onClick={() => window.open("https://dex.orderly.network/1fox-4617/perp/PERP_ETH_USDC", "_blank")}
-            data-testid="button-dex-trading"
-          >
-            <LineChart className="h-4 w-4" />
-          </Button>
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            onClick={() => setLocation("/trade-history")}
-            data-testid="button-trade-history"
-          >
-            <History className="h-4 w-4" />
-          </Button>
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            onClick={() => setLocation("/trade-journal")}
-            data-testid="button-trade-journal"
-          >
-            <BookOpen className="h-4 w-4" />
-          </Button>
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            onClick={() => setLocation("/trading-modes")}
-            data-testid="button-trading-modes"
-          >
-            <Target className="h-4 w-4" />
-          </Button>
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            onClick={() => setLocation("/settings")}
-            data-testid="button-settings"
-          >
-            <Settings className="h-4 w-4" />
-          </Button>
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            data-testid="button-logout"
-            onClick={() => window.location.href = '/api/logout'}
-          >
-            <LogOut className="h-4 w-4" />
-          </Button>
-          <ThemeSelector />
-          <ThemeToggle />
-        </div>
+                  <Target className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Trading Modes</p>
+              </TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  onClick={() => setLocation("/settings")}
+                  data-testid="button-settings"
+                >
+                  <Settings className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Settings</p>
+              </TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  data-testid="button-logout"
+                  onClick={() => window.location.href = '/api/logout'}
+                >
+                  <LogOut className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Logout</p>
+              </TooltipContent>
+            </Tooltip>
+            <ThemeSelector />
+            <ThemeToggle />
+          </div>
+        </TooltipProvider>
       </div>
       <ContactAdmin open={contactDialogOpen} onOpenChange={setContactDialogOpen} />
       <DepositModal open={depositModalOpen} onOpenChange={setDepositModalOpen} />

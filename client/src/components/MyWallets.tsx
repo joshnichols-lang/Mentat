@@ -99,27 +99,6 @@ export function MyWallets() {
       description: "Deposit: USDC on Polygon. Prediction markets.",
       icon: "circle",
     },
-    {
-      label: "Solana",
-      address: embeddedWallet.solanaAddress,
-      chain: "Solana",
-      description: "Deposit: SOL or SPL tokens. Solana DeFi & spot markets.",
-      icon: "server",
-    },
-    {
-      label: "EVM",
-      address: embeddedWallet.evmAddress,
-      chain: "Multi-chain",
-      description: "Universal address for all EVM chains (Ethereum, Arbitrum, etc.)",
-      icon: "boxes",
-    },
-    {
-      label: "BNB Chain",
-      address: embeddedWallet.bnbAddress,
-      chain: "BSC",
-      description: "Deposit: BNB or BEP-20 tokens. Spot market trading.",
-      icon: "diamond",
-    },
   ];
 
   const iconComponents = {
@@ -194,7 +173,7 @@ export function MyWallets() {
           <AlertCircle className="h-4 w-4" />
           <AlertDescription className="text-xs">
             <strong>Critical:</strong> Hyperliquid requires USDC on Arbitrum. Polymarket requires USDC on Polygon. 
-            BNB Chain uses BNB. Solana uses SOL. Sending wrong tokens or wrong chains causes permanent loss.
+            Sending wrong tokens or wrong chains causes permanent loss.
           </AlertDescription>
         </Alert>
       </CardContent>
