@@ -168,17 +168,57 @@ export function setupAuth(app: Express) {
   });
 
   app.post("/api/logout", (req, res, next) => {
+    const userId = req.user?.id;
+    
     req.logout((err) => {
       if (err) return next(err);
-      res.sendStatus(200);
+      
+      // Destroy session completely
+      req.session.destroy((destroyErr) => {
+        if (destroyErr) {
+          console.error('[Logout] Error destroying session:', destroyErr);
+          return next(destroyErr);
+        }
+        
+        // Clear session cookie
+        res.clearCookie('connect.sid', {
+          path: '/',
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production",
+          sameSite: "lax",
+        });
+        
+        console.log(`[Logout] User ${userId} logged out successfully - session destroyed and cookie cleared`);
+        res.sendStatus(200);
+      });
     });
   });
 
   // GET logout route for browser navigation - redirects to login page
   app.get("/api/logout", (req, res, next) => {
+    const userId = req.user?.id;
+    
     req.logout((err) => {
       if (err) return next(err);
-      res.redirect("/auth");
+      
+      // Destroy session completely
+      req.session.destroy((destroyErr) => {
+        if (destroyErr) {
+          console.error('[Logout] Error destroying session:', destroyErr);
+          return next(destroyErr);
+        }
+        
+        // Clear session cookie
+        res.clearCookie('connect.sid', {
+          path: '/',
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production",
+          sameSite: "lax",
+        });
+        
+        console.log(`[Logout] User ${userId} logged out successfully - session destroyed and cookie cleared`);
+        res.redirect("/auth");
+      });
     });
   });
 

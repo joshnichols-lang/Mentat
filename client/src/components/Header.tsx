@@ -23,6 +23,7 @@ import { MyWalletsModal } from "./MyWalletsModal";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
 import { useState } from "react";
+import { useDisconnect } from "wagmi";
 import logoUrl from "@assets/1fox-removebg-preview(1)_1761259210534.png";
 
 export default function Header() {
@@ -31,6 +32,60 @@ export default function Header() {
   const [contactDialogOpen, setContactDialogOpen] = useState(false);
   const [depositModalOpen, setDepositModalOpen] = useState(false);
   const [walletsModalOpen, setWalletsModalOpen] = useState(false);
+  const { disconnect } = useDisconnect();
+
+  const handleLogout = async () => {
+    try {
+      console.log('[Logout] Starting logout process...');
+      
+      // 1. Disconnect RainbowKit wallet
+      disconnect();
+      console.log('[Logout] Wallet disconnected');
+      
+      // 2. Clear RainbowKit localStorage cache
+      const rainbowKitKeys = [
+        'wagmi.store',
+        'wagmi.cache',
+        'wagmi.wallet',
+        'wagmi.connected',
+        'wagmi.recentConnectorId',
+        'rainbowkit.recentWallet',
+        'walletconnect'
+      ];
+      
+      rainbowKitKeys.forEach(key => {
+        try {
+          localStorage.removeItem(key);
+        } catch (e) {
+          console.error(`[Logout] Error removing ${key}:`, e);
+        }
+      });
+      
+      // Clear all localStorage keys that start with wagmi or rainbowkit
+      Object.keys(localStorage).forEach(key => {
+        if (key.startsWith('wagmi.') || key.startsWith('rainbowkit.') || key.includes('walletconnect')) {
+          try {
+            localStorage.removeItem(key);
+          } catch (e) {
+            console.error(`[Logout] Error removing ${key}:`, e);
+          }
+        }
+      });
+      
+      console.log('[Logout] Cleared wallet cache from localStorage');
+      
+      // 3. Call backend logout endpoint (which destroys session and clears cookies)
+      await fetch('/api/logout', { method: 'POST', credentials: 'include' });
+      console.log('[Logout] Backend session destroyed');
+      
+      // 4. Redirect to auth page
+      window.location.href = '/auth';
+    } catch (error) {
+      console.error('[Logout] Error during logout:', error);
+      // Still redirect even if there's an error
+      window.location.href = '/auth';
+    }
+  };
 
   return (
     <header className="glass-header px-6 py-3 sticky top-0 z-50">
@@ -222,7 +277,7 @@ export default function Header() {
                   variant="ghost" 
                   size="icon" 
                   data-testid="button-logout"
-                  onClick={() => window.location.href = '/api/logout'}
+                  onClick={handleLogout}
                 >
                   <LogOut className="h-4 w-4" />
                 </Button>
