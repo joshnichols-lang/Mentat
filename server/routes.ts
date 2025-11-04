@@ -2443,6 +2443,226 @@ Provide a clear, actionable analysis with specific recommendations. Format your 
     }
   });
 
+  // Estimate gas fees for a withdrawal
+  app.post("/api/withdrawals/estimate", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const { withdrawalService } = await import('./withdrawalService');
+      
+      const schema = z.object({
+        chain: z.enum(['ethereum', 'polygon', 'solana', 'bnb', 'hyperliquid']),
+        token: z.string(),
+        amount: z.string(),
+        recipient: z.string(),
+      });
+      
+      const data = schema.parse(req.body);
+      
+      // Get embedded wallet to get the from address
+      const wallet = await storage.getEmbeddedWallet(userId);
+      if (!wallet) {
+        return res.status(404).json({ success: false, error: "Embedded wallet not found" });
+      }
+      
+      const fromAddress = data.chain === 'solana' ? wallet.solanaAddress :
+                         data.chain === 'polygon' ? wallet.polygonAddress :
+                         data.chain === 'bnb' ? wallet.bnbAddress :
+                         data.chain === 'hyperliquid' ? wallet.hyperliquidAddress :
+                         wallet.evmAddress;
+      
+      // Validate recipient address
+      const isValid = await withdrawalService.validateAddress(data.chain, data.recipient);
+      if (!isValid) {
+        return res.status(400).json({ success: false, error: "Invalid recipient address" });
+      }
+      
+      const estimate = await withdrawalService.estimateGas({
+        ...data,
+        fromAddress,
+      });
+      
+      res.json({
+        success: true,
+        estimate,
+      });
+    } catch (error: any) {
+      console.error("Error estimating gas:", error);
+      res.status(500).json({
+        success: false,
+        error: error.message || "Failed to estimate gas"
+      });
+    }
+  });
+
+  // Send a withdrawal transaction
+  app.post("/api/withdrawals/send", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const { withdrawalService } = await import('./withdrawalService');
+      const { decryptCredential } = await import('./encryption');
+      
+      const schema = z.object({
+        chain: z.enum(['ethereum', 'polygon', 'solana', 'bnb', 'hyperliquid']),
+        token: z.string(),
+        amount: z.string(),
+        recipient: z.string(),
+      });
+      
+      const data = schema.parse(req.body);
+      
+      // Get embedded wallet
+      const wallet = await storage.getEmbeddedWallet(userId);
+      if (!wallet) {
+        return res.status(404).json({ success: false, error: "Embedded wallet not found" });
+      }
+      
+      // Get encrypted credentials
+      const credentials = await storage.getUserCredentials(userId);
+      if (!credentials) {
+        return res.status(404).json({ success: false, error: "Wallet credentials not found" });
+      }
+      
+      // Decrypt private key
+      const privateKey = decryptCredential(
+        credentials.encryptedPrivateKey,
+        credentials.credentialIv,
+        credentials.encryptedDek,
+        credentials.dekIv
+      );
+      
+      const fromAddress = data.chain === 'solana' ? wallet.solanaAddress :
+                         data.chain === 'polygon' ? wallet.polygonAddress :
+                         data.chain === 'bnb' ? wallet.bnbAddress :
+                         data.chain === 'hyperliquid' ? wallet.hyperliquidAddress :
+                         wallet.evmAddress;
+      
+      // Send transaction
+      const result = await withdrawalService.sendTransaction({
+        ...data,
+        fromAddress,
+        privateKey,
+      });
+      
+      // Store withdrawal in database
+      const withdrawal = await storage.createWithdrawal(userId, {
+        chain: data.chain,
+        token: data.token,
+        amount: data.amount,
+        recipient: data.recipient,
+        fromAddress,
+        transactionHash: result.transactionHash,
+        status: result.status,
+        explorerUrl: result.explorerUrl,
+      });
+      
+      res.json({
+        success: true,
+        withdrawal,
+      });
+    } catch (error: any) {
+      console.error("Error sending withdrawal:", error);
+      res.status(500).json({
+        success: false,
+        error: error.message || "Failed to send withdrawal"
+      });
+    }
+  });
+
+  // Get withdrawal history
+  app.get("/api/withdrawals", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 50;
+      
+      const withdrawals = await storage.getWithdrawals(userId, limit);
+      
+      res.json({
+        success: true,
+        withdrawals,
+      });
+    } catch (error: any) {
+      console.error("Error fetching withdrawals:", error);
+      res.status(500).json({
+        success: false,
+        error: error.message || "Failed to fetch withdrawals"
+      });
+    }
+  });
+
+  // Get specific withdrawal
+  app.get("/api/withdrawals/:id", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const { id } = req.params;
+      
+      const withdrawal = await storage.getWithdrawal(userId, id);
+      if (!withdrawal) {
+        return res.status(404).json({ success: false, error: "Withdrawal not found" });
+      }
+      
+      res.json({
+        success: true,
+        withdrawal,
+      });
+    } catch (error: any) {
+      console.error("Error fetching withdrawal:", error);
+      res.status(500).json({
+        success: false,
+        error: error.message || "Failed to fetch withdrawal"
+      });
+    }
+  });
+
+  // Check transaction status and update withdrawal
+  app.get("/api/withdrawals/:id/status", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const { id } = req.params;
+      const { withdrawalService } = await import('./withdrawalService');
+      
+      const withdrawal = await storage.getWithdrawal(userId, id);
+      if (!withdrawal) {
+        return res.status(404).json({ success: false, error: "Withdrawal not found" });
+      }
+      
+      if (!withdrawal.transactionHash) {
+        return res.json({
+          success: true,
+          status: withdrawal.status,
+        });
+      }
+      
+      // Check transaction status on blockchain
+      const txStatus = await withdrawalService.getTransactionStatus(
+        withdrawal.chain,
+        withdrawal.transactionHash
+      );
+      
+      // Update withdrawal if status changed
+      if (txStatus.status !== withdrawal.status) {
+        await storage.updateWithdrawal(userId, id, {
+          status: txStatus.status,
+          blockNumber: txStatus.blockNumber,
+          gasUsed: txStatus.gasUsed,
+          confirmedAt: txStatus.status === 'confirmed' ? new Date() : undefined,
+        });
+      }
+      
+      res.json({
+        success: true,
+        status: txStatus.status,
+        blockNumber: txStatus.blockNumber,
+        gasUsed: txStatus.gasUsed,
+      });
+    } catch (error: any) {
+      console.error("Error checking withdrawal status:", error);
+      res.status(500).json({
+        success: false,
+        error: error.message || "Failed to check withdrawal status"
+      });
+    }
+  });
+
   // Get comprehensive portfolio aggregation (ALL sources)
   app.get("/api/portfolio/comprehensive", requireVerifiedUser, async (req, res) => {
     try {
