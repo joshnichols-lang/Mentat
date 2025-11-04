@@ -2232,11 +2232,10 @@ Provide a clear, actionable analysis with specific recommendations. Format your 
       const { ethers } = await import('ethers');
       
       const schema = z.object({
-        seedPhrase: z.string().min(1),
         hyperliquidPrivateKey: z.string().min(1),
       });
       
-      const { seedPhrase, hyperliquidPrivateKey } = schema.parse(req.body);
+      const { hyperliquidPrivateKey } = schema.parse(req.body);
       
       // Get user's existing embedded wallet
       const existingWallet = await storage.getEmbeddedWallet(userId);

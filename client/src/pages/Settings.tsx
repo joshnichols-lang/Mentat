@@ -177,7 +177,7 @@ export default function Settings() {
   });
 
   const resyncMutation = useMutation({
-    mutationFn: async (data: { seedPhrase: string; hyperliquidPrivateKey: string }) => {
+    mutationFn: async (data: { hyperliquidPrivateKey: string }) => {
       const response = await apiRequest("POST", "/api/wallet/resync-hyperliquid-credentials", data);
       return response.json();
     },
@@ -189,6 +189,7 @@ export default function Settings() {
       setSeedPhrase("");
       setShowResyncModal(false);
       queryClient.invalidateQueries({ queryKey: ['/api/api-keys'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/wallets/embedded'] });
     },
     onError: (error: any) => {
       toast({
@@ -247,9 +248,8 @@ export default function Settings() {
       const hdNode = HDNodeWallet.fromSeed(seed);
       const hyperliquidWallet = hdNode.derivePath("m/44'/60'/0'/0/2");
       
-      // Submit to backend
+      // Submit to backend (only private key, not seed phrase)
       await resyncMutation.mutateAsync({
-        seedPhrase: trimmedPhrase,
         hyperliquidPrivateKey: hyperliquidWallet.privateKey,
       });
     } catch (error: any) {
