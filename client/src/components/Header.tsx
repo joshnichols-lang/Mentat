@@ -113,11 +113,11 @@ export default function Header() {
           <Button 
             variant="ghost" 
             size="sm" 
-            onClick={() => setWalletsModalOpen(true)}
-            data-testid="button-my-wallets"
+            onClick={() => setLocation("/wallet")}
+            data-testid="button-wallet"
           >
             <Wallet className="h-4 w-4 mr-2" />
-            Wallets
+            Wallet
           </Button>
           <Button 
             variant="ghost" 
