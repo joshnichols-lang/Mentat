@@ -90,6 +90,23 @@ export default function Wallet() {
   const balances: Record<string, ChainBalance> = balancesData?.balances || {};
   const wallet = walletData?.wallet;
 
+  const getChainTokens = (chain: string, chainData?: ChainBalance) => {
+    const defaultTokens = CHAIN_TOKENS[chain] || [];
+    const existingBalances = chainData?.balances || [];
+    
+    const tokenMap = new Map(existingBalances.map(b => [b.token, b]));
+    const allTokens = new Set([...defaultTokens.map(t => t.symbol), ...existingBalances.map(b => b.token)]);
+    
+    return Array.from(allTokens).map(tokenSymbol => {
+      const existing = tokenMap.get(tokenSymbol);
+      return existing || {
+        token: tokenSymbol,
+        balance: "0",
+        usdValue: 0
+      };
+    });
+  };
+
   return (
     <div className="container mx-auto p-6 max-w-6xl">
       <div className="flex justify-between items-center mb-6">
@@ -107,20 +124,21 @@ export default function Wallet() {
         <WithdrawalHistory />
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
-          {Object.entries(balances).map(([chain, data]) => (
-            <Card key={chain} data-testid={`card-chain-${chain}`}>
-              <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                  <span>{CHAIN_NAMES[chain as keyof typeof CHAIN_NAMES] || chain}</span>
-                </CardTitle>
-                <CardDescription className="font-mono text-xs truncate">
-                  {data.address}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {data.balances && data.balances.length > 0 ? (
-                    data.balances.map((balance) => (
+          {Object.entries(balances).map(([chain, data]) => {
+            const tokens = getChainTokens(chain, data);
+            return (
+              <Card key={chain} data-testid={`card-chain-${chain}`}>
+                <CardHeader>
+                  <CardTitle className="flex items-center justify-between">
+                    <span>{CHAIN_NAMES[chain as keyof typeof CHAIN_NAMES] || chain}</span>
+                  </CardTitle>
+                  <CardDescription className="font-mono text-xs truncate">
+                    {data.address}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {tokens.map((balance) => (
                       <div key={balance.token} className="flex items-center justify-between p-3 bg-muted rounded-lg">
                         <div>
                           <div className="font-semibold">{balance.token}</div>
@@ -145,16 +163,12 @@ export default function Wallet() {
                           </Button>
                         </div>
                       </div>
-                    ))
-                  ) : (
-                    <div className="text-sm text-muted-foreground text-center py-4">
-                      No balances available
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
 
           {wallet && (
             <Card>
