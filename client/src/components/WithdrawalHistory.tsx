@@ -11,8 +11,12 @@ const STATUS_COLORS = {
   failed: "bg-red-500",
 };
 
+interface WithdrawalsResponse {
+  withdrawals: any[];
+}
+
 export default function WithdrawalHistory() {
-  const { data, isLoading } = useQuery({
+  const { data, isLoading } = useQuery<WithdrawalsResponse>({
     queryKey: ['/api/withdrawals'],
   });
 
