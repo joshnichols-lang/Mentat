@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Lock, KeyRound, Brain, Trash2, Plus, AlertCircle, RefreshCcw } from "lucide-react";
+import { Lock, KeyRound, Brain, Trash2, Plus, AlertCircle, RefreshCcw, Clock, AlertTriangle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   AlertDialog,
@@ -86,6 +86,20 @@ export default function Settings() {
 
   const apiKeys = apiKeysData?.apiKeys || [];
   const aiKeys = apiKeys.filter(k => k.providerType === "ai");
+
+  // Query for Hyperliquid API wallet expiration status
+  const { data: expirationStatus } = useQuery<{
+    success: boolean;
+    hasApiWallet: boolean;
+    expirationDate: string | null;
+    daysRemaining: number | null;
+    hoursRemaining: number | null;
+    isExpiring: boolean;
+    isExpired: boolean;
+  }>({
+    queryKey: ['/api/wallets/hyperliquid-expiration'],
+    refetchInterval: 60000, // Check every minute
+  });
 
   const passwordForm = useForm<PasswordChangeForm>({
     resolver: zodResolver(passwordChangeSchema),
@@ -190,11 +204,34 @@ export default function Settings() {
       setShowResyncModal(false);
       queryClient.invalidateQueries({ queryKey: ['/api/api-keys'] });
       queryClient.invalidateQueries({ queryKey: ['/api/wallets/embedded'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/wallets/hyperliquid-expiration'] });
     },
     onError: (error: any) => {
       toast({
         title: "Re-sync Failed",
         description: error.message || "Failed to re-sync credentials. Please verify your seed phrase is correct.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const renewalMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest("/api/wallets/renew-hyperliquid", {
+        method: "POST",
+      });
+    },
+    onSuccess: (data: any) => {
+      toast({
+        title: "API Wallet Renewed",
+        description: `Your Hyperliquid API wallet has been renewed for 180 days. Expires ${new Date(data.expirationDate).toLocaleDateString()}.`,
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/wallets/hyperliquid-expiration'] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Renewal Failed",
+        description: error.message || "Failed to renew API wallet",
         variant: "destructive",
       });
     },
@@ -508,6 +545,77 @@ export default function Settings() {
               </Button>
             </CardContent>
           </Card>
+
+          {/* Renew Hyperliquid API Wallet */}
+          {expirationStatus?.hasApiWallet && (
+            <Card data-testid="card-renew-api-wallet">
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <Clock className="w-5 h-5" />
+                  <CardTitle>Hyperliquid API Wallet</CardTitle>
+                </div>
+                <CardDescription>
+                  Your API wallet authorization expires every 180 days for security. Renew it before expiration to avoid trading disruptions.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {expirationStatus.expirationDate && (
+                  <Alert className={
+                    expirationStatus.isExpired
+                      ? "border-destructive bg-destructive/10"
+                      : expirationStatus.isExpiring && (expirationStatus.daysRemaining || 0) < 7
+                      ? "border-destructive bg-destructive/10"
+                      : expirationStatus.isExpiring
+                      ? "border-amber-500 bg-amber-500/10"
+                      : "border-chart-2 bg-chart-2/10"
+                  }>
+                    {expirationStatus.isExpired ? (
+                      <AlertTriangle className="h-4 w-4 text-destructive" />
+                    ) : expirationStatus.isExpiring ? (
+                      <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                    ) : (
+                      <Clock className="h-4 w-4 text-chart-2" />
+                    )}
+                    <AlertDescription>
+                      {expirationStatus.isExpired ? (
+                        <span className="font-medium text-destructive">
+                          Your API wallet has expired. Renew it now to continue trading.
+                        </span>
+                      ) : (
+                        <>
+                          <span className="font-medium">
+                            {expirationStatus.isExpiring ? 'Expiring Soon:' : 'Active:'} {expirationStatus.daysRemaining}d {expirationStatus.hoursRemaining}h remaining
+                          </span>
+                          <br />
+                          <span className="text-sm opacity-90">
+                            Expires: {new Date(expirationStatus.expirationDate).toLocaleDateString()} at {new Date(expirationStatus.expirationDate).toLocaleTimeString()}
+                          </span>
+                        </>
+                      )}
+                    </AlertDescription>
+                  </Alert>
+                )}
+                <Button
+                  onClick={() => renewalMutation.mutate()}
+                  disabled={renewalMutation.isPending}
+                  variant={expirationStatus.isExpired || expirationStatus.isExpiring ? "default" : "outline"}
+                  data-testid="button-renew-api-wallet-settings"
+                >
+                  {renewalMutation.isPending ? (
+                    <>
+                      <RefreshCcw className="h-4 w-4 mr-2 animate-spin" />
+                      Renewing...
+                    </>
+                  ) : (
+                    <>
+                      <Clock className="h-4 w-4 mr-2" />
+                      Renew for 180 Days
+                    </>
+                  )}
+                </Button>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Password Settings */}
           <Card data-testid="card-password-settings">

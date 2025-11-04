@@ -25,6 +25,7 @@ import { useLocation } from "wouter";
 import { useState } from "react";
 import { useDisconnect } from "wagmi";
 import logoUrl from "@assets/1fox-removebg-preview(1)_1761259210534.png";
+import { HyperliquidExpirationWarning } from "./HyperliquidExpirationWarning";
 
 export default function Header() {
   const { user } = useAuth();
@@ -88,8 +89,10 @@ export default function Header() {
   };
 
   return (
-    <header className="glass-header px-6 py-3 sticky top-0 z-50">
-      <div className="flex items-center justify-between gap-4">
+    <>
+      <HyperliquidExpirationWarning />
+      <header className="glass-header px-6 py-3 sticky top-0 z-50">
+        <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <div 
             className="flex items-center gap-2 cursor-pointer hover-elevate active-elevate-2 px-2 py-1 rounded-md -ml-2" 
@@ -291,9 +294,10 @@ export default function Header() {
           </div>
         </TooltipProvider>
       </div>
-      <ContactAdmin open={contactDialogOpen} onOpenChange={setContactDialogOpen} />
-      <DepositModal open={depositModalOpen} onOpenChange={setDepositModalOpen} />
-      <MyWalletsModal open={walletsModalOpen} onOpenChange={setWalletsModalOpen} />
-    </header>
+        <ContactAdmin open={contactDialogOpen} onOpenChange={setContactDialogOpen} />
+        <DepositModal open={depositModalOpen} onOpenChange={setDepositModalOpen} />
+        <MyWalletsModal open={walletsModalOpen} onOpenChange={setWalletsModalOpen} />
+      </header>
+    </>
   );
 }
