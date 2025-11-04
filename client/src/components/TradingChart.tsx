@@ -19,88 +19,6 @@ interface TradingChartProps {
 
 type Timeframe = "1m" | "5m" | "15m" | "1h" | "4h" | "1D";
 
-// Theme-specific color configurations
-const themeColors = {
-  fox: {
-    dark: {
-      grid: "rgba(255, 163, 82, 0.05)",
-      crosshair: "rgba(255, 163, 82, 0.4)",
-      crosshairBg: "#B06000",
-      border: "rgba(255, 163, 82, 0.1)",
-      upColor: "#FFC107",
-      downColor: "#F54E2E",
-      volumeUp: "rgba(255, 193, 7, 0.4)",
-      volumeDown: "rgba(245, 78, 46, 0.4)",
-      volumeBase: "#B06000",
-      text: "#9ca3af",
-    },
-    light: {
-      grid: "rgba(176, 96, 0, 0.08)",
-      crosshair: "rgba(176, 96, 0, 0.5)",
-      crosshairBg: "#B06000",
-      border: "rgba(176, 96, 0, 0.15)",
-      upColor: "#D4A500",
-      downColor: "#D64324",
-      volumeUp: "rgba(212, 165, 0, 0.4)",
-      volumeDown: "rgba(214, 67, 36, 0.4)",
-      volumeBase: "#B06000",
-      text: "#374151",
-    },
-  },
-  cyber: {
-    dark: {
-      grid: "rgba(168, 85, 247, 0.05)",
-      crosshair: "rgba(168, 85, 247, 0.4)",
-      crosshairBg: "#7c3aed",
-      border: "rgba(168, 85, 247, 0.1)",
-      upColor: "#06b6d4",
-      downColor: "#ec4899",
-      volumeUp: "rgba(6, 182, 212, 0.4)",
-      volumeDown: "rgba(236, 72, 153, 0.4)",
-      volumeBase: "#7c3aed",
-      text: "#9ca3af",
-    },
-    light: {
-      grid: "rgba(124, 58, 237, 0.08)",
-      crosshair: "rgba(124, 58, 237, 0.5)",
-      crosshairBg: "#7c3aed",
-      border: "rgba(124, 58, 237, 0.15)",
-      upColor: "#0891b2",
-      downColor: "#db2777",
-      volumeUp: "rgba(8, 145, 178, 0.4)",
-      volumeDown: "rgba(219, 39, 119, 0.4)",
-      volumeBase: "#7c3aed",
-      text: "#374151",
-    },
-  },
-  matrix: {
-    dark: {
-      grid: "rgba(34, 197, 94, 0.05)",
-      crosshair: "rgba(34, 197, 94, 0.4)",
-      crosshairBg: "#16a34a",
-      border: "rgba(34, 197, 94, 0.1)",
-      upColor: "#22c55e",
-      downColor: "#dc2626",
-      volumeUp: "rgba(34, 197, 94, 0.4)",
-      volumeDown: "rgba(220, 38, 38, 0.4)",
-      volumeBase: "#16a34a",
-      text: "#9ca3af",
-    },
-    light: {
-      grid: "rgba(22, 163, 74, 0.08)",
-      crosshair: "rgba(22, 163, 74, 0.5)",
-      crosshairBg: "#16a34a",
-      border: "rgba(22, 163, 74, 0.15)",
-      upColor: "#16a34a",
-      downColor: "#b91c1c",
-      volumeUp: "rgba(22, 163, 74, 0.4)",
-      volumeDown: "rgba(185, 28, 28, 0.4)",
-      volumeBase: "#16a34a",
-      text: "#374151",
-    },
-  },
-};
-
 export default function TradingChart({ symbol, onSymbolChange }: TradingChartProps) {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
@@ -108,13 +26,22 @@ export default function TradingChart({ symbol, onSymbolChange }: TradingChartPro
   const volumeSeriesRef = useRef<ISeriesApi<"Histogram"> | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
   
-  const { themeName, mode } = useTheme();
+  const { mode } = useTheme();
   const [timeframe, setTimeframe] = useState<Timeframe>("1h");
   const [isLoading, setIsLoading] = useState(true);
   const [candleData, setCandleData] = useState<Map<number, { candle: CandlestickData, volume: number }>>(new Map());
 
-  // Get current theme colors
-  const colors = themeColors[themeName as keyof typeof themeColors]?.[mode as keyof typeof themeColors.fox] || themeColors.fox.dark;
+  // Minimalist monochrome colors
+  const colors = {
+    grid: mode === "dark" ? "rgba(255, 255, 255, 0.03)" : "rgba(0, 0, 0, 0.05)",
+    crosshair: mode === "dark" ? "rgba(255, 255, 255, 0.2)" : "rgba(0, 0, 0, 0.2)",
+    border: mode === "dark" ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.1)",
+    text: mode === "dark" ? "#a1a1aa" : "#52525b",
+    upColor: "#22c55e",
+    downColor: "#ef4444",
+    volumeUp: "rgba(34, 197, 94, 0.3)",
+    volumeDown: "rgba(239, 68, 68, 0.3)",
+  };
 
   // Initialize chart
   useEffect(() => {
@@ -134,11 +61,11 @@ export default function TradingChart({ symbol, onSymbolChange }: TradingChartPro
         mode: 1,
         vertLine: {
           color: colors.crosshair,
-          labelBackgroundColor: colors.crosshairBg,
+          labelBackgroundColor: colors.text,
         },
         horzLine: {
           color: colors.crosshair,
-          labelBackgroundColor: colors.crosshairBg,
+          labelBackgroundColor: colors.text,
         },
       },
       rightPriceScale: {
@@ -174,7 +101,7 @@ export default function TradingChart({ symbol, onSymbolChange }: TradingChartPro
 
     // Create volume series
     const volumeSeries = chart.addSeries(HistogramSeries, {
-      color: colors.volumeBase,
+      color: colors.volumeUp,
       priceFormat: {
         type: "volume",
       },
@@ -235,7 +162,7 @@ export default function TradingChart({ symbol, onSymbolChange }: TradingChartPro
       resizeObserver.disconnect();
       chart.remove();
     };
-  }, [colors]);
+  }, [colors, mode]);
 
   // Fetch historical candle data and set up WebSocket
   useEffect(() => {
@@ -468,31 +395,30 @@ export default function TradingChart({ symbol, onSymbolChange }: TradingChartPro
   return (
     <div className="h-full w-full flex flex-col">
       {/* Timeframe Selector */}
-      <div className="flex items-center gap-1 p-2 border-b border-glass/20">
+      <div className="flex items-center gap-1 p-2 border-b border-border/50">
         {timeframes.map((tf) => (
           <Button
             key={tf}
             variant={timeframe === tf ? "default" : "ghost"}
             size="sm"
             onClick={() => setTimeframe(tf)}
-            className={timeframe === tf ? "glow-orange" : ""}
             data-testid={`button-timeframe-${tf}`}
           >
             {tf}
           </Button>
         ))}
         {isLoading && (
-          <Loader2 className="h-4 w-4 ml-2 text-primary animate-spin" />
+          <Loader2 className="h-4 w-4 ml-2 animate-spin" />
         )}
       </div>
 
       {/* Chart Container */}
       <div ref={chartContainerRef} className="flex-1 relative">
         {isLoading && (
-          <div className="absolute inset-0 flex items-center justify-center glass">
+          <div className="absolute inset-0 flex items-center justify-center bg-background/50">
             <div className="text-center space-y-2">
-              <Loader2 className="h-8 w-8 mx-auto text-primary animate-spin" />
-              <p className="text-sm text-muted-foreground">Loading chart data...</p>
+              <Loader2 className="h-8 w-8 mx-auto animate-spin" />
+              <p className="text-sm text-tertiary">Loading chart data...</p>
             </div>
           </div>
         )}

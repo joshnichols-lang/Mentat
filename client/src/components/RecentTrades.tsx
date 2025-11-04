@@ -126,7 +126,7 @@ export default function RecentTrades({ symbol }: RecentTradesProps) {
   };
 
   const getSideBgColor = (side: "B" | "S") => {
-    return side === "B" ? "bg-long/10" : "bg-short/10";
+    return side === "B" ? "bg-long/5" : "bg-short/5";
   };
 
   const getSideLabel = (side: "B" | "S") => {
@@ -136,12 +136,12 @@ export default function RecentTrades({ symbol }: RecentTradesProps) {
   return (
     <div className="h-full flex flex-col">
       {/* Header with auto-scroll toggle */}
-      <div className="p-3 border-b border-glass/20">
+      <div className="p-3 border-b border-border/50">
         <div className="flex items-center justify-between">
-          <span className="text-xs text-muted-foreground">Live Trades</span>
+          <span className="text-xs text-secondary">Live Trades</span>
           <button
             onClick={() => setAutoScroll(!autoScroll)}
-            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+            className="text-xs text-tertiary hover:text-foreground transition-colors"
             data-testid="button-auto-scroll-toggle"
           >
             Auto-scroll: {autoScroll ? "On" : "Off"}
@@ -150,7 +150,7 @@ export default function RecentTrades({ symbol }: RecentTradesProps) {
       </div>
 
       {/* Column headers */}
-      <div className="grid grid-cols-4 gap-2 px-3 py-2 text-xs text-muted-foreground border-b border-glass/10">
+      <div className="grid grid-cols-4 gap-2 px-3 py-2 text-xs text-secondary border-b border-border/30">
         <div>Time</div>
         <div className="text-right">Price</div>
         <div className="text-right">Size</div>
@@ -162,22 +162,22 @@ export default function RecentTrades({ symbol }: RecentTradesProps) {
           {trades.map((trade, index) => (
             <div
               key={`${trade.id}-${index}`}
-              className={`relative grid grid-cols-4 gap-2 px-2 py-1.5 text-xs rounded hover-elevate cursor-pointer ${getSideBgColor(trade.side)}`}
+              className={`relative grid grid-cols-4 gap-2 px-2 py-1.5 text-xs rounded hover-elevate cursor-pointer transition-colors ${getSideBgColor(trade.side)}`}
               data-testid={`trade-${index}`}
             >
-              <div className="text-muted-foreground text-[10px] flex items-center">
+              <div className="text-tertiary text-[10px] font-mono flex items-center">
                 {formatTime(trade.time)}
               </div>
-              <div className={`text-right font-medium ${getSideColor(trade.side)}`}>
+              <div className={`text-right font-mono font-medium ${getSideColor(trade.side)}`}>
                 {formatPrice(trade.price)}
               </div>
-              <div className="text-right text-muted-foreground">
+              <div className="text-right text-secondary font-mono">
                 {formatSize(trade.size)}
               </div>
               <div className="flex justify-center">
                 <Badge 
                   variant="outline" 
-                  className={`text-[10px] px-1.5 py-0 h-4 ${getSideColor(trade.side)}`}
+                  className={`text-[10px] px-1.5 py-0 h-4 font-mono ${getSideColor(trade.side)}`}
                   data-testid={`badge-side-${trade.side}`}
                 >
                   {getSideLabel(trade.side)}
@@ -191,7 +191,7 @@ export default function RecentTrades({ symbol }: RecentTradesProps) {
       {/* Empty state */}
       {trades.length === 0 && (
         <div className="flex-1 flex items-center justify-center p-4">
-          <p className="text-sm text-muted-foreground">Waiting for trades...</p>
+          <p className="text-sm text-tertiary">Waiting for trades...</p>
         </div>
       )}
     </div>

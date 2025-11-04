@@ -169,12 +169,12 @@ export default function OrderBook({ symbol }: OrderBookProps) {
   return (
     <div className="h-full flex flex-col">
       {/* Header with spread */}
-      <div className="p-3 border-b border-glass/20">
+      <div className="p-3 border-b border-border/50">
         <div className="flex items-center justify-between">
-          <span className="text-xs text-muted-foreground">Spread</span>
+          <span className="text-xs text-secondary">Spread</span>
           <Badge 
             variant="outline" 
-            className="text-xs"
+            className="text-xs font-mono"
             data-testid="badge-spread"
           >
             ${orderBook.spread.toFixed(2)} ({orderBook.spreadPercent.toFixed(3)}%)
@@ -183,7 +183,7 @@ export default function OrderBook({ symbol }: OrderBookProps) {
       </div>
 
       {/* Column headers */}
-      <div className="grid grid-cols-3 gap-2 px-3 py-2 text-xs text-muted-foreground border-b border-glass/10">
+      <div className="grid grid-cols-3 gap-2 px-3 py-2 text-xs text-secondary border-b border-border/30">
         <div>Price</div>
         <div className="text-right">Size</div>
         <div className="text-right">Total</div>
@@ -195,21 +195,21 @@ export default function OrderBook({ symbol }: OrderBookProps) {
           {orderBook.asks.map((level, index) => (
             <div
               key={`ask-${index}`}
-              className="relative grid grid-cols-3 gap-2 px-3 py-1 text-xs hover-elevate cursor-pointer"
+              className="relative grid grid-cols-3 gap-2 px-3 py-1 text-xs hover-elevate cursor-pointer transition-colors"
               data-testid={`orderbook-ask-${index}`}
             >
-              {/* Depth visualization */}
+              {/* Horizontal depth visualization */}
               <div
-                className="absolute right-0 top-0 bottom-0 bg-short/10"
+                className="absolute left-0 top-0 bottom-0 bg-short/10 transition-all duration-200"
                 style={{ width: `${getDepthPercentage(level.total)}%` }}
               />
-              <div className="relative z-10 text-short font-medium">
+              <div className="relative z-10 text-short font-mono font-medium">
                 {formatPrice(level.price)}
               </div>
-              <div className="relative z-10 text-right text-muted-foreground">
+              <div className="relative z-10 text-right text-secondary font-mono">
                 {formatSize(level.size)}
               </div>
-              <div className="relative z-10 text-right text-muted-foreground/70">
+              <div className="relative z-10 text-right text-tertiary font-mono">
                 {formatSize(level.total)}
               </div>
             </div>
@@ -218,8 +218,8 @@ export default function OrderBook({ symbol }: OrderBookProps) {
 
         {/* Spread indicator */}
         {orderBook.bids.length > 0 && orderBook.asks.length > 0 && (
-          <div className="px-3 py-2 text-center border-y border-glass/20 glass">
-            <span className="text-xs font-medium text-primary">
+          <div className="px-3 py-2 text-center border-y border-border/30 bg-muted/30">
+            <span className="text-xs font-mono font-medium">
               ${formatPrice((orderBook.bids[0].price + orderBook.asks[0].price) / 2)}
             </span>
           </div>
@@ -230,21 +230,21 @@ export default function OrderBook({ symbol }: OrderBookProps) {
           {orderBook.bids.map((level, index) => (
             <div
               key={`bid-${index}`}
-              className="relative grid grid-cols-3 gap-2 px-3 py-1 text-xs hover-elevate cursor-pointer"
+              className="relative grid grid-cols-3 gap-2 px-3 py-1 text-xs hover-elevate cursor-pointer transition-colors"
               data-testid={`orderbook-bid-${index}`}
             >
-              {/* Depth visualization */}
+              {/* Horizontal depth visualization */}
               <div
-                className="absolute right-0 top-0 bottom-0 bg-long/10"
+                className="absolute left-0 top-0 bottom-0 bg-long/10 transition-all duration-200"
                 style={{ width: `${getDepthPercentage(level.total)}%` }}
               />
-              <div className="relative z-10 text-long font-medium">
+              <div className="relative z-10 text-long font-mono font-medium">
                 {formatPrice(level.price)}
               </div>
-              <div className="relative z-10 text-right text-muted-foreground">
+              <div className="relative z-10 text-right text-secondary font-mono">
                 {formatSize(level.size)}
               </div>
-              <div className="relative z-10 text-right text-muted-foreground/70">
+              <div className="relative z-10 text-right text-tertiary font-mono">
                 {formatSize(level.total)}
               </div>
             </div>
@@ -255,7 +255,7 @@ export default function OrderBook({ symbol }: OrderBookProps) {
       {/* Empty state */}
       {orderBook.bids.length === 0 && orderBook.asks.length === 0 && (
         <div className="flex-1 flex items-center justify-center p-4">
-          <p className="text-sm text-muted-foreground">Waiting for order book data...</p>
+          <p className="text-sm text-tertiary">Waiting for order book data...</p>
         </div>
       )}
     </div>
