@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type UpsertUser, type UserWallet, type InsertUserWallet, type EmbeddedWallet, type InsertEmbeddedWallet, type Trade, type InsertTrade, type Position, type InsertPosition, type PortfolioSnapshot, type InsertPortfolioSnapshot, type AiUsageLog, type InsertAiUsageLog, type MonitoringLog, type InsertMonitoringLog, type UserApiCredential, type InsertUserApiCredential, type ApiKey, type InsertApiKey, type ContactMessage, type InsertContactMessage, type ProtectiveOrderEvent, type InsertProtectiveOrderEvent, type UserTradeHistoryImport, type InsertUserTradeHistoryImport, type UserTradeHistoryTrade, type InsertUserTradeHistoryTrade, type TradeStyleProfile, type InsertTradeStyleProfile, type TradeJournalEntry, type TradeJournalEntryWithStrategy, type InsertTradeJournalEntry, type TradingMode, type InsertTradingMode, type BudgetAlert, type InsertBudgetAlert, type PolymarketEvent, type InsertPolymarketEvent, type PolymarketPosition, type InsertPolymarketPosition, type PolymarketOrder, type InsertPolymarketOrder, type OptionsStrategy, type InsertOptionsStrategy, type OptionsPosition, type InsertOptionsPosition, type OptionsOrder, type InsertOptionsOrder, type PanelLayout, type InsertPanelLayout, type PortfolioAnalysis, type InsertPortfolioAnalysis, users, userWallets, embeddedWallets, trades, positions, portfolioSnapshots, aiUsageLog, monitoringLog, userApiCredentials, apiKeys, contactMessages, protectiveOrderEvents, userTradeHistoryImports, userTradeHistoryTrades, tradeStyleProfiles, tradeJournalEntries, tradingModes, budgetAlerts, polymarketEvents, polymarketPositions, polymarketOrders, optionsStrategies, optionsPositions, optionsOrders, panelLayouts, portfolioAnalyses } from "@shared/schema";
+import { type User, type InsertUser, type UpsertUser, type UserWallet, type InsertUserWallet, type EmbeddedWallet, type InsertEmbeddedWallet, type Trade, type InsertTrade, type Position, type InsertPosition, type PortfolioSnapshot, type InsertPortfolioSnapshot, type AiUsageLog, type InsertAiUsageLog, type MonitoringLog, type InsertMonitoringLog, type UserApiCredential, type InsertUserApiCredential, type ApiKey, type InsertApiKey, type ContactMessage, type InsertContactMessage, type ProtectiveOrderEvent, type InsertProtectiveOrderEvent, type UserTradeHistoryImport, type InsertUserTradeHistoryImport, type UserTradeHistoryTrade, type InsertUserTradeHistoryTrade, type TradeStyleProfile, type InsertTradeStyleProfile, type TradeJournalEntry, type TradeJournalEntryWithStrategy, type InsertTradeJournalEntry, type TradingMode, type InsertTradingMode, type BudgetAlert, type InsertBudgetAlert, type PolymarketEvent, type InsertPolymarketEvent, type PolymarketPosition, type InsertPolymarketPosition, type PolymarketOrder, type InsertPolymarketOrder, type OptionsStrategy, type InsertOptionsStrategy, type OptionsPosition, type InsertOptionsPosition, type OptionsOrder, type InsertOptionsOrder, type PanelLayout, type InsertPanelLayout, type PortfolioAnalysis, type InsertPortfolioAnalysis, type Withdrawal, type InsertWithdrawal, users, userWallets, embeddedWallets, trades, positions, portfolioSnapshots, aiUsageLog, monitoringLog, userApiCredentials, apiKeys, contactMessages, protectiveOrderEvents, userTradeHistoryImports, userTradeHistoryTrades, tradeStyleProfiles, tradeJournalEntries, tradingModes, budgetAlerts, polymarketEvents, polymarketPositions, polymarketOrders, optionsStrategies, optionsPositions, optionsOrders, panelLayouts, portfolioAnalyses, withdrawals } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql, and, isNull, type SQL } from "drizzle-orm";
 import session from "express-session";
@@ -213,6 +213,12 @@ export interface IStorage {
   createPortfolioAnalysis(userId: string, data: InsertPortfolioAnalysis): Promise<PortfolioAnalysis>;
   getPortfolioAnalyses(userId: string, limit?: number): Promise<PortfolioAnalysis[]>;
   getPortfolioAnalysis(userId: string, id: string): Promise<PortfolioAnalysis | undefined>;
+  
+  // Withdrawal methods (multi-tenant)
+  createWithdrawal(userId: string, data: InsertWithdrawal): Promise<Withdrawal>;
+  getWithdrawals(userId: string, limit?: number): Promise<Withdrawal[]>;
+  getWithdrawal(userId: string, id: string): Promise<Withdrawal | undefined>;
+  updateWithdrawal(userId: string, id: string, updates: Partial<Withdrawal>): Promise<Withdrawal | undefined>;
   
   // Admin methods
   getAllUsers(): Promise<User[]>;
@@ -1547,6 +1553,38 @@ export class DbStorage implements IStorage {
       .from(portfolioAnalyses)
       .where(and(eq(portfolioAnalyses.userId, userId), eq(portfolioAnalyses.id, id))!)
       .limit(1);
+    return result[0];
+  }
+
+  // Withdrawal methods
+  async createWithdrawal(userId: string, data: InsertWithdrawal): Promise<Withdrawal> {
+    const [withdrawal] = await db.insert(withdrawals)
+      .values({ ...data, userId })
+      .returning();
+    return withdrawal;
+  }
+
+  async getWithdrawals(userId: string, limit: number = 50): Promise<Withdrawal[]> {
+    return await db.select()
+      .from(withdrawals)
+      .where(eq(withdrawals.userId, userId))
+      .orderBy(desc(withdrawals.createdAt))
+      .limit(limit);
+  }
+
+  async getWithdrawal(userId: string, id: string): Promise<Withdrawal | undefined> {
+    const result = await db.select()
+      .from(withdrawals)
+      .where(and(eq(withdrawals.userId, userId), eq(withdrawals.id, id))!)
+      .limit(1);
+    return result[0];
+  }
+
+  async updateWithdrawal(userId: string, id: string, updates: Partial<Withdrawal>): Promise<Withdrawal | undefined> {
+    const result = await db.update(withdrawals)
+      .set(updates)
+      .where(and(eq(withdrawals.userId, userId), eq(withdrawals.id, id))!)
+      .returning();
     return result[0];
   }
 
