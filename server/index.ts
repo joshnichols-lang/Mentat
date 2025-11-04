@@ -78,57 +78,68 @@ app.use((req, res, next) => {
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
   const port = parseInt(process.env.PORT || '5000', 10);
+  
+  // Start server immediately - do NOT block on async initialization
   server.listen({
     port,
     host: "0.0.0.0",
     reusePort: true,
-  }, async () => {
-    log(`serving on port ${port}`);
+  }, () => {
+    log(`Server listening on 0.0.0.0:${port}`);
     
-    // Initialize autonomous trading for all active users
-    try {
-      const users = await storage.getAllUsers();
-      const activeUsers = users.filter(u => u.agentMode === "active");
-      
-      log(`[Startup] Found ${activeUsers.length} active users, initializing monitoring...`);
-      
-      for (const user of activeUsers) {
-        try {
-          // Default to 5 minutes if frequency is 0 or null
-          const intervalMinutes = user.monitoringFrequencyMinutes && user.monitoringFrequencyMinutes > 0 
-            ? user.monitoringFrequencyMinutes 
-            : 5;
-          
-          // Check when the last monitoring run was to avoid spamming alerts on server restarts
-          const lastLog = await storage.getLatestMonitoringLog(user.id);
-          const now = new Date();
-          const shouldRunImmediately = !lastLog || 
-            (now.getTime() - new Date(lastLog.timestamp).getTime()) >= (intervalMinutes * 60 * 1000);
-          
-          await startUserMonitoring(user.id, intervalMinutes, shouldRunImmediately);
-          
-          if (shouldRunImmediately) {
-            log(`[Startup] ✓ Started monitoring for user ${user.id} (${intervalMinutes} min interval) - running immediately`);
-          } else {
-            log(`[Startup] ✓ Started monitoring for user ${user.id} (${intervalMinutes} min interval) - waiting for next interval`);
+    // Run async initialization in background - do not await or block
+    // This ensures the server can respond to health checks immediately
+    Promise.resolve().then(async () => {
+      // Initialize autonomous trading for all active users
+      try {
+        const users = await storage.getAllUsers();
+        const activeUsers = users.filter(u => u.agentMode === "active");
+        
+        log(`[Startup] Found ${activeUsers.length} active users, initializing monitoring...`);
+        
+        for (const user of activeUsers) {
+          try {
+            // Default to 5 minutes if frequency is 0 or null
+            const intervalMinutes = user.monitoringFrequencyMinutes && user.monitoringFrequencyMinutes > 0 
+              ? user.monitoringFrequencyMinutes 
+              : 5;
+            
+            // Check when the last monitoring run was to avoid spamming alerts on server restarts
+            const lastLog = await storage.getLatestMonitoringLog(user.id);
+            const now = new Date();
+            const shouldRunImmediately = !lastLog || 
+              (now.getTime() - new Date(lastLog.timestamp).getTime()) >= (intervalMinutes * 60 * 1000);
+            
+            await startUserMonitoring(user.id, intervalMinutes, shouldRunImmediately);
+            
+            if (shouldRunImmediately) {
+              log(`[Startup] ✓ Started monitoring for user ${user.id} (${intervalMinutes} min interval) - running immediately`);
+            } else {
+              log(`[Startup] ✓ Started monitoring for user ${user.id} (${intervalMinutes} min interval) - waiting for next interval`);
+            }
+          } catch (error: any) {
+            log(`[Startup] ✗ Failed to start monitoring for user ${user.id}: ${error.message}`);
+            // Continue to next user even if one fails
           }
-        } catch (error: any) {
-          log(`[Startup] ✗ Failed to start monitoring for user ${user.id}: ${error.message}`);
-          // Continue to next user even if one fails
         }
+        
+        log(`[Startup] Autonomous trading initialization complete`);
+      } catch (error: any) {
+        log(`[Startup] Error initializing autonomous trading: ${error.message || error}`);
+        // Server continues running even if monitoring fails
       }
       
-      log(`[Startup] Autonomous trading initialization complete`);
-    } catch (error) {
-      log(`[Startup] Error initializing autonomous trading: ${error}`);
-    }
-    
-    // Start daily aggregation scheduler for learning system
-    try {
-      startScheduler();
-      log(`[Startup] Learning aggregation scheduler started`);
-    } catch (error) {
-      log(`[Startup] Error starting aggregation scheduler: ${error}`);
-    }
+      // Start daily aggregation scheduler for learning system
+      try {
+        startScheduler();
+        log(`[Startup] Learning aggregation scheduler started`);
+      } catch (error: any) {
+        log(`[Startup] Error starting aggregation scheduler: ${error.message || error}`);
+        // Server continues running even if scheduler fails
+      }
+    }).catch((error) => {
+      log(`[Startup] Unhandled error in background initialization: ${error.message || error}`);
+      // Server continues running despite initialization errors
+    });
   });
 })();

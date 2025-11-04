@@ -56,6 +56,12 @@ function getUserId(req: any): string {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Health check endpoint for deployment monitoring
+  // Must respond quickly without database calls
+  app.get("/api/health", (req, res) => {
+    res.status(200).json({ status: "ok", timestamp: new Date().toISOString() });
+  });
+
   // Initialize username/password authentication
   setupAuth(app);
 
