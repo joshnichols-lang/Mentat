@@ -300,8 +300,46 @@ export default function AIPromptPanel() {
     setScreenshots((prev) => prev.filter((_, i) => i !== index));
   };
 
+  const deactivateAllMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest("POST", "/api/trading-modes/deactivate-all", {});
+    },
+    onSuccess: () => {
+      // Invalidate all trading mode queries using predicate to match hierarchical keys
+      queryClient.invalidateQueries({
+        predicate: (query) => {
+          const queryKey = query.queryKey[0];
+          return typeof queryKey === 'string' && queryKey.startsWith("/api/trading-modes");
+        }
+      });
+      
+      // Invalidate all AI usage queries to refresh conversation history
+      queryClient.invalidateQueries({
+        predicate: (query) => {
+          const queryKey = query.queryKey[0];
+          return typeof queryKey === 'string' && queryKey.startsWith("/api/ai/usage");
+        }
+      });
+      
+      toast({
+        title: "General Mode Activated",
+        description: "You can now have general AI conversations without a trading strategy",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "Failed to switch to general mode",
+      });
+    },
+  });
+
   const handleStrategyChange = (value: string) => {
-    if (value === "custom") {
+    if (value === "general") {
+      // Deactivate all strategies to enable general conversation mode
+      deactivateAllMutation.mutate();
+    } else if (value === "custom") {
       const activeModes = tradingModesData?.modes.filter((m: any) => m.isActive);
       if (activeModes && activeModes.length > 0) {
         setStrategyToRename(activeModes[0]);
@@ -351,23 +389,22 @@ export default function AIPromptPanel() {
           <div className="flex items-center gap-2">
             <Target className="h-3.5 w-3.5 text-muted-foreground" />
             <Select 
-              value={activeMode?.id || ""} 
+              value={activeMode?.id || "general"} 
               onValueChange={handleStrategyChange}
-              disabled={activateStrategyMutation.isPending}
+              disabled={activateStrategyMutation.isPending || deactivateAllMutation.isPending}
             >
               <SelectTrigger className="h-8 w-[200px] text-xs" data-testid="select-strategy">
-                <SelectValue placeholder="No strategy active" />
+                <SelectValue placeholder="General (No Strategy)" />
               </SelectTrigger>
               <SelectContent>
-                {modes.length === 0 ? (
-                  <SelectItem value="no-strategies" disabled>No strategies available</SelectItem>
-                ) : (
-                  modes.map((mode: any) => (
-                    <SelectItem key={mode.id} value={mode.id} data-testid={`strategy-${mode.id}`}>
-                      {mode.name}
-                    </SelectItem>
-                  ))
-                )}
+                <SelectItem value="general" data-testid="strategy-general">
+                  General (No Strategy)
+                </SelectItem>
+                {modes.length > 0 && modes.map((mode: any) => (
+                  <SelectItem key={mode.id} value={mode.id} data-testid={`strategy-${mode.id}`}>
+                    {mode.name}
+                  </SelectItem>
+                ))}
                 {activeMode && (
                   <SelectItem value="custom" data-testid="strategy-custom">
                     Rename Strategy...

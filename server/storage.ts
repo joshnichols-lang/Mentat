@@ -165,6 +165,7 @@ export interface IStorage {
   getActiveTradingMode(userId: string): Promise<TradingMode | undefined>;
   updateTradingMode(userId: string, id: string, updates: Partial<InsertTradingMode>): Promise<TradingMode | undefined>;
   setActiveTradingMode(userId: string, modeId: string): Promise<TradingMode | undefined>;
+  deactivateAllTradingModes(userId: string): Promise<void>;
   deleteTradingMode(userId: string, id: string): Promise<void>;
   
   // Polymarket Event methods (shared table - no user context)
@@ -1241,6 +1242,13 @@ export class DbStorage implements IStorage {
       .where(withUserFilter(tradingModes, userId, eq(tradingModes.id, modeId)))
       .returning();
     return result[0];
+  }
+
+  async deactivateAllTradingModes(userId: string): Promise<void> {
+    // Deactivate all modes for this user (enable general conversation mode)
+    await db.update(tradingModes)
+      .set({ isActive: 0, updatedAt: new Date() })
+      .where(eq(tradingModes.userId, userId));
   }
 
   async deleteTradingMode(userId: string, id: string): Promise<void> {

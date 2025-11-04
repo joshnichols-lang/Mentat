@@ -4441,6 +4441,26 @@ Provide a clear, actionable analysis with specific recommendations. Format your 
     }
   });
 
+  app.post("/api/trading-modes/deactivate-all", requireVerifiedUser, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      
+      // Deactivate all trading modes for this user (enable general conversation mode)
+      await storage.deactivateAllTradingModes(userId);
+      
+      res.json({
+        success: true,
+        message: "All trading modes deactivated - general conversation mode enabled"
+      });
+    } catch (error: any) {
+      console.error("Error deactivating all trading modes:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to deactivate trading modes"
+      });
+    }
+  });
+
   app.delete("/api/trading-modes/:id", requireVerifiedUser, async (req, res) => {
     try {
       const userId = getUserId(req);
