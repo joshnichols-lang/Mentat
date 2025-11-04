@@ -79,12 +79,20 @@ export default function SendModal({ isOpen, onClose, chain, token, availableBala
   };
 
   const handleMaxClick = () => {
+    // If no gas estimate yet, just set to full balance
     if (!gasEstimate) {
       setAmount(availableBalance);
       return;
     }
 
     let deduction = 0;
+    
+    // For Hyperliquid USDC gasless withdrawals, the $1 fee is deducted on their side
+    // User can withdraw their full balance, and Hyperliquid deducts the fee
+    if (gasEstimate?.isGasless) {
+      setAmount(availableBalance);
+      return;
+    }
     
     // Determine which fees need to be deducted from the withdrawal token balance
     const isNativeToken = (
@@ -97,14 +105,8 @@ export default function SendModal({ isOpen, onClose, chain, token, availableBala
     );
     
     // For native token withdrawals, gas is paid from the same balance
-    if (isNativeToken) {
+    if (isNativeToken && gasEstimate.estimatedFee) {
       deduction = parseFloat(gasEstimate.estimatedFee);
-    }
-    
-    // For Hyperliquid USDC withdrawals, deduct the $1 USDC platform fee
-    // (gas is paid in ETH separately)
-    if (chain === 'hyperliquid' && token === 'USDC' && gasEstimate.platformFee) {
-      deduction += parseFloat(gasEstimate.platformFee);
     }
     
     const maxAmount = Math.max(0, parseFloat(availableBalance) - deduction);
@@ -171,7 +173,9 @@ export default function SendModal({ isOpen, onClose, chain, token, availableBala
               {gasEstimate.platformFeeDescription && (
                 <Alert>
                   <AlertDescription>
-                    <div className="font-medium text-sm">Platform Fee Notice</div>
+                    <div className="font-medium text-sm">
+                      {gasEstimate.isGasless ? 'Gasless Withdrawal' : 'Platform Fee Notice'}
+                    </div>
                     <div className="text-xs mt-1">{gasEstimate.platformFeeDescription}</div>
                   </AlertDescription>
                 </Alert>
@@ -180,27 +184,31 @@ export default function SendModal({ isOpen, onClose, chain, token, availableBala
                 <CheckCircle2 className="w-4 h-4 text-green-500" />
                 <AlertDescription>
                   <div className="space-y-1">
-                    <div className="font-medium">Fee Breakdown:</div>
+                    <div className="font-medium">
+                      {gasEstimate.isGasless ? 'Withdrawal Fee:' : 'Fee Breakdown:'}
+                    </div>
                     <div className="text-sm space-y-0.5">
-                      <div className="flex justify-between">
-                        <span>Network Gas Fee:</span>
-                        <span>{parseFloat(gasEstimate.estimatedFee).toFixed(6)} {
-                          chain === 'solana' ? 'SOL' : 
-                          chain === 'polygon' ? 'MATIC' : 
-                          chain === 'bnb' ? 'BNB' :
-                          chain === 'arbitrum' ? 'ETH' :
-                          chain === 'hyperliquid' ? 'ETH' :
-                          'ETH'
-                        }</span>
-                      </div>
+                      {!gasEstimate.isGasless && (
+                        <div className="flex justify-between">
+                          <span>Network Gas Fee:</span>
+                          <span>{parseFloat(gasEstimate.estimatedFee).toFixed(6)} {
+                            chain === 'solana' ? 'SOL' : 
+                            chain === 'polygon' ? 'MATIC' : 
+                            chain === 'bnb' ? 'BNB' :
+                            chain === 'arbitrum' ? 'ETH' :
+                            chain === 'hyperliquid' ? 'ETH' :
+                            'ETH'
+                          }</span>
+                        </div>
+                      )}
                       {gasEstimate.platformFee && parseFloat(gasEstimate.platformFee) > 0 && (
                         <div className="flex justify-between">
-                          <span>Platform Fee:</span>
+                          <span>{gasEstimate.isGasless ? 'Total Cost:' : 'Platform Fee:'}</span>
                           <span className="font-semibold text-orange-600 dark:text-orange-400">{parseFloat(gasEstimate.platformFee).toFixed(2)} USDC</span>
                         </div>
                       )}
                     </div>
-                    {gasEstimate.estimatedFeeUSD && (
+                    {!gasEstimate.isGasless && gasEstimate.estimatedFeeUSD && (
                       <div className="text-xs text-muted-foreground mt-1">
                         Network gas ≈ ${parseFloat(gasEstimate.estimatedFeeUSD).toFixed(2)}
                         {gasEstimate.platformFee && parseFloat(gasEstimate.platformFee) > 0 && (

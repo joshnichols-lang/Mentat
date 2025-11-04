@@ -36,6 +36,7 @@ export interface GasEstimate {
   estimatedFeeUSD?: string;
   platformFee?: string;
   platformFeeDescription?: string;
+  isGasless?: boolean;
 }
 
 export interface TransactionResult {
@@ -78,6 +79,17 @@ export class WithdrawalService {
 
   async estimateGas(request: Omit<WithdrawalRequest, 'privateKey'>): Promise<GasEstimate> {
     const { chain, token, amount, recipient, fromAddress } = request;
+
+    // Hyperliquid USDC withdrawals are gasless - validators pay the Arbitrum gas
+    // Users only pay the $1 USDC fee which covers everything
+    if (chain === 'hyperliquid' && token === 'USDC') {
+      return {
+        estimatedFee: '0',
+        platformFee: '1.0',
+        platformFeeDescription: 'Gasless withdrawal - $1 USDC covers all network costs (no ETH needed)',
+        isGasless: true,
+      };
+    }
 
     let estimate: GasEstimate;
     
