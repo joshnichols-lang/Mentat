@@ -49,17 +49,31 @@ interface ChainBalance {
   }>;
 }
 
+interface BalancesResponse {
+  balances: Record<string, ChainBalance>;
+}
+
+interface WalletResponse {
+  wallet: {
+    hyperliquidAddress: string;
+    solanaAddress: string;
+    evmAddress: string;
+    polygonAddress: string;
+    bnbAddress: string;
+  };
+}
+
 export default function Wallet() {
   const [showSendModal, setShowSendModal] = useState(false);
   const [selectedChain, setSelectedChain] = useState<string>("");
   const [selectedToken, setSelectedToken] = useState<string>("");
   const [showHistory, setShowHistory] = useState(false);
 
-  const { data: balancesData, isLoading: balancesLoading, error: balancesError } = useQuery({
+  const { data: balancesData, isLoading: balancesLoading, error: balancesError } = useQuery<BalancesResponse>({
     queryKey: ['/api/wallets/balances'],
   });
 
-  const { data: walletData } = useQuery({
+  const { data: walletData } = useQuery<WalletResponse>({
     queryKey: ['/api/wallets/embedded'],
   });
 
