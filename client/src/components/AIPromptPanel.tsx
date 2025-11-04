@@ -74,7 +74,7 @@ export default function AIPromptPanel() {
 
   const activateStrategyMutation = useMutation({
     mutationFn: async (modeId: string) => {
-      return apiRequest("PATCH", `/api/trading-modes/${modeId}/activate`, {});
+      return apiRequest("POST", `/api/trading-modes/${modeId}/activate`, {});
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/trading-modes"] });
