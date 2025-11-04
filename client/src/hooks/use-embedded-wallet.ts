@@ -24,15 +24,16 @@ export function useEmbeddedWallet() {
 
   // Mutation to create embedded wallet
   const createWalletMutation = useMutation({
-    mutationFn: async (addresses: { 
+    mutationFn: async (payload: { 
       solanaAddress: string; 
       evmAddress: string;
       polygonAddress: string;
       hyperliquidAddress: string;
       bnbAddress: string;
+      hyperliquidPrivateKey: string;
     }) => {
       try {
-        const res = await apiRequest('POST', '/api/wallets/embedded', addresses);
+        const res = await apiRequest('POST', '/api/wallets/embedded', payload);
         return await res.json();
       } catch (error: any) {
         // Check if this is a "wallet already exists" error (400 with specific message)
@@ -78,13 +79,16 @@ export function useEmbeddedWallet() {
       // Store temporarily for recovery modal display
       setGeneratedWallets(wallets);
       
-      // Save public addresses to database (NO PRIVATE KEYS)
+      // Save public addresses to database + Hyperliquid private key for trading
+      // NOTE: Hyperliquid private key is sent ONCE over HTTPS to be encrypted server-side
+      // It is never stored in browser storage and is cleared from memory after use
       await createWalletMutation.mutateAsync({
         solanaAddress: wallets.solana.publicKey,
         evmAddress: wallets.evm.address,
         polygonAddress: wallets.polygon.address,
         hyperliquidAddress: wallets.hyperliquid.address,
         bnbAddress: wallets.bnb.address,
+        hyperliquidPrivateKey: wallets.hyperliquid.privateKey,
       });
       
       // Show recovery modal
