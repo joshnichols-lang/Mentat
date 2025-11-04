@@ -64,9 +64,9 @@ function PerpetualsInterface() {
   return (
     <div className="flex-1 overflow-auto flex flex-col">
       {/* Perpetuals Toolbar */}
-      <div className="glass border-b border-glass/20 p-2 flex items-center justify-between shrink-0">
+      <div className="bg-background border-b border-border/50 p-2 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-2">
-          <Flame className="h-4 w-4 text-primary" />
+          <Flame className="h-4 w-4" />
           <h3 className="text-sm font-semibold">Perpetuals Trading</h3>
           <MarketSelector
             selectedSymbol={selectedSymbol}
@@ -345,10 +345,10 @@ function PolymarketTradingModal({ event, onClose }: { event: any; onClose: () =>
       data-testid="modal-polymarket-trading"
     >
       <Card
-        className="glass-strong border-glass/20 max-w-2xl w-full max-h-[90vh] overflow-auto"
+        className="bg-popover border border-border/50 shadow-lg max-w-2xl w-full max-h-[90vh] overflow-auto"
         onClick={(e) => e.stopPropagation()}
       >
-        <CardHeader className="border-b border-glass/20">
+        <CardHeader className="border-b border-border/50">
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1">
               <CardTitle className="text-base mb-2">{event.question}</CardTitle>
@@ -420,7 +420,7 @@ function PolymarketTradingModal({ event, onClose }: { event: any; onClose: () =>
               value={size}
               onChange={(e) => setSize(e.target.value)}
               placeholder="Enter number of shares"
-              className="w-full px-3 py-2 bg-glass/50 border border-glass/20 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50"
+              className="w-full px-3 py-2 bg-background border border-border/50 rounded-md focus:outline-none focus:ring-2 focus:ring-ring/50"
               data-testid="input-order-size"
             />
           </div>
@@ -437,28 +437,28 @@ function PolymarketTradingModal({ event, onClose }: { event: any; onClose: () =>
                 value={price}
                 onChange={(e) => setPrice(e.target.value)}
                 placeholder="Enter price (e.g., 0.65)"
-                className="w-full px-3 py-2 bg-glass/50 border border-glass/20 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full px-3 py-2 bg-background border border-border/50 rounded-md focus:outline-none focus:ring-2 focus:ring-ring/50"
                 data-testid="input-limit-price"
               />
             </div>
           )}
 
           {/* Order Summary */}
-          <div className="glass rounded-lg p-4 space-y-2 border border-glass/20">
+          <div className="bg-muted/30 rounded-lg p-4 space-y-2 border border-border/30">
             <h3 className="text-sm font-semibold mb-3">Order Summary</h3>
             <div className="flex justify-between text-sm">
-              <span className="text-foreground/70">Estimated Cost</span>
-              <span className="font-medium">${estimatedCost.toFixed(2)}</span>
+              <span className="text-secondary">Estimated Cost</span>
+              <span className="font-medium font-mono">${estimatedCost.toFixed(2)}</span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-foreground/70">Potential Profit</span>
-              <span className={`font-medium ${potentialProfit > 0 ? 'text-long' : ''}`}>
+              <span className="text-secondary">Potential Profit</span>
+              <span className={`font-medium font-mono ${potentialProfit > 0 ? 'text-long' : ''}`}>
                 ${potentialProfit.toFixed(2)}
               </span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-foreground/70">Potential Return</span>
-              <span className="font-medium">
+              <span className="text-secondary">Potential Return</span>
+              <span className="font-medium font-mono">
                 {estimatedCost > 0 ? `${((potentialProfit / estimatedCost) * 100).toFixed(1)}%` : '0%'}
               </span>
             </div>
@@ -466,7 +466,7 @@ function PolymarketTradingModal({ event, onClose }: { event: any; onClose: () =>
             {/* Liquidity & Price Impact */}
             {orderBookData && (
               <>
-                <div className="border-t border-glass/10 my-2 pt-2" />
+                <div className="border-t border-border/20 my-2 pt-2" />
                 <div className="flex justify-between text-sm">
                   <span className="text-foreground/70">Available Liquidity</span>
                   <span className="font-medium">{availableLiquidity.toLocaleString()} shares</span>
@@ -626,9 +626,9 @@ function PredictionMarketsInterface() {
   return (
     <div className="flex-1 overflow-hidden flex flex-col">
       {/* Header with Tag-Based Navigation (Polymarket Style) */}
-      <div className="glass-header border-b border-glass/20">
-        <div className="flex items-center gap-3 px-4 py-3 border-b border-glass/10">
-          <Vote className="h-5 w-5 text-primary" />
+      <div className="bg-background border-b border-border/50">
+        <div className="flex items-center gap-3 px-4 py-3 border-b border-border/30">
+          <Vote className="h-5 w-5" />
           <h2 className="text-lg font-semibold">Prediction Markets</h2>
           <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30">
             {filteredMarkets.length}
@@ -642,7 +642,7 @@ function PredictionMarketsInterface() {
             placeholder="Search markets..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="px-3 py-1.5 text-sm bg-glass/30 border border-glass/20 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50 w-48 shrink-0"
+            className="px-3 py-1.5 text-sm bg-background border border-border/50 rounded-md focus:outline-none focus:ring-2 focus:ring-ring/50 w-48 shrink-0"
             data-testid="input-search-markets"
           />
           <div className="flex gap-1.5 flex-wrap overflow-x-auto scrollbar-hide max-h-24">
@@ -651,7 +651,7 @@ function PredictionMarketsInterface() {
                 key={tag}
                 variant={selectedTag === tag ? "default" : "outline"}
                 className={`cursor-pointer hover-elevate active-elevate-2 shrink-0 ${
-                  selectedTag === tag ? "" : "bg-glass/20 text-foreground/70 hover:text-foreground"
+                  selectedTag === tag ? "" : "text-secondary hover:text-foreground"
                 }`}
                 onClick={() => setSelectedTag(tag)}
                 data-testid={`badge-tag-${tag.toLowerCase().replace(/\s+/g, '-')}`}
@@ -674,8 +674,8 @@ function PredictionMarketsInterface() {
           </div>
         ) : filteredMarkets.length === 0 ? (
           <div className="flex items-start justify-center pt-20">
-            <Card className="glass-strong border-glass/20 p-6 max-w-md">
-              <p className="text-center text-foreground/70">No markets found matching your criteria</p>
+            <Card className="bg-card border-border/50 p-6 max-w-md">
+              <p className="text-center text-secondary">No markets found matching your criteria</p>
             </Card>
           </div>
         ) : (
@@ -689,7 +689,7 @@ function PredictionMarketsInterface() {
               return (
                 <Card
                   key={market.conditionId}
-                  className="glass border-glass/30 hover-elevate active-elevate-2 cursor-pointer transition-all duration-300"
+                  className="border-border/30 hover-elevate active-elevate-2 cursor-pointer transition-all duration-200"
                   onClick={() => setSelectedEvent(market)}
                   data-testid={`card-market-${market.conditionId}`}
                 >
@@ -738,7 +738,7 @@ function PredictionMarketsInterface() {
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between pt-2 border-t border-glass/20 text-xs text-foreground/50">
+                    <div className="flex items-center justify-between pt-2 border-t border-border/20 text-xs text-tertiary">
                       <span className="flex items-center gap-1">
                         <TrendingUp className="h-3 w-3" />
                         {volume >= 1000000 
@@ -785,9 +785,9 @@ function OptionsInterface() {
   return (
     <div className="flex-1 overflow-auto flex flex-col">
       {/* Options Toolbar */}
-      <div className="glass border-b border-glass/20 p-2 flex items-center justify-between shrink-0">
+      <div className="bg-background border-b border-border/50 p-2 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-2">
-          <Layers className="h-4 w-4 text-primary" />
+          <Layers className="h-4 w-4" />
           <h3 className="text-sm font-semibold">Options Trading</h3>
           <AssetSelector
             selectedAsset={selectedAsset}
@@ -890,18 +890,18 @@ function SpotDiscoveryInterface() {
   return (
     <div className="flex-1 overflow-auto p-6">
       <div className="max-w-7xl mx-auto">
-        <Card className="glass-strong border-glass/20">
+        <Card className="bg-card border-border/50">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-primary" />
+              <Sparkles className="h-5 w-5" />
               Spot Discovery - Coming Soon
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-foreground/70">
+            <p className="text-secondary">
               Discover and trade spot markets across multiple exchanges with AI-powered insights.
             </p>
-            <div className="mt-4 p-4 glass rounded-lg border border-glass/20">
+            <div className="mt-4 p-4 bg-muted/30 rounded-lg border border-border/30">
               <h3 className="font-semibold mb-2">Features:</h3>
               <ul className="space-y-1 text-sm text-foreground/70">
                 <li>• Multi-exchange spot market aggregation</li>
@@ -1036,9 +1036,9 @@ function AnalyticsInterface() {
 
       {/* Position ROE Chart */}
       {positionROEData.length > 0 && (
-        <div className="glass border border-glass/20 rounded-lg p-4">
+        <div className="bg-card border border-border/50 rounded-lg p-4">
           <div className="flex items-center gap-2 mb-3">
-            <LineChart className="h-4 w-4 text-primary" />
+            <LineChart className="h-4 w-4" />
             <h3 className="text-sm font-semibold">Position ROE Comparison</h3>
           </div>
           <PositionROEChart data={positionROEData} />
@@ -1065,8 +1065,8 @@ export default function UnifiedTerminal() {
             <ResizablePanel defaultSize={70} minSize={50}>
               <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col h-full">
                 {/* Tab Navigation Header */}
-                <div className="glass-header border-b border-glass/20 px-4 py-2">
-                  <TabsList className="grid w-full max-w-3xl grid-cols-5 bg-glass/50">
+                <div className="bg-background border-b border-border/50 px-4 py-2">
+                  <TabsList className="grid w-full max-w-3xl grid-cols-5 bg-muted/30">
                     <TabsTrigger 
                       value="perpetuals" 
                       className="flex items-center gap-2"
