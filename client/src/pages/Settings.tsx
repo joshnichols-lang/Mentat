@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Lock, KeyRound, Brain, Trash2, Plus, AlertCircle } from "lucide-react";
+import { Lock, KeyRound, Brain, Trash2, Plus, AlertCircle, RefreshCcw } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   AlertDialog,
@@ -23,6 +23,15 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 import Header from "@/components/Header";
 import { Badge } from "@/components/ui/badge";
 
@@ -67,6 +76,8 @@ export default function Settings() {
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [isAddingAI, setIsAddingAI] = useState(false);
   const [deleteKeyId, setDeleteKeyId] = useState<string | null>(null);
+  const [showResyncModal, setShowResyncModal] = useState(false);
+  const [seedPhrase, setSeedPhrase] = useState("");
 
   const { data: apiKeysData } = useQuery<{ success: boolean; apiKeys: ApiKey[] }>({
     queryKey: ['/api/api-keys'],
@@ -165,6 +176,29 @@ export default function Settings() {
     },
   });
 
+  const resyncMutation = useMutation({
+    mutationFn: async (data: { seedPhrase: string; hyperliquidPrivateKey: string }) => {
+      const response = await apiRequest("POST", "/api/wallet/resync-hyperliquid-credentials", data);
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Credentials Re-synced",
+        description: "Your Hyperliquid trading credentials have been successfully restored.",
+      });
+      setSeedPhrase("");
+      setShowResyncModal(false);
+      queryClient.invalidateQueries({ queryKey: ['/api/api-keys'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Re-sync Failed",
+        description: error.message || "Failed to re-sync credentials. Please verify your seed phrase is correct.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const onSubmitPassword = (data: PasswordChangeForm) => {
     passwordMutation.mutate({
       currentPassword: data.currentPassword,
@@ -179,6 +213,52 @@ export default function Settings() {
   const getProviderLabel = (providerName: string) => {
     const provider = AI_PROVIDERS.find(p => p.value === providerName);
     return provider?.label || providerName;
+  };
+
+  const handleResyncSubmit = async () => {
+    const trimmedPhrase = seedPhrase.trim();
+    
+    if (!trimmedPhrase) {
+      toast({
+        title: "Seed Phrase Required",
+        description: "Please enter your 12-word seed phrase.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Validate it's a 12-word phrase
+    const words = trimmedPhrase.split(/\s+/);
+    if (words.length !== 12) {
+      toast({
+        title: "Invalid Seed Phrase",
+        description: "Seed phrase must be exactly 12 words.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    try {
+      // Derive Hyperliquid wallet from seed phrase client-side
+      const { mnemonicToSeedSync } = await import('bip39');
+      const { HDNodeWallet } = await import('ethers');
+      
+      const seed = mnemonicToSeedSync(trimmedPhrase);
+      const hdNode = HDNodeWallet.fromSeed(seed);
+      const hyperliquidWallet = hdNode.derivePath("m/44'/60'/0'/0/2");
+      
+      // Submit to backend
+      await resyncMutation.mutateAsync({
+        seedPhrase: trimmedPhrase,
+        hyperliquidPrivateKey: hyperliquidWallet.privateKey,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Re-sync Failed",
+        description: error.message || "Failed to derive wallet from seed phrase. Please check your input.",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -390,6 +470,36 @@ export default function Settings() {
             </CardContent>
           </Card>
 
+          {/* Re-sync Hyperliquid Credentials */}
+          <Card data-testid="card-resync-credentials">
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <RefreshCcw className="w-5 h-5" />
+                <CardTitle>Re-sync Hyperliquid Credentials</CardTitle>
+              </div>
+              <CardDescription>
+                If you're seeing "No Hyperliquid credentials found" errors, use this tool to restore your trading credentials
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Alert className="mb-4">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  This feature is for users who created their account before the automatic credential setup was implemented.
+                  You'll need the 12-word seed phrase that was shown when you created your embedded wallet.
+                </AlertDescription>
+              </Alert>
+              <Button
+                onClick={() => setShowResyncModal(true)}
+                variant="outline"
+                data-testid="button-resync-credentials"
+              >
+                <RefreshCcw className="h-4 w-4 mr-2" />
+                Re-sync Credentials
+              </Button>
+            </CardContent>
+          </Card>
+
           {/* Password Settings */}
           <Card data-testid="card-password-settings">
             <CardHeader>
@@ -521,6 +631,58 @@ export default function Settings() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Re-sync Credentials Dialog */}
+      <Dialog open={showResyncModal} onOpenChange={setShowResyncModal}>
+        <DialogContent className="sm:max-w-[500px]" data-testid="dialog-resync">
+          <DialogHeader>
+            <DialogTitle>Re-sync Hyperliquid Credentials</DialogTitle>
+            <DialogDescription>
+              Enter the 12-word seed phrase from your embedded wallet to restore your trading credentials
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                Your seed phrase will be used to derive your Hyperliquid private key, which will be encrypted and stored securely. Never share your seed phrase with anyone.
+              </AlertDescription>
+            </Alert>
+            <div className="space-y-2">
+              <label htmlFor="seed-phrase" className="text-sm font-medium">
+                Seed Phrase (12 words)
+              </label>
+              <Textarea
+                id="seed-phrase"
+                placeholder="word1 word2 word3 ..."
+                value={seedPhrase}
+                onChange={(e) => setSeedPhrase(e.target.value)}
+                className="min-h-[100px] font-mono text-sm"
+                data-testid="input-seed-phrase"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowResyncModal(false);
+                setSeedPhrase("");
+              }}
+              data-testid="button-cancel-resync"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleResyncSubmit}
+              disabled={resyncMutation.isPending}
+              data-testid="button-submit-resync"
+            >
+              {resyncMutation.isPending ? "Re-syncing..." : "Re-sync Credentials"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
