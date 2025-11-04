@@ -970,6 +970,32 @@ export const portfolioAnalyses = pgTable("portfolio_analyses", {
   index("idx_portfolio_analyses_created").on(table.createdAt),
 ]);
 
+// Withdrawal Transactions - Tracks all withdrawals from embedded wallets
+export const withdrawals = pgTable("withdrawals", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  chain: text("chain").notNull(), // "ethereum", "polygon", "solana", "bnb", "hyperliquid"
+  token: text("token").notNull(), // "ETH", "MATIC", "USDC", "SOL", "BNB"
+  amount: decimal("amount", { precision: 18, scale: 8 }).notNull(),
+  recipient: text("recipient").notNull(), // Destination wallet address
+  fromAddress: text("from_address").notNull(), // Source wallet address (from embedded wallet)
+  transactionHash: text("transaction_hash"), // Blockchain transaction hash
+  status: text("status").notNull().default("pending"), // "pending", "confirmed", "failed"
+  gasUsed: decimal("gas_used", { precision: 18, scale: 8 }), // Gas used in native token
+  gasPriceGwei: decimal("gas_price_gwei", { precision: 18, scale: 8 }), // Gas price in Gwei (EVM) or lamports (Solana)
+  totalFee: decimal("total_fee", { precision: 18, scale: 8 }), // Total fee in native token
+  blockNumber: text("block_number"), // Block number where transaction was included
+  errorMessage: text("error_message"), // Error message if transaction failed
+  explorerUrl: text("explorer_url"), // Link to block explorer
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  confirmedAt: timestamp("confirmed_at"),
+}, (table) => [
+  index("idx_withdrawals_user").on(table.userId),
+  index("idx_withdrawals_status").on(table.status),
+  index("idx_withdrawals_chain").on(table.chain),
+  index("idx_withdrawals_tx_hash").on(table.transactionHash),
+]);
+
 // Zod schemas and types
 export const insertAdvancedOrderSchema = createInsertSchema(advancedOrders).omit({ id: true, createdAt: true });
 export const insertAdvancedOrderExecutionSchema = createInsertSchema(advancedOrderExecutions).omit({ id: true, timestamp: true });
@@ -978,6 +1004,7 @@ export const insertOptionsPositionSchema = createInsertSchema(optionsPositions).
 export const insertOptionsOrderSchema = createInsertSchema(optionsOrders).omit({ id: true, userId: true, createdAt: true });
 export const insertPanelLayoutSchema = createInsertSchema(panelLayouts).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertPortfolioAnalysisSchema = createInsertSchema(portfolioAnalyses).omit({ id: true, createdAt: true });
+export const insertWithdrawalSchema = createInsertSchema(withdrawals).omit({ id: true, createdAt: true });
 
 export type InsertAdvancedOrder = z.infer<typeof insertAdvancedOrderSchema>;
 export type AdvancedOrder = typeof advancedOrders.$inferSelect;
@@ -993,3 +1020,5 @@ export type InsertPanelLayout = z.infer<typeof insertPanelLayoutSchema>;
 export type PanelLayout = typeof panelLayouts.$inferSelect;
 export type InsertPortfolioAnalysis = z.infer<typeof insertPortfolioAnalysisSchema>;
 export type PortfolioAnalysis = typeof portfolioAnalyses.$inferSelect;
+export type InsertWithdrawal = z.infer<typeof insertWithdrawalSchema>;
+export type Withdrawal = typeof withdrawals.$inferSelect;
