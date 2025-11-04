@@ -240,17 +240,26 @@ export default function Settings() {
     }
     
     try {
-      // Derive Hyperliquid wallet from seed phrase client-side
-      const { mnemonicToSeedSync } = await import('bip39');
-      const { HDNodeWallet } = await import('ethers');
+      // Derive Hyperliquid wallet from seed phrase client-side using browser-compatible libraries
+      const { mnemonicToSeedSync } = await import('@scure/bip39');
+      const { HDKey } = await import('@scure/bip32');
       
       const seed = mnemonicToSeedSync(trimmedPhrase);
-      const hdNode = HDNodeWallet.fromSeed(seed);
-      const hyperliquidWallet = hdNode.derivePath("m/44'/60'/0'/0/2");
+      const hdNode = HDKey.fromMasterSeed(seed);
+      const hyperliquidWallet = hdNode.derive("m/44'/60'/0'/0/2");
+      
+      if (!hyperliquidWallet.privateKey) {
+        throw new Error("Failed to derive private key from seed phrase");
+      }
+      
+      // Convert Uint8Array private key to hex string with 0x prefix
+      const privateKeyHex = '0x' + Array.from(hyperliquidWallet.privateKey)
+        .map(b => b.toString(16).padStart(2, '0'))
+        .join('');
       
       // Submit to backend (only private key, not seed phrase)
       await resyncMutation.mutateAsync({
-        hyperliquidPrivateKey: hyperliquidWallet.privateKey,
+        hyperliquidPrivateKey: privateKeyHex,
       });
     } catch (error: any) {
       toast({
