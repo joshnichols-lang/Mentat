@@ -2225,6 +2225,88 @@ Provide a clear, actionable analysis with specific recommendations. Format your 
     }
   });
 
+  // Re-sync Hyperliquid credentials (for users who created wallets before auto-credential setup)
+  app.post("/api/wallet/resync-hyperliquid-credentials", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const { ethers } = await import('ethers');
+      
+      const schema = z.object({
+        seedPhrase: z.string().min(1),
+        hyperliquidPrivateKey: z.string().min(1),
+      });
+      
+      const { seedPhrase, hyperliquidPrivateKey } = schema.parse(req.body);
+      
+      // Get user's existing embedded wallet
+      const existingWallet = await storage.getEmbeddedWallet(userId);
+      if (!existingWallet) {
+        return res.status(400).json({
+          success: false,
+          error: "No embedded wallet found. Please create an embedded wallet first."
+        });
+      }
+      
+      // Verify the Hyperliquid private key matches the user's existing wallet address
+      const wallet = new ethers.Wallet(hyperliquidPrivateKey);
+      const derivedAddress = wallet.address;
+      
+      if (derivedAddress.toLowerCase() !== existingWallet.hyperliquidAddress.toLowerCase()) {
+        return res.status(400).json({
+          success: false,
+          error: "Seed phrase does not match your existing embedded wallet. Please verify you entered the correct seed phrase."
+        });
+      }
+      
+      // Check if credentials already exist
+      const existingApiKeys = await storage.getApiKeys(userId);
+      const existingCredential = existingApiKeys.find(key => 
+        key.providerType === "exchange" && 
+        key.providerName === "hyperliquid" &&
+        (key.metadata as any)?.mainWalletAddress?.toLowerCase() === existingWallet.hyperliquidAddress.toLowerCase()
+      );
+      
+      // Delete existing credential if it exists
+      if (existingCredential) {
+        await storage.deleteApiKey(userId, existingCredential.id);
+        console.log(`[Re-sync] Deleted existing Hyperliquid credential for user ${userId}`);
+      }
+      
+      // Encrypt and store the Hyperliquid private key
+      const { encryptedPrivateKey, credentialIv, encryptedDek, dekIv } = encryptCredential(hyperliquidPrivateKey);
+      
+      // Store in api_keys table (active by default)
+      await storage.createApiKey(userId, {
+        providerType: "exchange",
+        providerName: "hyperliquid",
+        label: "Hyperliquid Trading Wallet",
+        encryptedApiKey: encryptedPrivateKey,
+        apiKeyIv: credentialIv,
+        encryptedDek: encryptedDek,
+        dekIv: dekIv,
+        isActive: 1, // Active immediately
+        metadata: {
+          mainWalletAddress: existingWallet.hyperliquidAddress,
+          purpose: "trading",
+          resyncedAt: new Date().toISOString(),
+        } as any,
+      });
+      
+      console.log(`[Re-sync] Successfully re-synced Hyperliquid credentials for user ${userId}`);
+      
+      res.json({
+        success: true,
+        message: "Hyperliquid credentials successfully re-synced"
+      });
+    } catch (error: any) {
+      console.error("Error re-syncing Hyperliquid credentials:", error);
+      res.status(500).json({
+        success: false,
+        error: error.message || "Failed to re-sync Hyperliquid credentials"
+      });
+    }
+  });
+
   // Approve API wallet (user signs EIP-712 approveAgent message)
   app.post("/api/wallets/approve-api-wallet", isAuthenticated, async (req, res) => {
     try {
