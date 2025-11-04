@@ -1004,7 +1004,7 @@ export const insertOptionsPositionSchema = createInsertSchema(optionsPositions).
 export const insertOptionsOrderSchema = createInsertSchema(optionsOrders).omit({ id: true, userId: true, createdAt: true });
 export const insertPanelLayoutSchema = createInsertSchema(panelLayouts).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertPortfolioAnalysisSchema = createInsertSchema(portfolioAnalyses).omit({ id: true, createdAt: true });
-export const insertWithdrawalSchema = createInsertSchema(withdrawals).omit({ id: true, createdAt: true });
+export const insertWithdrawalSchema = createInsertSchema(withdrawals).omit({ id: true, userId: true, createdAt: true });
 
 export type InsertAdvancedOrder = z.infer<typeof insertAdvancedOrderSchema>;
 export type AdvancedOrder = typeof advancedOrders.$inferSelect;

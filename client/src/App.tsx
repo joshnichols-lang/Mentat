@@ -20,6 +20,7 @@ import AdminUsers from "@/pages/AdminUsers";
 import AdminMessages from "@/pages/AdminMessages";
 import Admin from "@/pages/Admin";
 import Settings from "@/pages/Settings";
+import Wallet from "@/pages/Wallet";
 import TradeHistory from "@/pages/TradeHistory";
 import TradeJournal from "@/pages/TradeJournal";
 import TradingModes from "@/pages/TradingModes";
@@ -42,6 +43,7 @@ function Router() {
       <ProtectedRoute path="/admin/messages" component={AdminMessages} />
       <ProtectedRoute path="/admin" component={Admin} />
       <ProtectedRoute path="/settings" component={Settings} />
+      <ProtectedRoute path="/wallet" component={Wallet} />
       <ProtectedRoute path="/trade-history" component={TradeHistory} />
       <ProtectedRoute path="/trade-journal" component={TradeJournal} />
       <ProtectedRoute path="/trading-modes" component={TradingModes} />
