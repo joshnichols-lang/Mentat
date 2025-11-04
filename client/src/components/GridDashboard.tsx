@@ -94,7 +94,7 @@ export default function GridDashboard({
   }
 
   return (
-    <div className="relative w-full h-full overflow-auto">
+    <div className="relative w-full h-full">
       <GridLayout
         className="layout"
         layout={layouts}
@@ -106,8 +106,8 @@ export default function GridDashboard({
         isResizable={true}
         compactType="vertical"
         preventCollision={false}
-        margin={[16, 16]}
-        containerPadding={[16, 16]}
+        margin={[12, 12]}
+        containerPadding={[12, 12]}
         draggableHandle=".drag-handle"
       >
         {children}
@@ -117,7 +117,7 @@ export default function GridDashboard({
       <button
         onClick={resetLayout}
         data-testid="button-reset-layout"
-        className="fixed bottom-4 right-4 px-4 py-2 bg-card/80 backdrop-blur-sm border border-border rounded-md text-sm hover-elevate active-elevate-2"
+        className="fixed bottom-4 right-4 px-4 py-2 bg-card/80 backdrop-blur-sm border border-border rounded-md text-sm hover-elevate active-elevate-2 z-50"
       >
         Reset Layout
       </button>

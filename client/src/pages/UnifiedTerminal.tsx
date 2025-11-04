@@ -53,12 +53,12 @@ import {
 function PerpetualsInterface() {
   const [selectedSymbol, setSelectedSymbol] = useState("BTC-USD");
 
-  // Default grid layouts for perpetuals panels
+  // Default grid layouts for perpetuals panels (optimized to fit on screen)
   const defaultLayouts = [
-    { i: "chart", x: 0, y: 0, w: 8, h: 12 },
-    { i: "orderEntry", x: 0, y: 12, w: 8, h: 6 },
-    { i: "orderBook", x: 8, y: 0, w: 4, h: 9 },
-    { i: "recentTrades", x: 8, y: 9, w: 4, h: 9 },
+    { i: "chart", x: 0, y: 0, w: 8, h: 11 },
+    { i: "orderEntry", x: 0, y: 11, w: 8, h: 6 },
+    { i: "orderBook", x: 8, y: 0, w: 4, h: 8 },
+    { i: "recentTrades", x: 8, y: 8, w: 4, h: 8 },
   ];
 
   return (
@@ -98,7 +98,7 @@ function PerpetualsInterface() {
         tab="perpetuals"
         defaultLayouts={defaultLayouts}
         cols={12}
-        rowHeight={30}
+        rowHeight={26}
         width={1400}
       >
         <div key="chart">
@@ -773,13 +773,13 @@ function OptionsInterface() {
   const [selectedStrategy, setSelectedStrategy] = useState<any>(null);
   const [currentPrice, setCurrentPrice] = useState(4000);
 
-  // Default grid layouts for options panels
+  // Default grid layouts for options panels (optimized to fit on screen)
   const defaultLayouts = [
-    { i: "chart", x: 0, y: 0, w: 8, h: 14 },
-    { i: "strategy", x: 0, y: 14, w: 8, h: 10 },
-    { i: "optionsChain", x: 8, y: 0, w: 4, h: 11 },
-    { i: "greeks", x: 8, y: 11, w: 4, h: 7 },
-    { i: "positions", x: 8, y: 18, w: 4, h: 6 },
+    { i: "chart", x: 0, y: 0, w: 7, h: 10 },
+    { i: "strategy", x: 0, y: 10, w: 7, h: 8 },
+    { i: "optionsChain", x: 7, y: 0, w: 5, h: 9 },
+    { i: "greeks", x: 7, y: 9, w: 5, h: 6 },
+    { i: "positions", x: 7, y: 15, w: 5, h: 5 },
   ];
 
   return (
@@ -820,7 +820,7 @@ function OptionsInterface() {
         tab="options"
         defaultLayouts={defaultLayouts}
         cols={12}
-        rowHeight={30}
+        rowHeight={24}
         width={1400}
       >
         <div key="chart">
