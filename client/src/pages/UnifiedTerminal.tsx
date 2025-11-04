@@ -62,7 +62,7 @@ function PerpetualsInterface() {
   ];
 
   return (
-    <div className="flex-1 overflow-hidden flex flex-col">
+    <div className="flex-1 overflow-auto flex flex-col">
       {/* Perpetuals Toolbar */}
       <div className="glass border-b border-glass/20 p-2 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-2">
@@ -783,7 +783,7 @@ function OptionsInterface() {
   ];
 
   return (
-    <div className="flex-1 overflow-hidden flex flex-col">
+    <div className="flex-1 overflow-auto flex flex-col">
       {/* Options Toolbar */}
       <div className="glass border-b border-glass/20 p-2 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-2">
