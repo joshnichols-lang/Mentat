@@ -18,7 +18,7 @@ const CHAIN_TOKENS: Record<string, { symbol: string; name: string }[]> = {
     { symbol: "USDC", name: "USD Coin" },
   ],
   hyperliquid: [
-    { symbol: "ETH", name: "Ethereum" },
+    { symbol: "USDC", name: "USD Coin" },
   ],
 };
 
