@@ -19,7 +19,7 @@ const EXPLORER_URLS = {
 };
 
 export interface WithdrawalRequest {
-  chain: 'ethereum' | 'polygon' | 'solana' | 'bnb' | 'hyperliquid';
+  chain: 'ethereum' | 'polygon' | 'solana' | 'bnb' | 'hyperliquid' | 'arbitrum';
   token: string;
   amount: string;
   recipient: string;
@@ -34,6 +34,8 @@ export interface GasEstimate {
   maxPriorityFeePerGas?: string;
   estimatedFee: string;
   estimatedFeeUSD?: string;
+  platformFee?: string;
+  platformFeeDescription?: string;
 }
 
 export interface TransactionResult {
@@ -75,13 +77,45 @@ export class WithdrawalService {
   }
 
   async estimateGas(request: Omit<WithdrawalRequest, 'privateKey'>): Promise<GasEstimate> {
-    const { chain, amount, recipient, fromAddress } = request;
+    const { chain, token, amount, recipient, fromAddress } = request;
 
+    let estimate: GasEstimate;
+    
     if (chain === 'solana') {
-      return this.estimateSolanaGas(amount, recipient, fromAddress);
+      estimate = await this.estimateSolanaGas(amount, recipient, fromAddress);
     } else {
-      return this.estimateEvmGas(chain, amount, recipient, fromAddress);
+      estimate = await this.estimateEvmGas(chain, amount, recipient, fromAddress);
     }
+
+    // Add platform-specific fees (separate from network fees)
+    const platformFeeInfo = this.getPlatformFee(chain, token);
+    if (platformFeeInfo) {
+      estimate.platformFee = platformFeeInfo.fee;
+      estimate.platformFeeDescription = platformFeeInfo.description;
+    }
+
+    return estimate;
+  }
+
+  private getPlatformFee(chain: string, token: string): { fee: string; description: string } | null {
+    // Hyperliquid charges $1 USDC withdrawal fee for USDC withdrawals only
+    if (chain === 'hyperliquid' && token === 'USDC') {
+      return {
+        fee: '1.0',
+        description: 'Hyperliquid charges a flat $1 USDC withdrawal fee for USDC withdrawals',
+      };
+    }
+    
+    // Polymarket has no platform fee (only network gas)
+    if (chain === 'polygon') {
+      return {
+        fee: '0.0',
+        description: 'Polymarket charges no platform fees. You only pay Polygon network gas fees.',
+      };
+    }
+    
+    // No platform fees for other chains/tokens
+    return null;
   }
 
   private async estimateEvmGas(
