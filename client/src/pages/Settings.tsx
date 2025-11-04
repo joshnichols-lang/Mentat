@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Lock, KeyRound, Brain, Trash2, Plus, AlertCircle, RefreshCcw, Clock, AlertTriangle } from "lucide-react";
+import { Lock, KeyRound, Brain, Trash2, Plus, AlertCircle, RefreshCcw, Clock, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   AlertDialog,
@@ -215,27 +215,6 @@ export default function Settings() {
     },
   });
 
-  const renewalMutation = useMutation({
-    mutationFn: async () => {
-      return await apiRequest("/api/wallets/renew-hyperliquid", {
-        method: "POST",
-      });
-    },
-    onSuccess: (data: any) => {
-      toast({
-        title: "API Wallet Renewed",
-        description: `Your Hyperliquid API wallet has been renewed for 180 days. Expires ${new Date(data.expirationDate).toLocaleDateString()}.`,
-      });
-      queryClient.invalidateQueries({ queryKey: ['/api/wallets/hyperliquid-expiration'] });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Renewal Failed",
-        description: error.message || "Failed to renew API wallet",
-        variant: "destructive",
-      });
-    },
-  });
 
   const onSubmitPassword = (data: PasswordChangeForm) => {
     passwordMutation.mutate({
@@ -516,103 +495,70 @@ export default function Settings() {
             </CardContent>
           </Card>
 
-          {/* Re-sync Hyperliquid Credentials */}
-          <Card data-testid="card-resync-credentials">
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <RefreshCcw className="w-5 h-5" />
-                <CardTitle>Re-sync Hyperliquid Credentials</CardTitle>
-              </div>
-              <CardDescription>
-                If you're seeing "No Hyperliquid credentials found" errors, use this tool to restore your trading credentials
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Alert className="mb-4">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>
-                  This feature is for users who created their account before the automatic credential setup was implemented.
-                  You'll need the 12-word seed phrase that was shown when you created your embedded wallet.
-                </AlertDescription>
-              </Alert>
-              <Button
-                onClick={() => setShowResyncModal(true)}
-                variant="outline"
-                data-testid="button-resync-credentials"
-              >
-                <RefreshCcw className="h-4 w-4 mr-2" />
-                Re-sync Credentials
-              </Button>
-            </CardContent>
-          </Card>
+          {/* Re-sync Hyperliquid Credentials - Only show if they don't have API wallet */}
+          {expirationStatus && !expirationStatus.hasApiWallet && (
+            <Card data-testid="card-resync-credentials">
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <RefreshCcw className="w-5 h-5" />
+                  <CardTitle>Re-sync Hyperliquid Credentials</CardTitle>
+                </div>
+                <CardDescription>
+                  Restore your Hyperliquid trading credentials using your embedded wallet's seed phrase
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Alert className="mb-4">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    <strong>When to use this:</strong> If you created your account before automatic credential setup was added, and you're seeing "No Hyperliquid credentials found" errors.
+                    <br /><br />
+                    <strong>What you need:</strong> The 12-word seed phrase that was shown when you first created your embedded wallet.
+                    <br /><br />
+                    <strong>Note:</strong> If you just created your account, your credentials are already set up automatically. You don't need this.
+                  </AlertDescription>
+                </Alert>
+                <Button
+                  onClick={() => setShowResyncModal(true)}
+                  variant="outline"
+                  data-testid="button-resync-credentials"
+                >
+                  <RefreshCcw className="h-4 w-4 mr-2" />
+                  Re-sync Credentials
+                </Button>
+              </CardContent>
+            </Card>
+          )}
 
-          {/* Renew Hyperliquid API Wallet */}
-          {expirationStatus?.hasApiWallet && (
-            <Card data-testid="card-renew-api-wallet">
+          {/* Hyperliquid API Wallet Status */}
+          {expirationStatus?.hasApiWallet && expirationStatus.expirationDate && (
+            <Card data-testid="card-api-wallet-status">
               <CardHeader>
                 <div className="flex items-center gap-2">
                   <Clock className="w-5 h-5" />
-                  <CardTitle>Hyperliquid API Wallet</CardTitle>
+                  <CardTitle>Hyperliquid API Wallet Status</CardTitle>
                 </div>
                 <CardDescription>
-                  Your API wallet authorization expires every 180 days for security. Renew it before expiration to avoid trading disruptions.
+                  Your API wallet authorization is automatically renewed every 180 days. No action required.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                {expirationStatus.expirationDate && (
-                  <Alert className={
-                    expirationStatus.isExpired
-                      ? "border-destructive bg-destructive/10"
-                      : expirationStatus.isExpiring && (expirationStatus.daysRemaining || 0) < 7
-                      ? "border-destructive bg-destructive/10"
-                      : expirationStatus.isExpiring
-                      ? "border-amber-500 bg-amber-500/10"
-                      : "border-chart-2 bg-chart-2/10"
-                  }>
-                    {expirationStatus.isExpired ? (
-                      <AlertTriangle className="h-4 w-4 text-destructive" />
-                    ) : expirationStatus.isExpiring ? (
-                      <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-                    ) : (
-                      <Clock className="h-4 w-4 text-chart-2" />
-                    )}
-                    <AlertDescription>
-                      {expirationStatus.isExpired ? (
-                        <span className="font-medium text-destructive">
-                          Your API wallet has expired. Renew it now to continue trading.
-                        </span>
-                      ) : (
-                        <>
-                          <span className="font-medium">
-                            {expirationStatus.isExpiring ? 'Expiring Soon:' : 'Active:'} {expirationStatus.daysRemaining}d {expirationStatus.hoursRemaining}h remaining
-                          </span>
-                          <br />
-                          <span className="text-sm opacity-90">
-                            Expires: {new Date(expirationStatus.expirationDate).toLocaleDateString()} at {new Date(expirationStatus.expirationDate).toLocaleTimeString()}
-                          </span>
-                        </>
-                      )}
-                    </AlertDescription>
-                  </Alert>
-                )}
-                <Button
-                  onClick={() => renewalMutation.mutate()}
-                  disabled={renewalMutation.isPending}
-                  variant={expirationStatus.isExpired || expirationStatus.isExpiring ? "default" : "outline"}
-                  data-testid="button-renew-api-wallet-settings"
-                >
-                  {renewalMutation.isPending ? (
-                    <>
-                      <RefreshCcw className="h-4 w-4 mr-2 animate-spin" />
-                      Renewing...
-                    </>
-                  ) : (
-                    <>
-                      <Clock className="h-4 w-4 mr-2" />
-                      Renew for 180 Days
-                    </>
-                  )}
-                </Button>
+                <Alert className="border-chart-2 bg-chart-2/10">
+                  <CheckCircle2 className="h-4 w-4 text-chart-2" />
+                  <AlertDescription>
+                    <span className="font-medium">
+                      Active: {expirationStatus.daysRemaining}d {expirationStatus.hoursRemaining}h remaining
+                    </span>
+                    <br />
+                    <span className="text-sm opacity-90">
+                      Expires: {new Date(expirationStatus.expirationDate).toLocaleDateString()} at {new Date(expirationStatus.expirationDate).toLocaleTimeString()}
+                    </span>
+                    <br />
+                    <span className="text-sm opacity-70 mt-2 block">
+                      Auto-renews 24 hours before expiration
+                    </span>
+                  </AlertDescription>
+                </Alert>
               </CardContent>
             </Card>
           )}

@@ -7,6 +7,7 @@ import { ThemeProvider } from "@/components/ThemeProvider";
 import { AuthProvider } from "@/hooks/use-auth";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { WalletInitializer } from "@/components/WalletInitializer";
+import { HyperliquidAutoRenew } from "@/components/HyperliquidAutoRenew";
 import { WagmiProvider } from 'wagmi';
 import { RainbowKitProvider, darkTheme } from '@rainbow-me/rainbowkit';
 import { config } from '@/lib/wagmi';
@@ -67,6 +68,7 @@ function App() {
             <TooltipProvider>
               <AuthProvider>
                 <WalletInitializer />
+                <HyperliquidAutoRenew />
                 <Router />
                 <Toaster />
               </AuthProvider>
