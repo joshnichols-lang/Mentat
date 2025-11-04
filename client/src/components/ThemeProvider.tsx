@@ -1,13 +1,11 @@
 import { createContext, useContext, useLayoutEffect, useState } from "react";
 
 type ThemeMode = "light" | "dark";
-type ThemeName = "fox" | "cyber" | "matrix";
 
 interface ThemeContextType {
   mode: ThemeMode;
-  themeName: ThemeName;
   setMode: (mode: ThemeMode) => void;
-  setThemeName: (name: ThemeName) => void;
+  toggleMode: () => void;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
@@ -21,31 +19,25 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     return "dark";
   });
 
-  const [themeName, setThemeName] = useState<ThemeName>(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("themeName") as ThemeName | null;
-      return saved || "fox";
-    }
-    return "fox";
-  });
-
   useLayoutEffect(() => {
     const root = document.documentElement;
     
-    // Remove all theme classes
-    root.classList.remove("light", "dark", "fox", "cyber", "matrix");
+    // Remove mode classes
+    root.classList.remove("light", "dark");
     
-    // Add current theme classes
+    // Add current mode class
     root.classList.add(mode);
-    root.classList.add(themeName);
     
     // Persist to localStorage
     localStorage.setItem("themeMode", mode);
-    localStorage.setItem("themeName", themeName);
-  }, [mode, themeName]);
+  }, [mode]);
+
+  const toggleMode = () => {
+    setMode(mode === "dark" ? "light" : "dark");
+  };
 
   return (
-    <ThemeContext.Provider value={{ mode, themeName, setMode, setThemeName }}>
+    <ThemeContext.Provider value={{ mode, setMode, toggleMode }}>
       {children}
     </ThemeContext.Provider>
   );

@@ -1,198 +1,175 @@
-# Design Guidelines: 1fox - Orderly-Inspired Trading Terminal
+# Design Guidelines: 1fox - Minimalist AI Trading Terminal
 
 ## Design Approach
-**Modern Dark Trading Interface** - Inspired by Orderly Network's professional DEX design. Rich orange/amber accent colors against dark brown/black backgrounds, creating a sophisticated and focused trading environment. Roboto typography provides clean, modern readability while maintaining professional credibility.
+**Modern Minimalist Fintech** - Inspired by Linear, Stripe, and modern trading platforms like Robinhood. Pure monochromatic palette with exceptional typography hierarchy, creative data visualizations, and subtle sophisticated animations. Clean geometric structure with spacing-based hierarchy over heavy borders.
 
 ## Core Design Elements
 
 ### A. Color Palette
 
-**Dark Mode Foundation (Primary)**
-Based on Orderly Network's color system
+**Dark Mode (Primary)**
+- Background Primary: 0 0 0 (Pure black)
+- Background Secondary: 10 10 10 (Elevated surfaces)
+- Background Tertiary: 18 18 18 (Cards, panels)
+- Border Subtle: 30 30 30 (Minimal borders)
+- Border Default: 45 45 45 (Standard dividers)
+- Text Primary: 255 255 255 (Pure white)
+- Text Secondary: 160 160 160 (Grey text)
+- Text Tertiary: 115 115 115 (Muted text)
+- Accent: 255 255 255 (White highlights)
 
-**Backgrounds (Base Colors)**
-- Base 10 (Darkest): 16 12 12 (Primary background)
-- Base 9: 24 18 18 (Secondary background)
-- Base 8: 28 22 22 (Card background)
-- Base 7: 32 26 26 (Elevated surfaces)
-- Base 6: 35 29 29 (Input backgrounds)
-- Base 5: 39 33 33 (Hover states)
-- Base 4: 44 36 36 (Active states)
-- Base 3: 48 40 40 (Borders)
-- Base 2: 56 48 48 (Dividers)
-- Base 1: 64 56 56 (Subtle highlights)
+**Light Mode**
+- Background Primary: 255 255 255 (Pure white)
+- Background Secondary: 250 250 250 (Elevated surfaces)
+- Background Tertiary: 245 245 245 (Cards, panels)
+- Border Subtle: 235 235 235 (Minimal borders)
+- Border Default: 220 220 220 (Standard dividers)
+- Text Primary: 0 0 0 (Pure black)
+- Text Secondary: 95 95 95 (Grey text)
+- Text Tertiary: 140 140 140 (Muted text)
+- Accent: 0 0 0 (Black highlights)
 
-**Primary Colors (Orange/Amber)**
-- Primary: 176 96 0 (Main orange)
-- Primary Light: 217 163 82 (Light amber)
-- Primary Darken: 137 64 0 (Dark orange)
-- Primary Contrast: 255 255 255 (White text on orange)
-
-**Accent Colors**
-- Link: 207 87 59 (Orange link)
-- Link Light: 250 154 122 (Light orange link)
-- Tertiary: 218 137 84 (Amber accent)
-- Secondary: 255 255 255 (White)
-
-**Status Colors**
-- Danger/Sell: 245 78 46 (Red for losses/shorts)
-- Danger Light: 250 142 93
-- Danger Darken: 237 56 34
-- Success/Buy: 255 193 7 (Yellow/Gold for profits/longs)
-- Success Light: 255 223 74
-- Success Darken: 255 152 0
-- Warning: 255 209 70 (Amber warning)
-- Warning Light: 255 229 133
-
-**Text Colors**
-- Base Foreground: 255 255 255 (Primary white text)
-- Line Color: 255 255 255 (Borders/dividers)
-
-**Trading Colors**
-- Trading Loss: 245 78 46 (Red) - Contrast: 255 255 255
-- Trading Profit: 255 193 7 (Gold) - Contrast: 0 0 0
-
-**Gradients**
-- Primary: from 128 64 0 to 207 87 59
-- Secondary: from 176 96 0 to 255 163 82
-- Success: from 255 193 7 to 255 223 74
-- Danger: from 153 24 24 to 245 78 46
-- Brand: from 231 163 82 to 255 193 7
-- Warning: from 152 58 8 to 255 209 70
-- Neutral: from 27 29 24 to 38 41 36
+**Trading Status Colors** (Same both modes)
+- Success/Long: 34 197 94 (Green)
+- Danger/Short: 239 68 68 (Red)
+- Warning: 234 179 8 (Yellow)
+- Neutral: 148 163 184 (Slate)
 
 ### B. Typography
 
 **Font Stack**
-- Primary: 'Roboto', sans-serif (all UI text)
-- Base size: 16px
+- Primary: 'Inter', -apple-system, sans-serif
+- Monospace: 'JetBrains Mono', monospace (for numbers/data)
 
-**Type Scale**
-- Display/Hero: text-4xl font-bold (Major metrics)
-- Section Headers: text-2xl font-semibold (Page sections)
-- Subsection: text-xl font-medium (Component titles)
-- Body/UI: text-base font-normal (16px base, all UI)
-- Data/Numbers: text-lg font-semibold (Prices, quantities)
-- Small/Labels: text-sm font-medium (Input labels)
-- Captions: text-xs (Timestamps, metadata)
+**Type Scale & Weights**
+- Hero Numbers: text-6xl font-bold tracking-tight (Portfolio value)
+- Section Headers: text-3xl font-semibold tracking-tight
+- Data Headers: text-xl font-semibold
+- Body/UI: text-base font-normal (16px base)
+- Trading Data: text-lg font-mono font-medium (Prices, quantities)
+- Labels: text-sm font-medium tracking-wide uppercase (Input labels)
+- Metadata: text-xs font-mono text-tertiary (Timestamps)
 
-**Number Formatting**
-- Large metrics: text-4xl font-bold
-- Price data: text-2xl font-semibold
-- Percentages: text-base font-medium
+**Grey Scale Hierarchy**
+- Critical data: text-primary font-bold
+- Standard text: text-primary font-normal
+- Supporting info: text-secondary font-medium
+- Metadata: text-tertiary font-normal
 
 ### C. Layout System
 
-**Border Radius (Smooth Modern)**
-- sm: 2px
-- default: 4px
-- md: 6px
-- lg: 8px
-- xl: 12px
-- 2xl: 16px
-- full: 9999px
+**Spacing Primitives** (Tailwind units)
+- Core spacing: 1, 2, 3, 4, 6, 8, 12, 16, 24, 32
+- Component padding: p-6 or p-8
+- Section gaps: gap-6 or gap-8
+- Page margins: my-12 or my-16
 
-**Spacing Primitives**
-- xs: 20rem
-- sm: 22.5rem
-- md: 26.25rem
-- lg: 30rem
-- xl: 33.75rem
+**Border Radius**
+- sm: 4px (Inputs, small cards)
+- default: 8px (Standard cards)
+- lg: 12px (Large panels)
+- xl: 16px (Modals, major containers)
 
 **Dashboard Grid**
-- Primary container: max-w-[1600px] mx-auto
-- Main content: grid grid-cols-12 gap-6
-- Borders: Subtle borders in base-3 color
+- Container: max-w-[1800px] mx-auto px-6
+- Main grid: grid grid-cols-12 gap-6
+- Responsive: Single column mobile, multi-column desktop
 
 ### D. Component Library
 
-**Cards & Containers**
-- Base card: rounded-md border border-base-3 bg-base-8 shadow-sm
-- Data card: p-6 with subtle borders
-- Stat card: Clean boxes with bold numbers, orange accents
-- Interactive cards: hover:bg-base-7 transition
-- Elevated: bg-base-7 for raised surfaces
+**Cards & Panels**
+- Minimal card: bg-tertiary rounded-lg p-6 border border-subtle
+- Elevated panel: bg-secondary rounded-xl p-8 shadow-sm
+- Ghost card: bg-transparent border-none (spacing-based separation)
+- Interactive: hover:scale-[1.01] transition-transform duration-200
 
-**Data Display**
-- Tables: Clean borders (base-3), hover:bg-base-7
-- Price displays: Large bold numbers, orange for buys/green alternatives
-- Charts: Orange/yellow/red color scheme, dark backgrounds
-- Metrics grid: 2-3 column layouts with gradient cards
+**Data Visualizations (Creative)**
+- **Radial Gauges**: Circular progress for Greeks (delta, gamma, theta, vega) - 120px diameter, 8px stroke, animated arc drawing
+- **Heatmap Grids**: Portfolio allocation in 3x3 or 4x4 grid, cell size based on position weight, green/red intensity by P&L
+- **Horizontal Depth Bars**: Order book visualization, horizontal bars growing from center, bid (green) left / ask (red) right
+- **Inline Sparklines**: Tiny 60x20px price trend charts next to symbols, grey line with gradient fill
+- **Activity Heatmaps**: Calendar-style grid showing trading frequency, darker cells = more activity
+- **Arc Progress Indicators**: Semi-circle gauges for account metrics, animated fill from 0deg to target
 
 **Navigation**
-- Top bar: Dark header with orange "1fox" branding
-- Tabs: Orange underline for active tab
-- Section dividers: Subtle base-3 borders
+- Top bar: Minimal black/white bar, "1fox" with fox logo left, status indicators right
+- Tab navigation: Underline accent on active (3px height), text-secondary for inactive
+- Sidebar: Clean vertical nav with icon + label, hover:bg-secondary
 
 **Forms & Inputs**
-- Text inputs: border border-base-3 bg-base-6 focus:border-primary focus:ring-1 focus:ring-primary
-- Number inputs: Roboto with orange focus states
+- Text inputs: border border-default bg-tertiary rounded-md px-4 py-3 focus:border-accent focus:ring-1 focus:ring-accent
+- Number inputs: font-mono tracking-tight
 - Buttons:
-  - Primary: bg-primary text-white hover:bg-primary-darken font-medium rounded-md
-  - Outline: border-2 border-primary bg-transparent hover:bg-primary/10
-  - Ghost: hover:bg-base-5 text-foreground
+  - Primary: bg-accent text-background px-6 py-3 rounded-lg font-medium hover:opacity-90
+  - Ghost: hover:bg-secondary text-primary px-4 py-2 rounded-md
+  - Trade Buy: bg-success text-white rounded-lg font-semibold
+  - Trade Sell: bg-danger text-white rounded-lg font-semibold
 
-**Trading Specific**
-- Buy orders: bg-success text-black or gradient-success
-- Sell orders: bg-danger text-white or gradient-danger
-- Position cards: Dark cards with orange accents
-- Order book: Two-column with orange/red depth visualization
-- Trade history: Table with alternating row backgrounds
+**Trading Components**
+- Order book: Two-column table, horizontal depth bars, monospace numbers, subtle row dividers
+- Position cards: Clean geometric panels with PnL in large font-mono, entry/current price stacked
+- Trade log: Minimal table with alternating subtle bg, timestamp in text-xs font-mono
+- Price tickers: Large font-mono numbers with inline sparklines
 
-**AI Prompt Interface**
-- Large textarea: Dark input with orange focus ring
-- Status indicators: Orange loading states
-- Results display: Card format with gradient headers
+**AI Interface**
+- Prompt input: Large textarea (min-h-32) with minimal border, focus:ring-1
+- Response cards: bg-secondary rounded-xl p-6 with typing animation
+- Suggestion chips: Inline pills with hover:bg-tertiary
 
-**Status & Notifications**
-- Toast notifications: Dark with orange accents
-- Connection status: Orange dot for connected
-- Live updates: Subtle orange highlight on changes
-- Warnings: Amber/yellow colored boxes
+**Data Display**
+- Tables: No borders on cells, only subtle row separators (border-b border-subtle), hover:bg-secondary
+- Metric cards: Large numbers font-mono, small labels uppercase text-tertiary
+- Real-time updates: Brief highlight pulse (200ms opacity change)
 
-**Data Visualization**
-- Price charts: Orange for positive, red for negative
-- Performance graphs: Gradient fills with orange/yellow
-- Sparklines: Orange inline charts
-- Progress bars: Orange gradients
+### E. Animations (Subtle & Classy)
 
-### E. Animations
-**Smooth & Professional**
-- Data updates: Brief highlight (150ms) in orange
-- Loading states: Orange spinner or pulse
-- Transitions: duration-200 ease-out for responsive feel
-- Page loads: Smooth fade-ins (300ms)
+**Hover States**
+- Cards: scale-[0.98] to scale-[1.02] smooth elevation
+- Buttons: opacity-90 or subtle bg-shift
+- Interactive rows: bg-secondary fade-in
 
-**Interactive States**
-- Hover: Subtle background elevation (bg-base-7)
-- Active: Deeper background (bg-base-5)
-- Focus: Orange ring (ring-2 ring-primary)
+**Data Updates**
+- Price changes: 300ms highlight pulse (bg-accent/10)
+- Chart drawing: Animated path stroke-dashoffset
+- Number transitions: Smooth count-up animations
+- Loading: Minimal skeleton shimmer in grey
 
-## Dashboard Layout Structure
+**Transitions**
+- Page loads: 200ms fade-in
+- Modal entry: 250ms scale from 0.95 to 1.0
+- Tab switching: 150ms crossfade
+- All: ease-out timing
 
-**Main Trading Terminal View**
-1. **Header**: Dark bar with orange "1fox" logo, connection status in orange
-2. **AI Prompt Section**: Large dark input with orange accents
-3. **Market Board**: Grid of crypto prices with orange highlights
-4. **Active Positions**: Cards with orange/red color coding
-5. **Order Entry Form**: Dark panel with orange buy/red sell buttons
-6. **Trade Log**: Dark table with subtle borders
-7. **Performance Dashboard**: Metric cards with orange gradient accents
+**Progress Indicators**
+- Arc gauges: Animated stroke-dasharray from 0 to value
+- Linear bars: width transition over 400ms
+- Loading states: Subtle pulse (opacity 0.4 to 1.0)
+
+## Dashboard Structure
+
+**Main Trading View**
+1. **Header**: Minimal black bar, "1fox" + fox logo, connection status (small green/red dot), account value right-aligned
+2. **AI Command Bar**: Prominent input with suggestion chips below
+3. **Portfolio Overview**: Hero metric (total value) + radial gauges for Greeks in 4-column grid
+4. **Market Heatmap**: 4x6 grid of top cryptocurrencies, cell color intensity by 24h change
+5. **Active Positions**: Geometric cards with large PnL numbers, entry/exit prices, inline sparklines
+6. **Order Entry**: Clean form with horizontal depth bars showing current book
+7. **Trade History**: Minimal table with monospace data, activity heatmap above
+8. **Analytics Panel**: Arc progress indicators for portfolio metrics, allocation heatmap
 
 ## Visual Hierarchy Principles
 
-1. **Orange Accents**: Use primary orange for CTAs and important data
-2. **Dark Depth**: Layer different base colors to create depth
-3. **Roboto Typography**: Clean, professional, highly readable
-4. **Smooth Corners**: 4-8px border radius for modern feel
-5. **Gradient Highlights**: Use orange gradients for emphasis
-6. **High Contrast**: White text on dark backgrounds
+1. **Typography First**: Use font size, weight, and grey scale for hierarchy
+2. **Spacing Over Borders**: Generous whitespace instead of heavy dividers
+3. **Monochrome Discipline**: Only green/red for trading status, everything else grey scale
+4. **Data Clarity**: Large monospace numbers for critical trading data
+5. **Geometric Cleanliness**: Pure rectangles, minimal decoration
+6. **Subtle Animation**: Elevate without distraction
 
 ## Brand Identity
 
 **1fox**
-- Name represents: one platform, sharp focus, clever trading
-- Aesthetic: Orderly Network-inspired professional trading terminal
-- Values: Sophistication, precision, modern technology, performance
-- Color palette: Rich orange/amber on dark brown/black backgrounds
-- Typography: Roboto for clean, professional readability
+- Logo: Minimalist fox icon in pure black (dark mode) / white (light mode)
+- Name treatment: Lowercase, clean sans-serif
+- Aesthetic: Sophisticated minimalism, fintech precision
+- Differentiator: Creative visualizations + AI-powered insights
