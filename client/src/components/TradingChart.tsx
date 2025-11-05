@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import { 
   createChart, 
   IChartApi, 
@@ -32,7 +32,8 @@ export default function TradingChart({ symbol, onSymbolChange }: TradingChartPro
   const [candleData, setCandleData] = useState<Map<number, { candle: CandlestickData, volume: number }>>(new Map());
 
   // Minimalist monochrome colors - grey/white/black only
-  const colors = {
+  // Memoize colors to prevent unnecessary chart re-initialization
+  const colors = useMemo(() => ({
     grid: mode === "dark" ? "rgba(255, 255, 255, 0.03)" : "rgba(0, 0, 0, 0.05)",
     crosshair: mode === "dark" ? "rgba(255, 255, 255, 0.2)" : "rgba(0, 0, 0, 0.2)",
     border: mode === "dark" ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.1)",
@@ -44,7 +45,7 @@ export default function TradingChart({ symbol, onSymbolChange }: TradingChartPro
     wickColor: mode === "dark" ? "#737373" : "#525252",      // Grey wicks
     volumeUp: mode === "dark" ? "rgba(115, 115, 115, 0.3)" : "rgba(82, 82, 82, 0.3)",   // Grey volume
     volumeDown: mode === "dark" ? "rgba(82, 82, 82, 0.3)" : "rgba(115, 115, 115, 0.3)", // Grey volume
-  };
+  }), [mode]);
 
   // Initialize chart
   useEffect(() => {
