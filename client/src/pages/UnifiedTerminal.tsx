@@ -49,60 +49,50 @@ import {
   Layers,
 } from "lucide-react";
 
-// Perpetuals Trading Interface Component
+// Perpetuals Trading Interface Component - Compact Numora Style
 function PerpetualsInterface() {
   const [selectedSymbol, setSelectedSymbol] = useState("BTC-USD");
 
-  // Default grid layouts for perpetuals panels (optimized to fit on screen)
+  // Compact grid layouts - fit everything in viewport without scrolling
   const defaultLayouts = [
-    { i: "chart", x: 0, y: 0, w: 8, h: 11 },
-    { i: "orderEntry", x: 0, y: 11, w: 8, h: 6 },
-    { i: "orderBook", x: 8, y: 0, w: 4, h: 8 },
-    { i: "recentTrades", x: 8, y: 8, w: 4, h: 8 },
+    { i: "chart", x: 0, y: 0, w: 7, h: 18 },           // Chart left (58%)
+    { i: "orderEntry", x: 7, y: 0, w: 3, h: 9 },       // Order Entry top-right (25%)
+    { i: "orderBook", x: 10, y: 0, w: 2, h: 9 },       // Order Book far-right (17%)
+    { i: "recentTrades", x: 7, y: 9, w: 5, h: 9 },     // Recent Trades bottom-right
   ];
 
   return (
-    <div className="flex-1 overflow-auto flex flex-col">
-      {/* Perpetuals Toolbar */}
-      <div className="bg-background border-b border-border/50 p-2 flex items-center justify-between shrink-0">
+    <div className="h-full flex flex-col">
+      {/* Compact Toolbar */}
+      <div className="bg-background border-b border-border/30 px-2 py-1 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-2">
-          <Flame className="h-4 w-4" />
-          <h3 className="text-sm font-semibold">Perpetuals Trading</h3>
           <MarketSelector
             selectedSymbol={selectedSymbol}
             onSymbolChange={setSelectedSymbol}
           />
-          <Badge 
-            variant="outline" 
-            className="bg-long/10 text-long border-long/30"
-            data-testid="badge-price-change"
-          >
-            +2.4%
-          </Badge>
+          <span className="text-xs text-success" data-testid="badge-price-change">+2.4%</span>
         </div>
 
-        <div className="flex items-center gap-1">
-          <Button 
-            variant="ghost" 
-            size="icon"
-            className="h-8 w-8"
-            data-testid="button-chart-settings"
-          >
-            <Settings className="h-4 w-4" />
-          </Button>
-        </div>
+        <Button 
+          variant="ghost" 
+          size="icon"
+          className="h-6 w-6"
+          data-testid="button-chart-settings"
+        >
+          <Settings className="h-3 w-3" />
+        </Button>
       </div>
 
-      {/* Grid Dashboard with Draggable Widgets */}
+      {/* Compact Grid Dashboard */}
       <GridDashboard
         tab="perpetuals"
         defaultLayouts={defaultLayouts}
         cols={12}
-        rowHeight={26}
+        rowHeight={22}
         width={1400}
       >
         <div key="chart">
-          <Widget id="chart" title="Trading Chart">
+          <Widget id="chart" title="Chart">
             <TradingChart 
               symbol={selectedSymbol}
               onSymbolChange={setSelectedSymbol}
@@ -1048,117 +1038,90 @@ function AnalyticsInterface() {
   );
 }
 
-// Main Unified Terminal
+// Main Unified Terminal - Numora Style Layout
 export default function UnifiedTerminal() {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState("perpetuals");
 
   return (
     <SymbolProvider>
-      <div className="min-h-screen">
+      <div className="min-h-screen flex flex-col">
         <Header />
         
-        <main className="h-[calc(100vh-3.5rem)]">
-          <ResizablePanelGroup direction="horizontal" className="h-full">
-            
-            {/* Main Content Area with Tabs */}
-            <ResizablePanel defaultSize={70} minSize={50}>
-              <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col h-full">
-                {/* Tab Navigation Header */}
-                <div className="bg-background border-b border-border/50 px-4 py-2">
-                  <TabsList className="grid w-full max-w-3xl grid-cols-5 bg-muted/30">
-                    <TabsTrigger 
-                      value="perpetuals" 
-                      className="flex items-center gap-2"
-                      data-testid="tab-perpetuals"
-                    >
-                      <Flame className="h-4 w-4" />
-                      Perpetuals
-                    </TabsTrigger>
-                    <TabsTrigger 
-                      value="prediction" 
-                      className="flex items-center gap-2"
-                      data-testid="tab-prediction-markets"
-                    >
-                      <Vote className="h-4 w-4" />
-                      Prediction Markets
-                    </TabsTrigger>
-                    <TabsTrigger 
-                      value="options" 
-                      className="flex items-center gap-2"
-                      data-testid="tab-options"
-                    >
-                      <Layers className="h-4 w-4" />
-                      Options
-                    </TabsTrigger>
-                    <TabsTrigger 
-                      value="spot" 
-                      className="flex items-center gap-2"
-                      data-testid="tab-spot-discovery"
-                    >
-                      <Sparkles className="h-4 w-4" />
-                      Spot Discovery
-                    </TabsTrigger>
-                    <TabsTrigger 
-                      value="analytics" 
-                      className="flex items-center gap-2"
-                      data-testid="tab-analytics"
-                    >
-                      <BarChart3 className="h-4 w-4" />
-                      Analytics
-                    </TabsTrigger>
-                  </TabsList>
-                </div>
-
-                {/* Tab Content */}
-                <TabsContent value="perpetuals" className="m-0 flex-1 flex flex-col">
-                  <PerpetualsInterface />
-                </TabsContent>
-
-                <TabsContent value="prediction" className="m-0 flex-1 flex flex-col">
-                  <PredictionMarketsInterface />
-                </TabsContent>
-
-                <TabsContent value="options" className="m-0 flex-1 flex flex-col">
-                  <OptionsInterface />
-                </TabsContent>
-
-                <TabsContent value="spot" className="m-0 flex-1 flex flex-col">
-                  <SpotDiscoveryInterface />
-                </TabsContent>
-
-                <TabsContent value="analytics" className="m-0 flex-1 flex flex-col">
-                  <AnalyticsInterface />
-                </TabsContent>
-              </Tabs>
-            </ResizablePanel>
-
-            <ResizableHandle withHandle />
-
-            {/* Right Panel - AI Chat & Positions */}
-            <ResizablePanel defaultSize={30} minSize={25} maxSize={40}>
-              <div className="h-full flex flex-col">
-                
-                {/* AI Prompt Panel */}
-                <div className="p-4 border-b">
-                  <AIPromptPanel />
-                </div>
-
-                {/* Conversation History */}
-                <div className="flex-1 overflow-auto p-4">
-                  <ConversationHistory />
-                </div>
-
-                {/* Positions & Activity */}
-                <div className="p-4 border-t space-y-4 overflow-auto max-h-[40vh]">
-                  <PositionsGrid />
-                  <AIUsageTracker />
-                </div>
-
+        {/* Main content - single viewport, no scrolling */}
+        <main className="h-[calc(100vh-3.5rem)] flex">
+          
+          {/* Left: Tabs + Content (75%) */}
+          <div className="flex-1 flex flex-col border-r border-border/30">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col h-full">
+              {/* Tab Navigation - Compact Header */}
+              <div className="bg-background border-b border-border/30 px-3 py-1.5 shrink-0">
+                <TabsList className="bg-secondary/30 h-8">
+                  <TabsTrigger value="perpetuals" className="text-xs py-1 px-3" data-testid="tab-perpetuals">
+                    <Flame className="h-3 w-3 mr-1.5" />
+                    Perpetuals
+                  </TabsTrigger>
+                  <TabsTrigger value="prediction" className="text-xs py-1 px-3" data-testid="tab-prediction-markets">
+                    <Vote className="h-3 w-3 mr-1.5" />
+                    Prediction Markets
+                  </TabsTrigger>
+                  <TabsTrigger value="options" className="text-xs py-1 px-3" data-testid="tab-options">
+                    <Layers className="h-3 w-3 mr-1.5" />
+                    Options
+                  </TabsTrigger>
+                  <TabsTrigger value="spot" className="text-xs py-1 px-3" data-testid="tab-spot-discovery">
+                    <Sparkles className="h-3 w-3 mr-1.5" />
+                    Spot Discovery
+                  </TabsTrigger>
+                  <TabsTrigger value="analytics" className="text-xs py-1 px-3" data-testid="tab-analytics">
+                    <BarChart3 className="h-3 w-3 mr-1.5" />
+                    Analytics
+                  </TabsTrigger>
+                </TabsList>
               </div>
-            </ResizablePanel>
 
-          </ResizablePanelGroup>
+              {/* Tab Content */}
+              <TabsContent value="perpetuals" className="m-0 flex-1">
+                <PerpetualsInterface />
+              </TabsContent>
+
+              <TabsContent value="prediction" className="m-0 flex-1">
+                <PredictionMarketsInterface />
+              </TabsContent>
+
+              <TabsContent value="options" className="m-0 flex-1">
+                <OptionsInterface />
+              </TabsContent>
+
+              <TabsContent value="spot" className="m-0 flex-1">
+                <SpotDiscoveryInterface />
+              </TabsContent>
+
+              <TabsContent value="analytics" className="m-0 flex-1">
+                <AnalyticsInterface />
+              </TabsContent>
+            </Tabs>
+          </div>
+
+          {/* Right Sidebar: AI + Positions (25% fixed) */}
+          <div className="w-[25%] flex flex-col bg-background">
+            {/* AI Prompt Panel */}
+            <div className="p-3 border-b border-border/30 shrink-0">
+              <AIPromptPanel />
+            </div>
+
+            {/* Conversation History */}
+            <div className="flex-1 overflow-y-auto p-3 min-h-0">
+              <ConversationHistory />
+            </div>
+
+            {/* Positions & AI Usage */}
+            <div className="p-3 border-t border-border/30 space-y-3 max-h-[35vh] overflow-y-auto shrink-0">
+              <PositionsGrid />
+              <AIUsageTracker />
+            </div>
+          </div>
+
         </main>
       </div>
     </SymbolProvider>
