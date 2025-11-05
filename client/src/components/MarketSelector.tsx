@@ -120,16 +120,15 @@ export default function MarketSelector({ selectedSymbol, onSymbolChange }: Marke
         <Button
           variant="ghost"
           size="sm"
-          className="hover:glow-orange"
           data-testid="button-market-selector"
         >
-          <span className="font-bold text-primary">{selectedSymbol}</span>
+          <span className="font-bold">{selectedSymbol}</span>
         </Button>
       </DialogTrigger>
-      <DialogContent className="glass-strong border-glass/30 max-w-2xl">
+      <DialogContent className="bg-card border-border/50 max-w-2xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Search className="h-5 w-5 text-primary" />
+            <Search className="h-5 w-5" />
             Select Market
           </DialogTitle>
         </DialogHeader>
@@ -142,7 +141,7 @@ export default function MarketSelector({ selectedSymbol, onSymbolChange }: Marke
               placeholder="Search markets..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 glass"
+              className="pl-10"
               data-testid="input-market-search"
             />
           </div>

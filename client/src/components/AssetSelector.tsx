@@ -20,7 +20,7 @@ export default function AssetSelector({ selectedAsset, onAssetChange, className 
     <Select value={selectedAsset} onValueChange={onAssetChange}>
       <SelectTrigger 
         data-testid="select-asset" 
-        className={`w-[200px] glass-panel border border-primary/20 hover-elevate ${className || ''}`}
+        className={`w-[200px] bg-background border border-border/50 hover-elevate ${className || ''}`}
       >
         <div className="flex items-center gap-2">
           <span className="text-muted-foreground text-xs">Asset:</span>
@@ -29,7 +29,7 @@ export default function AssetSelector({ selectedAsset, onAssetChange, className 
           </SelectValue>
         </div>
       </SelectTrigger>
-      <SelectContent className="glass-panel border border-primary/20">
+      <SelectContent className="bg-card border border-border/50">
         {AVAILABLE_ASSETS.map((asset) => (
           <SelectItem 
             key={asset.value} 
