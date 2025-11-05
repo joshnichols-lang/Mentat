@@ -49,12 +49,13 @@ import {
   Layers,
 } from "lucide-react";
 
-// Perpetuals Trading Interface Component - Fixed Optimized Layout
+// Perpetuals Trading Interface Component - Hyperliquid-style Layout
 function PerpetualsInterface() {
   const [selectedSymbol, setSelectedSymbol] = useState("BTC-USD");
+  const [bottomTab, setBottomTab] = useState<"positions" | "orders" | "history" | "trades">("positions");
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col bg-background">
       {/* Compact Toolbar */}
       <div className="bg-background border-b border-border/30 px-2 py-1 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-2">
@@ -75,11 +76,11 @@ function PerpetualsInterface() {
         </Button>
       </div>
 
-      {/* Fixed Optimized Layout - Single Viewport */}
-      <div className="flex-1 flex gap-1 p-1 overflow-x-auto overflow-y-hidden">
-        {/* Chart - 58% width, min-width ensures it doesn't collapse */}
-        <div className="flex-[58] flex flex-col min-w-[400px]">
-          <Widget id="chart" title="Chart">
+      {/* TOP SECTION: Chart + Order Book + Trading (72% height) */}
+      <div className="flex-[72] flex gap-px overflow-hidden">
+        {/* Chart - 70% width */}
+        <div className="flex-[70] flex flex-col min-w-[500px]">
+          <Widget id="chart" title="Chart" compact>
             <TradingChart 
               symbol={selectedSymbol}
               onSymbolChange={setSelectedSymbol}
@@ -87,18 +88,68 @@ function PerpetualsInterface() {
           </Widget>
         </div>
 
-        {/* Trading Panel - 25% width */}
-        <div className="flex-[25] flex flex-col min-w-[250px]">
-          <Widget id="trading" title="">
-            <TradingActionsPanel symbol={selectedSymbol} />
+        {/* Order Book - 15% width */}
+        <div className="flex-[15] flex flex-col min-w-[180px] border-l border-border/20">
+          <Widget id="orderBook" title="Order Book" compact>
+            <OrderBook symbol={selectedSymbol} />
           </Widget>
         </div>
 
-        {/* Order Book - 17% width */}
-        <div className="flex-[17] flex flex-col min-w-[200px]">
-          <Widget id="orderBook" title="Order Book">
-            <OrderBook symbol={selectedSymbol} />
+        {/* Trading Panel - 15% width */}
+        <div className="flex-[15] flex flex-col min-w-[200px] border-l border-border/20">
+          <Widget id="trading" compact>
+            <TradingActionsPanel symbol={selectedSymbol} />
           </Widget>
+        </div>
+      </div>
+
+      {/* BOTTOM SECTION: Tabbed Positions/Orders/History (28% height) */}
+      <div className="flex-[28] flex flex-col border-t border-border/20 overflow-hidden">
+        {/* Tabs Header - ultra compact */}
+        <div className="flex items-center gap-px border-b border-border/20 bg-card shrink-0">
+          {[
+            { id: "positions", label: "Positions" },
+            { id: "orders", label: "Open Orders" },
+            { id: "history", label: "Order History" },
+            { id: "trades", label: "Trade History" },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setBottomTab(tab.id as any)}
+              data-testid={`tab-${tab.id}`}
+              className={`px-3 py-1.5 text-[11px] font-medium transition-colors ${
+                bottomTab === tab.id
+                  ? "bg-background text-foreground border-b-2 border-primary"
+                  : "text-muted-foreground hover-elevate"
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Tab Content */}
+        <div className="flex-1 overflow-auto bg-background p-1">
+          {bottomTab === "positions" && (
+            <div className="h-full">
+              <PositionsGrid />
+            </div>
+          )}
+          {bottomTab === "orders" && (
+            <div className="text-xs text-muted-foreground p-2">
+              Open orders will appear here
+            </div>
+          )}
+          {bottomTab === "history" && (
+            <div className="text-xs text-muted-foreground p-2">
+              Order history will appear here
+            </div>
+          )}
+          {bottomTab === "trades" && (
+            <div className="text-xs text-muted-foreground p-2">
+              Trade history will appear here
+            </div>
+          )}
         </div>
       </div>
     </div>

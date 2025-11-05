@@ -4,14 +4,31 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 
 interface WidgetProps {
   id: string;
-  title: string;
+  title?: string;
   children: ReactNode;
   onClose?: () => void;
   className?: string;
+  compact?: boolean; // Hyperliquid-style ultra-minimal chrome
 }
 
-export default function Widget({ id, title, children, onClose, className = '' }: WidgetProps) {
+export default function Widget({ id, title, children, onClose, className = '', compact = false }: WidgetProps) {
   const [isMinimized, setIsMinimized] = useState(false);
+
+  // Hyperliquid compact mode: no borders, minimal padding, no title bar
+  if (compact) {
+    return (
+      <div className={`flex flex-col h-full overflow-hidden bg-card ${className}`} data-testid={`widget-${id}`}>
+        {title && (
+          <div className="px-2 py-0.5 border-b border-border/20 shrink-0">
+            <h3 className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">{title}</h3>
+          </div>
+        )}
+        <div className="flex-1 overflow-auto p-1">
+          {children}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <Card className={`flex flex-col h-full overflow-hidden ${className}`} data-testid={`widget-${id}`}>
