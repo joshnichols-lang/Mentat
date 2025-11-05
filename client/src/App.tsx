@@ -14,6 +14,7 @@ import { config } from '@/lib/wagmi';
 import '@rainbow-me/rainbowkit/styles.css';
 import LandingPage from "@/pages/LandingPage";
 import UnifiedTerminal from "@/pages/UnifiedTerminal";
+import NumoraDashboard from "@/pages/NumoraDashboard";
 import AuthPage from "@/pages/AuthPage";
 import PendingApproval from "@/pages/PendingApproval";
 import AdminVerification from "@/pages/AdminVerification";
@@ -34,6 +35,7 @@ function Router() {
     <Switch>
       <Route path="/" component={LandingPage} />
       <Route path="/auth" component={AuthPage} />
+      <Route path="/numora" component={NumoraDashboard} />
       <Route path="/ui-preview" component={UIPreview} />
       <Route path="/ui-enhanced" component={EnhancedUIPreview} />
       <ProtectedRoute path="/terminal" component={UnifiedTerminal} />
