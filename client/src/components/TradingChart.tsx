@@ -9,8 +9,16 @@ import {
   HistogramSeries,
 } from "lightweight-charts";
 import { Button } from "@/components/ui/button";
-import { Loader2 } from "lucide-react";
+import { Loader2, TrendingUp, PenTool } from "lucide-react";
 import { useTheme } from "@/components/ThemeProvider";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface TradingChartProps {
   symbol: string;
@@ -93,10 +101,10 @@ export default function TradingChart({ symbol, onSymbolChange }: TradingChartPro
       },
     });
 
-    // Create candlestick series - grey/white/black only
+    // Create candlestick series with white/black fills
     const candleSeries = chart.addSeries(CandlestickSeries, {
-      upColor: "transparent",                  // Transparent fill
-      downColor: "transparent",                // Transparent fill
+      upColor: colors.upColor,                 // White fill for up candles
+      downColor: colors.downColor,             // Black fill for down candles
       borderUpColor: colors.borderColor,       // Grey outline
       borderDownColor: colors.borderColor,     // Grey outline
       wickUpColor: colors.wickColor,           // Grey wicks
@@ -401,22 +409,90 @@ export default function TradingChart({ symbol, onSymbolChange }: TradingChartPro
 
   return (
     <div className="h-full w-full flex flex-col">
-      {/* Timeframe Selector */}
-      <div className="flex items-center gap-1 p-2 border-b border-border/50">
-        {timeframes.map((tf) => (
-          <Button
-            key={tf}
-            variant={timeframe === tf ? "default" : "ghost"}
-            size="sm"
-            onClick={() => setTimeframe(tf)}
-            data-testid={`button-timeframe-${tf}`}
-          >
-            {tf}
-          </Button>
-        ))}
-        {isLoading && (
-          <Loader2 className="h-4 w-4 ml-2 animate-spin" />
-        )}
+      {/* Timeframe Selector and Chart Controls */}
+      <div className="flex items-center justify-between gap-1 p-2 border-b border-border/50">
+        <div className="flex items-center gap-1">
+          {timeframes.map((tf) => (
+            <Button
+              key={tf}
+              variant={timeframe === tf ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setTimeframe(tf)}
+              data-testid={`button-timeframe-${tf}`}
+            >
+              {tf}
+            </Button>
+          ))}
+          {isLoading && (
+            <Loader2 className="h-4 w-4 ml-2 animate-spin" />
+          )}
+        </div>
+        
+        {/* Indicators & Drawing Tools */}
+        <div className="flex items-center gap-1">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm" data-testid="button-indicators">
+                <TrendingUp className="h-4 w-4 mr-2" />
+                Indicators
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuLabel>Indicators</DropdownMenuLabel>
+              <DropdownMenuItem data-testid="indicator-ma">
+                Moving Average
+              </DropdownMenuItem>
+              <DropdownMenuItem data-testid="indicator-ema">
+                EMA
+              </DropdownMenuItem>
+              <DropdownMenuItem data-testid="indicator-rsi">
+                RSI
+              </DropdownMenuItem>
+              <DropdownMenuItem data-testid="indicator-macd">
+                MACD
+              </DropdownMenuItem>
+              <DropdownMenuItem data-testid="indicator-bb">
+                Bollinger Bands
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuLabel>Volume</DropdownMenuLabel>
+              <DropdownMenuItem data-testid="indicator-volume">
+                Volume Profile
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm" data-testid="button-drawing-tools">
+                <PenTool className="h-4 w-4 mr-2" />
+                Draw
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuLabel>Drawing Tools</DropdownMenuLabel>
+              <DropdownMenuItem data-testid="draw-trendline">
+                Trend Line
+              </DropdownMenuItem>
+              <DropdownMenuItem data-testid="draw-horizontal">
+                Horizontal Line
+              </DropdownMenuItem>
+              <DropdownMenuItem data-testid="draw-vertical">
+                Vertical Line
+              </DropdownMenuItem>
+              <DropdownMenuItem data-testid="draw-rectangle">
+                Rectangle
+              </DropdownMenuItem>
+              <DropdownMenuItem data-testid="draw-fibonacci">
+                Fibonacci Retracement
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem data-testid="draw-clear" className="text-destructive">
+                Clear All Drawings
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
 
       {/* Chart Container */}
