@@ -2,56 +2,56 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ========== MINIMALIST DARK MODE (Primary) ========== */
+/* ========== NUMORA-INSPIRED DARK MODE (Primary) ========== */
 .dark {
-  /* Pure monochrome backgrounds */
-  --background: 0 0% 0%;           /* Pure black */
-  --foreground: 0 0% 100%;         /* Pure white */
+  /* Dark sophisticated backgrounds - not pure black */
+  --background: 240 4% 6%;         /* #0B0B0F - Deep dark grey */
+  --foreground: 0 0% 100%;         /* #FFFFFF - Pure white */
   
-  /* Surface levels */
-  --card: 0 0% 4%;                 /* Slightly elevated */
+  /* Surface levels - Numora panel backgrounds */
+  --card: 240 4% 8%;               /* #141418 - Panel background */
   --card-foreground: 0 0% 100%;
-  --popover: 0 0% 4%;
+  --popover: 240 4% 8%;
   --popover-foreground: 0 0% 100%;
   
-  /* Borders - minimal and subtle */
-  --border: 0 0% 18%;              /* Subtle divider */
-  --input: 0 0% 7%;                /* Input background */
+  /* Borders - subtle grey */
+  --border: 240 3% 12%;            /* #1F1F23 - Subtle border */
+  --input: 240 4% 8%;              /* #141418 - Input background */
   
-  /* Interactive states - pure white accent */
-  --primary: 0 0% 100%;            /* White for primary actions */
-  --primary-foreground: 0 0% 0%;   /* Black text on white */
+  /* Interactive states - bright lime green accent */
+  --primary: 150 100% 50%;         /* #00FF87 - Bright lime green */
+  --primary-foreground: 240 4% 6%; /* Dark text on green */
   
-  --secondary: 0 0% 10%;           /* Dark grey */
+  --secondary: 240 4% 10%;         /* #18181C - Elevated surface */
   --secondary-foreground: 0 0% 100%;
   
-  --muted: 0 0% 10%;
-  --muted-foreground: 0 0% 45%;    /* Mid grey for less important text */
+  --muted: 240 4% 10%;
+  --muted-foreground: 0 0% 55%;    /* #8B8B8D - Mid grey text */
   
-  --accent: 0 0% 100%;             /* White highlight */
-  --accent-foreground: 0 0% 0%;
+  --accent: 150 100% 50%;          /* #00FF87 - Lime green highlight */
+  --accent-foreground: 240 4% 6%;
   
-  /* Text hierarchy - grey scales */
-  --text-primary: 0 0% 100%;       /* White - most important */
-  --text-secondary: 0 0% 63%;      /* Light grey - supporting */
-  --text-tertiary: 0 0% 45%;       /* Mid grey - metadata */
+  /* Text hierarchy - grey scales (Numora style) */
+  --text-primary: 0 0% 100%;       /* #FFFFFF - Most important */
+  --text-secondary: 0 0% 55%;      /* #8B8B8D - Supporting 55% */
+  --text-tertiary: 0 0% 39%;       /* #646466 - Metadata 39% */
   
-  /* Trading status colors - consistent across modes */
-  --success: 142 71% 45%;          /* Green for long/profit */
-  --success-foreground: 0 0% 100%;
+  /* Trading status colors - Numora bright accent colors */
+  --success: 150 100% 50%;         /* #00FF87 - Bright lime green */
+  --success-foreground: 240 4% 6%;
   
-  --destructive: 0 84% 60%;        /* Red for short/loss */
+  --destructive: 343 100% 62%;     /* #FF3B69 - Bright red/pink */
   --destructive-foreground: 0 0% 100%;
   
-  --warning: 45 93% 47%;           /* Yellow */
-  --warning-foreground: 0 0% 0%;
+  --warning: 45 100% 51%;          /* #FFC107 - Amber */
+  --warning-foreground: 240 4% 6%;
   
-  /* Chart colors - minimal */
-  --chart-1: 142 71% 45%;          /* Green */
-  --chart-2: 0 84% 60%;            /* Red */
-  --chart-3: 0 0% 63%;             /* Grey */
-  --chart-4: 0 0% 45%;             /* Dark grey */
-  --chart-5: 0 0% 30%;             /* Darker grey */
+  /* Chart colors - Numora palette */
+  --chart-1: 150 100% 50%;         /* #00FF87 - Lime green */
+  --chart-2: 343 100% 62%;         /* #FF3B69 - Red/pink */
+  --chart-3: 217 91% 60%;          /* #3B82F6 - Blue */
+  --chart-4: 0 0% 55%;             /* #8B8B8D - Grey */
+  --chart-5: 0 0% 39%;             /* #646466 - Dark grey */
   
   /* Elevation - subtle white overlays for hover states */
   --elevate-1: rgba(255, 255, 255, 0.05);
@@ -76,56 +76,56 @@
   --ring: 0 0% 100%;
 }
 
-/* ========== MINIMALIST LIGHT MODE ========== */
+/* ========== LIGHT MODE ========== */
 .light {
-  /* Pure monochrome backgrounds */
-  --background: 0 0% 100%;         /* Pure white */
-  --foreground: 0 0% 0%;           /* Pure black */
+  /* Clean white backgrounds */
+  --background: 0 0% 100%;         /* #FFFFFF - Pure white */
+  --foreground: 240 4% 6%;         /* #0B0B0F - Deep dark text */
   
   /* Surface levels */
-  --card: 0 0% 98%;                /* Slightly recessed */
-  --card-foreground: 0 0% 0%;
+  --card: 0 0% 98%;                /* #FAFAFA - Slightly recessed */
+  --card-foreground: 240 4% 6%;
   --popover: 0 0% 98%;
-  --popover-foreground: 0 0% 0%;
+  --popover-foreground: 240 4% 6%;
   
   /* Borders - minimal and subtle */
-  --border: 0 0% 92%;              /* Subtle divider */
-  --input: 0 0% 96%;               /* Input background */
+  --border: 0 0% 92%;              /* #EBEBEB - Subtle divider */
+  --input: 0 0% 96%;               /* #F5F5F5 - Input background */
   
-  /* Interactive states - pure black accent */
-  --primary: 0 0% 0%;              /* Black for primary actions */
-  --primary-foreground: 0 0% 100%; /* White text on black */
+  /* Interactive states - bright green accent */
+  --primary: 150 100% 39%;         /* #00C864 - Green for light mode */
+  --primary-foreground: 0 0% 100%; /* White text on green */
   
-  --secondary: 0 0% 96%;           /* Light grey */
-  --secondary-foreground: 0 0% 0%;
+  --secondary: 0 0% 96%;           /* #F5F5F5 - Light grey */
+  --secondary-foreground: 240 4% 6%;
   
   --muted: 0 0% 96%;
-  --muted-foreground: 0 0% 55%;    /* Mid grey for less important text */
+  --muted-foreground: 0 0% 39%;    /* #646466 - Mid grey text */
   
-  --accent: 0 0% 0%;               /* Black highlight */
+  --accent: 150 100% 39%;          /* #00C864 - Green highlight */
   --accent-foreground: 0 0% 100%;
   
   /* Text hierarchy - grey scales */
-  --text-primary: 0 0% 0%;         /* Black - most important */
-  --text-secondary: 0 0% 37%;      /* Dark grey - supporting */
-  --text-tertiary: 0 0% 55%;       /* Mid grey - metadata */
+  --text-primary: 240 4% 6%;       /* #0B0B0F - Most important */
+  --text-secondary: 0 0% 39%;      /* #646466 - Supporting */
+  --text-tertiary: 0 0% 55%;       /* #8B8B8D - Metadata */
   
-  /* Trading status colors - consistent across modes */
-  --success: 142 71% 45%;          /* Green for long/profit */
+  /* Trading status colors - bright accents */
+  --success: 150 100% 39%;         /* #00C864 - Green */
   --success-foreground: 0 0% 100%;
   
-  --destructive: 0 84% 60%;        /* Red for short/loss */
+  --destructive: 343 100% 62%;     /* #FF3B69 - Bright red/pink */
   --destructive-foreground: 0 0% 100%;
   
-  --warning: 45 93% 47%;           /* Yellow */
-  --warning-foreground: 0 0% 0%;
+  --warning: 45 100% 51%;          /* #FFC107 - Amber */
+  --warning-foreground: 240 4% 6%;
   
-  /* Chart colors - minimal */
-  --chart-1: 142 71% 45%;          /* Green */
-  --chart-2: 0 84% 60%;            /* Red */
-  --chart-3: 0 0% 37%;             /* Grey */
-  --chart-4: 0 0% 55%;             /* Light grey */
-  --chart-5: 0 0% 70%;             /* Lighter grey */
+  /* Chart colors */
+  --chart-1: 150 100% 39%;         /* #00C864 - Green */
+  --chart-2: 343 100% 62%;         /* #FF3B69 - Red/pink */
+  --chart-3: 217 91% 60%;          /* #3B82F6 - Blue */
+  --chart-4: 0 0% 55%;             /* #8B8B8D - Grey */
+  --chart-5: 0 0% 39%;             /* #646466 - Dark grey */
   
   /* Elevation - subtle black overlays for hover states */
   --elevate-1: rgba(0, 0, 0, 0.03);
@@ -386,6 +386,63 @@
   
   /* ========== GLASSMORPHISM REMOVAL ========== */
   /* All glassmorphic effects removed - pure geometric design */
+  
+  /* ========== NUMORA-STYLE UTILITIES ========== */
+  
+  /* Panel styling - Numora grid panels */
+  .numora-panel {
+    @apply bg-card border border-border rounded-lg p-4 hover:border-border/50 transition-all duration-200;
+  }
+  
+  .numora-panel-compact {
+    @apply bg-card border border-border rounded-lg p-3 hover:border-border/50 transition-all duration-200;
+  }
+  
+  .numora-panel-elevated {
+    @apply bg-secondary border border-border/70 rounded-lg p-6 hover:border-border/50 transition-all duration-200;
+  }
+  
+  /* Time range pills (1D, 7D, 3M, etc.) */
+  .time-pill {
+    @apply px-3 py-1.5 text-sm rounded-md transition-all duration-150;
+    @apply text-foreground/70 bg-secondary hover:bg-secondary/80;
+  }
+  
+  .time-pill-active {
+    @apply bg-foreground/10 text-foreground font-medium;
+  }
+  
+  /* Metric labels - uppercase small text */
+  .metric-label {
+    @apply text-xs uppercase tracking-wide text-foreground/60;
+  }
+  
+  /* Large display numbers - monospace */
+  .display-number-lg {
+    @apply font-mono text-3xl font-semibold;
+  }
+  
+  .display-number-xl {
+    @apply font-mono text-5xl font-semibold tracking-tight;
+  }
+  
+  /* Percentage badges */
+  .percentage-badge {
+    @apply inline-flex items-center px-2 py-1 rounded text-xs font-medium;
+  }
+  
+  .percentage-badge-positive {
+    @apply bg-success/10 text-success border border-success/20;
+  }
+  
+  .percentage-badge-negative {
+    @apply bg-destructive/10 text-destructive border border-destructive/20;
+  }
+  
+  /* Token badges (USDT 35%, ETH 32%, etc.) */
+  .token-badge {
+    @apply inline-flex items-center gap-1.5 px-2 py-1 rounded bg-foreground/10 text-xs font-medium;
+  }
   
   /* ========== FOCUS STATES ========== */
   
