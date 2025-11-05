@@ -81,7 +81,7 @@ export default function OrderEntryPanel({ symbol, lastPrice = 0 }: OrderEntryPan
   };
 
   return (
-    <div className="h-full flex flex-col p-1">
+    <div className="h-full flex flex-col p-1 overflow-hidden">
       {/* Tabs */}
       <Tabs value={orderType} onValueChange={(v) => setOrderType(v as any)} className="flex-shrink-0">
         <TabsList className="w-full grid grid-cols-3 h-6">
@@ -115,8 +115,9 @@ export default function OrderEntryPanel({ symbol, lastPrice = 0 }: OrderEntryPan
         </Button>
       </div>
 
-      {/* Scrollable Content */}
-      <div className="flex-1 overflow-auto no-scrollbar mt-1 space-y-1">
+      {/* Scrollable Content - FIXED HEIGHT */}
+      <div className="flex-1 overflow-hidden mt-1">
+        <div className="h-full overflow-auto no-scrollbar space-y-1">
         {/* Available / Position Info */}
         <div className="space-y-0.5">
           <div className="flex justify-between text-[9px]">
@@ -290,6 +291,7 @@ export default function OrderEntryPanel({ symbol, lastPrice = 0 }: OrderEntryPan
             </div>
           </CollapsibleContent>
         </Collapsible>
+        </div>
       </div>
 
       {/* Connect Wallet / Place Order Button */}
