@@ -38,9 +38,9 @@ export default function TradingChart({ symbol, onSymbolChange }: TradingChartPro
     crosshair: mode === "dark" ? "rgba(255, 255, 255, 0.2)" : "rgba(0, 0, 0, 0.2)",
     border: mode === "dark" ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.1)",
     text: mode === "dark" ? "#a1a1aa" : "#52525b",
-    // Candle colors: white/grey in dark mode, black/grey in light mode
-    upColor: mode === "dark" ? "#ffffff" : "#000000",        // White (dark) / Black (light)
-    downColor: mode === "dark" ? "#ffffff" : "#000000",      // Same for down candles
+    // Candle fill colors: white for up, black for down (theme-independent)
+    upColor: "#ffffff",        // White fill for up candles (close > open)
+    downColor: "#000000",      // Black fill for down candles (close < open)
     borderColor: mode === "dark" ? "#525252" : "#737373",    // Grey outline
     wickColor: mode === "dark" ? "#737373" : "#525252",      // Grey wicks
     volumeUp: mode === "dark" ? "rgba(115, 115, 115, 0.3)" : "rgba(82, 82, 82, 0.3)",   // Grey volume
