@@ -76,8 +76,8 @@ function PerpetualsInterface() {
         </Button>
       </div>
 
-      {/* TOP SECTION: Chart + Order Book + Trading (72% height) */}
-      <div className="flex-[72] flex gap-px overflow-hidden">
+      {/* TOP SECTION: Chart + Right Panels (75% height) */}
+      <div className="flex-[75] flex gap-px overflow-hidden">
         {/* Chart - 70% width */}
         <div className="flex-[70] flex flex-col min-w-[500px]">
           <Widget id="chart" title="Chart" compact>
@@ -88,23 +88,26 @@ function PerpetualsInterface() {
           </Widget>
         </div>
 
-        {/* Order Book - 15% width */}
-        <div className="flex-[15] flex flex-col min-w-[180px] border-l border-border/20">
-          <Widget id="orderBook" title="Order Book" compact>
-            <OrderBook symbol={selectedSymbol} />
-          </Widget>
-        </div>
+        {/* Right Side - Order Book + Trading Panel Stacked Vertically (30% width) */}
+        <div className="flex-[30] flex flex-col gap-px min-w-[220px] border-l border-border/20">
+          {/* Order Book - 60% of right panel */}
+          <div className="flex-[60] flex flex-col overflow-hidden">
+            <Widget id="orderBook" title="Order Book" compact>
+              <OrderBook symbol={selectedSymbol} />
+            </Widget>
+          </div>
 
-        {/* Trading Panel - 15% width */}
-        <div className="flex-[15] flex flex-col min-w-[200px] border-l border-border/20">
-          <Widget id="trading" compact>
-            <TradingActionsPanel symbol={selectedSymbol} />
-          </Widget>
+          {/* Trading Panel - 40% of right panel */}
+          <div className="flex-[40] flex flex-col overflow-hidden border-t border-border/20">
+            <Widget id="trading" compact>
+              <TradingActionsPanel symbol={selectedSymbol} />
+            </Widget>
+          </div>
         </div>
       </div>
 
-      {/* BOTTOM SECTION: Tabbed Positions/Orders/History (28% height) */}
-      <div className="flex-[28] flex flex-col border-t border-border/20 overflow-hidden">
+      {/* BOTTOM SECTION: Tabbed Positions/Orders/History (25% height) - FULL WIDTH */}
+      <div className="flex-[25] flex flex-col border-t border-border/20 overflow-hidden">
         {/* Tabs Header - ultra compact */}
         <div className="flex items-center gap-px border-b border-border/20 bg-card shrink-0">
           {[
