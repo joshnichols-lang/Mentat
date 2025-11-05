@@ -32,7 +32,6 @@ import OrderEntryPanel from "@/components/OrderEntryPanel";
 import OrderManagementPanel from "@/components/OrderManagementPanel";
 import TradingActionsPanel from "@/components/TradingActionsPanel";
 import MarketSelector from "@/components/MarketSelector";
-import GridDashboard from "@/components/GridDashboard";
 import Widget from "@/components/Widget";
 import LiveGreeks from "@/components/LiveGreeks";
 import AssetSelector from "@/components/AssetSelector";
@@ -50,16 +49,9 @@ import {
   Layers,
 } from "lucide-react";
 
-// Perpetuals Trading Interface Component - Compact Numora Style
+// Perpetuals Trading Interface Component - Fixed Optimized Layout
 function PerpetualsInterface() {
   const [selectedSymbol, setSelectedSymbol] = useState("BTC-USD");
-
-  // Optimized grid layouts - fit in single viewport without scrolling
-  const defaultLayouts = [
-    { i: "chart", x: 0, y: 0, w: 7, h: 20 },           // Chart left (58%)
-    { i: "trading", x: 7, y: 0, w: 3, h: 20 },         // Trading panel (Order/Positions/Trades tabs)
-    { i: "orderBook", x: 10, y: 0, w: 2, h: 20 },      // Order Book right
-  ];
 
   return (
     <div className="h-full flex flex-col">
@@ -83,14 +75,10 @@ function PerpetualsInterface() {
         </Button>
       </div>
 
-      {/* Optimized Grid Dashboard - Single Viewport */}
-      <GridDashboard
-        tab="perpetuals"
-        defaultLayouts={defaultLayouts}
-        cols={12}
-        rowHeight={26}
-      >
-        <div key="chart">
+      {/* Fixed Optimized Layout - Single Viewport */}
+      <div className="flex-1 flex gap-1 p-1 overflow-x-auto overflow-y-hidden">
+        {/* Chart - 58% width, min-width ensures it doesn't collapse */}
+        <div className="flex-[58] flex flex-col min-w-[400px]">
           <Widget id="chart" title="Chart">
             <TradingChart 
               symbol={selectedSymbol}
@@ -99,18 +87,20 @@ function PerpetualsInterface() {
           </Widget>
         </div>
 
-        <div key="trading">
+        {/* Trading Panel - 25% width */}
+        <div className="flex-[25] flex flex-col min-w-[250px]">
           <Widget id="trading" title="">
             <TradingActionsPanel symbol={selectedSymbol} />
           </Widget>
         </div>
 
-        <div key="orderBook">
+        {/* Order Book - 17% width */}
+        <div className="flex-[17] flex flex-col min-w-[200px]">
           <Widget id="orderBook" title="Order Book">
             <OrderBook symbol={selectedSymbol} />
           </Widget>
         </div>
-      </GridDashboard>
+      </div>
     </div>
   );
 }
@@ -749,24 +739,15 @@ function PredictionMarketsInterface() {
   );
 }
 
-// Options Trading Interface Component
+// Options Trading Interface Component - Fixed Optimized Layout
 function OptionsInterface() {
   const [selectedAsset, setSelectedAsset] = useState("ETH");
   const [mode, setMode] = useState<"simple" | "pro">("simple");
   const [selectedStrategy, setSelectedStrategy] = useState<any>(null);
   const [currentPrice, setCurrentPrice] = useState(4000);
 
-  // Default grid layouts for options panels (optimized to fit on screen)
-  const defaultLayouts = [
-    { i: "chart", x: 0, y: 0, w: 7, h: 10 },
-    { i: "strategy", x: 0, y: 10, w: 7, h: 8 },
-    { i: "optionsChain", x: 7, y: 0, w: 5, h: 9 },
-    { i: "greeks", x: 7, y: 9, w: 5, h: 6 },
-    { i: "positions", x: 7, y: 15, w: 5, h: 5 },
-  ];
-
   return (
-    <div className="flex-1 overflow-auto flex flex-col">
+    <div className="h-full flex flex-col">
       {/* Options Toolbar */}
       <div className="bg-background border-b border-border/50 p-2 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-2">
@@ -798,71 +779,69 @@ function OptionsInterface() {
         </div>
       </div>
 
-      {/* Grid Dashboard with Draggable Widgets - Responsive */}
-      <GridDashboard
-        tab="options"
-        defaultLayouts={defaultLayouts}
-        cols={12}
-        rowHeight={24}
-      >
-        <div key="chart">
-          <Widget id="chart" title="Options Chart">
-            <OptionsChart 
-              asset={selectedAsset}
-              selectedStrategy={selectedStrategy}
-              onPriceUpdate={setCurrentPrice}
-            />
-          </Widget>
+      {/* Fixed Optimized Layout */}
+      <div className="flex-1 flex gap-1 p-1 overflow-x-auto overflow-y-hidden">
+        {/* Left Column - Chart & Strategy Builder (58%) */}
+        <div className="flex-[58] flex flex-col gap-1 min-w-[500px]">
+          <div className="flex-[55] min-h-0">
+            <Widget id="chart" title="Options Chart">
+              <OptionsChart 
+                asset={selectedAsset}
+                selectedStrategy={selectedStrategy}
+                onPriceUpdate={setCurrentPrice}
+              />
+            </Widget>
+          </div>
+          <div className="flex-[45] min-h-0">
+            <Widget id="strategy" title="Strategy Builder">
+              <OptionsStrategyBuilder 
+                asset={selectedAsset}
+                currentPrice={currentPrice}
+                mode={mode}
+                onModeChange={setMode}
+                onStrategySelect={setSelectedStrategy}
+              />
+            </Widget>
+          </div>
         </div>
 
-        <div key="strategy">
-          <Widget id="strategy" title="Strategy Builder">
-            <OptionsStrategyBuilder 
-              asset={selectedAsset}
-              currentPrice={currentPrice}
-              mode={mode}
-              onModeChange={setMode}
-              onStrategySelect={setSelectedStrategy}
-            />
-          </Widget>
-        </div>
-
-        <div key="optionsChain">
-          <Widget id="optionsChain" title="Options Chain">
-            <OptionsChain 
-              asset={selectedAsset}
-              currentPrice={currentPrice}
-            />
-          </Widget>
-        </div>
-
-        <div key="greeks">
-          <Widget id="greeks" title="Live Greeks">
-            <LiveGreeks 
-              asset={selectedAsset}
-              instrumentName={selectedStrategy?.instrumentName}
-            />
-          </Widget>
-        </div>
-
-        <div key="positions">
-          <Widget id="positions" title="Options Positions">
-            <div className="space-y-2 text-sm text-foreground/70">
-              <p>Live positions with:</p>
-              <ul className="space-y-1 text-xs ml-4">
-                <li>• P&L tracking</li>
-                <li>• Greeks by position</li>
-                <li>• Days to expiry</li>
-                <li>• Breakeven prices</li>
-                <li>• Quick close buttons</li>
-              </ul>
-              <div className="text-xs text-foreground/50 mt-3">
-                📋 Task 10: OptionsPositionsGrid.tsx
+        {/* Right Column - Options Chain, Greeks & Positions (42%) */}
+        <div className="flex-[42] flex flex-col gap-1 min-w-[350px]">
+          <div className="flex-[50] min-h-0">
+            <Widget id="optionsChain" title="Options Chain">
+              <OptionsChain 
+                asset={selectedAsset}
+                currentPrice={currentPrice}
+              />
+            </Widget>
+          </div>
+          <div className="flex-[30] min-h-0">
+            <Widget id="greeks" title="Live Greeks">
+              <LiveGreeks 
+                asset={selectedAsset}
+                instrumentName={selectedStrategy?.instrumentName}
+              />
+            </Widget>
+          </div>
+          <div className="flex-[20] min-h-0">
+            <Widget id="positions" title="Options Positions">
+              <div className="space-y-2 text-sm text-foreground/70">
+                <p>Live positions with:</p>
+                <ul className="space-y-1 text-xs ml-4">
+                  <li>• P&L tracking</li>
+                  <li>• Greeks by position</li>
+                  <li>• Days to expiry</li>
+                  <li>• Breakeven prices</li>
+                  <li>• Quick close buttons</li>
+                </ul>
+                <div className="text-xs text-foreground/50 mt-3">
+                  📋 Task 10: OptionsPositionsGrid.tsx
+                </div>
               </div>
-            </div>
-          </Widget>
+            </Widget>
+          </div>
         </div>
-      </GridDashboard>
+      </div>
     </div>
   );
 }
