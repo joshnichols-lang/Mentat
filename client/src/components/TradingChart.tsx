@@ -7,9 +7,10 @@ import {
   Time,
   CandlestickSeries,
   HistogramSeries,
+  LineSeries,
 } from "lightweight-charts";
 import { Button } from "@/components/ui/button";
-import { Loader2, TrendingUp, PenTool } from "lucide-react";
+import { Loader2, TrendingUp, PenTool, Magnet } from "lucide-react";
 import { useTheme } from "@/components/ThemeProvider";
 import {
   DropdownMenu,
@@ -38,6 +39,12 @@ export default function TradingChart({ symbol, onSymbolChange }: TradingChartPro
   const [timeframe, setTimeframe] = useState<Timeframe>("1h");
   const [isLoading, setIsLoading] = useState(true);
   const [candleData, setCandleData] = useState<Map<number, { candle: CandlestickData, volume: number }>>(new Map());
+  
+  // Indicators and drawing tools state
+  const [activeIndicators, setActiveIndicators] = useState<Set<string>>(new Set());
+  const [drawingMode, setDrawingMode] = useState<string | null>(null);
+  const [magnetEnabled, setMagnetEnabled] = useState(true);
+  const indicatorSeriesRef = useRef<Map<string, ISeriesApi<any>>>(new Map());
 
   // Minimalist monochrome colors - grey/white/black only
   // Memoize colors to prevent unnecessary chart re-initialization
@@ -46,11 +53,11 @@ export default function TradingChart({ symbol, onSymbolChange }: TradingChartPro
     crosshair: mode === "dark" ? "rgba(255, 255, 255, 0.2)" : "rgba(0, 0, 0, 0.2)",
     border: mode === "dark" ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.1)",
     text: mode === "dark" ? "#a1a1aa" : "#52525b",
-    // Candle fill colors: white for up, black for down (theme-independent)
-    upColor: "#ffffff",        // White fill for up candles (close > open)
-    downColor: "#000000",      // Black fill for down candles (close < open)
-    borderColor: mode === "dark" ? "#525252" : "#737373",    // Grey outline
-    wickColor: mode === "dark" ? "#737373" : "#525252",      // Grey wicks
+    // Candle fill colors: Light mode = up transparent/down black, Dark mode = up white/down transparent
+    upColor: mode === "dark" ? "#ffffff" : "transparent",     // Dark: white, Light: transparent
+    downColor: mode === "dark" ? "transparent" : "#000000",   // Dark: transparent, Light: black
+    borderColor: mode === "dark" ? "#525252" : "#737373",     // Grey outline
+    wickColor: mode === "dark" ? "#737373" : "#525252",       // Grey wicks
     volumeUp: mode === "dark" ? "rgba(115, 115, 115, 0.3)" : "rgba(82, 82, 82, 0.3)",   // Grey volume
     volumeDown: mode === "dark" ? "rgba(82, 82, 82, 0.3)" : "rgba(115, 115, 115, 0.3)", // Grey volume
   }), [mode]);
@@ -183,6 +190,8 @@ export default function TradingChart({ symbol, onSymbolChange }: TradingChartPro
 
     return () => {
       resizeObserver.disconnect();
+      // Clear indicator series references when chart is torn down
+      indicatorSeriesRef.current.clear();
       chart.remove();
     };
   }, [colors, mode]);
@@ -405,7 +414,135 @@ export default function TradingChart({ symbol, onSymbolChange }: TradingChartPro
     volumeSeriesRef.current.setData(sortedVolumes);
   }, [colors, candleData]);
 
+  // Update indicators when candle data or mode changes
+  useEffect(() => {
+    if (candleData.size === 0 || !chartRef.current) return;
+    
+    // Clear and recreate all active indicator series
+    activeIndicators.forEach(indicatorId => {
+      // Remove old series only if it exists in the current chart
+      const oldSeries = indicatorSeriesRef.current.get(indicatorId);
+      if (oldSeries) {
+        try {
+          // Only remove if series still belongs to current chart
+          if (chartRef.current) {
+            chartRef.current.removeSeries(oldSeries);
+          }
+        } catch (error) {
+          // Series might have been removed during chart recreation, that's fine
+          console.debug(`[TradingChart] Could not remove indicator ${indicatorId}:`, error);
+        }
+        indicatorSeriesRef.current.delete(indicatorId);
+      }
+      // Add indicator with latest data
+      addIndicatorSeries(indicatorId);
+    });
+  }, [candleData, mode, activeIndicators]);
+
   const timeframes: Timeframe[] = ["1m", "5m", "15m", "1h", "4h", "1D"];
+
+  // Toggle indicator on/off
+  const toggleIndicator = (indicatorId: string) => {
+    setActiveIndicators(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(indicatorId)) {
+        // Remove indicator
+        newSet.delete(indicatorId);
+        // Remove series from chart
+        const series = indicatorSeriesRef.current.get(indicatorId);
+        if (series && chartRef.current) {
+          chartRef.current.removeSeries(series);
+          indicatorSeriesRef.current.delete(indicatorId);
+        }
+      } else {
+        // Add indicator
+        newSet.add(indicatorId);
+        // Add series to chart (basic implementation)
+        if (chartRef.current && candleData.size > 0) {
+          addIndicatorSeries(indicatorId);
+        }
+      }
+      return newSet;
+    });
+  };
+
+  // Add indicator series to chart
+  const addIndicatorSeries = (indicatorId: string) => {
+    if (!chartRef.current || candleData.size === 0) return;
+
+    const candles = Array.from(candleData.values()).map(d => d.candle);
+    
+    // Calculate indicator data based on type
+    let indicatorData: any[] = [];
+    
+    if (indicatorId === 'ma') {
+      // Simple Moving Average (20 period)
+      indicatorData = calculateMA(candles, 20);
+    } else if (indicatorId === 'ema') {
+      // Exponential Moving Average (20 period)
+      indicatorData = calculateEMA(candles, 20);
+    }
+    // Note: RSI, MACD, BB would need separate panes or different rendering
+    
+    if (indicatorData.length > 0) {
+      const lineSeries = chartRef.current.addSeries(LineSeries, {
+        color: mode === "dark" ? "#10b981" : "#059669",
+        lineWidth: 1,
+      });
+      lineSeries.setData(indicatorData);
+      indicatorSeriesRef.current.set(indicatorId, lineSeries);
+    }
+  };
+
+  // Simple Moving Average calculation
+  const calculateMA = (candles: CandlestickData[], period: number) => {
+    const result: any[] = [];
+    for (let i = period - 1; i < candles.length; i++) {
+      let sum = 0;
+      for (let j = 0; j < period; j++) {
+        sum += candles[i - j].close;
+      }
+      result.push({
+        time: candles[i].time,
+        value: sum / period,
+      });
+    }
+    return result;
+  };
+
+  // Exponential Moving Average calculation
+  const calculateEMA = (candles: CandlestickData[], period: number) => {
+    const result: any[] = [];
+    const multiplier = 2 / (period + 1);
+    let ema = candles[0].close;
+    
+    for (let i = 0; i < candles.length; i++) {
+      ema = (candles[i].close - ema) * multiplier + ema;
+      if (i >= period - 1) {
+        result.push({
+          time: candles[i].time,
+          value: ema,
+        });
+      }
+    }
+    return result;
+  };
+
+  // Handle drawing mode
+  const setDrawMode = (mode: string | null) => {
+    setDrawingMode(mode);
+    if (mode) {
+      // In a real implementation, you would enable drawing mode on the chart
+      console.log(`Drawing mode activated: ${mode}`);
+    }
+  };
+
+  // Clear all drawings
+  const clearDrawings = () => {
+    // In a real implementation, you would clear all drawing objects
+    console.log('All drawings cleared');
+    setDrawingMode(null);
+  };
 
   return (
     <div className="h-full w-full flex flex-col">
@@ -439,25 +576,51 @@ export default function TradingChart({ symbol, onSymbolChange }: TradingChartPro
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
               <DropdownMenuLabel>Indicators</DropdownMenuLabel>
-              <DropdownMenuItem data-testid="indicator-ma">
-                Moving Average
+              <DropdownMenuItem 
+                data-testid="indicator-ma"
+                onClick={() => toggleIndicator('ma')}
+              >
+                <span className={activeIndicators.has('ma') ? 'font-medium' : ''}>
+                  {activeIndicators.has('ma') ? '✓ ' : ''}Moving Average
+                </span>
               </DropdownMenuItem>
-              <DropdownMenuItem data-testid="indicator-ema">
-                EMA
+              <DropdownMenuItem 
+                data-testid="indicator-ema"
+                onClick={() => toggleIndicator('ema')}
+              >
+                <span className={activeIndicators.has('ema') ? 'font-medium' : ''}>
+                  {activeIndicators.has('ema') ? '✓ ' : ''}EMA
+                </span>
               </DropdownMenuItem>
-              <DropdownMenuItem data-testid="indicator-rsi">
-                RSI
+              <DropdownMenuItem 
+                data-testid="indicator-rsi"
+                onClick={() => toggleIndicator('rsi')}
+                disabled
+              >
+                RSI (Coming Soon)
               </DropdownMenuItem>
-              <DropdownMenuItem data-testid="indicator-macd">
-                MACD
+              <DropdownMenuItem 
+                data-testid="indicator-macd"
+                onClick={() => toggleIndicator('macd')}
+                disabled
+              >
+                MACD (Coming Soon)
               </DropdownMenuItem>
-              <DropdownMenuItem data-testid="indicator-bb">
-                Bollinger Bands
+              <DropdownMenuItem 
+                data-testid="indicator-bb"
+                onClick={() => toggleIndicator('bb')}
+                disabled
+              >
+                Bollinger Bands (Coming Soon)
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuLabel>Volume</DropdownMenuLabel>
-              <DropdownMenuItem data-testid="indicator-volume">
-                Volume Profile
+              <DropdownMenuItem 
+                data-testid="indicator-volume"
+                onClick={() => toggleIndicator('volume')}
+                disabled
+              >
+                Volume Profile (Coming Soon)
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -471,27 +634,57 @@ export default function TradingChart({ symbol, onSymbolChange }: TradingChartPro
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
               <DropdownMenuLabel>Drawing Tools</DropdownMenuLabel>
-              <DropdownMenuItem data-testid="draw-trendline">
-                Trend Line
+              <DropdownMenuItem 
+                data-testid="draw-trendline"
+                onClick={() => setDrawMode('trendline')}
+              >
+                {drawingMode === 'trendline' ? '✓ ' : ''}Trend Line
               </DropdownMenuItem>
-              <DropdownMenuItem data-testid="draw-horizontal">
-                Horizontal Line
+              <DropdownMenuItem 
+                data-testid="draw-horizontal"
+                onClick={() => setDrawMode('horizontal')}
+              >
+                {drawingMode === 'horizontal' ? '✓ ' : ''}Horizontal Line
               </DropdownMenuItem>
-              <DropdownMenuItem data-testid="draw-vertical">
-                Vertical Line
+              <DropdownMenuItem 
+                data-testid="draw-vertical"
+                onClick={() => setDrawMode('vertical')}
+              >
+                {drawingMode === 'vertical' ? '✓ ' : ''}Vertical Line
               </DropdownMenuItem>
-              <DropdownMenuItem data-testid="draw-rectangle">
-                Rectangle
+              <DropdownMenuItem 
+                data-testid="draw-rectangle"
+                onClick={() => setDrawMode('rectangle')}
+              >
+                {drawingMode === 'rectangle' ? '✓ ' : ''}Rectangle
               </DropdownMenuItem>
-              <DropdownMenuItem data-testid="draw-fibonacci">
-                Fibonacci Retracement
+              <DropdownMenuItem 
+                data-testid="draw-fibonacci"
+                onClick={() => setDrawMode('fibonacci')}
+              >
+                {drawingMode === 'fibonacci' ? '✓ ' : ''}Fibonacci Retracement
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem data-testid="draw-clear" className="text-destructive">
+              <DropdownMenuItem 
+                data-testid="draw-clear" 
+                className="text-destructive"
+                onClick={clearDrawings}
+              >
                 Clear All Drawings
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+          
+          {/* Magnet Toggle */}
+          <Button 
+            variant={magnetEnabled ? "default" : "ghost"}
+            size="sm"
+            onClick={() => setMagnetEnabled(!magnetEnabled)}
+            data-testid="button-magnet-toggle"
+            title={magnetEnabled ? "Magnet On: Snap to Price" : "Magnet Off"}
+          >
+            <Magnet className="h-4 w-4" />
+          </Button>
         </div>
       </div>
 
