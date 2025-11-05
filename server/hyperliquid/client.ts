@@ -236,9 +236,16 @@ export class HyperliquidClient {
       await this.ensureInitialized();
       const perpMeta = await this.sdk.info.perpetuals.getMeta();
       
-      const asset = perpMeta.universe.find((a: any) => a.name === symbol);
+      // Normalize symbol format: "BTC-USD" or "BTC" -> "BTC-PERP"
+      let normalizedSymbol = symbol;
+      if (!symbol.endsWith('-PERP')) {
+        const baseSymbol = symbol.replace(/-USD$|-SPOT$|-PERP$/, '');
+        normalizedSymbol = `${baseSymbol}-PERP`;
+      }
+      
+      const asset = perpMeta.universe.find((a: any) => a.name === normalizedSymbol);
       if (!asset) {
-        console.warn(`[Hyperliquid] Asset metadata not found for ${symbol}`);
+        console.warn(`[Hyperliquid] Asset metadata not found for ${symbol} (normalized to ${normalizedSymbol})`);
         return null;
       }
       
@@ -250,9 +257,9 @@ export class HyperliquidClient {
       // Infer tick size from the asset - major assets like BTC use $1, others use $0.1 or smaller
       // This is a heuristic - ideally we'd get this from metadata, but it's not always available
       let tickSize = 0.1; // Default
-      if (symbol === 'BTC-PERP') tickSize = 1;
-      else if (symbol === 'ETH-PERP') tickSize = 0.1;
-      else if (symbol === 'SOL-PERP') tickSize = 0.01;
+      if (normalizedSymbol === 'BTC-PERP') tickSize = 1;
+      else if (normalizedSymbol === 'ETH-PERP') tickSize = 0.1;
+      else if (normalizedSymbol === 'SOL-PERP') tickSize = 0.01;
       
       return { szDecimals, tickSize, maxLeverage };
     } catch (error) {

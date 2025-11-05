@@ -39,12 +39,14 @@ export default function OrderEntryPanel({ symbol, lastPrice = 0 }: OrderEntryPan
     success: boolean; 
     metadata: { maxLeverage: number; szDecimals: number; tickSize: number } 
   }>({
-    queryKey: ['/api/hyperliquid/asset-metadata', { symbol }],
+    queryKey: [`/api/hyperliquid/asset-metadata?symbol=${symbol}`],
     enabled: !!symbol,
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
   });
 
   const maxLeverage = assetMetadata?.metadata?.maxLeverage ?? 50;
+  
+  console.log(`[OrderEntryPanel] Symbol: ${symbol}, Max Leverage: ${maxLeverage}`, assetMetadata);
 
   const handlePlaceOrder = async (orderSide: "buy" | "sell") => {
     if (orderType === "advanced") {
