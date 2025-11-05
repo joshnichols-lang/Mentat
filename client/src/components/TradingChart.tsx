@@ -148,11 +148,22 @@ export default function TradingChart({ symbol, onSymbolChange }: TradingChartPro
 
     // Handle resize
     const handleResize = () => {
-      if (chartContainerRef.current && chartRef.current) {
-        chartRef.current.applyOptions({
-          width: chartContainerRef.current.clientWidth,
-          height: chartContainerRef.current.clientHeight,
-        });
+      try {
+        if (chartContainerRef.current && chartRef.current) {
+          const width = chartContainerRef.current.clientWidth;
+          const height = chartContainerRef.current.clientHeight;
+          
+          // Only resize if dimensions are valid
+          if (width > 0 && height > 0) {
+            chartRef.current.applyOptions({
+              width,
+              height,
+            });
+          }
+        }
+      } catch (error) {
+        // Silently ignore resize errors during widget minimize/maximize
+        console.debug("[TradingChart] Resize error (likely during minimize/maximize):", error);
       }
     };
 
@@ -316,29 +327,21 @@ export default function TradingChart({ symbol, onSymbolChange }: TradingChartPro
             const newData = new Map(prev);
             newData.set(timestamp as number, { candle: candlePoint, volume });
             
-            // Sort by time
-            const sorted = Array.from(newData.entries()).sort((a, b) => a[0] - b[0]);
-            
-            // Update candlestick chart
+            // Use update() instead of setData() to preserve zoom level
             if (candleSeriesRef.current) {
-              const sortedCandles = sorted.map(([_, data]) => data.candle);
-              candleSeriesRef.current.setData(sortedCandles);
+              candleSeriesRef.current.update(candlePoint);
             }
 
-            // Update volume histogram with full history
+            // Update volume histogram - use update() to preserve zoom
             if (volumeSeriesRef.current) {
-              const sortedVolumes = sorted.map(([_, data]) => {
-                const volumeColor = data.candle.close >= data.candle.open ? 
-                  colors.volumeUp : colors.volumeDown;
-                
-                return {
-                  time: data.candle.time,
-                  value: data.volume,
-                  color: volumeColor,
-                };
-              });
+              const volumeColor = candlePoint.close >= candlePoint.open ? 
+                colors.volumeUp : colors.volumeDown;
               
-              volumeSeriesRef.current.setData(sortedVolumes);
+              volumeSeriesRef.current.update({
+                time: candlePoint.time,
+                value: volume,
+                color: volumeColor,
+              });
             }
             
             return newData;
