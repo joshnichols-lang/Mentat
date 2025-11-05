@@ -31,16 +31,19 @@ export default function TradingChart({ symbol, onSymbolChange }: TradingChartPro
   const [isLoading, setIsLoading] = useState(true);
   const [candleData, setCandleData] = useState<Map<number, { candle: CandlestickData, volume: number }>>(new Map());
 
-  // Minimalist monochrome colors
+  // Minimalist monochrome colors - grey/white/black only
   const colors = {
     grid: mode === "dark" ? "rgba(255, 255, 255, 0.03)" : "rgba(0, 0, 0, 0.05)",
     crosshair: mode === "dark" ? "rgba(255, 255, 255, 0.2)" : "rgba(0, 0, 0, 0.2)",
     border: mode === "dark" ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.1)",
     text: mode === "dark" ? "#a1a1aa" : "#52525b",
-    upColor: "#22c55e",
-    downColor: "#ef4444",
-    volumeUp: "rgba(34, 197, 94, 0.3)",
-    volumeDown: "rgba(239, 68, 68, 0.3)",
+    // Candle colors: white/grey in dark mode, black/grey in light mode
+    upColor: mode === "dark" ? "#ffffff" : "#000000",        // White (dark) / Black (light)
+    downColor: mode === "dark" ? "#ffffff" : "#000000",      // Same for down candles
+    borderColor: mode === "dark" ? "#525252" : "#737373",    // Grey outline
+    wickColor: mode === "dark" ? "#737373" : "#525252",      // Grey wicks
+    volumeUp: mode === "dark" ? "rgba(115, 115, 115, 0.3)" : "rgba(82, 82, 82, 0.3)",   // Grey volume
+    volumeDown: mode === "dark" ? "rgba(82, 82, 82, 0.3)" : "rgba(115, 115, 115, 0.3)", // Grey volume
   };
 
   // Initialize chart
@@ -89,14 +92,14 @@ export default function TradingChart({ symbol, onSymbolChange }: TradingChartPro
       },
     });
 
-    // Create candlestick series
+    // Create candlestick series - grey/white/black only
     const candleSeries = chart.addSeries(CandlestickSeries, {
-      upColor: colors.upColor,
-      downColor: colors.downColor,
-      borderUpColor: colors.upColor,
-      borderDownColor: colors.downColor,
-      wickUpColor: colors.upColor,
-      wickDownColor: colors.downColor,
+      upColor: "transparent",                  // Transparent fill
+      downColor: "transparent",                // Transparent fill
+      borderUpColor: colors.borderColor,       // Grey outline
+      borderDownColor: colors.borderColor,     // Grey outline
+      wickUpColor: colors.wickColor,           // Grey wicks
+      wickDownColor: colors.wickColor,         // Grey wicks
     });
 
     // Create volume series
