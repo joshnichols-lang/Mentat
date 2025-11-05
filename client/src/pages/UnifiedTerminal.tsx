@@ -47,15 +47,48 @@ import {
   Maximize2,
   Minimize2,
   Layers,
+  LayoutGrid,
+  TrendingDown,
+  Bell,
+  BookOpen,
+  PieChart,
 } from "lucide-react";
 
 // Perpetuals Trading Interface Component - Hyperliquid-style Layout
 function PerpetualsInterface() {
   const [selectedSymbol, setSelectedSymbol] = useState("BTC-USD");
   const [bottomTab, setBottomTab] = useState<"positions" | "orders" | "history" | "trades">("positions");
+  const [selectedTool, setSelectedTool] = useState<string>("chart");
+
+  const tools = [
+    { id: "chart", icon: LineChart, label: "Chart" },
+    { id: "orderbook", icon: LayoutGrid, label: "Order Book" },
+    { id: "positions", icon: PieChart, label: "Positions" },
+    { id: "alerts", icon: Bell, label: "Alerts" },
+    { id: "orders", icon: BookOpen, label: "Orders" },
+  ];
 
   return (
-    <div className="h-full flex flex-col bg-background">
+    <div className="h-full flex bg-background">
+      {/* LEFT SIDEBAR - Narrow Icon Toolbar */}
+      <div className="w-12 bg-card border-r border-border/30 flex flex-col items-center py-2 gap-1 shrink-0">
+        {tools.map((tool) => (
+          <Button
+            key={tool.id}
+            variant="ghost"
+            size="icon"
+            onClick={() => setSelectedTool(tool.id)}
+            data-testid={`button-tool-${tool.id}`}
+            className={selectedTool === tool.id ? "bg-primary/10 text-primary" : "text-muted-foreground"}
+            title={tool.label}
+          >
+            <tool.icon className="h-4 w-4" />
+          </Button>
+        ))}
+      </div>
+
+      {/* MAIN CONTENT AREA */}
+      <div className="flex-1 flex flex-col overflow-hidden">
       {/* Compact Toolbar */}
       <div className="bg-background border-b border-border/30 px-2 py-1 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-2">
@@ -154,6 +187,7 @@ function PerpetualsInterface() {
             </div>
           )}
         </div>
+      </div>
       </div>
     </div>
   );
