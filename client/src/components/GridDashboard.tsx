@@ -1,7 +1,10 @@
 import { useState, useEffect, ReactNode } from 'react';
-import GridLayout, { Layout } from 'react-grid-layout';
+import GridLayout, { Layout, WidthProvider } from 'react-grid-layout';
 import 'react-grid-layout/css/styles.css';
 import { useToast } from '@/hooks/use-toast';
+
+// Responsive grid layout that auto-adjusts to container width
+const ResponsiveGridLayout = WidthProvider(GridLayout);
 
 interface GridDashboardProps {
   tab: string;
@@ -10,7 +13,6 @@ interface GridDashboardProps {
   onLayoutChange?: (layouts: Layout[]) => void;
   cols?: number;
   rowHeight?: number;
-  width?: number;
 }
 
 export default function GridDashboard({
@@ -20,7 +22,6 @@ export default function GridDashboard({
   onLayoutChange,
   cols = 12,
   rowHeight = 30,
-  width = 1200,
 }: GridDashboardProps) {
   const [layouts, setLayouts] = useState<Layout[]>(defaultLayouts);
   const [mounted, setMounted] = useState(false);
@@ -95,23 +96,22 @@ export default function GridDashboard({
 
   return (
     <div className="relative w-full h-full">
-      <GridLayout
+      <ResponsiveGridLayout
         className="layout"
         layout={layouts}
         cols={cols}
         rowHeight={rowHeight}
-        width={width}
         onLayoutChange={handleLayoutChange}
         isDraggable={true}
         isResizable={true}
         compactType="vertical"
         preventCollision={false}
-        margin={[12, 12]}
-        containerPadding={[12, 12]}
+        margin={[8, 8]}
+        containerPadding={[8, 8]}
         draggableHandle=".drag-handle"
       >
         {children}
-      </GridLayout>
+      </ResponsiveGridLayout>
 
       {/* Reset button */}
       <button

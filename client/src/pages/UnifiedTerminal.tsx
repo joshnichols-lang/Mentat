@@ -83,13 +83,12 @@ function PerpetualsInterface() {
         </Button>
       </div>
 
-      {/* Compact Grid Dashboard */}
+      {/* Compact Grid Dashboard - Responsive */}
       <GridDashboard
         tab="perpetuals"
         defaultLayouts={defaultLayouts}
         cols={12}
         rowHeight={22}
-        width={1400}
       >
         <div key="chart">
           <Widget id="chart" title="Chart">
