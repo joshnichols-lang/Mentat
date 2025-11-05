@@ -19,11 +19,11 @@ export default function Widget({ id, title, children, onClose, className = '', c
     return (
       <div className={`flex flex-col h-full overflow-hidden bg-card ${className}`} data-testid={`widget-${id}`}>
         {title && (
-          <div className="px-2 py-0.5 border-b border-border/20 shrink-0">
-            <h3 className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">{title}</h3>
+          <div className="px-1 py-0 border-b border-border/20 shrink-0" style={{minHeight: '16px'}}>
+            <h3 className="text-[9px] font-medium text-muted-foreground uppercase tracking-wide leading-4">{title}</h3>
           </div>
         )}
-        <div className="flex-1 overflow-auto p-1">
+        <div className="flex-1 overflow-auto p-0">
           {children}
         </div>
       </div>

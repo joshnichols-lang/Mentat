@@ -109,57 +109,55 @@ export default function OrderEntryPanel({ symbol, lastPrice = 0 }: OrderEntryPan
   const estimatedSize = lastPrice > 0 ? estimatedNotional / lastPrice : 0;
 
   return (
-    <div className="h-full p-3">
-      <div className="grid grid-cols-2 gap-3 h-full">
-        {/* Left Column: Order Type & Size */}
-        <div className="space-y-3">
-          <Tabs value={orderType} onValueChange={(v) => setOrderType(v as "market" | "limit" | "advanced")}>
-            <TabsList className="w-full grid grid-cols-3">
-              <TabsTrigger value="market" data-testid="tab-market">
-                Market
-              </TabsTrigger>
-              <TabsTrigger value="limit" data-testid="tab-limit">
-                Limit
-              </TabsTrigger>
-              <TabsTrigger value="advanced" data-testid="tab-advanced" className="text-xs">
-                Advanced
-              </TabsTrigger>
-            </TabsList>
+    <div className="h-full p-0.5 flex flex-col">
+      <Tabs value={orderType} onValueChange={(v) => setOrderType(v as "market" | "limit" | "advanced")} className="flex flex-col flex-1">
+          <TabsList className="w-full grid grid-cols-3 h-6 shrink-0">
+            <TabsTrigger value="market" data-testid="tab-market" className="text-[9px] py-0 px-1">
+              Market
+            </TabsTrigger>
+            <TabsTrigger value="limit" data-testid="tab-limit" className="text-[9px] py-0 px-1">
+              Limit
+            </TabsTrigger>
+            <TabsTrigger value="advanced" data-testid="tab-advanced" className="text-[9px] py-0 px-1">
+              Advanced
+            </TabsTrigger>
+          </TabsList>
 
-            <TabsContent value="market" className="space-y-3 mt-3">
+          <TabsContent value="market" className="space-y-0.5 mt-0.5 flex-1 overflow-auto px-0.5">
               {/* Size Input */}
-              <div className="space-y-2">
+              <div className="space-y-0.5">
                 <div className="flex items-center justify-between">
-                  <Label className="text-xs font-medium">Size</Label>
-                  <div className="flex items-center gap-1">
+                  <Label className="text-[9px] font-medium">Size</Label>
+                  <div className="flex items-center gap-0.5">
                     <Button
                       variant={sizeMode === "usd" ? "default" : "outline"}
                       size="sm"
                       onClick={() => setSizeMode("usd")}
-                      className="h-7 px-2"
+                      className="h-4 w-4 p-0"
                       data-testid="button-size-usd"
                     >
-                      <DollarSign className="h-3 w-3" />
+                      <DollarSign className="h-2 w-2" />
                     </Button>
                     <Button
                       variant={sizeMode === "percent" ? "default" : "outline"}
                       size="sm"
                       onClick={() => setSizeMode("percent")}
-                      className="h-7 px-2"
+                      className="h-4 w-4 p-0"
                       data-testid="button-size-percent"
                     >
-                      <Percent className="h-3 w-3" />
+                      <Percent className="h-2 w-2" />
                     </Button>
                   </div>
                 </div>
                 <Input
                   type="number"
-                  placeholder={sizeMode === "usd" ? "Enter USD amount" : "Enter %"}
+                  placeholder={sizeMode === "usd" ? "USD" : "%"}
                   value={sizeValue}
                   onChange={(e) => setSizeValue(e.target.value)}
+                  className="h-6 text-[10px] px-1 py-0"
                   data-testid="input-size"
                 />
-                <p className="text-xs text-tertiary">
+                <p className="text-[9px] text-muted-foreground leading-none">
                   ≈ {estimatedSize.toFixed(4)} {symbol.split("-")[0]}
                 </p>
               </div>
@@ -175,52 +173,54 @@ export default function OrderEntryPanel({ symbol, lastPrice = 0 }: OrderEntryPan
               </div>
             </TabsContent>
 
-            <TabsContent value="limit" className="space-y-3 mt-3">
+            <TabsContent value="limit" className="space-y-0.5 mt-0.5 flex-1 overflow-auto px-0.5">
               {/* Limit Price */}
-              <div className="space-y-2">
-                <Label className="text-xs font-medium">Limit Price</Label>
+              <div className="space-y-0.5">
+                <Label className="text-[9px] font-medium">Limit Price</Label>
                 <Input
                   type="number"
-                  placeholder="Enter price"
+                  placeholder="Price"
                   value={limitPrice}
                   onChange={(e) => setLimitPrice(e.target.value)}
+                  className="h-6 text-[10px] px-1 py-0"
                   data-testid="input-limit-price"
                 />
               </div>
 
               {/* Size Input */}
-              <div className="space-y-2">
+              <div className="space-y-0.5">
                 <div className="flex items-center justify-between">
-                  <Label className="text-xs font-medium">Size</Label>
-                  <div className="flex items-center gap-1">
+                  <Label className="text-[9px] font-medium">Size</Label>
+                  <div className="flex items-center gap-0.5">
                     <Button
                       variant={sizeMode === "usd" ? "default" : "outline"}
                       size="sm"
                       onClick={() => setSizeMode("usd")}
-                      className="h-7 px-2"
+                      className="h-4 w-4 p-0"
                       data-testid="button-size-usd-limit"
                     >
-                      <DollarSign className="h-3 w-3" />
+                      <DollarSign className="h-2 w-2" />
                     </Button>
                     <Button
                       variant={sizeMode === "percent" ? "default" : "outline"}
                       size="sm"
                       onClick={() => setSizeMode("percent")}
-                      className="h-7 px-2"
+                      className="h-4 w-4 p-0"
                       data-testid="button-size-percent-limit"
                     >
-                      <Percent className="h-3 w-3" />
+                      <Percent className="h-2 w-2" />
                     </Button>
                   </div>
                 </div>
                 <Input
                   type="number"
-                  placeholder={sizeMode === "usd" ? "Enter USD amount" : "Enter %"}
+                  placeholder={sizeMode === "usd" ? "USD" : "%"}
                   value={sizeValue}
                   onChange={(e) => setSizeValue(e.target.value)}
+                  className="h-6 text-[10px] px-1 py-0"
                   data-testid="input-size-limit"
                 />
-                <p className="text-xs text-tertiary">
+                <p className="text-[9px] text-muted-foreground leading-none">
                   ≈ {estimatedSize.toFixed(4)} {symbol.split("-")[0]}
                 </p>
               </div>
@@ -236,242 +236,136 @@ export default function OrderEntryPanel({ symbol, lastPrice = 0 }: OrderEntryPan
               </div>
             </TabsContent>
 
-            <TabsContent value="advanced" className="space-y-2 mt-3">
+            <TabsContent value="advanced" className="space-y-0.5 mt-0.5 flex-1 overflow-auto px-0.5">
               {/* Order Type Selector */}
-              <div className="space-y-2">
-                <Label className="text-xs font-medium">Order Type</Label>
-                <div className="grid grid-cols-4 gap-1">
+              <div className="space-y-0.5">
+                <Label className="text-[9px] font-medium">Order Type</Label>
+                <div className="grid grid-cols-4 gap-0.5">
                   <Button
                     variant={advancedType === "twap" ? "default" : "outline"}
                     size="sm"
                     onClick={() => setAdvancedType("twap")}
-                    className="h-7 px-1 text-xs"
+                    className="h-6 px-0.5 text-[9px]"
                     data-testid="button-twap"
                   >
-                    <Clock className="h-3 w-3 mr-1" />
+                    <Clock className="h-2.5 w-2.5 mr-0.5" />
                     TWAP
                   </Button>
                   <Button
                     variant={advancedType === "chase" ? "default" : "outline"}
                     size="sm"
                     onClick={() => setAdvancedType("chase")}
-                    className="h-7 px-1 text-xs"
+                    className="h-6 px-0.5 text-[9px]"
                     data-testid="button-chase"
                   >
-                    <Target className="h-3 w-3 mr-1" />
+                    <Target className="h-2.5 w-2.5 mr-0.5" />
                     Chase
                   </Button>
                   <Button
                     variant={advancedType === "scaled" ? "default" : "outline"}
                     size="sm"
                     onClick={() => setAdvancedType("scaled")}
-                    className="h-7 px-1 text-xs"
+                    className="h-6 px-0.5 text-[9px]"
                     data-testid="button-scaled"
                   >
-                    <Layers className="h-3 w-3 mr-1" />
+                    <Layers className="h-2.5 w-2.5 mr-0.5" />
                     Scaled
                   </Button>
                   <Button
                     variant={advancedType === "iceberg" ? "default" : "outline"}
                     size="sm"
                     onClick={() => setAdvancedType("iceberg")}
-                    className="h-7 px-1 text-xs"
+                    className="h-6 px-0.5 text-[9px]"
                     data-testid="button-iceberg"
                   >
-                    <IceCream className="h-3 w-3 mr-1" />
+                    <IceCream className="h-2.5 w-2.5 mr-0.5" />
                     Iceberg
                   </Button>
                 </div>
               </div>
 
               {/* Size Input */}
-              <div className="space-y-2">
-                <Label className="text-xs font-medium">Total Size</Label>
+              <div className="space-y-0.5">
+                <Label className="text-[9px] font-medium">Total Size</Label>
                 <Input
                   type="number"
-                  placeholder="Enter USD amount"
+                  placeholder="USD"
                   value={sizeValue}
                   onChange={(e) => setSizeValue(e.target.value)}
-                  className="h-8 text-sm"
+                  className="h-6 text-[10px] px-1 py-0"
                   data-testid="input-advanced-size"
                 />
               </div>
 
               {/* Type-specific compact parameters */}
               {advancedType === "twap" && (
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="space-y-1">
-                    <Label className="text-xs">Duration (min)</Label>
-                    <Input type="number" defaultValue="30" className="h-7 text-xs" data-testid="input-twap-duration" />
+                <div className="grid grid-cols-2 gap-0.5">
+                  <div className="space-y-0.5">
+                    <Label className="text-[9px]">Duration (min)</Label>
+                    <Input type="number" defaultValue="30" className="h-6 text-[10px] px-1 py-0" data-testid="input-twap-duration" />
                   </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs">Slices</Label>
-                    <Input type="number" defaultValue="10" className="h-7 text-xs" data-testid="input-twap-slices" />
+                  <div className="space-y-0.5">
+                    <Label className="text-[9px]">Slices</Label>
+                    <Input type="number" defaultValue="10" className="h-6 text-[10px] px-1 py-0" data-testid="input-twap-slices" />
                   </div>
                 </div>
               )}
 
               {advancedType === "chase" && (
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="space-y-1">
-                    <Label className="text-xs">Offset (bps)</Label>
-                    <Input type="number" defaultValue="1" className="h-7 text-xs" data-testid="input-chase-offset" />
+                <div className="grid grid-cols-2 gap-0.5">
+                  <div className="space-y-0.5">
+                    <Label className="text-[9px]">Offset (bps)</Label>
+                    <Input type="number" defaultValue="1" className="h-6 text-[10px] px-1 py-0" data-testid="input-chase-offset" />
                   </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs">Max Chases</Label>
-                    <Input type="number" defaultValue="10" className="h-7 text-xs" data-testid="input-chase-max" />
+                  <div className="space-y-0.5">
+                    <Label className="text-[9px]">Max Chases</Label>
+                    <Input type="number" defaultValue="10" className="h-6 text-[10px] px-1 py-0" data-testid="input-chase-max" />
                   </div>
                 </div>
               )}
 
               {advancedType === "scaled" && (
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="space-y-1">
-                    <Label className="text-xs">Levels</Label>
-                    <Input type="number" defaultValue="5" className="h-7 text-xs" data-testid="input-scaled-levels" />
+                <div className="grid grid-cols-2 gap-0.5">
+                  <div className="space-y-0.5">
+                    <Label className="text-[9px]">Levels</Label>
+                    <Input type="number" defaultValue="5" className="h-6 text-[10px] px-1 py-0" data-testid="input-scaled-levels" />
                   </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs">Range %</Label>
-                    <Input type="number" defaultValue="5" className="h-7 text-xs" data-testid="input-scaled-range" />
+                  <div className="space-y-0.5">
+                    <Label className="text-[9px]">Range %</Label>
+                    <Input type="number" defaultValue="5" className="h-6 text-[10px] px-1 py-0" data-testid="input-scaled-range" />
                   </div>
                 </div>
               )}
 
               {advancedType === "iceberg" && (
-                <div className="space-y-2">
-                  <div className="space-y-1">
-                    <Label className="text-xs">Display Size</Label>
-                    <Input type="number" placeholder="Visible amount" className="h-7 text-xs" data-testid="input-iceberg-display" />
+                <div className="space-y-0.5">
+                  <div className="space-y-0.5">
+                    <Label className="text-[9px]">Display Size</Label>
+                    <Input type="number" placeholder="Visible amount" className="h-6 text-[10px] px-1 py-0" data-testid="input-iceberg-display" />
                   </div>
                 </div>
               )}
-            </TabsContent>
-          </Tabs>
-        </div>
+          </TabsContent>
+      </Tabs>
 
-        {/* Right Column: TP/SL & Order Buttons OR AI Optimize */}
-        <div className="space-y-3">
-          {orderType !== "advanced" ? (
-            <>
-              {/* Take Profit */}
-              <Card className="border-border/50">
-                <CardContent className="p-3 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-xs font-medium">Take Profit</Label>
-                    <Switch
-                      checked={takeProfitEnabled}
-                      onCheckedChange={setTakeProfitEnabled}
-                      data-testid="switch-take-profit"
-                    />
-                  </div>
-                  {takeProfitEnabled && (
-                    <Input
-                      type="number"
-                      placeholder="TP Price"
-                      value={takeProfitPrice}
-                      onChange={(e) => setTakeProfitPrice(e.target.value)}
-                      data-testid="input-take-profit"
-                    />
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Stop Loss */}
-              <Card className="border-border/50">
-                <CardContent className="p-3 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-xs font-medium">Stop Loss</Label>
-                    <Switch
-                      checked={stopLossEnabled}
-                      onCheckedChange={setStopLossEnabled}
-                      data-testid="switch-stop-loss"
-                    />
-                  </div>
-                  {stopLossEnabled && (
-                    <Input
-                      type="number"
-                      placeholder="SL Price"
-                      value={stopLossPrice}
-                      onChange={(e) => setStopLossPrice(e.target.value)}
-                      data-testid="input-stop-loss"
-                    />
-                  )}
-                </CardContent>
-              </Card>
-
-              <Separator className="bg-border/30" />
-            </>
-          ) : (
-            <>
-              {/* AI Optimization for Advanced Orders */}
-              <Card className="border-border/50">
-                <CardContent className="p-3 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Zap className="h-4 w-4" />
-                      <Label className="text-xs font-medium">AI Optimize</Label>
-                    </div>
-                    <Switch
-                      defaultChecked={true}
-                      data-testid="switch-ai-optimize"
-                    />
-                  </div>
-                  <p className="text-xs text-tertiary">
-                    Uses AI to optimize execution parameters
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Separator className="bg-border/30" />
-            </>
-          )}
-
-          {/* Order Buttons */}
-          <div className="grid grid-cols-2 gap-2">
-            <Button
-              onClick={() => handlePlaceOrder("buy")}
-              disabled={isSubmitting}
-              className="h-10 bg-long hover:bg-long/90 text-background font-semibold transition-all active-press"
-              data-testid="button-buy"
-            >
-              <TrendingUp className="h-4 w-4 mr-2" />
-              {orderType === "advanced" ? `${advancedType.toUpperCase()}` : "Buy"}
-            </Button>
-            <Button
-              onClick={() => handlePlaceOrder("sell")}
-              disabled={isSubmitting}
-              className="h-10 bg-short hover:bg-short/90 text-background font-semibold transition-all active-press"
-              data-testid="button-sell"
-            >
-              <TrendingDown className="h-4 w-4 mr-2" />
-              Sell
-            </Button>
-          </div>
-
-          {/* Order Summary */}
-          <Card className="border-border/50">
-            <CardContent className="p-3 space-y-1 text-xs">
-              <div className="flex justify-between">
-                <span className="text-secondary">Notional</span>
-                <span className="font-mono font-medium" data-testid="text-notional">${estimatedNotional.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-secondary">Size</span>
-                <span className="font-mono font-medium" data-testid="text-size">{estimatedSize.toFixed(4)} {symbol.split("-")[0]}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-secondary">Leverage</span>
-                <span className="font-mono font-medium" data-testid="text-leverage">{leverage}x</span>
-              </div>
-              {lastPrice > 0 && (
-                <div className="flex justify-between">
-                  <span className="text-secondary">Est. Entry</span>
-                  <span className="font-mono font-medium" data-testid="text-entry">${lastPrice.toFixed(2)}</span>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+      {/* Order Buttons - Fixed at bottom */}
+      <div className="grid grid-cols-2 gap-0.5 shrink-0 mt-0.5">
+        <Button
+          onClick={() => handlePlaceOrder("buy")}
+          disabled={isSubmitting}
+          className="h-6 bg-long hover:bg-long/90 text-background font-semibold text-[10px]"
+          data-testid="button-buy"
+        >
+          Buy
+        </Button>
+        <Button
+          onClick={() => handlePlaceOrder("sell")}
+          disabled={isSubmitting}
+          className="h-6 bg-short hover:bg-short/90 text-background font-semibold text-[10px]"
+          data-testid="button-sell"
+        >
+          Sell
+        </Button>
       </div>
     </div>
   );

@@ -90,7 +90,7 @@ function PerpetualsInterface() {
       {/* MAIN CONTENT AREA */}
       <div className="flex-1 flex flex-col overflow-hidden">
       {/* Compact Toolbar */}
-      <div className="bg-background border-b border-border/30 px-2 py-1 flex items-center justify-between shrink-0">
+      <div className="bg-background border-b border-border/30 px-1 py-0.5 flex items-center justify-between shrink-0" style={{minHeight: '24px'}}>
         <div className="flex items-center gap-2">
           <MarketSelector
             selectedSymbol={selectedSymbol}
@@ -102,10 +102,10 @@ function PerpetualsInterface() {
         <Button 
           variant="ghost" 
           size="icon"
-          className="h-6 w-6"
+          className="h-5 w-5"
           data-testid="button-chart-settings"
         >
-          <Settings className="h-3 w-3" />
+          <Settings className="h-2.5 w-2.5" />
         </Button>
       </div>
 
@@ -142,7 +142,7 @@ function PerpetualsInterface() {
       {/* BOTTOM SECTION: Tabbed Positions/Orders/History (25% height) - FULL WIDTH */}
       <div className="flex-[25] flex flex-col border-t border-border/20 overflow-hidden">
         {/* Tabs Header - ultra compact */}
-        <div className="flex items-center gap-px border-b border-border/20 bg-card shrink-0">
+        <div className="flex items-center gap-px border-b border-border/20 bg-card shrink-0" style={{minHeight: '20px'}}>
           {[
             { id: "positions", label: "Positions" },
             { id: "orders", label: "Open Orders" },
@@ -153,7 +153,7 @@ function PerpetualsInterface() {
               key={tab.id}
               onClick={() => setBottomTab(tab.id as any)}
               data-testid={`tab-${tab.id}`}
-              className={`px-3 py-1.5 text-[11px] font-medium transition-colors ${
+              className={`px-2 py-0.5 text-[9px] font-medium transition-colors ${
                 bottomTab === tab.id
                   ? "bg-background text-foreground border-b-2 border-primary"
                   : "text-muted-foreground hover-elevate"
@@ -165,7 +165,7 @@ function PerpetualsInterface() {
         </div>
 
         {/* Tab Content */}
-        <div className="flex-1 overflow-auto bg-background p-1">
+        <div className="flex-1 overflow-auto bg-background p-0">
           {bottomTab === "positions" && (
             <div className="h-full">
               <PositionsGrid />
