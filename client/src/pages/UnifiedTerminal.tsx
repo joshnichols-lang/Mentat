@@ -798,13 +798,12 @@ function OptionsInterface() {
         </div>
       </div>
 
-      {/* Grid Dashboard with Draggable Widgets */}
+      {/* Grid Dashboard with Draggable Widgets - Responsive */}
       <GridDashboard
         tab="options"
         defaultLayouts={defaultLayouts}
         cols={12}
         rowHeight={24}
-        width={1400}
       >
         <div key="chart">
           <Widget id="chart" title="Options Chart">
