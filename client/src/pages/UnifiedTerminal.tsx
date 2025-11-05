@@ -30,6 +30,7 @@ import OrderBook from "@/components/OrderBook";
 import RecentTrades from "@/components/RecentTrades";
 import OrderEntryPanel from "@/components/OrderEntryPanel";
 import OrderManagementPanel from "@/components/OrderManagementPanel";
+import TradingActionsPanel from "@/components/TradingActionsPanel";
 import MarketSelector from "@/components/MarketSelector";
 import GridDashboard from "@/components/GridDashboard";
 import Widget from "@/components/Widget";
@@ -53,12 +54,11 @@ import {
 function PerpetualsInterface() {
   const [selectedSymbol, setSelectedSymbol] = useState("BTC-USD");
 
-  // Compact grid layouts - fit everything in viewport without scrolling
+  // Optimized grid layouts - fit in single viewport without scrolling
   const defaultLayouts = [
-    { i: "chart", x: 0, y: 0, w: 7, h: 18 },           // Chart left (58%)
-    { i: "orderEntry", x: 7, y: 0, w: 3, h: 9 },       // Order Entry top-right (25%)
-    { i: "orderBook", x: 10, y: 0, w: 2, h: 9 },       // Order Book far-right (17%)
-    { i: "recentTrades", x: 7, y: 9, w: 5, h: 9 },     // Recent Trades bottom-right
+    { i: "chart", x: 0, y: 0, w: 7, h: 20 },           // Chart left (58%)
+    { i: "trading", x: 7, y: 0, w: 3, h: 20 },         // Trading panel (Order/Positions/Trades tabs)
+    { i: "orderBook", x: 10, y: 0, w: 2, h: 20 },      // Order Book right
   ];
 
   return (
@@ -83,12 +83,12 @@ function PerpetualsInterface() {
         </Button>
       </div>
 
-      {/* Compact Grid Dashboard - Responsive */}
+      {/* Optimized Grid Dashboard - Single Viewport */}
       <GridDashboard
         tab="perpetuals"
         defaultLayouts={defaultLayouts}
         cols={12}
-        rowHeight={22}
+        rowHeight={26}
       >
         <div key="chart">
           <Widget id="chart" title="Chart">
@@ -99,21 +99,15 @@ function PerpetualsInterface() {
           </Widget>
         </div>
 
-        <div key="orderEntry">
-          <Widget id="orderEntry" title="Order Entry">
-            <OrderEntryPanel symbol={selectedSymbol} />
+        <div key="trading">
+          <Widget id="trading" title="">
+            <TradingActionsPanel symbol={selectedSymbol} />
           </Widget>
         </div>
 
         <div key="orderBook">
           <Widget id="orderBook" title="Order Book">
             <OrderBook symbol={selectedSymbol} />
-          </Widget>
-        </div>
-
-        <div key="recentTrades">
-          <Widget id="recentTrades" title="Recent Trades">
-            <RecentTrades symbol={selectedSymbol} />
           </Widget>
         </div>
       </GridDashboard>
