@@ -18,9 +18,9 @@
   --border: 240 3% 12%;            /* #1F1F23 - Subtle border */
   --input: 240 4% 8%;              /* #141418 - Input background */
   
-  /* Interactive states - bright lime green accent */
-  --primary: 150 100% 50%;         /* #00FF87 - Bright lime green */
-  --primary-foreground: 240 4% 6%; /* Dark text on green */
+  /* Interactive states - minimal color, mostly grey */
+  --primary: 0 0% 70%;             /* #B3B3B3 - Light grey (was bright green) */
+  --primary-foreground: 240 4% 6%; /* Dark text on grey */
   
   --secondary: 240 4% 10%;         /* #18181C - Elevated surface */
   --secondary-foreground: 0 0% 100%;
@@ -28,8 +28,8 @@
   --muted: 240 4% 10%;
   --muted-foreground: 0 0% 55%;    /* #8B8B8D - Mid grey text */
   
-  --accent: 150 100% 50%;          /* #00FF87 - Lime green highlight */
-  --accent-foreground: 240 4% 6%;
+  --accent: 0 0% 15%;              /* #262626 - Dark grey accent (was bright green) */
+  --accent-foreground: 0 0% 100%;
   
   /* Text hierarchy - grey scales (Numora style) */
   --text-primary: 0 0% 100%;       /* #FFFFFF - Most important */
@@ -57,10 +57,10 @@
   --elevate-1: rgba(255, 255, 255, 0.05);
   --elevate-2: rgba(255, 255, 255, 0.10);
   
-  /* Typography */
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-serif: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-mono: 'JetBrains Mono', 'Roboto Mono', monospace;
+  /* Typography - IBM Plex Mono everywhere */
+  --font-sans: 'IBM Plex Mono', monospace;
+  --font-serif: 'IBM Plex Mono', monospace;
+  --font-mono: 'IBM Plex Mono', monospace;
   
   /* Border radius - minimal */
   --radius: 0.5rem;               /* 8px */
@@ -92,9 +92,9 @@
   --border: 0 0% 92%;              /* #EBEBEB - Subtle divider */
   --input: 0 0% 96%;               /* #F5F5F5 - Input background */
   
-  /* Interactive states - bright green accent */
-  --primary: 150 100% 39%;         /* #00C864 - Green for light mode */
-  --primary-foreground: 0 0% 100%; /* White text on green */
+  /* Interactive states - minimal color, mostly grey */
+  --primary: 0 0% 30%;             /* #4D4D4D - Dark grey (was green) */
+  --primary-foreground: 0 0% 100%; /* White text on dark grey */
   
   --secondary: 0 0% 96%;           /* #F5F5F5 - Light grey */
   --secondary-foreground: 240 4% 6%;
@@ -102,8 +102,8 @@
   --muted: 0 0% 96%;
   --muted-foreground: 0 0% 39%;    /* #646466 - Mid grey text */
   
-  --accent: 150 100% 39%;          /* #00C864 - Green highlight */
-  --accent-foreground: 0 0% 100%;
+  --accent: 0 0% 90%;              /* #E6E6E6 - Light grey accent (was green) */
+  --accent-foreground: 240 4% 6%;
   
   /* Text hierarchy - grey scales */
   --text-primary: 240 4% 6%;       /* #0B0B0F - Most important */
@@ -131,10 +131,10 @@
   --elevate-1: rgba(0, 0, 0, 0.03);
   --elevate-2: rgba(0, 0, 0, 0.06);
   
-  /* Typography */
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-serif: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-mono: 'JetBrains Mono', 'Roboto Mono', monospace;
+  /* Typography - IBM Plex Mono everywhere */
+  --font-sans: 'IBM Plex Mono', monospace;
+  --font-serif: 'IBM Plex Mono', monospace;
+  --font-mono: 'IBM Plex Mono', monospace;
   
   /* Border radius - minimal */
   --radius: 0.5rem;               /* 8px */
