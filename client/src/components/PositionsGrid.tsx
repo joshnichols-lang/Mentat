@@ -162,8 +162,7 @@ export default function PositionsGrid() {
 
   if (isLoading) {
     return (
-      <div>
-        <h2 className="mb-3 text-sm font-semibold">Positions</h2>
+      <div className="p-2">
         <div className="space-y-2">
           {[1, 2].map((i) => (
             <Card key={i} className="p-3">
@@ -177,17 +176,14 @@ export default function PositionsGrid() {
 
   if (positions.length === 0) {
     return (
-      <div>
-        <h2 className="mb-3 text-sm font-semibold">Positions</h2>
-        <Card className="p-6 text-center text-sm text-muted-foreground">
-          No active positions
-        </Card>
+      <div className="text-xs text-muted-foreground p-2">
+        No active positions
       </div>
     );
   }
 
   return (
-    <div>
+    <div className="p-2">
       <div className="mb-3 flex items-center justify-between gap-2">
         <h2 className="text-sm font-semibold">Positions</h2>
         <Button
