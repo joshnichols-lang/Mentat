@@ -178,7 +178,7 @@ const LiveGreeks = ({ asset, instrumentName }: LiveGreeksProps) => {
       </div>
 
       {/* Index Price */}
-      <Card className="glass-strong border-glass/20 p-3">
+      <Card className="bg-card border-border/50 p-3">
         <div className="flex items-center justify-between">
           <span className="text-xs text-foreground/60">Index Price</span>
           <span className="text-lg font-bold font-mono" data-testid="text-index-price">
@@ -192,7 +192,7 @@ const LiveGreeks = ({ asset, instrumentName }: LiveGreeksProps) => {
         <h4 className="text-xs font-semibold text-foreground/90">Option Greeks</h4>
         
         {!greeks && !instrumentName && (
-          <Card className="glass-strong border-glass/20 p-4 text-center">
+          <Card className="bg-card border-border/50 p-4 text-center">
             <p className="text-xs text-foreground/50">
               Select a strategy to view Greeks
             </p>
@@ -200,7 +200,7 @@ const LiveGreeks = ({ asset, instrumentName }: LiveGreeksProps) => {
         )}
 
         {!greeks && instrumentName && (
-          <Card className="glass-strong border-glass/20 p-4 text-center">
+          <Card className="bg-card border-border/50 p-4 text-center">
             <div className="animate-pulse">
               <p className="text-xs text-foreground/50">
                 Loading Greeks data...
@@ -212,7 +212,7 @@ const LiveGreeks = ({ asset, instrumentName }: LiveGreeksProps) => {
         {greeks && (
           <div className="space-y-2">
             {/* Delta */}
-            <Card className="glass-strong border-glass/20 p-3 hover-elevate transition-all">
+            <Card className="bg-card border-border/50 p-3 hover-elevate transition-all">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <TrendingUp className="h-4 w-4 text-primary" />
@@ -229,7 +229,7 @@ const LiveGreeks = ({ asset, instrumentName }: LiveGreeksProps) => {
             </Card>
 
             {/* Gamma */}
-            <Card className="glass-strong border-glass/20 p-3 hover-elevate transition-all">
+            <Card className="bg-card border-border/50 p-3 hover-elevate transition-all">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Activity className="h-4 w-4 text-primary" />
@@ -246,7 +246,7 @@ const LiveGreeks = ({ asset, instrumentName }: LiveGreeksProps) => {
             </Card>
 
             {/* Theta */}
-            <Card className="glass-strong border-glass/20 p-3 hover-elevate transition-all">
+            <Card className="bg-card border-border/50 p-3 hover-elevate transition-all">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Zap className="h-4 w-4 text-primary" />
@@ -263,7 +263,7 @@ const LiveGreeks = ({ asset, instrumentName }: LiveGreeksProps) => {
             </Card>
 
             {/* Vega */}
-            <Card className="glass-strong border-glass/20 p-3 hover-elevate transition-all">
+            <Card className="bg-card border-border/50 p-3 hover-elevate transition-all">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Wind className="h-4 w-4 text-primary" />
@@ -280,7 +280,7 @@ const LiveGreeks = ({ asset, instrumentName }: LiveGreeksProps) => {
             </Card>
 
             {/* Rho */}
-            <Card className="glass-strong border-glass/20 p-3 hover-elevate transition-all">
+            <Card className="bg-card border-border/50 p-3 hover-elevate transition-all">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Droplets className="h-4 w-4 text-primary" />
@@ -298,7 +298,7 @@ const LiveGreeks = ({ asset, instrumentName }: LiveGreeksProps) => {
 
             {/* Implied Volatility */}
             {greeks.iv !== undefined && (
-              <Card className="glass-strong border-glass/20 p-3 hover-elevate transition-all">
+              <Card className="bg-card border-border/50 p-3 hover-elevate transition-all">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <TrendingDown className="h-4 w-4 text-primary" />
@@ -320,7 +320,7 @@ const LiveGreeks = ({ asset, instrumentName }: LiveGreeksProps) => {
 
       {/* Info Footer */}
       <div className="flex-1"></div>
-      <div className="pt-3 border-t border-glass/10">
+      <div className="pt-3 border-t border-border/20">
         <p className="text-xs text-foreground/40 text-center">
           Real-time data from Aevo
         </p>

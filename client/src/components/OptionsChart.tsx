@@ -129,13 +129,13 @@ export default function OptionsChart({
   const [expectedPrice, setExpectedPrice] = useState<number | null>(null);
   const maxLossLineRef = useRef<IPriceLine | null>(null);
   
-  const { themeName, mode } = useTheme();
+  const { mode } = useTheme();
   const [isLoading, setIsLoading] = useState(true);
   const [candleData, setCandleData] = useState<Map<number, CandlestickData>>(new Map());
   const [currentPrice, setCurrentPrice] = useState<number | null>(null);
 
-  // Get current theme colors (default to fox theme)
-  const colors = themeColors[themeName as keyof typeof themeColors]?.[mode as keyof typeof themeColors.fox] || themeColors.fox.dark;
+  // Get current theme colors (default to dark theme)
+  const colors = themeColors.fox[mode as keyof typeof themeColors.fox] || themeColors.fox.dark;
 
   // Initialize chart
   useEffect(() => {
@@ -578,7 +578,7 @@ export default function OptionsChart({
     <div className="h-full w-full flex flex-col" data-testid="chart-options">
       {isLoading && (
         <div className="absolute inset-0 flex items-center justify-center z-10">
-          <div className="flex flex-col items-center gap-2 glass-strong p-6 rounded-md">
+          <div className="flex flex-col items-center gap-2 bg-card p-6 rounded-md">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
             <p className="text-sm text-muted-foreground">Loading chart...</p>
           </div>
@@ -593,7 +593,7 @@ export default function OptionsChart({
 
       {/* Current price indicator */}
       {currentPrice && !selectedStrategy && (
-        <div className="absolute top-2 left-2 glass-strong px-3 py-1.5 rounded-md">
+        <div className="absolute top-2 left-2 bg-card/90 px-3 py-1.5 rounded-md border border-border/30">
           <div className="flex items-center gap-2">
             <span className="text-xs text-muted-foreground">Current Price:</span>
             <span className="text-sm font-semibold text-foreground" data-testid="text-current-price">
@@ -606,7 +606,7 @@ export default function OptionsChart({
       {/* Expected Price & Net P&L Panel (Hegic Style) */}
       {selectedStrategy && expectedPrice && netPnL && (
         <div className="absolute top-2 left-2 right-2 flex items-center justify-between gap-4">
-          <div className="glass-strong px-4 py-2 rounded-md border border-glass/30 flex-1">
+          <div className="bg-card/90 px-4 py-2 rounded-md border border-border/50 flex-1">
             <div className="flex items-center justify-between">
               <div>
                 <span className="text-xs text-muted-foreground block mb-1">Expected Price</span>
@@ -621,7 +621,7 @@ export default function OptionsChart({
                     step={(currentPrice || 0) * 0.001}
                     value={expectedPrice}
                     onChange={(e) => setExpectedPrice(parseFloat(e.target.value))}
-                    className="w-32 h-1 bg-glass/30 rounded-lg appearance-none cursor-pointer slider"
+                    className="w-32 h-1 bg-muted/30 rounded-lg appearance-none cursor-pointer slider"
                     data-testid="slider-expected-price"
                   />
                 </div>
@@ -658,7 +658,7 @@ export default function OptionsChart({
 
       {/* Strategy info (compact when Expected Price panel is shown) */}
       {selectedStrategy && (
-        <div className={`absolute ${expectedPrice ? 'top-16 right-2' : 'top-2 right-2'} glass-strong px-3 py-1.5 rounded-md max-w-xs`}>
+        <div className={`absolute ${expectedPrice ? 'top-16 right-2' : 'top-2 right-2'} bg-card/90 px-3 py-1.5 rounded-md border border-border/30 max-w-xs`}>
           <div className="flex flex-col gap-1">
             <div className="flex items-center gap-2">
               <span className="text-xs font-semibold text-primary">{selectedStrategy.name}</span>

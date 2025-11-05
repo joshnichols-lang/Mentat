@@ -178,7 +178,7 @@ export default function OptionsChain({ asset, currentPrice }: OptionsChainProps)
         <div className="flex items-center gap-2">
           <span className="text-xs text-muted-foreground">Expiry:</span>
           <Tabs value={selectedExpiry || expiryDates[0] || ''} onValueChange={setSelectedExpiry}>
-            <TabsList className="glass-panel h-7">
+            <TabsList className="bg-muted/30 h-7">
               {expiryDates.slice(0, 6).map((expiry) => (
                 <TabsTrigger 
                   key={expiry || 'default'} 
@@ -203,7 +203,7 @@ export default function OptionsChain({ asset, currentPrice }: OptionsChainProps)
       {/* Options chain table */}
       <div className="flex-1 overflow-auto px-2 pb-2">
         <table className="w-full text-[11px]">
-          <thead className="sticky top-0 glass-panel z-10">
+          <thead className="sticky top-0 bg-background z-10">
             <tr className="border-b border-primary/10">
               {/* Calls header */}
               <th className="text-left py-2 px-1.5 font-medium text-success/90">Bid</th>

@@ -258,8 +258,8 @@ export default function PayoffDiagram({ strategy, currentPrice, asset }: PayoffD
   };
 
   return (
-    <div className="h-full w-full flex flex-col glass" data-testid="diagram-payoff">
-      <div className="p-3 border-b border-glass/20">
+    <div className="h-full w-full flex flex-col bg-background" data-testid="diagram-payoff">
+      <div className="p-3 border-b border-border/30">
         <div className="flex items-center justify-between">
           <h3 className="text-xs font-semibold text-muted-foreground">
             Payoff Diagram
@@ -284,7 +284,7 @@ export default function PayoffDiagram({ strategy, currentPrice, asset }: PayoffD
             />
             
             {hoveredPoint && (
-              <div className="absolute top-6 left-6 glass-strong px-3 py-1.5 rounded-md border border-glass/30">
+              <div className="absolute top-6 left-6 bg-card/90 px-3 py-1.5 rounded-md border border-border/50">
                 <div className="text-xs space-y-0.5">
                   <div className="flex items-center gap-2">
                     <span className="text-muted-foreground">Price:</span>

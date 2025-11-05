@@ -534,8 +534,8 @@ export default function OptionsStrategyBuilder({
   const filteredStrategies = SIMPLE_STRATEGIES.filter(s => s.sentiment === selectedSentiment);
 
   return (
-    <div className="h-full flex flex-col glass">
-      <div className="p-4 pb-3 border-b border-glass/20">
+    <div className="h-full flex flex-col bg-background">
+      <div className="p-4 pb-3 border-b border-border/30">
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-sm font-semibold flex items-center gap-2">
             <Layers className="h-4 w-4 text-primary" />
@@ -543,7 +543,7 @@ export default function OptionsStrategyBuilder({
           </h3>
           
           <Tabs value={mode} onValueChange={(v) => onModeChange(v as "simple" | "pro")}>
-            <TabsList className="h-8 glass">
+            <TabsList className="h-8 bg-muted/30">
               <TabsTrigger value="simple" className="text-xs h-6" data-testid="tab-simple-mode">
                 <Sparkles className="h-3 w-3 mr-1" />
                 Simple
@@ -571,7 +571,7 @@ export default function OptionsStrategyBuilder({
           <>
             {/* Selected Market Display */}
             {selectedMarket && (
-              <div className="glass-strong rounded-md p-3 border border-primary/40" data-testid="selected-market-display">
+              <div className="bg-card rounded-md p-3 border border-border/50" data-testid="selected-market-display">
                 <div className="flex items-start justify-between mb-2">
                   <div className="flex items-center gap-2">
                     <CheckCircle2 className="h-4 w-4 text-success" />
@@ -633,7 +633,7 @@ export default function OptionsStrategyBuilder({
                       hover-elevate active-elevate-2
                       ${selectedSentiment === sentiment.id 
                         ? sentiment.bgColor.replace('hover:', '') + ' border-current' 
-                        : 'glass border-glass/20'
+                        : 'bg-background border-border/30'
                       }
                     `}
                     data-testid={`button-sentiment-${sentiment.id}`}
@@ -670,7 +670,7 @@ export default function OptionsStrategyBuilder({
                 max="90"
                 value={period}
                 onChange={(e) => setPeriod(parseInt(e.target.value))}
-                className="w-full h-1.5 bg-glass/30 rounded-lg appearance-none cursor-pointer slider"
+                className="w-full h-1.5 bg-muted/30 rounded-lg appearance-none cursor-pointer slider"
                 data-testid="slider-period"
               />
               <div className="flex justify-between text-[10px] text-muted-foreground mt-1">
@@ -681,7 +681,7 @@ export default function OptionsStrategyBuilder({
 
             {/* Expiry Date Display */}
             {selectedExpiry && (
-              <div className="glass rounded-md p-2 border border-glass/20">
+              <div className="bg-card rounded-md p-2 border border-border/30">
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-muted-foreground">Expiration Date:</span>
                   <span className="font-semibold text-foreground">
@@ -714,7 +714,7 @@ export default function OptionsStrategyBuilder({
                         hover-elevate active-elevate-2
                         ${selectedStrategyId === strategy.id 
                           ? 'bg-primary/10 border-primary/50' 
-                          : 'glass border-glass/20'
+                          : 'bg-background border-border/30'
                         }
                       `}
                       data-testid={`button-strategy-${strategy.id}`}
@@ -741,7 +741,7 @@ export default function OptionsStrategyBuilder({
                           
                           {/* Profit Zone Preview */}
                           {strategyData && (
-                            <div className="mt-2 pt-2 border-t border-glass/20">
+                            <div className="mt-2 pt-2 border-t border-border/20">
                               <div className="flex items-center justify-between text-[10px]">
                                 <div>
                                   <span className="text-muted-foreground">Profit Zone:</span>
@@ -781,7 +781,7 @@ export default function OptionsStrategyBuilder({
               const originalCost = strategy?.discount ? cost / 0.9 : cost;
               
               return (
-                <div className="glass rounded-md p-3 border border-primary/30">
+                <div className="bg-card rounded-md p-3 border border-border/50">
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-muted-foreground">Total Cost</span>
@@ -839,7 +839,7 @@ export default function OptionsStrategyBuilder({
               </Select>
             </div>
 
-            <div className="glass rounded-md p-3 border border-glass/20">
+            <div className="bg-card rounded-md p-3 border border-border/30">
               <p className="text-xs text-center text-muted-foreground italic">
                 Pro mode leg construction coming in next iteration
               </p>
