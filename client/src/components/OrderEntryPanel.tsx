@@ -45,8 +45,6 @@ export default function OrderEntryPanel({ symbol, lastPrice = 0 }: OrderEntryPan
   });
 
   const maxLeverage = assetMetadata?.metadata?.maxLeverage ?? 50;
-  
-  console.log(`[OrderEntryPanel] Symbol: ${symbol}, Max Leverage: ${maxLeverage}`, assetMetadata);
 
   const handlePlaceOrder = async (orderSide: "buy" | "sell") => {
     if (orderType === "advanced") {
