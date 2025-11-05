@@ -165,24 +165,24 @@ function PerpetualsInterface() {
         </div>
 
         {/* Tab Content */}
-        <div className="flex-1 overflow-auto bg-background p-0">
+        <div className="flex-1 overflow-hidden bg-background p-0">
           {bottomTab === "positions" && (
-            <div className="h-full">
+            <div className="h-full overflow-auto">
               <PositionsGrid />
             </div>
           )}
           {bottomTab === "orders" && (
-            <div className="text-xs text-muted-foreground p-2">
+            <div className="h-full overflow-auto text-xs text-muted-foreground p-2">
               Open orders will appear here
             </div>
           )}
           {bottomTab === "history" && (
-            <div className="text-xs text-muted-foreground p-2">
+            <div className="h-full overflow-auto text-xs text-muted-foreground p-2">
               Order history will appear here
             </div>
           )}
           {bottomTab === "trades" && (
-            <div className="text-xs text-muted-foreground p-2">
+            <div className="h-full overflow-auto text-xs text-muted-foreground p-2">
               Trade history will appear here
             </div>
           )}
