@@ -23,7 +23,7 @@ export default function Widget({ id, title, children, onClose, className = '', c
             <h3 className="text-[9px] font-medium text-muted-foreground uppercase tracking-wide leading-4">{title}</h3>
           </div>
         )}
-        <div className="flex-1 overflow-auto p-0">
+        <div className="flex-1 overflow-auto no-scrollbar p-0">
           {children}
         </div>
       </div>
