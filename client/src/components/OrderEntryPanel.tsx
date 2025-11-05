@@ -1,14 +1,14 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { Separator } from "@/components/ui/separator";
-import { DollarSign, Percent, TrendingUp, TrendingDown, Clock, Target, Layers, IceCream, Zap } from "lucide-react";
-import { LeverageSlider } from "@/components/LeverageSlider";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Slider } from "@/components/ui/slider";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { ChevronDown } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
@@ -19,353 +19,312 @@ interface OrderEntryPanelProps {
 
 export default function OrderEntryPanel({ symbol, lastPrice = 0 }: OrderEntryPanelProps) {
   const { toast } = useToast();
-  const [orderType, setOrderType] = useState<"market" | "limit" | "advanced">("market");
-  const [side, setSide] = useState<"buy" | "sell">("buy");
-  const [sizeMode, setSizeMode] = useState<"usd" | "percent">("usd");
-  const [sizeValue, setSizeValue] = useState("");
-  const [leverage, setLeverage] = useState(5);
-  const [limitPrice, setLimitPrice] = useState("");
-  const [takeProfitEnabled, setTakeProfitEnabled] = useState(false);
-  const [takeProfitPrice, setTakeProfitPrice] = useState("");
-  const [stopLossEnabled, setStopLossEnabled] = useState(false);
-  const [stopLossPrice, setStopLossPrice] = useState("");
   
-  // Advanced order states
-  const [advancedType, setAdvancedType] = useState<"twap" | "chase" | "scaled" | "iceberg">("twap");
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  // State
+  const [orderType, setOrderType] = useState<"market" | "limit" | "scale">("market");
+  const [side, setSide] = useState<"buy" | "sell">("buy");
+  const [limitPrice, setLimitPrice] = useState("");
+  const [amount, setAmount] = useState("");
+  const [sliderValue, setSliderValue] = useState([0]);
+  const [reduceOnly, setReduceOnly] = useState(false);
+  const [tpslEnabled, setTpslEnabled] = useState(false);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [advancedOrderType, setAdvancedOrderType] = useState("");
+  
+  // Scale order specific
+  const [scaleStart, setScaleStart] = useState("");
+  const [scaleEnd, setScaleEnd] = useState("");
+  const [scaleOrderCount, setScaleOrderCount] = useState("5");
+  const [scaleSizeSkew, setScaleSizeSkew] = useState("1.00");
 
-  // Fetch asset metadata to get max leverage for the selected symbol
-  const { data: assetMetadata } = useQuery<{ 
-    success: boolean; 
-    metadata: { maxLeverage: number; szDecimals: number; tickSize: number } 
-  }>({
-    queryKey: [`/api/hyperliquid/asset-metadata?symbol=${symbol}`],
-    enabled: !!symbol,
-    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+  const { data: userData } = useQuery<{ user: any }>({
+    queryKey: ["/api/user"],
   });
 
-  const maxLeverage = assetMetadata?.metadata?.maxLeverage ?? 50;
+  const isConnected = !!userData?.user;
 
-  const handlePlaceOrder = async (orderSide: "buy" | "sell") => {
-    if (orderType === "advanced") {
-      // Handle advanced order creation
-      if (!sizeValue || parseFloat(sizeValue) <= 0) {
-        toast({
-          title: "Invalid Size",
-          description: "Please enter a valid order size",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      setIsSubmitting(true);
-      try {
-        await apiRequest("POST", "/api/advanced-orders", {
-          orderType: advancedType,
-          symbol,
-          side: orderSide,
-          totalSize: sizeValue,
-          parameters: {}, // Would be populated from form fields
-          status: "pending",
-        });
-
-        toast({
-          title: "Advanced Order Created",
-          description: `${advancedType.toUpperCase()} order for ${sizeValue} ${symbol} created`,
-        });
-
-        setSizeValue("");
-      } catch (error) {
-        toast({
-          title: "Order Failed",
-          description: error instanceof Error ? error.message : "Failed to create advanced order",
-          variant: "destructive",
-        });
-      } finally {
-        setIsSubmitting(false);
-      }
-    } else {
-      // Handle regular market/limit order
-      console.log("[OrderEntry] Placing order:", {
-        symbol,
-        orderType,
-        side: orderSide,
-        sizeMode,
-        sizeValue,
-        leverage,
-        limitPrice: orderType === "limit" ? limitPrice : undefined,
-        takeProfit: takeProfitEnabled ? takeProfitPrice : undefined,
-        stopLoss: stopLossEnabled ? stopLossPrice : undefined,
+  const handlePlaceOrder = async () => {
+    if (!isConnected) {
+      toast({
+        title: "Wallet Not Connected",
+        description: "Please connect your wallet to trade",
+        variant: "destructive",
       });
+      return;
+    }
 
-      // TODO: Implement actual order placement via API
+    console.log("[OrderEntry] Placing order:", {
+      symbol,
+      orderType,
+      side,
+      amount,
+      limitPrice: orderType === "limit" ? limitPrice : undefined,
+    });
+
+    // TODO: Implement actual order placement
+    toast({
+      title: "Order Placed",
+      description: `${side.toUpperCase()} order for ${amount} ${symbol}`,
+    });
+  };
+
+  const handleSetMidPrice = () => {
+    if (lastPrice > 0) {
+      setLimitPrice(lastPrice.toString());
     }
   };
 
-  const estimatedNotional = sizeMode === "usd" 
-    ? parseFloat(sizeValue) || 0
-    : (parseFloat(sizeValue) || 0) / 100 * 10000; // Placeholder: would use actual account balance
-
-  const estimatedSize = lastPrice > 0 ? estimatedNotional / lastPrice : 0;
+  const handleSliderChange = (value: number[]) => {
+    setSliderValue(value);
+    // Update amount based on slider percentage
+    // TODO: Calculate based on available balance
+  };
 
   return (
-    <div className="h-full p-0.5 flex flex-col">
-      <Tabs value={orderType} onValueChange={(v) => setOrderType(v as "market" | "limit" | "advanced")} className="flex flex-col flex-1">
-          <TabsList className="w-full grid grid-cols-3 h-6 shrink-0">
-            <TabsTrigger value="market" data-testid="tab-market" className="text-[9px] py-0 px-1">
-              Market
-            </TabsTrigger>
-            <TabsTrigger value="limit" data-testid="tab-limit" className="text-[9px] py-0 px-1">
-              Limit
-            </TabsTrigger>
-            <TabsTrigger value="advanced" data-testid="tab-advanced" className="text-[9px] py-0 px-1">
-              Advanced
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="market" className="space-y-0.5 mt-0.5 flex-1 overflow-auto px-0.5">
-              {/* Size Input */}
-              <div className="space-y-0.5">
-                <div className="flex items-center justify-between">
-                  <Label className="text-[9px] font-medium">Size</Label>
-                  <div className="flex items-center gap-0.5">
-                    <Button
-                      variant={sizeMode === "usd" ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setSizeMode("usd")}
-                      className="h-4 w-4 p-0"
-                      data-testid="button-size-usd"
-                    >
-                      <DollarSign className="h-2 w-2" />
-                    </Button>
-                    <Button
-                      variant={sizeMode === "percent" ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setSizeMode("percent")}
-                      className="h-4 w-4 p-0"
-                      data-testid="button-size-percent"
-                    >
-                      <Percent className="h-2 w-2" />
-                    </Button>
-                  </div>
-                </div>
-                <Input
-                  type="number"
-                  placeholder={sizeMode === "usd" ? "USD" : "%"}
-                  value={sizeValue}
-                  onChange={(e) => setSizeValue(e.target.value)}
-                  className="h-6 text-[10px] px-1 py-0"
-                  data-testid="input-size"
-                />
-                <p className="text-[9px] text-muted-foreground leading-none">
-                  ≈ {estimatedSize.toFixed(4)} {symbol.split("-")[0]}
-                </p>
-              </div>
-
-              {/* Leverage Slider */}
-              <div>
-                <LeverageSlider
-                  value={leverage}
-                  onChange={setLeverage}
-                  min={1}
-                  max={maxLeverage}
-                />
-              </div>
-            </TabsContent>
-
-            <TabsContent value="limit" className="space-y-0.5 mt-0.5 flex-1 overflow-auto px-0.5">
-              {/* Limit Price */}
-              <div className="space-y-0.5">
-                <Label className="text-[9px] font-medium">Limit Price</Label>
-                <Input
-                  type="number"
-                  placeholder="Price"
-                  value={limitPrice}
-                  onChange={(e) => setLimitPrice(e.target.value)}
-                  className="h-6 text-[10px] px-1 py-0"
-                  data-testid="input-limit-price"
-                />
-              </div>
-
-              {/* Size Input */}
-              <div className="space-y-0.5">
-                <div className="flex items-center justify-between">
-                  <Label className="text-[9px] font-medium">Size</Label>
-                  <div className="flex items-center gap-0.5">
-                    <Button
-                      variant={sizeMode === "usd" ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setSizeMode("usd")}
-                      className="h-4 w-4 p-0"
-                      data-testid="button-size-usd-limit"
-                    >
-                      <DollarSign className="h-2 w-2" />
-                    </Button>
-                    <Button
-                      variant={sizeMode === "percent" ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setSizeMode("percent")}
-                      className="h-4 w-4 p-0"
-                      data-testid="button-size-percent-limit"
-                    >
-                      <Percent className="h-2 w-2" />
-                    </Button>
-                  </div>
-                </div>
-                <Input
-                  type="number"
-                  placeholder={sizeMode === "usd" ? "USD" : "%"}
-                  value={sizeValue}
-                  onChange={(e) => setSizeValue(e.target.value)}
-                  className="h-6 text-[10px] px-1 py-0"
-                  data-testid="input-size-limit"
-                />
-                <p className="text-[9px] text-muted-foreground leading-none">
-                  ≈ {estimatedSize.toFixed(4)} {symbol.split("-")[0]}
-                </p>
-              </div>
-
-              {/* Leverage Slider */}
-              <div>
-                <LeverageSlider
-                  value={leverage}
-                  onChange={setLeverage}
-                  min={1}
-                  max={maxLeverage}
-                />
-              </div>
-            </TabsContent>
-
-            <TabsContent value="advanced" className="space-y-0.5 mt-0.5 flex-1 overflow-auto px-0.5">
-              {/* Order Type Selector */}
-              <div className="space-y-0.5">
-                <Label className="text-[9px] font-medium">Order Type</Label>
-                <div className="grid grid-cols-4 gap-0.5">
-                  <Button
-                    variant={advancedType === "twap" ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setAdvancedType("twap")}
-                    className="h-6 px-0.5 text-[9px]"
-                    data-testid="button-twap"
-                  >
-                    <Clock className="h-2.5 w-2.5 mr-0.5" />
-                    TWAP
-                  </Button>
-                  <Button
-                    variant={advancedType === "chase" ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setAdvancedType("chase")}
-                    className="h-6 px-0.5 text-[9px]"
-                    data-testid="button-chase"
-                  >
-                    <Target className="h-2.5 w-2.5 mr-0.5" />
-                    Chase
-                  </Button>
-                  <Button
-                    variant={advancedType === "scaled" ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setAdvancedType("scaled")}
-                    className="h-6 px-0.5 text-[9px]"
-                    data-testid="button-scaled"
-                  >
-                    <Layers className="h-2.5 w-2.5 mr-0.5" />
-                    Scaled
-                  </Button>
-                  <Button
-                    variant={advancedType === "iceberg" ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setAdvancedType("iceberg")}
-                    className="h-6 px-0.5 text-[9px]"
-                    data-testid="button-iceberg"
-                  >
-                    <IceCream className="h-2.5 w-2.5 mr-0.5" />
-                    Iceberg
-                  </Button>
-                </div>
-              </div>
-
-              {/* Size Input */}
-              <div className="space-y-0.5">
-                <Label className="text-[9px] font-medium">Total Size</Label>
-                <Input
-                  type="number"
-                  placeholder="USD"
-                  value={sizeValue}
-                  onChange={(e) => setSizeValue(e.target.value)}
-                  className="h-6 text-[10px] px-1 py-0"
-                  data-testid="input-advanced-size"
-                />
-              </div>
-
-              {/* Type-specific compact parameters */}
-              {advancedType === "twap" && (
-                <div className="grid grid-cols-2 gap-0.5">
-                  <div className="space-y-0.5">
-                    <Label className="text-[9px]">Duration (min)</Label>
-                    <Input type="number" defaultValue="30" className="h-6 text-[10px] px-1 py-0" data-testid="input-twap-duration" />
-                  </div>
-                  <div className="space-y-0.5">
-                    <Label className="text-[9px]">Slices</Label>
-                    <Input type="number" defaultValue="10" className="h-6 text-[10px] px-1 py-0" data-testid="input-twap-slices" />
-                  </div>
-                </div>
-              )}
-
-              {advancedType === "chase" && (
-                <div className="grid grid-cols-2 gap-0.5">
-                  <div className="space-y-0.5">
-                    <Label className="text-[9px]">Offset (bps)</Label>
-                    <Input type="number" defaultValue="1" className="h-6 text-[10px] px-1 py-0" data-testid="input-chase-offset" />
-                  </div>
-                  <div className="space-y-0.5">
-                    <Label className="text-[9px]">Max Chases</Label>
-                    <Input type="number" defaultValue="10" className="h-6 text-[10px] px-1 py-0" data-testid="input-chase-max" />
-                  </div>
-                </div>
-              )}
-
-              {advancedType === "scaled" && (
-                <div className="grid grid-cols-2 gap-0.5">
-                  <div className="space-y-0.5">
-                    <Label className="text-[9px]">Levels</Label>
-                    <Input type="number" defaultValue="5" className="h-6 text-[10px] px-1 py-0" data-testid="input-scaled-levels" />
-                  </div>
-                  <div className="space-y-0.5">
-                    <Label className="text-[9px]">Range %</Label>
-                    <Input type="number" defaultValue="5" className="h-6 text-[10px] px-1 py-0" data-testid="input-scaled-range" />
-                  </div>
-                </div>
-              )}
-
-              {advancedType === "iceberg" && (
-                <div className="space-y-0.5">
-                  <div className="space-y-0.5">
-                    <Label className="text-[9px]">Display Size</Label>
-                    <Input type="number" placeholder="Visible amount" className="h-6 text-[10px] px-1 py-0" data-testid="input-iceberg-display" />
-                  </div>
-                </div>
-              )}
-          </TabsContent>
+    <div className="h-full flex flex-col p-1">
+      {/* Tabs */}
+      <Tabs value={orderType} onValueChange={(v) => setOrderType(v as any)} className="flex-shrink-0">
+        <TabsList className="w-full grid grid-cols-3 h-6">
+          <TabsTrigger value="market" className="text-[9px] px-1 py-0">Market</TabsTrigger>
+          <TabsTrigger value="limit" className="text-[9px] px-1 py-0">Limit</TabsTrigger>
+          <TabsTrigger value="scale" className="text-[9px] px-1 py-0">Scale</TabsTrigger>
+        </TabsList>
       </Tabs>
 
-      {/* Order Buttons - Fixed at bottom */}
-      <div className="grid grid-cols-2 gap-0.5 shrink-0 mt-0.5">
+      {/* Buy/Sell Toggle */}
+      <div className="grid grid-cols-2 gap-0.5 mt-1 flex-shrink-0">
         <Button
-          onClick={() => handlePlaceOrder("buy")}
-          disabled={isSubmitting}
-          className="h-6 bg-long hover:bg-long/90 text-background font-semibold text-[10px]"
-          data-testid="button-buy"
+          variant={side === "buy" ? "default" : "outline"}
+          onClick={() => setSide("buy")}
+          className={`h-7 text-[10px] font-semibold ${
+            side === "buy" ? "bg-long hover:bg-long/90 text-background" : ""
+          }`}
+          data-testid="button-buy-long"
         >
-          Buy
+          Buy / Long
         </Button>
         <Button
-          onClick={() => handlePlaceOrder("sell")}
-          disabled={isSubmitting}
-          className="h-6 bg-short hover:bg-short/90 text-background font-semibold text-[10px]"
-          data-testid="button-sell"
+          variant={side === "sell" ? "default" : "outline"}
+          onClick={() => setSide("sell")}
+          className={`h-7 text-[10px] font-semibold ${
+            side === "sell" ? "bg-short hover:bg-short/90 text-background" : ""
+          }`}
+          data-testid="button-sell-short"
         >
-          Sell
+          Sell / Short
         </Button>
+      </div>
+
+      {/* Scrollable Content */}
+      <div className="flex-1 overflow-auto no-scrollbar mt-1 space-y-1">
+        {/* Available / Position Info */}
+        <div className="space-y-0.5">
+          <div className="flex justify-between text-[9px]">
+            <span className="text-secondary">Available to Trade:</span>
+            <span className="font-mono">-</span>
+          </div>
+          <div className="flex justify-between text-[9px]">
+            <span className="text-secondary">Position:</span>
+            <span className="font-mono">-</span>
+          </div>
+        </div>
+
+        {/* Limit Price (for Limit orders) */}
+        {orderType === "limit" && (
+          <div className="space-y-0.5">
+            <Label className="text-[9px] font-medium">Limit Price</Label>
+            <div className="flex gap-0.5">
+              <Input
+                type="number"
+                placeholder="Price"
+                value={limitPrice}
+                onChange={(e) => setLimitPrice(e.target.value)}
+                className="h-6 text-[10px] px-1 py-0 flex-1"
+                data-testid="input-limit-price"
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleSetMidPrice}
+                className="h-6 px-2 text-[9px]"
+                data-testid="button-mid-price"
+              >
+                Mid
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Scale Order Fields */}
+        {orderType === "scale" && (
+          <div className="space-y-1">
+            <div className="space-y-0.5">
+              <Label className="text-[9px] font-medium">Start</Label>
+              <Input
+                type="number"
+                placeholder="0.0"
+                value={scaleStart}
+                onChange={(e) => setScaleStart(e.target.value)}
+                className="h-6 text-[10px] px-1 py-0"
+                data-testid="input-scale-start"
+              />
+            </div>
+            <div className="space-y-0.5">
+              <Label className="text-[9px] font-medium">End</Label>
+              <div className="flex gap-0.5">
+                <Input
+                  type="number"
+                  placeholder="0.0"
+                  value={scaleEnd}
+                  onChange={(e) => setScaleEnd(e.target.value)}
+                  className="h-6 text-[10px] px-1 py-0 flex-1"
+                  data-testid="input-scale-end"
+                />
+                <span className="text-[9px] text-secondary flex items-center px-1">USD</span>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-0.5">
+              <div className="space-y-0.5">
+                <Label className="text-[9px]">Order Count</Label>
+                <Input
+                  type="number"
+                  value={scaleOrderCount}
+                  onChange={(e) => setScaleOrderCount(e.target.value)}
+                  className="h-6 text-[10px] px-1 py-0"
+                  data-testid="input-order-count"
+                />
+              </div>
+              <div className="space-y-0.5">
+                <Label className="text-[9px]">Size Skew</Label>
+                <Input
+                  type="number"
+                  value={scaleSizeSkew}
+                  onChange={(e) => setScaleSizeSkew(e.target.value)}
+                  className="h-6 text-[10px] px-1 py-0"
+                  data-testid="input-size-skew"
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Amount */}
+        <div className="space-y-0.5">
+          <Label className="text-[9px] font-medium">Amount</Label>
+          <div className="flex gap-0.5">
+            <Input
+              type="number"
+              placeholder="0.00000"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              className="h-6 text-[10px] px-1 py-0 flex-1"
+              data-testid="input-amount"
+            />
+            <span className="text-[9px] text-secondary flex items-center px-1">BTC</span>
+          </div>
+        </div>
+
+        {/* Amount Slider */}
+        <div className="flex items-center gap-2 px-0.5">
+          <Slider
+            value={sliderValue}
+            onValueChange={handleSliderChange}
+            max={100}
+            step={1}
+            className="flex-1"
+            data-testid="slider-amount"
+          />
+          <div className="flex items-center gap-1 text-[9px] text-secondary">
+            <span>0</span>
+            <span>%</span>
+          </div>
+        </div>
+
+        {/* Checkboxes */}
+        <div className="space-y-1">
+          <div className="flex items-center gap-1.5">
+            <Checkbox
+              id="reduce-only"
+              checked={reduceOnly}
+              onCheckedChange={(checked) => setReduceOnly(checked as boolean)}
+              data-testid="checkbox-reduce-only"
+            />
+            <label htmlFor="reduce-only" className="text-[9px] cursor-pointer">
+              Reduce Only
+            </label>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <Checkbox
+              id="tpsl"
+              checked={tpslEnabled}
+              onCheckedChange={(checked) => setTpslEnabled(checked as boolean)}
+              data-testid="checkbox-tpsl"
+            />
+            <label htmlFor="tpsl" className="text-[9px] cursor-pointer">
+              Take Profit / Stop Loss
+            </label>
+          </div>
+        </div>
+
+        {/* Advanced Dropdown */}
+        <Collapsible open={advancedOpen} onOpenChange={setAdvancedOpen}>
+          <CollapsibleTrigger className="flex items-center gap-1 text-[9px] hover-elevate p-1 rounded w-full" data-testid="button-advanced-toggle">
+            <span>Advanced</span>
+            <ChevronDown className={`h-3 w-3 transition-transform ${advancedOpen ? "rotate-180" : ""}`} />
+          </CollapsibleTrigger>
+          <CollapsibleContent className="space-y-1 mt-1">
+            <div className="space-y-0.5">
+              <Label className="text-[9px]">Order Type</Label>
+              <Select value={advancedOrderType} onValueChange={setAdvancedOrderType}>
+                <SelectTrigger className="h-6 text-[9px]" data-testid="select-advanced-type">
+                  <SelectValue placeholder="Select type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="stop-limit">Stop Limit</SelectItem>
+                  <SelectItem value="stop-market">Stop Market</SelectItem>
+                  <SelectItem value="take-profit-limit">Take Profit Limit</SelectItem>
+                  <SelectItem value="take-profit-market">Take Profit Market</SelectItem>
+                  <SelectItem value="twap">TWAP</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
+      </div>
+
+      {/* Connect Wallet / Place Order Button */}
+      <div className="mt-1 flex-shrink-0">
+        <Button
+          onClick={handlePlaceOrder}
+          className="w-full h-8 text-[10px] font-semibold bg-primary hover:bg-primary/90"
+          data-testid="button-place-order"
+        >
+          {isConnected ? (side === "buy" ? "Buy" : "Sell") : "Connect Wallet to Trade"}
+        </Button>
+      </div>
+
+      {/* Bottom Info Section */}
+      <div className="mt-1 space-y-px text-[9px] flex-shrink-0">
+        <div className="flex justify-between">
+          <span className="text-secondary">Maximum Order Value:</span>
+          <span className="font-mono">-</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-secondary">Order Value:</span>
+          <span className="font-mono">-</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-secondary">Est. Liq. Price:</span>
+          <span className="font-mono">-</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-secondary">Position Margin:</span>
+          <span className="font-mono">$0.00</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-secondary">Fees:</span>
+          <span className="font-mono">Taker: 0% | Maker: 0%</span>
+        </div>
       </div>
     </div>
   );

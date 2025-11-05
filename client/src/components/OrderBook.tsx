@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface OrderBookProps {
   symbol: string;
@@ -21,6 +22,7 @@ interface OrderBookData {
 
 export default function OrderBook({ symbol }: OrderBookProps) {
   const wsRef = useRef<WebSocket | null>(null);
+  const [activeTab, setActiveTab] = useState("orders");
   const [orderBook, setOrderBook] = useState<OrderBookData>({
     bids: [],
     asks: [],
@@ -168,28 +170,40 @@ export default function OrderBook({ symbol }: OrderBookProps) {
 
   return (
     <div className="h-full flex flex-col">
-      {/* Header with spread */}
-      <div className="px-1 py-0.5 border-b border-border/50" style={{minHeight: '18px'}}>
-        <div className="flex items-center justify-between">
-          <span className="text-[9px] text-secondary leading-none">Spread</span>
-          <Badge 
-            variant="outline" 
-            className="text-[9px] font-mono h-4 px-1"
-            data-testid="badge-spread"
-          >
-            ${orderBook.spread.toFixed(2)} ({orderBook.spreadPercent.toFixed(3)}%)
-          </Badge>
-        </div>
-      </div>
+      {/* Tabs for Orders and Trades */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col h-full">
+        <TabsList className="w-full grid grid-cols-2 h-6 shrink-0">
+          <TabsTrigger value="orders" data-testid="tab-orders" className="text-[9px] py-0 px-1">
+            Orders
+          </TabsTrigger>
+          <TabsTrigger value="trades" data-testid="tab-trades" className="text-[9px] py-0 px-1">
+            Trades
+          </TabsTrigger>
+        </TabsList>
 
-      {/* Column headers */}
-      <div className="grid grid-cols-3 gap-1 px-1 py-0.5 text-[9px] text-secondary border-b border-border/30" style={{minHeight: '14px'}}>
-        <div>Price</div>
-        <div className="text-right">Size</div>
-        <div className="text-right">Total</div>
-      </div>
+        <TabsContent value="orders" className="flex-1 flex flex-col overflow-hidden m-0">
+          {/* Header with spread */}
+          <div className="px-1 py-0.5 border-b border-border/50" style={{minHeight: '18px'}}>
+            <div className="flex items-center justify-between">
+              <span className="text-[9px] text-secondary leading-none">Spread</span>
+              <Badge 
+                variant="outline" 
+                className="text-[9px] font-mono h-4 px-1"
+                data-testid="badge-spread"
+              >
+                ${orderBook.spread.toFixed(2)} ({orderBook.spreadPercent.toFixed(3)}%)
+              </Badge>
+            </div>
+          </div>
 
-      <ScrollArea className="flex-1">
+          {/* Column headers */}
+          <div className="grid grid-cols-3 gap-1 px-1 py-0.5 text-[9px] text-secondary border-b border-border/30" style={{minHeight: '14px'}}>
+            <div>Price</div>
+            <div className="text-right">Size</div>
+            <div className="text-right">Total</div>
+          </div>
+
+          <ScrollArea className="flex-1 no-scrollbar">
         {/* Asks (sell orders) - reverse display so best ask is at bottom */}
         <div className="flex flex-col-reverse">
           {orderBook.asks.map((level, index) => (
@@ -250,14 +264,31 @@ export default function OrderBook({ symbol }: OrderBookProps) {
             </div>
           ))}
         </div>
-      </ScrollArea>
+          </ScrollArea>
 
-      {/* Empty state */}
-      {orderBook.bids.length === 0 && orderBook.asks.length === 0 && (
-        <div className="flex-1 flex items-center justify-center p-1">
-          <p className="text-[9px] text-tertiary">Waiting for order book data...</p>
-        </div>
-      )}
+          {/* Empty state */}
+          {orderBook.bids.length === 0 && orderBook.asks.length === 0 && (
+            <div className="flex-1 flex items-center justify-center p-1">
+              <p className="text-[9px] text-tertiary">Waiting for order book data...</p>
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="trades" className="flex-1 flex flex-col overflow-hidden m-0">
+          {/* Trades table */}
+          <div className="grid grid-cols-3 gap-1 px-1 py-0.5 text-[9px] text-secondary border-b border-border/30" style={{minHeight: '14px'}}>
+            <div>Price</div>
+            <div className="text-right">Size</div>
+            <div className="text-right">Time</div>
+          </div>
+          
+          <ScrollArea className="flex-1 no-scrollbar">
+            <div className="text-[9px] text-tertiary p-2 text-center">
+              Trade history will appear here
+            </div>
+          </ScrollArea>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

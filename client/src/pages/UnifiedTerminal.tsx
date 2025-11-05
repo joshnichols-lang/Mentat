@@ -1174,9 +1174,8 @@ export default function UnifiedTerminal() {
               <ConversationHistory />
             </div>
 
-            {/* Positions & AI Usage */}
-            <div className="p-3 border-t border-border/30 space-y-3 max-h-[35vh] overflow-y-auto shrink-0">
-              <PositionsGrid />
+            {/* AI Usage */}
+            <div className="p-3 border-t border-border/30 shrink-0">
               <AIUsageTracker />
             </div>
           </div>

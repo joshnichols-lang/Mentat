@@ -689,7 +689,7 @@ export default function TradingChart({ symbol, onSymbolChange }: TradingChartPro
       </div>
 
       {/* Chart Container */}
-      <div ref={chartContainerRef} className="flex-1 relative">
+      <div ref={chartContainerRef} className="flex-1 relative no-scrollbar">
         {isLoading && (
           <div className="absolute inset-0 flex items-center justify-center bg-background/50">
             <div className="text-center space-y-2">
