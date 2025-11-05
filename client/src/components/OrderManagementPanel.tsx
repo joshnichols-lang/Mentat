@@ -419,7 +419,7 @@ export default function OrderManagementPanel() {
 
   if (isLoading) {
     return (
-      <Card className="glass-panel">
+      <Card className="bg-card">
         <CardHeader className="pb-3">
           <CardTitle className="text-base">Order Management</CardTitle>
         </CardHeader>
@@ -434,7 +434,7 @@ export default function OrderManagementPanel() {
 
   return (
     <>
-      <Card className="glass-panel">
+      <Card className="bg-card">
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <CardTitle className="text-base">Order Management</CardTitle>

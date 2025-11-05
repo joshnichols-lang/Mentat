@@ -191,7 +191,7 @@ export function AdvancedOrderEntry({ symbol, currentPrice }: AdvancedOrderEntryP
   };
 
   return (
-    <Card className="glass">
+    <Card className="bg-card">
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
@@ -450,7 +450,7 @@ export function AdvancedOrderEntry({ symbol, currentPrice }: AdvancedOrderEntryP
 
         {/* AI Suggestions Display */}
         {aiOptimizationEnabled && aiSuggestions && (
-          <Card className="glass-strong border-primary/20">
+          <Card className="bg-background border-border/50">
             <CardContent className="p-4 space-y-2">
               <div className="flex items-center gap-2 mb-2">
                 <Sparkles className="w-4 h-4 text-primary" />

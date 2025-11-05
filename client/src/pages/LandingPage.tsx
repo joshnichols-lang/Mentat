@@ -225,7 +225,7 @@ export default function LandingPage() {
       {/* Content */}
       <div className="relative z-10">
         {/* Header */}
-        <header className="glass-header border-b border-border/40">
+        <header className="bg-background border-b border-border/50">
           <div className="mx-auto max-w-7xl px-4 py-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <img src={logoUrl} alt="1fox" className="h-10 w-10" />
@@ -298,7 +298,7 @@ export default function LandingPage() {
 
               {/* Authentication Status Indicator */}
               {authStep !== 'idle' && authStep !== 'complete' && !walletCreationFailed && (
-                <Card className="glass max-w-md mx-auto mt-6 p-6 border-border/40" data-testid="card-auth-status">
+                <Card className="bg-card max-w-md mx-auto mt-6 p-6 border-border/50" data-testid="card-auth-status">
                   <div className="flex items-center gap-4">
                     <Loader2 className="h-6 w-6 animate-spin text-primary" />
                     <div className="flex-1 text-left">
@@ -317,7 +317,7 @@ export default function LandingPage() {
 
               {/* Wallet Creation Retry */}
               {walletCreationFailed && (
-                <Card className="glass max-w-md mx-auto mt-6 p-6 border-destructive/40" data-testid="card-wallet-retry">
+                <Card className="bg-card max-w-md mx-auto mt-6 p-6 border-destructive/50" data-testid="card-wallet-retry">
                   <div className="space-y-4">
                     <div>
                       <h3 className="font-semibold text-lg mb-1 text-destructive" data-testid="text-wallet-retry-title">
@@ -341,7 +341,7 @@ export default function LandingPage() {
 
             {/* Feature Cards */}
             <div className="grid md:grid-cols-3 gap-6 pt-12 max-w-5xl mx-auto">
-              <Card className="glass hover-illuminate p-6 border-border/40">
+              <Card className="bg-card hover-elevate p-6 border-border/50">
                 <div className="space-y-3">
                   <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center glow-amber">
                     <TrendingUp className="h-6 w-6 text-primary" />
@@ -353,7 +353,7 @@ export default function LandingPage() {
                 </div>
               </Card>
 
-              <Card className="glass hover-illuminate p-6 border-border/40">
+              <Card className="bg-card hover-elevate p-6 border-border/50">
                 <div className="space-y-3">
                   <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center glow-amber">
                     <Bot className="h-6 w-6 text-primary" />
@@ -365,7 +365,7 @@ export default function LandingPage() {
                 </div>
               </Card>
 
-              <Card className="glass hover-illuminate p-6 border-border/40">
+              <Card className="bg-card hover-elevate p-6 border-border/50">
                 <div className="space-y-3">
                   <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center glow-amber">
                     <Shield className="h-6 w-6 text-primary" />

@@ -153,7 +153,7 @@ export function AdvancedOrdersPanel() {
 
   if (isLoading) {
     return (
-      <Card className="glass">
+      <Card className="bg-card">
         <CardHeader>
           <CardTitle>Advanced Orders</CardTitle>
         </CardHeader>
@@ -168,7 +168,7 @@ export function AdvancedOrdersPanel() {
 
   if (!orders || orders.length === 0) {
     return (
-      <Card className="glass">
+      <Card className="bg-card">
         <CardHeader>
           <CardTitle>Advanced Orders</CardTitle>
         </CardHeader>
@@ -184,7 +184,7 @@ export function AdvancedOrdersPanel() {
   }
 
   return (
-    <Card className="glass">
+    <Card className="bg-card">
       <CardHeader>
         <CardTitle>Advanced Orders ({orders.length})</CardTitle>
       </CardHeader>
@@ -192,7 +192,7 @@ export function AdvancedOrdersPanel() {
         {orders.map((order) => (
           <div
             key={order.id}
-            className="glass-strong rounded-lg p-4 space-y-3"
+            className="bg-background rounded-lg p-4 space-y-3 border border-border/30"
             data-testid={`advanced-order-${order.id}`}
           >
             {/* Header Row */}
