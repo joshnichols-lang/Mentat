@@ -11,10 +11,18 @@ if (!(window as any).__errorHandlersRegistered) {
       event.message === 'Analytics SDK:' &&
       !event.error?.message;
     
-    if (isReplitAnalyticsInitError) {
+    const isNonErrorException = 
+      event.message?.includes('An uncaught exception') ||
+      (!event.error && event.message?.includes('exception'));
+    
+    if (isReplitAnalyticsInitError || isNonErrorException) {
       event.preventDefault();
       event.stopPropagation();
-      console.debug('[1fox] Suppressed Replit Analytics SDK initialization warning (non-critical platform noise)');
+      if (isReplitAnalyticsInitError) {
+        console.debug('[1fox] Suppressed Replit Analytics SDK initialization warning');
+      } else {
+        console.debug('[1fox] Suppressed non-Error exception (already handled in component)');
+      }
       return false;
     }
   });
@@ -24,10 +32,16 @@ if (!(window as any).__errorHandlersRegistered) {
       event.reason?.context === 'AnalyticsSDKApiError' && 
       event.reason?.message === undefined;
     
-    if (isReplitAnalyticsInitError) {
+    const isNonErrorRejection = !event.reason || typeof event.reason !== 'object' || !(event.reason instanceof Error);
+    
+    if (isReplitAnalyticsInitError || isNonErrorRejection) {
       event.preventDefault();
       event.stopPropagation();
-      console.debug('[1fox] Suppressed Replit Analytics SDK promise rejection (non-critical platform noise)');
+      if (isReplitAnalyticsInitError) {
+        console.debug('[1fox] Suppressed Replit Analytics SDK promise rejection');
+      } else {
+        console.debug('[1fox] Suppressed non-Error promise rejection (already handled in component)');
+      }
     }
   });
 }
