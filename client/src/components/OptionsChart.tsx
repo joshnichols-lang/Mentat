@@ -224,7 +224,7 @@ export default function OptionsChart({
       chartRef.current = null;
       candleSeriesRef.current = null;
     };
-  }, [colors, themeName, mode]);
+  }, [colors, mode]);
 
   // Fetch historical candle data and set up WebSocket
   useEffect(() => {
