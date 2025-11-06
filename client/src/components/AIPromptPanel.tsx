@@ -426,13 +426,13 @@ export default function AIPromptPanel() {
                 <TooltipTrigger asChild>
                   <div 
                     className={`h-2 w-2 rounded-full ${
-                      balancesSuccess && !balancesError && balancesData?.success && balancesData?.balances && Object.keys(balancesData.balances).length > 0 ? 'bg-long' : 'bg-muted-foreground/30'
+                      balancesSuccess && !balancesError && balancesData?.success && balancesData?.balances && Object.values(balancesData.balances).some((bal: any) => parseFloat(bal?.balance || '0') > 0) ? 'bg-long' : 'bg-muted-foreground/30'
                     }`}
                     data-testid="status-balance-visible"
                   />
                 </TooltipTrigger>
                 <TooltipContent side="bottom" className="text-xs">
-                  <p>Balance {balancesSuccess && !balancesError && balancesData?.success && balancesData?.balances && Object.keys(balancesData.balances).length > 0 ? 'Visible' : balancesError ? 'Fetch Error' : 'Not Available'}</p>
+                  <p>Balance {balancesSuccess && !balancesError && balancesData?.success && balancesData?.balances && Object.values(balancesData.balances).some((bal: any) => parseFloat(bal?.balance || '0') > 0) ? 'Visible' : balancesError ? 'Fetch Error' : 'No Funds Deposited'}</p>
                 </TooltipContent>
               </Tooltip>
               
