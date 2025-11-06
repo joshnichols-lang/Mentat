@@ -17,7 +17,6 @@ import ThemeToggle from "./ThemeToggle";
 import ThemeSelector from "./ThemeSelector";
 import AgentModeToggle from "./AgentModeToggle";
 import ChainSwitcher from "./ChainSwitcher";
-import { ContactAdmin } from "./ContactAdmin";
 import { DepositModal } from "./DepositModal";
 import { MyWalletsModal } from "./MyWalletsModal";
 import { useAuth } from "@/hooks/use-auth";
@@ -30,7 +29,6 @@ import { HyperliquidExpirationWarning } from "./HyperliquidExpirationWarning";
 export default function Header() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
-  const [contactDialogOpen, setContactDialogOpen] = useState(false);
   const [depositModalOpen, setDepositModalOpen] = useState(false);
   const [walletsModalOpen, setWalletsModalOpen] = useState(false);
   const { disconnect } = useDisconnect();
@@ -189,21 +187,6 @@ export default function Header() {
                 <Button 
                   variant="ghost" 
                   size="icon" 
-                  onClick={() => setContactDialogOpen(true)}
-                  data-testid="button-contact-admin"
-                >
-                  <MessageSquare className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Contact Admin</p>
-              </TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
                   onClick={() => window.open("https://dex.orderly.network/1fox-4617/perp/PERP_ETH_USDC", "_blank")}
                   data-testid="button-dex-trading"
                 >
@@ -294,7 +277,6 @@ export default function Header() {
           </div>
         </TooltipProvider>
       </div>
-        <ContactAdmin open={contactDialogOpen} onOpenChange={setContactDialogOpen} />
         <DepositModal open={depositModalOpen} onOpenChange={setDepositModalOpen} />
         <MyWalletsModal open={walletsModalOpen} onOpenChange={setWalletsModalOpen} />
       </header>
