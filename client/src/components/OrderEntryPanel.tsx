@@ -81,7 +81,7 @@ export default function OrderEntryPanel({ symbol, lastPrice = 0 }: OrderEntryPan
   };
 
   return (
-    <div className="flex h-full min-h-0 flex-col p-1 w-[280px] min-w-[280px] max-w-[280px]">
+    <div className="flex flex-col p-1 w-[280px] min-w-[280px] max-w-[280px] h-[600px] min-h-[600px] max-h-[600px]">
       {/* Tabs - Fixed Header */}
       <Tabs value={orderType} onValueChange={(v) => setOrderType(v as any)} className="flex-shrink-0">
         <TabsList className="w-full grid grid-cols-3 h-6">
@@ -92,7 +92,7 @@ export default function OrderEntryPanel({ symbol, lastPrice = 0 }: OrderEntryPan
       </Tabs>
 
       {/* ALL CONTENT - Scrollable with Fixed Height */}
-      <div className="flex-1 min-h-0 overflow-auto no-scrollbar flex flex-col mt-1">
+      <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden no-scrollbar flex flex-col mt-1">
         {/* Buy/Sell Toggle */}
         <div className="grid grid-cols-2 gap-0.5 flex-shrink-0">
           <Button
