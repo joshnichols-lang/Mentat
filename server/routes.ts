@@ -3234,6 +3234,39 @@ Provide a clear, actionable analysis with specific recommendations. Format your 
     }
   });
 
+  // Portfolio Manager - Multi-strategy coordination endpoint
+  app.get("/api/portfolio-manager/status", requireVerifiedUser, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const { PortfolioManagerService } = await import('./portfolioManager');
+      const portfolioManager = new PortfolioManagerService(storage);
+      
+      // Get total capital from comprehensive portfolio
+      const { balanceService } = await import('./balanceService');
+      let totalCapital = 0;
+      
+      try {
+        const embeddedBalances = await balanceService.getAllBalances(userId, storage);
+        totalCapital = embeddedBalances.totalUsd;
+      } catch (error: any) {
+        console.log('[Portfolio Manager] Could not get total capital:', error.message);
+      }
+      
+      // Get portfolio status with all strategies
+      const portfolioStatus = await portfolioManager.getPortfolioStatus(userId, totalCapital);
+      
+      res.json({
+        success: true,
+        status: portfolioStatus,
+      });
+    } catch (error: any) {
+      console.error("Error fetching portfolio manager status:", error);
+      res.status(500).json({
+        success: false,
+        error: error.message || "Failed to fetch portfolio manager status"
+      });
+    }
+  });
 
   // Create multi-provider API key
   app.post("/api/api-keys", isAuthenticated, async (req, res) => {
@@ -4743,13 +4776,30 @@ Provide a clear, actionable analysis with specific recommendations. Format your 
     try {
       const userId = getUserId(req);
       const { id } = req.params;
-      const { name, type, description, parameters } = req.body;
+      const { 
+        name, 
+        type, 
+        description, 
+        parameters, 
+        status,
+        isActive,
+        allocatedCapitalPercent,
+        maxPositionsPerStrategy,
+        maxLeveragePerStrategy,
+        dailyLossLimitPercent
+      } = req.body;
       
       const updates: any = {};
       if (name !== undefined) updates.name = name;
       if (type !== undefined) updates.type = type;
       if (description !== undefined) updates.description = description;
       if (parameters !== undefined) updates.parameters = parameters;
+      if (status !== undefined) updates.status = status;
+      if (isActive !== undefined) updates.isActive = isActive;
+      if (allocatedCapitalPercent !== undefined) updates.allocatedCapitalPercent = allocatedCapitalPercent;
+      if (maxPositionsPerStrategy !== undefined) updates.maxPositionsPerStrategy = maxPositionsPerStrategy;
+      if (maxLeveragePerStrategy !== undefined) updates.maxLeveragePerStrategy = maxLeveragePerStrategy;
+      if (dailyLossLimitPercent !== undefined) updates.dailyLossLimitPercent = dailyLossLimitPercent;
       
       // Auto-analyze strategy if custom rules were updated
       if (parameters?.customRules) {
@@ -4768,6 +4818,58 @@ Provide a clear, actionable analysis with specific recommendations. Format your 
           // Continue without updating strategyConfig
         }
       }
+      
+      const mode = await storage.updateTradingMode(userId, id, updates);
+      
+      if (!mode) {
+        return res.status(404).json({
+          success: false,
+          error: "Trading mode not found"
+        });
+      }
+      
+      res.json({
+        success: true,
+        mode
+      });
+    } catch (error: any) {
+      console.error("Error updating trading mode:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to update trading mode"
+      });
+    }
+  });
+
+  // PATCH endpoint (alias for PUT for RESTful compliance)
+  app.patch("/api/trading-modes/:id", requireVerifiedUser, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const { id } = req.params;
+      const { 
+        name, 
+        type, 
+        description, 
+        parameters, 
+        status,
+        isActive,
+        allocatedCapitalPercent,
+        maxPositionsPerStrategy,
+        maxLeveragePerStrategy,
+        dailyLossLimitPercent
+      } = req.body;
+      
+      const updates: any = {};
+      if (name !== undefined) updates.name = name;
+      if (type !== undefined) updates.type = type;
+      if (description !== undefined) updates.description = description;
+      if (parameters !== undefined) updates.parameters = parameters;
+      if (status !== undefined) updates.status = status;
+      if (isActive !== undefined) updates.isActive = isActive;
+      if (allocatedCapitalPercent !== undefined) updates.allocatedCapitalPercent = allocatedCapitalPercent;
+      if (maxPositionsPerStrategy !== undefined) updates.maxPositionsPerStrategy = maxPositionsPerStrategy;
+      if (maxLeveragePerStrategy !== undefined) updates.maxLeveragePerStrategy = maxLeveragePerStrategy;
+      if (dailyLossLimitPercent !== undefined) updates.dailyLossLimitPercent = dailyLossLimitPercent;
       
       const mode = await storage.updateTradingMode(userId, id, updates);
       
