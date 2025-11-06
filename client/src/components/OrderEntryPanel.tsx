@@ -345,11 +345,52 @@ export default function OrderEntryPanel({ symbol, lastPrice = 0 }: OrderEntryPan
       limitPrice: orderType === "limit" ? limitPrice : undefined,
     });
 
-    // TODO: Implement actual market/limit order placement
-    toast({
-      title: "Order Placed",
-      description: `${side.toUpperCase()} ${orderType} order for ${amount} ${symbol}`,
-    });
+    try {
+      // Validate limit price for limit orders
+      if (orderType === "limit") {
+        if (!limitPrice || parseFloat(limitPrice) <= 0) {
+          toast({
+            title: "Invalid Limit Price",
+            description: "Please enter a valid limit price",
+            variant: "destructive",
+          });
+          return;
+        }
+      }
+
+      // Extract coin symbol (remove -PERP or -USD suffix if present)
+      const coin = symbol.replace("-PERP", "").replace("-USD", "");
+
+      // Prepare order parameters
+      const orderParams = {
+        coin,
+        is_buy: side === "buy",
+        sz: parseFloat(amount),
+        order_type: orderType,
+        limit_px: orderType === "limit" ? parseFloat(limitPrice) : undefined,
+        reduce_only: reduceOnly,
+      };
+
+      // Place order via API
+      const response = await apiRequest("POST", "/api/hyperliquid/order", orderParams);
+
+      toast({
+        title: "Order Placed Successfully",
+        description: `${side.toUpperCase()} ${orderType} order for ${amount} ${coin}`,
+      });
+
+      // Reset form
+      setAmount("");
+      setLimitPrice("");
+      setReduceOnly(false);
+    } catch (error: any) {
+      console.error("[OrderEntry] Order failed:", error);
+      toast({
+        title: "Order Failed",
+        description: error.message || "Failed to place order",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleSetMidPrice = () => {
