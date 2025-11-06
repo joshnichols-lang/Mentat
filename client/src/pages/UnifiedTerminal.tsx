@@ -23,6 +23,11 @@ import { TradeDistributionDonut } from "@/components/TradeDistributionDonut";
 import { CumulativeReturnsChart } from "@/components/CumulativeReturnsChart";
 import { DrawdownChart } from "@/components/DrawdownChart";
 import { PositionROEChart } from "@/components/PositionROEChart";
+import { RecentTradesTable } from "@/components/RecentTradesTable";
+import { WinLossStats } from "@/components/WinLossStats";
+import { ExchangeBreakdown } from "@/components/ExchangeBreakdown";
+import { TopPerformingAssets } from "@/components/TopPerformingAssets";
+import { AIInsightsPanel } from "@/components/AIInsightsPanel";
 import TradingChart from "@/components/TradingChart";
 import OptionsChart from "@/components/OptionsChart";
 import OptionsStrategyBuilder from "@/components/OptionsStrategyBuilder";
@@ -967,14 +972,19 @@ function AnalyticsInterface() {
     }));
   }, [multiExchangePositions]);
 
-  const wins = 95;
-  const losses = 42;
-  const breakeven = 5;
-
   return (
     <div className="flex-1 overflow-auto p-4 space-y-4">
       {/* Unified Portfolio Overview */}
       <PortfolioOverview />
+
+      {/* Two Column Layout for Key Metrics */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Win/Loss Statistics */}
+        <WinLossStats />
+
+        {/* Top Performing Assets */}
+        <TopPerformingAssets />
+      </div>
 
       {/* Portfolio Performance Chart */}
       {portfolioChartData.length > 0 && (
@@ -985,18 +995,29 @@ function AnalyticsInterface() {
         />
       )}
 
-      {/* Cumulative Returns vs Benchmark */}
-      {cumulativeReturnsData.length > 0 && (
-        <CumulativeReturnsChart data={cumulativeReturnsData} />
-      )}
+      {/* Three Column Layout for Charts */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* Cumulative Returns vs Benchmark */}
+        {cumulativeReturnsData.length > 0 && (
+          <div className="lg:col-span-2">
+            <CumulativeReturnsChart data={cumulativeReturnsData} />
+          </div>
+        )}
 
-      {/* Drawdown Chart */}
-      {drawdownData.length > 0 && (
-        <DrawdownChart data={drawdownData} />
-      )}
+        {/* Sharpe Ratio Gauge */}
+        <SharpeGauge value={sharpeRatio} />
+      </div>
 
-      {/* Sharpe Ratio Gauge */}
-      <SharpeGauge value={sharpeRatio} />
+      {/* Two Column Layout for Drawdown & Exchange */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Drawdown Chart */}
+        {drawdownData.length > 0 && (
+          <DrawdownChart data={drawdownData} />
+        )}
+
+        {/* Exchange Distribution */}
+        <ExchangeBreakdown />
+      </div>
 
       {/* Margin Usage Progress Bar */}
       {accountValue > 0 && (
@@ -1008,9 +1029,6 @@ function AnalyticsInterface() {
         />
       )}
 
-      {/* Trade Distribution */}
-      <TradeDistributionDonut wins={wins} losses={losses} breakeven={breakeven} />
-
       {/* Position ROE Chart */}
       {positionROEData.length > 0 && (
         <div className="bg-card border border-border/50 rounded-lg p-4">
@@ -1021,6 +1039,15 @@ function AnalyticsInterface() {
           <PositionROEChart data={positionROEData} />
         </div>
       )}
+
+      {/* Two Column Layout for Insights & Recent Trades */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* AI Insights */}
+        <AIInsightsPanel />
+
+        {/* Recent Trades Table */}
+        <RecentTradesTable />
+      </div>
     </div>
   );
 }
