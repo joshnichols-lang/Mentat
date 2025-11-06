@@ -81,8 +81,8 @@ export default function OrderEntryPanel({ symbol, lastPrice = 0 }: OrderEntryPan
   };
 
   return (
-    <div className="flex h-full min-h-0 flex-col p-1">
-      {/* Tabs */}
+    <div className="flex h-full min-h-0 flex-col p-1 w-[280px] min-w-[280px] max-w-[280px]">
+      {/* Tabs - Fixed Header */}
       <Tabs value={orderType} onValueChange={(v) => setOrderType(v as any)} className="flex-shrink-0">
         <TabsList className="w-full grid grid-cols-3 h-6">
           <TabsTrigger value="market" className="text-[9px] px-1 py-0">Market</TabsTrigger>
@@ -91,32 +91,33 @@ export default function OrderEntryPanel({ symbol, lastPrice = 0 }: OrderEntryPan
         </TabsList>
       </Tabs>
 
-      {/* Buy/Sell Toggle */}
-      <div className="grid grid-cols-2 gap-0.5 mt-1 flex-shrink-0">
-        <Button
-          variant={side === "buy" ? "default" : "outline"}
-          onClick={() => setSide("buy")}
-          className={`h-7 text-[10px] font-semibold ${
-            side === "buy" ? "bg-long hover:bg-long/90 text-background" : ""
-          }`}
-          data-testid="button-buy-long"
-        >
-          Buy / Long
-        </Button>
-        <Button
-          variant={side === "sell" ? "default" : "outline"}
-          onClick={() => setSide("sell")}
-          className={`h-7 text-[10px] font-semibold ${
-            side === "sell" ? "bg-short hover:bg-short/90 text-background" : ""
-          }`}
-          data-testid="button-sell-short"
-        >
-          Sell / Short
-        </Button>
-      </div>
+      {/* ALL CONTENT - Scrollable with Fixed Height */}
+      <div className="flex-1 min-h-0 overflow-auto no-scrollbar flex flex-col mt-1">
+        {/* Buy/Sell Toggle */}
+        <div className="grid grid-cols-2 gap-0.5 flex-shrink-0">
+          <Button
+            variant={side === "buy" ? "default" : "outline"}
+            onClick={() => setSide("buy")}
+            className={`h-7 text-[10px] font-semibold ${
+              side === "buy" ? "bg-long hover:bg-long/90 text-background" : ""
+            }`}
+            data-testid="button-buy-long"
+          >
+            Buy / Long
+          </Button>
+          <Button
+            variant={side === "sell" ? "default" : "outline"}
+            onClick={() => setSide("sell")}
+            className={`h-7 text-[10px] font-semibold ${
+              side === "sell" ? "bg-short hover:bg-short/90 text-background" : ""
+            }`}
+            data-testid="button-sell-short"
+          >
+            Sell / Short
+          </Button>
+        </div>
 
-      {/* Scrollable Content - FIXED HEIGHT */}
-      <div className="flex-1 min-h-0 overflow-auto no-scrollbar mt-1 space-y-1">
+        <div className="space-y-1 mt-1">
         {/* Available / Position Info */}
         <div className="space-y-0.5">
           <div className="flex justify-between text-[9px]">
@@ -290,40 +291,41 @@ export default function OrderEntryPanel({ symbol, lastPrice = 0 }: OrderEntryPan
             </div>
           </CollapsibleContent>
         </Collapsible>
-      </div>
 
-      {/* Connect Wallet / Place Order Button */}
-      <div className="mt-1 flex-shrink-0">
-        <Button
-          onClick={handlePlaceOrder}
-          className="w-full h-8 text-[10px] font-semibold bg-primary hover:bg-primary/90"
-          data-testid="button-place-order"
-        >
-          {isConnected ? (side === "buy" ? "Buy" : "Sell") : "Connect Wallet to Trade"}
-        </Button>
-      </div>
+        {/* Connect Wallet / Place Order Button */}
+        <div className="mt-1 flex-shrink-0">
+          <Button
+            onClick={handlePlaceOrder}
+            className="w-full h-8 text-[10px] font-semibold bg-primary hover:bg-primary/90"
+            data-testid="button-place-order"
+          >
+            {isConnected ? (side === "buy" ? "Buy" : "Sell") : "Connect Wallet to Trade"}
+          </Button>
+        </div>
 
-      {/* Bottom Info Section */}
-      <div className="mt-1 space-y-px text-[9px] flex-shrink-0">
-        <div className="flex justify-between">
-          <span className="text-secondary">Maximum Order Value:</span>
-          <span className="font-mono">-</span>
+        {/* Bottom Info Section */}
+        <div className="mt-1 space-y-px text-[9px] flex-shrink-0">
+          <div className="flex justify-between">
+            <span className="text-secondary">Maximum Order Value:</span>
+            <span className="font-mono">-</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-secondary">Order Value:</span>
+            <span className="font-mono">-</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-secondary">Est. Liq. Price:</span>
+            <span className="font-mono">-</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-secondary">Position Margin:</span>
+            <span className="font-mono">$0.00</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-secondary">Fees:</span>
+            <span className="font-mono">Taker: 0% | Maker: 0%</span>
+          </div>
         </div>
-        <div className="flex justify-between">
-          <span className="text-secondary">Order Value:</span>
-          <span className="font-mono">-</span>
-        </div>
-        <div className="flex justify-between">
-          <span className="text-secondary">Est. Liq. Price:</span>
-          <span className="font-mono">-</span>
-        </div>
-        <div className="flex justify-between">
-          <span className="text-secondary">Position Margin:</span>
-          <span className="font-mono">$0.00</span>
-        </div>
-        <div className="flex justify-between">
-          <span className="text-secondary">Fees:</span>
-          <span className="font-mono">Taker: 0% | Maker: 0%</span>
         </div>
       </div>
     </div>
