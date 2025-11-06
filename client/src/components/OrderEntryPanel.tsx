@@ -365,41 +365,44 @@ export default function OrderEntryPanel({ symbol, lastPrice = 0 }: OrderEntryPan
   };
 
   return (
-    <div className="flex flex-col p-1 w-full h-[600px] min-h-[600px] max-h-[600px]">
+    <div className="flex flex-col p-1 w-full h-full">
       {/* Order Type Selection - Fixed Header */}
       <div className="flex-shrink-0 space-y-0.5">
-        {/* Market/Limit Tabs */}
-        <Tabs value={orderType} onValueChange={(v) => setOrderType(v as any)}>
-          <TabsList className="w-full grid grid-cols-2 h-6">
-            <TabsTrigger value="market" className="text-[9px] px-1 py-0" data-testid="tab-market">Market</TabsTrigger>
-            <TabsTrigger value="limit" className="text-[9px] px-1 py-0" data-testid="tab-limit">Limit</TabsTrigger>
-          </TabsList>
-        </Tabs>
-        
-        {/* Advanced Order Type Dropdown */}
-        <div className="space-y-0.5">
-          <Label className="text-[9px] font-medium">Advanced</Label>
-          <Select value={advancedOrderType} onValueChange={setAdvancedOrderType}>
-            <SelectTrigger className="h-6 text-[9px]" data-testid="select-advanced-type">
-              <SelectValue placeholder="None" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">None</SelectItem>
-              <SelectItem value="twap">TWAP</SelectItem>
-              <SelectItem value="limit_chase">Limit Chase</SelectItem>
-              <SelectItem value="scaled">Scaled/Ladder</SelectItem>
-              <SelectItem value="iceberg">Iceberg</SelectItem>
-              <SelectItem value="oco">OCO</SelectItem>
-              <SelectItem value="trailing_tp">Trailing TP</SelectItem>
-              <SelectItem value="grid">Grid</SelectItem>
-              <SelectItem value="conditional">Conditional</SelectItem>
-            </SelectContent>
-          </Select>
+        {/* Market/Limit Tabs + Advanced Dropdown - All in one row */}
+        <div className="flex gap-0.5 items-end">
+          <div className="flex-1">
+            <Tabs value={orderType} onValueChange={(v) => setOrderType(v as any)}>
+              <TabsList className="w-full grid grid-cols-2 h-6">
+                <TabsTrigger value="market" className="text-[9px] px-1 py-0" data-testid="tab-market">Market</TabsTrigger>
+                <TabsTrigger value="limit" className="text-[9px] px-1 py-0" data-testid="tab-limit">Limit</TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
+          
+          {/* Advanced Order Type Dropdown - Inline */}
+          <div className="flex-1">
+            <Select value={advancedOrderType} onValueChange={setAdvancedOrderType}>
+              <SelectTrigger className="h-6 text-[9px]" data-testid="select-advanced-type">
+                <SelectValue placeholder="Advanced" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">None</SelectItem>
+                <SelectItem value="twap">TWAP</SelectItem>
+                <SelectItem value="limit_chase">Limit Chase</SelectItem>
+                <SelectItem value="scaled">Scaled/Ladder</SelectItem>
+                <SelectItem value="iceberg">Iceberg</SelectItem>
+                <SelectItem value="oco">OCO</SelectItem>
+                <SelectItem value="trailing_tp">Trailing TP</SelectItem>
+                <SelectItem value="grid">Grid</SelectItem>
+                <SelectItem value="conditional">Conditional</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </div>
 
-      {/* ALL CONTENT - Scrollable with Fixed Height */}
-      <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden no-scrollbar flex flex-col mt-1">
+      {/* ALL CONTENT - No scrolling */}
+      <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden no-scrollbar flex flex-col mt-0.5">
         {/* Buy/Sell Toggle */}
         <div className="grid grid-cols-2 gap-0.5 flex-shrink-0">
           <Button
@@ -709,7 +712,7 @@ export default function OrderEntryPanel({ symbol, lastPrice = 0 }: OrderEntryPan
               className="h-6 text-[10px] px-1 py-0 flex-1"
               data-testid="input-amount"
             />
-            <span className="text-[9px] text-secondary flex items-center px-1">BTC</span>
+            <span className="text-[9px] text-secondary flex items-center px-1">{symbol}</span>
           </div>
         </div>
 
