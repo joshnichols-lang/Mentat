@@ -28,7 +28,7 @@ export default function OrderEntryPanel({ symbol, lastPrice = 0 }: OrderEntryPan
   const [tpslEnabled, setTpslEnabled] = useState(false);
   
   // Advanced order type state
-  const [advancedOrderType, setAdvancedOrderType] = useState<string>("");
+  const [advancedOrderType, setAdvancedOrderType] = useState<string>("none");
   
   // TWAP parameters
   const [twapDuration, setTwapDuration] = useState("60");
@@ -81,7 +81,7 @@ export default function OrderEntryPanel({ symbol, lastPrice = 0 }: OrderEntryPan
     }
 
     // Handle advanced orders
-    if (advancedOrderType) {
+    if (advancedOrderType && advancedOrderType !== "none") {
       try {
         let parameters: any = {};
 
@@ -384,7 +384,7 @@ export default function OrderEntryPanel({ symbol, lastPrice = 0 }: OrderEntryPan
               <SelectValue placeholder="None" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">None</SelectItem>
+              <SelectItem value="none">None</SelectItem>
               <SelectItem value="twap">TWAP</SelectItem>
               <SelectItem value="limit_chase">Limit Chase</SelectItem>
               <SelectItem value="scaled">Scaled/Ladder</SelectItem>
@@ -689,7 +689,7 @@ export default function OrderEntryPanel({ symbol, lastPrice = 0 }: OrderEntryPan
           </div>
         )}
 
-        {advancedOrderType && !["twap", "limit_chase", "scaled", "iceberg"].includes(advancedOrderType) && (
+        {advancedOrderType && advancedOrderType !== "none" && !["twap", "limit_chase", "scaled", "iceberg"].includes(advancedOrderType) && (
           <div className="p-2 border border-border rounded">
             <div className="text-[9px] text-secondary text-center">
               {advancedOrderType.toUpperCase()} order type coming soon
