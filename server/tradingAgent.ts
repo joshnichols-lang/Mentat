@@ -24,6 +24,35 @@ interface TradingAction {
   exitStrategy?: string;
   triggerPrice?: string;
   orderId?: number;
+  
+  // Advanced Order Types (optional)
+  advancedOrderType?: "twap" | "scaled" | "limit_chase" | "iceberg";
+  
+  // TWAP Parameters
+  twapDurationMinutes?: number;
+  twapSlices?: number;
+  twapPriceLimit?: string;
+  twapRandomize?: boolean;
+  
+  // Scaled Order Parameters
+  scaledLevels?: number;
+  scaledPriceStart?: string;
+  scaledPriceEnd?: string;
+  scaledDistribution?: "linear" | "geometric";
+  
+  // Limit Chase Parameters
+  chaseOffset?: number;
+  chaseMaxChases?: number;
+  chaseIntervalSeconds?: number;
+  chasePriceLimit?: string;
+  chaseGiveBehavior?: "cancel" | "market" | "wait";
+  
+  // Iceberg Parameters
+  icebergDisplaySize?: string;
+  icebergTotalSize?: string;
+  icebergPriceLimit?: string;
+  icebergRefreshBehavior?: "immediate" | "delayed";
+  icebergRefreshDelaySeconds?: number;
 }
 
 interface TradingStrategy {
@@ -353,6 +382,122 @@ Each action must have:
   "triggerPrice": "43500" [REQUIRED for stop_loss/take_profit],
   "orderId": 12345 [REQUIRED for cancel_order]
 }
+
+ADVANCED ORDER TYPES:
+When users request sophisticated execution (DCA, scaling into positions, chasing markets, hiding size), use advanced order types instead of simple buy/sell:
+
+1. **TWAP (Time-Weighted Average Price)** - For DCA or spreading execution over time
+   Natural language patterns: "DCA into...", "buy over the next X hours", "average in over time"
+   Example: "DCA $5000 into SOL over 4 hours"
+   {
+     "action": "buy",
+     "symbol": "SOL-PERP",
+     "side": "long",
+     "size": "50",  // Total size
+     "leverage": 1,
+     "advancedOrderType": "twap",
+     "twapDurationMinutes": 240,
+     "twapSlices": 20,
+     "twapRandomize": true,  // Prevents gaming
+     "twapPriceLimit": "105.50",  // Optional: won't buy above this
+     "reasoning": "DCA strategy to reduce market impact",
+     "expectedEntry": "100.00",
+     "exitCriteria": "2% stop loss",
+     "expectedRoi": "8%",
+     "stopLossReasoning": "Exit below support",
+     "takeProfitReasoning": "Take profit at resistance",
+     "exitStrategy": "Scale out if target missed"
+   }
+
+2. **SCALED/LADDER ORDERS** - For accumulating positions across a price range with weighted distribution
+   Natural language patterns: "scale into...", "ladder orders between X and Y", "weighted toward...", "accumulate between..."
+   Example: "Scale $20k into BTC between 97000-100000 in 20 orders weighted toward 97000 with 2x leverage"
+   {
+     "action": "buy",
+     "symbol": "BTC-PERP",
+     "side": "long",
+     "size": "0.4",  // Total size across all levels
+     "leverage": 2,
+     "advancedOrderType": "scaled",
+     "scaledLevels": 20,
+     "scaledPriceStart": "97000",  // Lower price (more orders here if geometric)
+     "scaledPriceEnd": "100000",   // Higher price
+     "scaledDistribution": "geometric",  // "geometric" = more at start, "linear" = equal distribution
+     "reasoning": "Accumulate BTC with more size at lower prices",
+     "expectedEntry": "98000",
+     "exitCriteria": "Below 96000",
+     "expectedRoi": "15%",
+     "stopLossReasoning": "Exit if breaks below accumulation zone",
+     "takeProfitReasoning": "Target 112k resistance",
+     "exitStrategy": "Trail profits above 105k"
+   }
+   
+   Distribution types:
+   - "linear": Equal size at each level (e.g., 20 orders × $1000 each)
+   - "geometric": More size at lower prices for longs (or higher prices for shorts)
+   
+   ⚠️ IMPORTANT for "weighted toward" requests:
+   - User says "weighted toward 97000" + buying → use "geometric" with priceStart="97000", priceEnd="100000"
+   - User says "weighted toward 100000" + buying → use "geometric" with priceStart="100000", priceEnd="97000"
+
+3. **LIMIT CHASE** - For aggressively pursuing best price while staying in orderbook
+   Natural language patterns: "chase the market", "stay at front of book", "aggressive limit order"
+   Example: "Chase into 100 ETH long, max 5 adjustments"
+   {
+     "action": "buy",
+     "symbol": "ETH-PERP",
+     "side": "long",
+     "size": "100",
+     "leverage": 3,
+     "advancedOrderType": "limit_chase",
+     "chaseOffset": 1,  // Ticks from best bid (1 = just ahead)
+     "chaseMaxChases": 5,
+     "chaseIntervalSeconds": 3,
+     "chaseGiveBehavior": "cancel",  // cancel | market | wait
+     "chasePriceLimit": "2550",  // Optional: don't chase above this
+     "reasoning": "Aggressive entry while avoiding market order slippage",
+     "expectedEntry": "2500",
+     "exitCriteria": "2% stop",
+     "expectedRoi": "6%",
+     "stopLossReasoning": "Break of support",
+     "takeProfitReasoning": "Resistance target",
+     "exitStrategy": "Trail if momentum continues"
+   }
+
+4. **ICEBERG** - For hiding true position size to prevent market impact
+   Natural language patterns: "hide my size", "iceberg order", "show small size"
+   Example: "Buy 500 ETH but only show 50 at a time"
+   {
+     "action": "buy",
+     "symbol": "ETH-PERP",
+     "side": "long",
+     "size": "500",  // Total size
+     "leverage": 2,
+     "advancedOrderType": "iceberg",
+     "icebergDisplaySize": "50",  // Visible size
+     "icebergTotalSize": "500",   // Total hidden size
+     "icebergPriceLimit": "2500", // Limit price
+     "icebergRefreshBehavior": "delayed",
+     "icebergRefreshDelaySeconds": 5,
+     "reasoning": "Large order with minimal market impact",
+     "expectedEntry": "2500",
+     "exitCriteria": "2450 stop",
+     "expectedRoi": "5%",
+     "stopLossReasoning": "Support break",
+     "takeProfitReasoning": "Resistance target",
+     "exitStrategy": "Scale out on strength"
+   }
+
+🎯 WHEN TO USE ADVANCED ORDERS:
+- TWAP: User mentions time ("over 4 hours"), DCA, spreading execution
+- Scaled: User mentions price range ("between X and Y"), ladder, accumulation, weighted distribution
+- Limit Chase: User wants best price but aggressive ("chase", "stay at front")
+- Iceberg: Large size + hide intent ("don't move market", "hide size")
+
+⚠️ ADVANCED ORDER PROTECTIVE BRACKETS:
+- TWAP, Scaled, Limit Chase, Iceberg still require stop_loss and take_profit actions
+- These apply to the TOTAL position once fully executed
+- Include them in the same actions array
 
 MULTI-EXCHANGE TRADING:
 - Hyperliquid (default): All trades execute on Hyperliquid unless specified otherwise
