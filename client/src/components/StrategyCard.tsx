@@ -43,11 +43,9 @@ export function StrategyCard({ strategy, allocation, onEdit }: StrategyCardProps
 
   const updateStatusMutation = useMutation({
     mutationFn: async (newStatus: 'active' | 'paused' | 'stopped') => {
-      const response = await apiRequest("PATCH", `/api/trading-modes/${strategy.id}`, {
+      return await apiRequest("POST", `/api/trading-modes/${strategy.id}/status`, {
         status: newStatus,
-        isActive: newStatus === 'active' ? 1 : 0,
       });
-      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/trading-modes'] });

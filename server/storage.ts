@@ -165,6 +165,7 @@ export interface IStorage {
   getActiveTradingMode(userId: string): Promise<TradingMode | undefined>;
   updateTradingMode(userId: string, id: string, updates: Partial<InsertTradingMode>): Promise<TradingMode | undefined>;
   setActiveTradingMode(userId: string, modeId: string): Promise<TradingMode | undefined>;
+  toggleStrategyStatus(userId: string, modeId: string, newStatus: string): Promise<TradingMode | undefined>;
   deactivateAllTradingModes(userId: string): Promise<void>;
   deleteTradingMode(userId: string, id: string): Promise<void>;
   
@@ -1231,14 +1232,23 @@ export class DbStorage implements IStorage {
   }
 
   async setActiveTradingMode(userId: string, modeId: string): Promise<TradingMode | undefined> {
-    // Deactivate all other modes for this user
+    // For AI conversation context: Deactivate all other modes for this user
     await db.update(tradingModes)
       .set({ isActive: 0, updatedAt: new Date() })
       .where(eq(tradingModes.userId, userId));
     
-    // Activate the selected mode
+    // Activate the selected mode for AI conversation
     const result = await db.update(tradingModes)
       .set({ isActive: 1, updatedAt: new Date() })
+      .where(withUserFilter(tradingModes, userId, eq(tradingModes.id, modeId)))
+      .returning();
+    return result[0];
+  }
+
+  async toggleStrategyStatus(userId: string, modeId: string, newStatus: string): Promise<TradingMode | undefined> {
+    // For multi-strategy execution: Toggle status without affecting isActive
+    const result = await db.update(tradingModes)
+      .set({ status: newStatus, updatedAt: new Date() })
       .where(withUserFilter(tradingModes, userId, eq(tradingModes.id, modeId)))
       .returning();
     return result[0];

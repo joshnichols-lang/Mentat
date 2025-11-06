@@ -4920,6 +4920,58 @@ Provide a clear, actionable analysis with specific recommendations. Format your 
     }
   });
 
+  // Toggle strategy status (active/paused/stopped) for multi-strategy execution
+  app.post("/api/trading-modes/:id/status", requireVerifiedUser, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const { id } = req.params;
+      const { status } = req.body;
+
+      // Validate status
+      if (!['active', 'paused', 'stopped'].includes(status)) {
+        return res.status(400).json({
+          success: false,
+          error: "Invalid status. Must be 'active', 'paused', or 'stopped'"
+        });
+      }
+
+      // Check if user is at max active strategies
+      if (status === 'active') {
+        const allModes = await storage.getTradingModes(userId);
+        const activeCount = allModes.filter(m => m.status === 'active' && m.id !== id).length;
+        const user = await storage.getUser(userId);
+        const maxActive = user?.maxActiveStrategies || 3;
+
+        if (activeCount >= maxActive) {
+          return res.status(400).json({
+            success: false,
+            error: `Maximum ${maxActive} active strategies allowed. Please pause or stop another strategy first.`
+          });
+        }
+      }
+
+      const mode = await storage.toggleStrategyStatus(userId, id, status);
+      
+      if (!mode) {
+        return res.status(404).json({
+          success: false,
+          error: "Trading mode not found"
+        });
+      }
+      
+      res.json({
+        success: true,
+        mode
+      });
+    } catch (error: any) {
+      console.error("Error toggling strategy status:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to toggle strategy status"
+      });
+    }
+  });
+
   app.post("/api/trading-modes/deactivate-all", requireVerifiedUser, async (req, res) => {
     try {
       const userId = getUserId(req);
