@@ -81,7 +81,7 @@ export default function OrderEntryPanel({ symbol, lastPrice = 0 }: OrderEntryPan
   };
 
   return (
-    <div className="flex flex-col p-1 w-[280px] min-w-[280px] max-w-[280px] h-[600px] min-h-[600px] max-h-[600px]">
+    <div className="flex flex-col p-1 w-full h-[600px] min-h-[600px] max-h-[600px]">
       {/* Tabs - Fixed Header */}
       <Tabs value={orderType} onValueChange={(v) => setOrderType(v as any)} className="flex-shrink-0">
         <TabsList className="w-full grid grid-cols-3 h-6">
