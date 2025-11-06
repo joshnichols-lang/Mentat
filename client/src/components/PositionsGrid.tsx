@@ -199,7 +199,7 @@ export default function PositionsGrid() {
       </div>
       <div className="space-y-2">
         {positions.map((position, idx) => {
-          const side = position.side.toLowerCase();
+          const side = position.side?.toLowerCase() || "";
           const absSize = parseFloat(position.size);
           const entryPrice = parseFloat(position.entryPrice || "0");
           const currentPrice = parseFloat(position.currentPrice || position.entryPrice || "0");

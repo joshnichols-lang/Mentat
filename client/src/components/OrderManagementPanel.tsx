@@ -334,7 +334,7 @@ export default function OrderManagementPanel() {
   };
 
   const OrderRow = ({ order, isDragging }: { order: Order; isDragging: boolean }) => {
-    const isBuy = order.side.toLowerCase() === "buy";
+    const isBuy = order.side?.toLowerCase() === "buy";
     const price = dragState?.orderId === order.oid 
       ? dragState.currentPrice 
       : parseFloat(order.triggerPx || order.limitPx);
@@ -521,7 +521,7 @@ export default function OrderManagementPanel() {
               ) : (
                 advancedOrders.map((order: any) => {
                   const progress = parseFloat(order.progress || "0");
-                  const isBuy = order.side.toLowerCase() === "buy";
+                  const isBuy = order.side?.toLowerCase() === "buy";
                   const orderIcon = order.orderType === "twap" ? <Clock className="w-3 h-3" /> :
                                    order.orderType === "limit_chase" ? <Target className="w-3 h-3" /> :
                                    order.orderType === "scaled" ? <Layers className="w-3 h-3" /> :

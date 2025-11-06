@@ -147,7 +147,7 @@ export function MyWallets() {
               <div
                 key={wallet.label}
                 className="rounded-lg border p-4 space-y-2 hover-elevate"
-                data-testid={`wallet-${wallet.label.toLowerCase().replace(/\s+/g, '-')}`}
+                data-testid={`wallet-${wallet.label?.toLowerCase().replace(/\s+/g, '-') || 'unknown'}`}
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -173,7 +173,7 @@ export function MyWallets() {
                   variant="ghost"
                   size="sm"
                   onClick={() => copyAddress(wallet.address, wallet.label)}
-                  data-testid={`button-copy-${wallet.label.toLowerCase().replace(/\s+/g, '-')}`}
+                  data-testid={`button-copy-${wallet.label?.toLowerCase().replace(/\s+/g, '-') || 'unknown'}`}
                 >
                   {copiedAddress === wallet.address ? (
                     <Check className="h-4 w-4 text-green-500" />
@@ -184,7 +184,7 @@ export function MyWallets() {
                 </div>
                 <div 
                   className="font-mono text-xs break-all bg-muted p-2 rounded"
-                  data-testid={`text-address-${wallet.label.toLowerCase().replace(/\s+/g, '-')}`}
+                  data-testid={`text-address-${wallet.label?.toLowerCase().replace(/\s+/g, '-') || 'unknown'}`}
                 >
                   {wallet.address}
                 </div>

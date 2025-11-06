@@ -49,8 +49,8 @@ export default function MarketSelector({ selectedSymbol, onSymbolChange }: Marke
   const filteredMarkets = markets.filter((market) => {
     const query = searchQuery.toLowerCase();
     const matchesSearch = 
-      market.symbol.toLowerCase().includes(query) ||
-      market.displayName.toLowerCase().includes(query);
+      market.symbol?.toLowerCase().includes(query) ||
+      market.displayName?.toLowerCase().includes(query);
     
     // Only show perpetual markets
     return matchesSearch && market.type === "perp";

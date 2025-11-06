@@ -629,7 +629,8 @@ function PredictionMarketsInterface() {
     // Sort by frequency and return top tags
     const sortedTags = Array.from(tagCounts.entries())
       .sort((a, b) => b[1] - a[1])
-      .map(([tag]) => tag);
+      .map(([tag]) => tag)
+      .filter((tag): tag is string => typeof tag === 'string' && tag.length > 0); // Filter out any undefined/empty values
     
     return ["All", ...sortedTags.slice(0, 30)]; // Top 30 tags + "All"
   }, [markets]);
@@ -715,7 +716,7 @@ function PredictionMarketsInterface() {
                   selectedTag === tag ? "" : "text-secondary hover:text-foreground"
                 }`}
                 onClick={() => setSelectedTag(tag)}
-                data-testid={`badge-tag-${tag.toLowerCase().replace(/\s+/g, '-')}`}
+                data-testid={`badge-tag-${tag?.toLowerCase().replace(/\s+/g, '-') || 'unknown'}`}
               >
                 {tag}
               </Badge>

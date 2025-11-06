@@ -107,7 +107,7 @@ export function TradingPairSelector({ value, onChange }: TradingPairSelectorProp
                       onChange(currentValue.toUpperCase());
                       setOpen(false);
                     }}
-                    data-testid={`option-${market.symbol.toLowerCase()}`}
+                    data-testid={`option-${market.symbol?.toLowerCase() || 'unknown'}`}
                     className="font-mono"
                   >
                     <Check
@@ -140,7 +140,7 @@ export function TradingPairSelector({ value, onChange }: TradingPairSelectorProp
                       onChange(currentValue.toUpperCase());
                       setOpen(false);
                     }}
-                    data-testid={`option-${market.symbol.toLowerCase()}`}
+                    data-testid={`option-${market.symbol?.toLowerCase() || 'unknown'}`}
                     className="font-mono"
                   >
                     <Check
