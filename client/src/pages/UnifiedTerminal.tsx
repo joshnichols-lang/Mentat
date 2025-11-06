@@ -828,108 +828,35 @@ function PredictionMarketsInterface() {
   );
 }
 
-// Options Trading Interface Component - Fixed Optimized Layout
+// Options Trading Interface Component - Coming Soon
 function OptionsInterface() {
-  const [selectedAsset, setSelectedAsset] = useState("ETH");
-  const [mode, setMode] = useState<"simple" | "pro">("simple");
-  const [selectedStrategy, setSelectedStrategy] = useState<any>(null);
-  const [currentPrice, setCurrentPrice] = useState(4000);
-
   return (
-    <div className="h-full flex flex-col">
-      {/* Options Toolbar */}
-      <div className="bg-background border-b border-border/50 p-2 flex items-center justify-between shrink-0">
-        <div className="flex items-center gap-2">
-          <Layers className="h-4 w-4" />
-          <h3 className="text-sm font-semibold">Options Trading</h3>
-          <AssetSelector
-            selectedAsset={selectedAsset}
-            onAssetChange={setSelectedAsset}
-          />
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Badge 
-            variant={mode === "simple" ? "default" : "outline"}
-            className="cursor-pointer hover-elevate active-elevate-2"
-            onClick={() => setMode("simple")}
-            data-testid="badge-mode-simple"
-          >
-            Simple
-          </Badge>
-          <Badge 
-            variant={mode === "pro" ? "default" : "outline"}
-            className="cursor-pointer hover-elevate active-elevate-2"
-            onClick={() => setMode("pro")}
-            data-testid="badge-mode-pro"
-          >
-            Pro
-          </Badge>
-        </div>
-      </div>
-
-      {/* Fixed Optimized Layout */}
-      <div className="flex-1 flex gap-1 p-1 overflow-x-auto overflow-y-hidden">
-        {/* Left Column - Chart & Strategy Builder (58%) */}
-        <div className="flex-[58] flex flex-col gap-1 min-w-[500px]">
-          <div className="flex-[55] min-h-0">
-            <Widget id="chart" title="Options Chart">
-              <OptionsChart 
-                asset={selectedAsset}
-                selectedStrategy={selectedStrategy}
-                onPriceUpdate={setCurrentPrice}
-              />
-            </Widget>
-          </div>
-          <div className="flex-[45] min-h-0">
-            <Widget id="strategy" title="Strategy Builder">
-              <OptionsStrategyBuilder 
-                asset={selectedAsset}
-                currentPrice={currentPrice}
-                mode={mode}
-                onModeChange={setMode}
-                onStrategySelect={setSelectedStrategy}
-              />
-            </Widget>
-          </div>
-        </div>
-
-        {/* Right Column - Options Chain, Greeks & Positions (42%) */}
-        <div className="flex-[42] flex flex-col gap-1 min-w-[350px]">
-          <div className="flex-[50] min-h-0">
-            <Widget id="optionsChain" title="Options Chain">
-              <OptionsChain 
-                asset={selectedAsset}
-                currentPrice={currentPrice}
-              />
-            </Widget>
-          </div>
-          <div className="flex-[30] min-h-0">
-            <Widget id="greeks" title="Live Greeks">
-              <LiveGreeks 
-                asset={selectedAsset}
-                instrumentName={selectedStrategy?.instrumentName}
-              />
-            </Widget>
-          </div>
-          <div className="flex-[20] min-h-0">
-            <Widget id="positions" title="Options Positions">
-              <div className="space-y-2 text-sm text-foreground/70">
-                <p>Live positions with:</p>
-                <ul className="space-y-1 text-xs ml-4">
-                  <li>• P&L tracking</li>
-                  <li>• Greeks by position</li>
-                  <li>• Days to expiry</li>
-                  <li>• Breakeven prices</li>
-                  <li>• Quick close buttons</li>
-                </ul>
-                <div className="text-xs text-foreground/50 mt-3">
-                  📋 Task 10: OptionsPositionsGrid.tsx
-                </div>
-              </div>
-            </Widget>
-          </div>
-        </div>
+    <div className="h-full flex items-center justify-center p-4 overflow-auto">
+      <div className="max-w-7xl mx-auto">
+        <Card className="bg-card border-border/50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Layers className="h-5 w-5" />
+              Options Trading - Coming Soon
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-secondary">
+              Trade onchain options with AI-powered strategy building and real-time Greeks analysis.
+            </p>
+            <div className="mt-4 p-4 bg-muted/30 rounded-lg border border-border/30">
+              <h3 className="font-semibold mb-2">Features:</h3>
+              <ul className="space-y-1 text-sm text-foreground/70">
+                <li>• One-click strategy execution (Covered Call, Iron Condor, Butterfly, etc.)</li>
+                <li>• Live Greeks monitoring and risk analytics</li>
+                <li>• Interactive options chain with IV analysis</li>
+                <li>• AI-powered strategy recommendations</li>
+                <li>• Multi-leg order execution</li>
+                <li>• Portfolio Greeks and P&L tracking</li>
+              </ul>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

@@ -11,12 +11,13 @@ Preferred communication style: Simple, everyday language.
 ### Frontend
 **Technology Stack:** React with TypeScript, Vite, Wouter, TanStack Query, Tailwind CSS, shadcn/ui, and lightweight-charts.
 **Design System:** Dark-themed dashboard inspired by Numora, using deep grey backgrounds, lime green for success, and red/pink for danger. Features a grid-based panel layout with subtle borders. Incorporates unique data visualizations like transaction heatmaps, donut/circular charts for portfolio allocation, patterned bar charts, and gradient area charts. Uses Inter for UI typography and JetBrains Mono for numbers. Panel styling follows a `bg-card border border-border rounded-lg p-4` pattern. Includes time range pills, a token allocation heatmap, metro metric labels, and large display numbers. Supports light/dark modes and features a clean search bar and profile section.
-**Unified Terminal Architecture:** Single-page interface with five main tabs (Perpetuals, Prediction Markets, Options, Spot Discovery, Analytics) and a persistent right sidebar for AI chat, conversation history, positions, and AI usage tracking. Layouts are fixed and optimized for a professional trading experience, with minimal padding and compact widgets.
+**Unified Terminal Architecture:** Single-page interface with five main tabs (Perpetuals, Prediction Markets, Options [Coming Soon], Spot Discovery [Coming Soon], Analytics) and a persistent right sidebar for AI chat, conversation history, positions, and AI usage tracking. Layouts are fixed and optimized for a professional trading experience, with minimal padding and compact widgets.
 **Order Entry System:** Restructured into a 3-tab design (Market | Limit | Advanced) for improved UX. Supports market and limit orders via API calls, and advanced orders (TWAP, Limit Chase, Scaled, Iceberg, OCO, Trailing TP) with dynamic input fields.
 **Key Layouts:**
 - **Perpetuals Tab:** Hyperliquid-style layout with a large chart, order book, and trading panel at the top, and tabbed panels for positions, open orders, order history, and trade history at the bottom.
 - **Prediction Markets Tab:** Tag-based market browser using Polymarket's eventTags, including popular tags and search functionality. Features an auto-bridging system for Polygon balance.
-- **Options Tab:** Fixed 2-column layout displaying options charts, strategy builder, options chain, live Greeks, and options positions. Includes Aevo REST API and WebSocket integration, asset selector, database schema, authenticated routes, and six one-click strategies.
+- **Options Tab:** Coming Soon placeholder - Will include onchain options trading with AI-powered strategy building, live Greeks, options chain, and multi-leg execution.
+- **Spot Discovery Tab:** Coming Soon placeholder - Will include multi-exchange spot market discovery and AI-powered trend analysis.
 - **Analytics Tab:** Comprehensive performance dashboard with portfolio overview, cumulative returns, drawdown, and Sharpe ratio charts.
 
 ### Backend
