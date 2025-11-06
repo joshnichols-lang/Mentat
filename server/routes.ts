@@ -2181,6 +2181,33 @@ Provide a clear, actionable analysis with specific recommendations. Format your 
       
       console.log(`[Wallet] Created embedded wallets with main wallet (${hyperliquidAddress}) and API wallet (${apiWalletAddress}) for user ${userId}`);
       
+      // CRITICAL: Set referral code on Hyperliquid using MAIN wallet
+      // This registers the wallet under our platform's referral code for 4% fee discount
+      const referralCode = process.env.HYPERLIQUID_REFERRAL_CODE;
+      if (referralCode) {
+        try {
+          console.log(`[Wallet] Setting Hyperliquid referral code: ${referralCode}`);
+          const { HyperliquidClient } = await import("./hyperliquid/client");
+          const tempClient = new HyperliquidClient({
+            privateKey: hyperliquidPrivateKey,
+            testnet: isTestnet,
+            walletAddress: hyperliquidAddress,
+          });
+          
+          const referralResult = await tempClient.setReferralCode(referralCode);
+          if (referralResult.success) {
+            console.log(`[Wallet] ✓ Referral code set successfully for ${hyperliquidAddress}`);
+          } else {
+            // Don't fail wallet creation if referral code fails (might already be set)
+            console.warn(`[Wallet] Referral code warning: ${referralResult.error}`);
+          }
+        } catch (error: any) {
+          console.warn(`[Wallet] Failed to set referral code (non-critical):`, error.message);
+        }
+      } else {
+        console.warn(`[Wallet] HYPERLIQUID_REFERRAL_CODE not configured - skipping referral setup`);
+      }
+      
       res.json({
         success: true,
         wallet: embeddedWallet,
@@ -2217,6 +2244,50 @@ Provide a clear, actionable analysis with specific recommendations. Format your 
       res.status(500).json({
         success: false,
         error: error.message || "Failed to fetch embedded wallet"
+      });
+    }
+  });
+
+  // Get Hyperliquid referral status for current user
+  app.get("/api/hyperliquid/referral-status", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const wallet = await storage.getEmbeddedWallet(userId);
+      
+      if (!wallet) {
+        return res.status(404).json({
+          success: false,
+          error: "No embedded wallet found"
+        });
+      }
+
+      const isTestnet = process.env.HYPERLIQUID_TESTNET === "true";
+      const apiUrl = isTestnet 
+        ? "https://api.hyperliquid-testnet.xyz" 
+        : "https://api.hyperliquid.xyz";
+
+      const response = await fetch(`${apiUrl}/info`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "referral",
+          user: wallet.hyperliquidAddress,
+        }),
+      });
+
+      const referralData = await response.json();
+
+      res.json({
+        success: true,
+        referralStatus: referralData,
+        hasReferral: !!referralData.referredBy,
+        referralCode: referralData.referredBy?.code || null,
+      });
+    } catch (error: any) {
+      console.error("Error fetching referral status:", error);
+      res.status(500).json({
+        success: false,
+        error: error.message || "Failed to fetch referral status"
       });
     }
   });

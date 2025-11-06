@@ -2,8 +2,9 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Copy, Check, Wallet, AlertCircle, Zap, Circle, Server, Boxes, Diamond } from "lucide-react";
+import { Copy, Check, Wallet, AlertCircle, Zap, Circle, Server, Boxes, Diamond, Percent } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface WalletAddress {
@@ -29,6 +30,15 @@ export function MyWallets() {
     };
   }>({
     queryKey: ["/api/wallets/embedded"],
+  });
+
+  const { data: referralData } = useQuery<{
+    success: boolean;
+    hasReferral: boolean;
+    referralCode: string | null;
+  }>({
+    queryKey: ["/api/hyperliquid/referral-status"],
+    enabled: !!data?.wallet,
   });
 
   const embeddedWallet = data?.wallet;
@@ -130,6 +140,9 @@ export function MyWallets() {
         <div className="space-y-3">
           {wallets.map((wallet) => {
             const IconComponent = iconComponents[wallet.icon as keyof typeof iconComponents];
+            const isHyperliquid = wallet.label === "Hyperliquid";
+            const showDiscount = isHyperliquid && referralData?.hasReferral;
+            
             return (
               <div
                 key={wallet.label}
@@ -140,7 +153,19 @@ export function MyWallets() {
                   <div className="flex items-center gap-2">
                     <IconComponent className="h-5 w-5 text-primary" />
                     <div>
-                      <h4 className="font-medium text-sm">{wallet.label}</h4>
+                      <div className="flex items-center gap-2">
+                        <h4 className="font-medium text-sm">{wallet.label}</h4>
+                        {showDiscount && (
+                          <Badge 
+                            variant="secondary" 
+                            className="text-xs px-1.5 py-0.5 flex items-center gap-1"
+                            data-testid="badge-fee-discount"
+                          >
+                            <Percent className="h-3 w-3" />
+                            4% fee discount
+                          </Badge>
+                        )}
+                      </div>
                       <p className="text-xs text-muted-foreground">{wallet.chain}</p>
                     </div>
                   </div>

@@ -711,6 +711,85 @@ export class HyperliquidClient {
       };
     }
   }
+
+  async setReferralCode(referralCode: string): Promise<{ success: boolean; error?: string; response?: any }> {
+    try {
+      const wallet = new ethers.Wallet(this.config.privateKey);
+      const isTestnet = this.config.testnet || false;
+      const chainId = isTestnet ? 421614 : 42161;
+      const hyperliquidChain = isTestnet ? "Testnet" : "Mainnet";
+      const timestamp = Date.now();
+
+      const domain = {
+        name: "HyperliquidSignTransaction",
+        version: "1",
+        chainId: chainId,
+        verifyingContract: "0x0000000000000000000000000000000000000000",
+      };
+
+      const types = {
+        "HyperliquidTransaction:SetReferralCode": [
+          { name: "hyperliquidChain", type: "string" },
+          { name: "code", type: "string" },
+          { name: "time", type: "uint64" },
+        ],
+      };
+
+      const message = {
+        hyperliquidChain: hyperliquidChain,
+        code: referralCode,
+        time: timestamp,
+      };
+
+      const signature = await wallet.signTypedData(domain, types, message);
+      const sig = ethers.Signature.from(signature);
+
+      const payload = {
+        action: {
+          type: "setReferralCode",
+          code: referralCode,
+        },
+        nonce: timestamp,
+        signature: {
+          r: sig.r,
+          s: sig.s,
+          v: sig.v,
+        },
+      };
+
+      const apiUrl = isTestnet 
+        ? "https://api.hyperliquid-testnet.xyz" 
+        : "https://api.hyperliquid.xyz";
+
+      const response = await fetch(`${apiUrl}/exchange`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const result = await response.json();
+      
+      if (result.status === "err") {
+        console.error("[Hyperliquid] Failed to set referral code:", result.response);
+        return {
+          success: false,
+          error: result.response || "Failed to set referral code",
+        };
+      }
+
+      console.log(`[Hyperliquid] Successfully set referral code: ${referralCode}`);
+      return {
+        success: true,
+        response: result,
+      };
+    } catch (error: any) {
+      console.error("[Hyperliquid] Error setting referral code:", error);
+      return {
+        success: false,
+        error: error.message || "Failed to set referral code",
+      };
+    }
+  }
 }
 
 // Singleton instance (for backward compatibility, e.g., monitoring service)
