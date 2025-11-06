@@ -32,6 +32,35 @@ interface TradingAction {
   exitStrategy?: string; // How to manage trade if in profit but unlikely to reach original TP
   triggerPrice?: string;
   orderId?: number;  // REQUIRED for cancel_order action - the order ID to cancel
+  
+  // Advanced Order Types (optional)
+  advancedOrderType?: "twap" | "scaled" | "limit_chase" | "iceberg";
+  
+  // TWAP Parameters
+  twapDurationMinutes?: number;
+  twapSlices?: number;
+  twapPriceLimit?: string;
+  twapRandomize?: boolean;
+  
+  // Scaled Order Parameters
+  scaledLevels?: number;
+  scaledPriceStart?: string;
+  scaledPriceEnd?: string;
+  scaledDistribution?: "linear" | "geometric";
+  
+  // Limit Chase Parameters
+  chaseOffset?: number;
+  chaseMaxChases?: number;
+  chaseIntervalSeconds?: number;
+  chasePriceLimit?: string;
+  chaseGiveBehavior?: "cancel" | "market" | "wait";
+  
+  // Iceberg Parameters
+  icebergDisplaySize?: string;
+  icebergTotalSize?: string;
+  icebergPriceLimit?: string;
+  icebergRefreshBehavior?: "immediate" | "delayed";
+  icebergRefreshDelaySeconds?: number;
 }
 
 interface ExecutionResult {
@@ -1257,6 +1286,131 @@ export async function executeTradeStrategy(
 
       // Handle "buy" and "sell" actions (opening new positions)
       console.log(`[Trade Executor] ⚠️ DEBUG: Action before execution:`, JSON.stringify(action, null, 2));
+      
+      // Check if this is an advanced order type (TWAP, Scaled, Limit Chase, Iceberg)
+      const advancedAction = action as any;
+      if (advancedAction.advancedOrderType) {
+        console.log(`[Trade Executor] 🎯 ADVANCED ORDER: Detected ${advancedAction.advancedOrderType} order for ${action.symbol}`);
+        
+        // Build parameters based on order type
+        let parameters: any = {};
+        
+        switch (advancedAction.advancedOrderType) {
+          case "twap":
+            parameters = {
+              durationMinutes: advancedAction.twapDurationMinutes,
+              slices: advancedAction.twapSlices,
+              randomizeIntervals: advancedAction.twapRandomize || false,
+            };
+            if (advancedAction.twapPriceLimit) {
+              parameters.priceLimit = advancedAction.twapPriceLimit;
+            }
+            break;
+            
+          case "scaled":
+            parameters = {
+              levels: advancedAction.scaledLevels,
+              priceStart: advancedAction.scaledPriceStart,
+              priceEnd: advancedAction.scaledPriceEnd,
+              distribution: advancedAction.scaledDistribution || "linear",
+            };
+            break;
+            
+          case "limit_chase":
+            parameters = {
+              offset: advancedAction.chaseOffset,
+              maxChases: advancedAction.chaseMaxChases,
+              chaseIntervalSeconds: advancedAction.chaseIntervalSeconds,
+              giveBehavior: advancedAction.chaseGiveBehavior || "cancel",
+            };
+            if (advancedAction.chasePriceLimit) {
+              parameters.priceLimit = advancedAction.chasePriceLimit;
+            }
+            break;
+            
+          case "iceberg":
+            parameters = {
+              displaySize: advancedAction.icebergDisplaySize,
+              totalSize: advancedAction.icebergTotalSize,
+              priceLimit: advancedAction.icebergPriceLimit,
+              refreshBehavior: advancedAction.icebergRefreshBehavior || "immediate",
+            };
+            if (advancedAction.icebergRefreshDelaySeconds) {
+              parameters.refreshDelaySeconds = advancedAction.icebergRefreshDelaySeconds;
+            }
+            break;
+        }
+        
+        // Create advanced order using the advancedOrders routes
+        try {
+          const { db } = await import("./db");
+          const { advancedOrders } = await import("../shared/schema");
+          const { validateOrderParameters } = await import("./advancedOrders/routes");
+          
+          // Validate parameters
+          validateOrderParameters(advancedAction.advancedOrderType, parameters);
+          
+          // Determine exchange (default to hyperliquid)
+          const exchange = action.exchange || "hyperliquid";
+          
+          // Create advanced order in database
+          const [order] = await db.insert(advancedOrders).values({
+            userId,
+            orderType: advancedAction.advancedOrderType,
+            symbol: action.symbol,
+            side: action.side === "long" ? "buy" : "sell",
+            totalSize: action.size,
+            limitPrice: action.expectedEntry || null,
+            exchange,
+            leverage: action.leverage,
+            parameters: JSON.stringify(parameters),
+            status: "pending",
+          }).returning();
+          
+          console.log(`[Trade Executor] ✓ Created advanced order ${order.id}: ${advancedAction.advancedOrderType} ${action.symbol}`);
+          
+          // Start execution asynchronously (don't wait for completion)
+          const { advancedOrderEngine } = await import("./advancedOrders/engine");
+          if (advancedOrderEngine) {
+            advancedOrderEngine.executeOrder(order.id).catch(err => {
+              console.error(`[Trade Executor] Advanced order ${order.id} execution failed:`, err);
+            });
+          }
+          
+          // Get protective actions for journal entry
+          const symbolProtectiveActions = priceValidatedProtectiveGroups.get(action.symbol) || [];
+          
+          // Create journal entry for advanced order
+          const journalEntryId = await createJournalEntry(
+            userId,
+            action,
+            { success: true, executedPrice: undefined, response: { status: "pending" } },
+            symbolProtectiveActions,
+            tradingModeId
+          );
+          
+          results.push({
+            success: true,
+            action,
+            orderId: order.id,
+            journalEntryId: journalEntryId || undefined,
+          });
+          successCount++;
+          continue;
+          
+        } catch (advancedOrderError: any) {
+          console.error(`[Trade Executor] Failed to create advanced order:`, advancedOrderError);
+          results.push({
+            success: false,
+            action,
+            error: advancedOrderError.message || "Failed to create advanced order",
+          });
+          failCount++;
+          continue;
+        }
+      }
+      
+      // Regular order execution (non-advanced)
       // Get protective actions for this symbol to include in journal entry
       const symbolProtectiveActions = priceValidatedProtectiveGroups.get(action.symbol) || [];
       const openResult = await executeOpenPosition(hyperliquid, action, userId, useIsolatedMargin, symbolProtectiveActions, tradingModeId);
