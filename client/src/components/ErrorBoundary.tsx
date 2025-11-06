@@ -19,14 +19,20 @@ class ErrorBoundary extends Component<Props, State> {
     errorInfo: null
   };
 
-  public static getDerivedStateFromError(error: Error): State {
-    return { hasError: true, error, errorInfo: null };
+  public static getDerivedStateFromError(error: any): State {
+    const normalizedError = error instanceof Error 
+      ? error 
+      : new Error(typeof error === 'string' ? error : JSON.stringify(error));
+    return { hasError: true, error: normalizedError, errorInfo: null };
   }
 
-  public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error("Uncaught error:", error, errorInfo);
+  public componentDidCatch(error: any, errorInfo: ErrorInfo) {
+    const normalizedError = error instanceof Error 
+      ? error 
+      : new Error(typeof error === 'string' ? error : JSON.stringify(error));
+    console.error("Uncaught error:", normalizedError, errorInfo);
     this.setState({
-      error,
+      error: normalizedError,
       errorInfo
     });
   }
