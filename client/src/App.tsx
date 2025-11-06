@@ -8,6 +8,7 @@ import { AuthProvider } from "@/hooks/use-auth";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { WalletInitializer } from "@/components/WalletInitializer";
 import { HyperliquidAutoRenew } from "@/components/HyperliquidAutoRenew";
+import ErrorBoundary from "@/components/ErrorBoundary";
 import { WagmiProvider } from 'wagmi';
 import { RainbowKitProvider, darkTheme } from '@rainbow-me/rainbowkit';
 import { config } from '@/lib/wagmi';
@@ -57,28 +58,30 @@ function Router() {
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <WagmiProvider config={config}>
-        <RainbowKitProvider
-          theme={darkTheme({
-            accentColor: '#B06000',
-            accentColorForeground: 'white',
-            borderRadius: 'medium',
-          })}
-        >
-          <ThemeProvider>
-            <TooltipProvider>
-              <AuthProvider>
-                <WalletInitializer />
-                <HyperliquidAutoRenew />
-                <Router />
-                <Toaster />
-              </AuthProvider>
-            </TooltipProvider>
-          </ThemeProvider>
-        </RainbowKitProvider>
-      </WagmiProvider>
-    </QueryClientProvider>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <WagmiProvider config={config}>
+          <RainbowKitProvider
+            theme={darkTheme({
+              accentColor: '#B06000',
+              accentColorForeground: 'white',
+              borderRadius: 'medium',
+            })}
+          >
+            <ThemeProvider>
+              <TooltipProvider>
+                <AuthProvider>
+                  <WalletInitializer />
+                  <HyperliquidAutoRenew />
+                  <Router />
+                  <Toaster />
+                </AuthProvider>
+              </TooltipProvider>
+            </ThemeProvider>
+          </RainbowKitProvider>
+        </WagmiProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 }
 

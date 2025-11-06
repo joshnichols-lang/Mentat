@@ -62,7 +62,7 @@ export default function SendModal({ isOpen, onClose, chain, token, availableBala
     } else {
       setGasEstimate(null);
     }
-  }, [recipient, amount]);
+  }, [recipient, amount, chain, token]);
 
   const handleSend = () => {
     if (!recipient || !amount || parseFloat(amount) <= 0) {
