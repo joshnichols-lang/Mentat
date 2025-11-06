@@ -309,7 +309,7 @@ Follow-up question: ${message}`;
                             {aiStrategy.actions.map((action: any, idx: number) => (
                               <div key={idx} className="text-xs bg-muted/50 p-2 space-y-0.5 select-text" data-testid={`action-${idx}`}>
                                 <div className="font-mono select-text">
-                                  {action.action?.toUpperCase()} {action.symbol?.replace("-PERP", "")} {action.side?.toUpperCase()}
+                                  {action.action?.toUpperCase()} {(action.symbol || "").replace("-PERP", "")} {action.side?.toUpperCase()}
                                   {action.leverage && ` ${action.leverage}x`}
                                 </div>
                                 <div className="text-muted-foreground select-text">Size: {action.size}</div>
@@ -420,7 +420,7 @@ Follow-up question: ${message}`;
                               <div key={idx} className="text-xs bg-muted/50 p-2 space-y-0.5 select-text">
                                 <div className="flex items-center justify-between">
                                   <span className="font-mono select-text">
-                                    {result.action?.action?.toUpperCase()} {result.action?.symbol?.replace("-PERP", "")} {result.action?.side?.toUpperCase()}
+                                    {result.action?.action?.toUpperCase()} {(result.action?.symbol || "").replace("-PERP", "")} {result.action?.side?.toUpperCase()}
                                   </span>
                                   <Badge variant={result.success ? "default" : "destructive"} className="text-xs h-4 px-1.5">
                                     {result.success ? "success" : "failed"}

@@ -123,7 +123,7 @@ export default function OrderManagementPanel() {
     onSuccess: (_, { coin }) => {
       toast({
         title: "Order Cancelled",
-        description: `Successfully cancelled order for ${coin.replace("-PERP", "")}`,
+        description: `Successfully cancelled order for ${(coin || "").replace("-PERP", "")}`,
       });
       queryClient.invalidateQueries({ queryKey: ["/api/hyperliquid/open-orders"] });
       queryClient.invalidateQueries({ queryKey: ["/api/hyperliquid/positions"] });
@@ -168,7 +168,7 @@ export default function OrderManagementPanel() {
     onSuccess: (_, { order }) => {
       toast({
         title: "Order Modified",
-        description: `Successfully updated order for ${order.coin.replace("-PERP", "")}`,
+        description: `Successfully updated order for ${(order.coin || "").replace("-PERP", "")}`,
       });
       queryClient.invalidateQueries({ queryKey: ["/api/hyperliquid/open-orders"] });
       queryClient.invalidateQueries({ queryKey: ["/api/hyperliquid/positions"] });
@@ -362,7 +362,7 @@ export default function OrderManagementPanel() {
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <span className="font-semibold text-sm" data-testid={`order-symbol-${order.oid}`}>
-              {order.coin.replace("-PERP", "")}
+              {(order.coin || "").replace("-PERP", "")}
             </span>
             <Badge 
               variant={isBuy ? "default" : "destructive"} 
@@ -541,7 +541,7 @@ export default function OrderManagementPanel() {
                             {isBuy ? "BUY" : "SELL"}
                           </Badge>
                           <Badge variant="outline" className="text-xs capitalize">
-                            {order.orderType.replace("_", " ")}
+                            {(order.orderType || "").replace("_", " ")}
                           </Badge>
                         </div>
                         <Badge 
@@ -624,7 +624,7 @@ export default function OrderManagementPanel() {
           <DialogHeader>
             <DialogTitle>Edit Order</DialogTitle>
             <DialogDescription>
-              Modify the price and size of your order for {editingOrder?.coin.replace("-PERP", "")}
+              Modify the price and size of your order for {(editingOrder?.coin || "").replace("-PERP", "")}
             </DialogDescription>
           </DialogHeader>
           <Form {...editForm}>

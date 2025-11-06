@@ -1,0 +1,43 @@
+TypeError: Cannot read properties of undefined (reading 'replace')
+    at f0t (https://1fox.replit.app/assets/index-BLjnHlwd.js:4292:4182)
+    at div
+    at div
+    at div
+    at div
+    at div
+    at Pxt (https://1fox.replit.app/assets/index-BLjnHlwd.js:4310:56903)
+    at div
+    at https://1fox.replit.app/assets/index-BLjnHlwd.js:49:51328
+    at Qr (https://1fox.replit.app/assets/index-BLjnHlwd.js:49:55856)
+    at https://1fox.replit.app/assets/index-BLjnHlwd.js:4208:14252
+    at https://1fox.replit.app/assets/index-BLjnHlwd.js:4208:15670
+    at div
+    at https://1fox.replit.app/assets/index-BLjnHlwd.js:49:51328
+    at u (https://1fox.replit.app/assets/index-BLjnHlwd.js:49:47572)
+    at https://1fox.replit.app/assets/index-BLjnHlwd.js:4208:12843
+    at div
+    at main
+    at div
+    at _$e (https://1fox.replit.app/assets/index-BLjnHlwd.js:4208:8568)
+    at pG (https://1fox.replit.app/assets/index-BLjnHlwd.js:4310:79520)
+    at il (https://1fox.replit.app/assets/index-BLjnHlwd.js:49:3251)
+    at lo (https://1fox.replit.app/assets/index-BLjnHlwd.js:464:59963)
+    at cye (https://1fox.replit.app/assets/index-BLjnHlwd.js:49:4071)
+    at Qbt
+    at jwe (https://1fox.replit.app/assets/index-BLjnHlwd.js:464:58964)
+    at u (https://1fox.replit.app/assets/index-BLjnHlwd.js:49:47572)
+    at wX (https://1fox.replit.app/assets/index-BLjnHlwd.js:464:50660)
+    at wwe (https://1fox.replit.app/assets/index-BLjnHlwd.js:464:58430)
+    at div
+    at JRe (https://1fox.replit.app/assets/index-BLjnHlwd.js:4204:81387)
+    at BIe (https://1fox.replit.app/assets/index-BLjnHlwd.js:4203:85561)
+    at r9e (https://1fox.replit.app/assets/index-BLjnHlwd.js:4204:1153)
+    at a9e (https://1fox.replit.app/assets/index-BLjnHlwd.js:4204:3090)
+    at jIe (https://1fox.replit.app/assets/index-BLjnHlwd.js:4203:76284)
+    at o9e (https://1fox.replit.app/assets/index-BLjnHlwd.js:4204:2872)
+    at IIe (https://1fox.replit.app/assets/index-BLjnHlwd.js:4203:85120)
+    at L9e (https://1fox.replit.app/assets/index-BLjnHlwd.js:4204:15942)
+    at RTe (https://1fox.replit.app/assets/index-BLjnHlwd.js:2608:36133)
+    at $Te (https://1fox.replit.app/assets/index-BLjnHlwd.js:2608:36437)
+    at Mye (https://1fox.replit.app/assets/index-BLjnHlwd.js:49:42195)
+    at JAe (https://1fox.replit.app/assets/index-BLjnHlwd.js:2564:7695)

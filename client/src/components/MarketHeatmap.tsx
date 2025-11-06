@@ -44,7 +44,7 @@ export function MarketHeatmap({ data }: MarketHeatmapProps) {
               )}
             >
               <div className="flex items-center justify-between mb-1">
-                <span className="text-xs font-bold">{item.symbol.replace("-PERP", "")}</span>
+                <span className="text-xs font-bold">{(item.symbol || "").replace("-PERP", "")}</span>
                 {item.change24h > 0 ? (
                   <TrendingUp className="h-3 w-3 text-green-600" />
                 ) : (

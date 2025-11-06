@@ -120,7 +120,7 @@ export default function UIPreview() {
                         <span className="text-xs font-bold">{symbol.substring(0, 3)}</span>
                       </div>
                       <div>
-                        <div className="text-sm font-medium">{symbol.replace("-PERP", "")}</div>
+                        <div className="text-sm font-medium">{(symbol || "").replace("-PERP", "")}</div>
                         <div className="text-xs text-muted-foreground">
                           ${(45000 + i * 1000).toLocaleString()}
                         </div>

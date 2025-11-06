@@ -359,7 +359,7 @@ export default function OrderEntryPanel({ symbol, lastPrice = 0 }: OrderEntryPan
       }
 
       // Extract coin symbol (remove -PERP or -USD suffix if present)
-      const coin = symbol.replace("-PERP", "").replace("-USD", "");
+      const coin = (symbol || "").replace("-PERP", "").replace("-USD", "");
 
       // Prepare order parameters
       const orderParams = {

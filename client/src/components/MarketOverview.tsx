@@ -78,7 +78,7 @@ function SortableWatchlistRow({
   const price = parseFloat(market.price);
   const change24h = parseFloat(market.change24h);
   const volume24h = parseFloat(market.volume24h);
-  const displaySymbol = market.symbol.replace("-PERP", "");
+  const displaySymbol = (market.symbol || "").replace("-PERP", "");
 
   return (
     <tr
@@ -383,7 +383,7 @@ export default function MarketOverview() {
                   {availableMarkets.map((market) => {
                     const price = parseFloat(market.price);
                     const change24h = parseFloat(market.change24h);
-                    const displaySymbol = market.symbol.replace("-PERP", "");
+                    const displaySymbol = (market.symbol || "").replace("-PERP", "");
                     
                     return (
                       <div

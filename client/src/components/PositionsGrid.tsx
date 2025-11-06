@@ -93,7 +93,7 @@ export default function PositionsGrid() {
     onSuccess: (_, coin) => {
       toast({
         title: "Position Closed",
-        description: `Successfully closed position for ${coin.replace("-PERP", "")}`,
+        description: `Successfully closed position for ${(coin || "").replace("-PERP", "")}`,
       });
       queryClient.invalidateQueries({ queryKey: ["/api/hyperliquid/positions"] });
       queryClient.invalidateQueries({ queryKey: ["/api/hyperliquid/open-orders"] });
@@ -101,7 +101,7 @@ export default function PositionsGrid() {
     onError: (error: any, coin) => {
       toast({
         title: "Close Failed",
-        description: error.message || `Failed to close position for ${coin.replace("-PERP", "")}`,
+        description: error.message || `Failed to close position for ${(coin || "").replace("-PERP", "")}`,
         variant: "destructive",
       });
     },
@@ -205,7 +205,7 @@ export default function PositionsGrid() {
           const currentPrice = parseFloat(position.currentPrice || position.entryPrice || "0");
           const pnl = parseFloat(position.unrealizedPnl || "0");
           const roe = position.roe ? parseFloat(position.roe) : 0;
-          const displaySymbol = position.symbol.replace("-PERP", "").replace("-USD", "");
+          const displaySymbol = (position.symbol || "").replace("-PERP", "").replace("-USD", "");
           const liquidationPrice = position.liquidationPrice ? parseFloat(position.liquidationPrice) : null;
           const leverage = position.leverage || 1;
           

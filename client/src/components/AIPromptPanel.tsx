@@ -589,7 +589,7 @@ export default function AIPromptPanel() {
                           {result.success ? "✓" : result.error ? "✗" : "○"}
                         </span>
                         <span className="font-mono">
-                          {result.action.action.toUpperCase()} {result.action.symbol.replace("-PERP", "")} {result.action.side.toUpperCase()}
+                          {result.action.action.toUpperCase()} {(result.action.symbol || "").replace("-PERP", "")} {result.action.side.toUpperCase()}
                         </span>
                         <Badge variant={result.action.side === "long" ? "default" : "destructive"} className="text-xs h-4 px-1.5">
                           {result.action.leverage ? `${result.action.leverage}x` : '1x'}
