@@ -1,4 +1,4 @@
-import { LogOut, UserCheck, Settings, Users, ChevronDown, MessageSquare, History, BookOpen, Target, Home, BarChart3, LineChart, ArrowDownToLine, Wallet } from "lucide-react";
+import { LogOut, UserCheck, Settings, Users, ChevronDown, MessageSquare, History, BookOpen, Target, Home, BarChart3, LineChart, ArrowDownToLine, Wallet, Layers } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -240,6 +240,21 @@ export default function Header() {
               </TooltipTrigger>
               <TooltipContent>
                 <p>Trading Modes</p>
+              </TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  onClick={() => setLocation("/strategies")}
+                  data-testid="button-strategies"
+                >
+                  <Layers className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Strategies</p>
               </TooltipContent>
             </Tooltip>
             <Tooltip>

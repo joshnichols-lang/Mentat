@@ -27,6 +27,7 @@ import Wallet from "@/pages/Wallet";
 import TradeHistory from "@/pages/TradeHistory";
 import TradeJournal from "@/pages/TradeJournal";
 import TradingModes from "@/pages/TradingModes";
+import Strategies from "@/pages/Strategies";
 import UIPreview from "@/pages/UIPreview";
 import EnhancedUIPreview from "@/pages/EnhancedUIPreview";
 import NotFound from "@/pages/not-found";
@@ -51,6 +52,7 @@ function Router() {
       <ProtectedRoute path="/trade-history" component={TradeHistory} />
       <ProtectedRoute path="/trade-journal" component={TradeJournal} />
       <ProtectedRoute path="/trading-modes" component={TradingModes} />
+      <ProtectedRoute path="/strategies" component={Strategies} />
       <Route component={NotFound} />
     </Switch>
   );
