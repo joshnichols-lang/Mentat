@@ -4,25 +4,14 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Lock, KeyRound, Brain, Trash2, Plus, AlertCircle, RefreshCcw, Clock, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { Lock, KeyRound, AlertCircle, RefreshCcw, Clock, CheckCircle2 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import {
   Dialog,
   DialogContent,
@@ -33,7 +22,6 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import Header from "@/components/Header";
-import { Badge } from "@/components/ui/badge";
 
 const passwordChangeSchema = z.object({
   currentPassword: z.string().min(6, "Current password is required"),
@@ -44,48 +32,15 @@ const passwordChangeSchema = z.object({
   path: ["confirmPassword"],
 });
 
-const aiProviderSchema = z.object({
-  provider: z.enum(["perplexity", "openai", "xai"]),
-  apiKey: z.string().min(1, "API key is required"),
-  label: z.string().min(1, "Label is required").max(50),
-});
-
 type PasswordChangeForm = z.infer<typeof passwordChangeSchema>;
-type AIProviderFormData = z.infer<typeof aiProviderSchema>;
-
-interface ApiKey {
-  id: string;
-  providerType: "ai" | "exchange";
-  providerName: string;
-  label: string;
-  isActive: boolean;
-  createdAt: string;
-  lastUsed?: string;
-}
-
-const AI_PROVIDERS = [
-  { value: "perplexity", label: "Perplexity AI", description: "Sonar models with web search" },
-  { value: "openai", label: "OpenAI (ChatGPT)", description: "GPT-4 and GPT-3.5 models" },
-  { value: "xai", label: "xAI (Grok)", description: "Grok models" },
-];
 
 
 export default function Settings() {
   const { toast } = useToast();
   const { user } = useAuth();
   const [isChangingPassword, setIsChangingPassword] = useState(false);
-  const [isAddingAI, setIsAddingAI] = useState(false);
-  const [deleteKeyId, setDeleteKeyId] = useState<string | null>(null);
   const [showResyncModal, setShowResyncModal] = useState(false);
   const [seedPhrase, setSeedPhrase] = useState("");
-
-  const { data: apiKeysData } = useQuery<{ success: boolean; apiKeys: ApiKey[] }>({
-    queryKey: ['/api/api-keys'],
-    refetchInterval: 5000,
-  });
-
-  const apiKeys = apiKeysData?.apiKeys || [];
-  const aiKeys = apiKeys.filter(k => k.providerType === "ai");
 
   // Query for Hyperliquid API wallet expiration status
   const { data: expirationStatus } = useQuery<{
@@ -110,15 +65,6 @@ export default function Settings() {
     },
   });
 
-  const aiForm = useForm<AIProviderFormData>({
-    resolver: zodResolver(aiProviderSchema),
-    defaultValues: {
-      provider: "perplexity",
-      apiKey: "",
-      label: "",
-    },
-  });
-
   const passwordMutation = useMutation({
     mutationFn: async (data: { currentPassword: string; newPassword: string }) => {
       return await apiRequest("PATCH", "/api/user/password", data);
@@ -135,56 +81,6 @@ export default function Settings() {
       toast({
         title: "Error",
         description: error.message || "Failed to change password. Please check your current password.",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const aiProviderMutation = useMutation({
-    mutationFn: async (data: AIProviderFormData) => {
-      const response = await apiRequest("POST", "/api/api-keys", {
-        providerType: "ai",
-        providerName: data.provider,
-        label: data.label,
-        apiKey: data.apiKey,
-      });
-      return response.json();
-    },
-    onSuccess: () => {
-      toast({
-        title: "AI Provider Added",
-        description: "Your AI provider has been added successfully.",
-      });
-      aiForm.reset();
-      setIsAddingAI(false);
-      queryClient.invalidateQueries({ queryKey: ['/api/api-keys'] });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to add AI provider.",
-        variant: "destructive",
-      });
-    },
-  });
-
-
-  const deleteKeyMutation = useMutation({
-    mutationFn: async (keyId: string) => {
-      await apiRequest("DELETE", `/api/api-keys/${keyId}`);
-    },
-    onSuccess: () => {
-      toast({
-        title: "API Key Deleted",
-        description: "The API key has been removed successfully.",
-      });
-      setDeleteKeyId(null);
-      queryClient.invalidateQueries({ queryKey: ['/api/api-keys'] });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to delete API key.",
         variant: "destructive",
       });
     },
@@ -221,15 +117,6 @@ export default function Settings() {
       currentPassword: data.currentPassword,
       newPassword: data.newPassword,
     });
-  };
-
-  const onSubmitAI = (data: AIProviderFormData) => {
-    aiProviderMutation.mutate(data);
-  };
-
-  const getProviderLabel = (providerName: string) => {
-    const provider = AI_PROVIDERS.find(p => p.value === providerName);
-    return provider?.label || providerName;
   };
 
   const handleResyncSubmit = async () => {
@@ -299,205 +186,8 @@ export default function Settings() {
             </div>
           </div>
 
-          {/* AI Provider API Keys */}
-          <Card data-testid="card-ai-keys">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Brain className="w-5 h-5" />
-                  <CardTitle>AI Provider API Keys</CardTitle>
-                </div>
-                {aiKeys.length > 0 && (
-                  <Button
-                    onClick={() => setIsAddingAI(true)}
-                    variant="outline"
-                    size="sm"
-                    data-testid="button-add-ai-key"
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add AI Provider
-                  </Button>
-                )}
-              </div>
-              <CardDescription>
-                Choose between Platform AI (shared xAI Grok) or your own API keys from Perplexity, OpenAI, or xAI
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {aiKeys.length === 0 && !isAddingAI && (
-                <div className="space-y-4">
-                  <Alert>
-                    <Brain className="h-4 w-4" />
-                    <AlertDescription>
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="font-medium">🦊 Using Platform AI</p>
-                            <p className="text-sm text-muted-foreground mt-1">
-                              You're using our shared xAI Grok infrastructure. Usage costs are covered by the platform.
-                            </p>
-                          </div>
-                          <Badge variant="outline" className="ml-2">Active</Badge>
-                        </div>
-                      </div>
-                    </AlertDescription>
-                  </Alert>
-                  <div className="flex justify-end">
-                    <Button
-                      onClick={() => setIsAddingAI(true)}
-                      variant="outline"
-                      size="sm"
-                      data-testid="button-switch-to-personal"
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Switch to Personal AI Key
-                    </Button>
-                  </div>
-                </div>
-              )}
-
-              {aiKeys.length > 0 && (
-                <Alert>
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>
-                    <strong>Using Personal AI Key</strong> - You're using your own API credentials. 
-                    Delete all personal keys below to switch back to Platform AI (shared infrastructure).
-                  </AlertDescription>
-                </Alert>
-              )}
-
-              {aiKeys.map((key) => (
-                <div
-                  key={key.id}
-                  className="flex items-center justify-between p-4 border rounded-md"
-                  data-testid={`ai-key-${key.id}`}
-                >
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <p className="font-medium">{getProviderLabel(key.providerName)}</p>
-                      {key.isActive && <Badge variant="outline">Active</Badge>}
-                    </div>
-                    <p className="text-sm text-muted-foreground">{key.label}</p>
-                    {key.lastUsed && (
-                      <p className="text-xs text-muted-foreground">
-                        Last used: {new Date(key.lastUsed).toLocaleString()}
-                      </p>
-                    )}
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setDeleteKeyId(key.id)}
-                    data-testid={`button-delete-ai-${key.id}`}
-                  >
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                  </Button>
-                </div>
-              ))}
-
-              {isAddingAI && (
-                <Form {...aiForm}>
-                  <form onSubmit={aiForm.handleSubmit(onSubmitAI)} className="space-y-4 p-4 border rounded-md">
-                    <FormField
-                      control={aiForm.control}
-                      name="provider"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>AI Provider</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                              <SelectTrigger data-testid="select-ai-provider">
-                                <SelectValue placeholder="Select AI provider" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {AI_PROVIDERS.map((provider) => (
-                                <SelectItem key={provider.value} value={provider.value}>
-                                  <div className="flex flex-col">
-                                    <span>{provider.label}</span>
-                                    <span className="text-xs text-muted-foreground">
-                                      {provider.description}
-                                    </span>
-                                  </div>
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={aiForm.control}
-                      name="label"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Label</FormLabel>
-                          <FormControl>
-                            <Input
-                              placeholder="e.g., Main AI, Backup Provider"
-                              data-testid="input-ai-label"
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormDescription>
-                            A friendly name to identify this API key
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={aiForm.control}
-                      name="apiKey"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>API Key</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="password"
-                              placeholder="Enter your API key"
-                              autoComplete="off"
-                              data-testid="input-ai-api-key"
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <div className="flex gap-2">
-                      <Button
-                        type="submit"
-                        disabled={aiProviderMutation.isPending}
-                        data-testid="button-submit-ai"
-                      >
-                        {aiProviderMutation.isPending ? "Adding..." : "Add Provider"}
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => {
-                          setIsAddingAI(false);
-                          aiForm.reset();
-                        }}
-                        data-testid="button-cancel-ai"
-                      >
-                        Cancel
-                      </Button>
-                    </div>
-                  </form>
-                </Form>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Re-sync Hyperliquid Credentials - Only show if they don't have API wallet */}
-          {expirationStatus && !expirationStatus.hasApiWallet && (
-            <Card data-testid="card-resync-credentials">
+          {/* Re-sync Hyperliquid Credentials - Always visible */}
+          <Card data-testid="card-resync-credentials">
               <CardHeader>
                 <div className="flex items-center gap-2">
                   <RefreshCcw className="w-5 h-5" />
@@ -527,8 +217,7 @@ export default function Settings() {
                   Re-sync Credentials
                 </Button>
               </CardContent>
-            </Card>
-          )}
+          </Card>
 
           {/* Hyperliquid API Wallet Status */}
           {expirationStatus?.hasApiWallet && expirationStatus.expirationDate && (
@@ -673,27 +362,6 @@ export default function Settings() {
           </Card>
         </div>
       </div>
-
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={!!deleteKeyId} onOpenChange={() => setDeleteKeyId(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete API Key?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the API key.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel data-testid="button-cancel-delete">Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => deleteKeyId && deleteKeyMutation.mutate(deleteKeyId)}
-              data-testid="button-confirm-delete"
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
 
       {/* Re-sync Credentials Dialog */}
       <Dialog open={showResyncModal} onOpenChange={setShowResyncModal}>
