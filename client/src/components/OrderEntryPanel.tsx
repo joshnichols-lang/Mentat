@@ -19,7 +19,7 @@ export default function OrderEntryPanel({ symbol, lastPrice = 0 }: OrderEntryPan
   const { toast } = useToast();
   
   // State
-  const [orderType, setOrderType] = useState<"market" | "limit">("market");
+  const [orderType, setOrderType] = useState<"market" | "limit" | "advanced">("market");
   const [side, setSide] = useState<"buy" | "sell">("buy");
   const [limitPrice, setLimitPrice] = useState("");
   const [amount, setAmount] = useState("");
@@ -28,7 +28,7 @@ export default function OrderEntryPanel({ symbol, lastPrice = 0 }: OrderEntryPan
   const [tpslEnabled, setTpslEnabled] = useState(false);
   
   // Advanced order type state
-  const [advancedOrderType, setAdvancedOrderType] = useState<string>("none");
+  const [advancedOrderType, setAdvancedOrderType] = useState<string>("twap");
   
   // TWAP parameters
   const [twapDuration, setTwapDuration] = useState("60");
@@ -81,7 +81,7 @@ export default function OrderEntryPanel({ symbol, lastPrice = 0 }: OrderEntryPan
     }
 
     // Handle advanced orders
-    if (advancedOrderType && advancedOrderType !== "none") {
+    if (orderType === "advanced") {
       try {
         let parameters: any = {};
 
@@ -367,38 +367,14 @@ export default function OrderEntryPanel({ symbol, lastPrice = 0 }: OrderEntryPan
   return (
     <div className="flex flex-col p-1 w-full h-full">
       {/* Order Type Selection - Fixed Header */}
-      <div className="flex-shrink-0 space-y-0.5">
-        {/* Market/Limit Tabs + Advanced Dropdown - All in one row */}
-        <div className="flex gap-0.5 items-end">
-          <div className="flex-1">
-            <Tabs value={orderType} onValueChange={(v) => setOrderType(v as any)}>
-              <TabsList className="w-full grid grid-cols-2 h-6">
-                <TabsTrigger value="market" className="text-[9px] px-1 py-0" data-testid="tab-market">Market</TabsTrigger>
-                <TabsTrigger value="limit" className="text-[9px] px-1 py-0" data-testid="tab-limit">Limit</TabsTrigger>
-              </TabsList>
-            </Tabs>
-          </div>
-          
-          {/* Advanced Order Type Dropdown - Inline */}
-          <div className="flex-1">
-            <Select value={advancedOrderType} onValueChange={setAdvancedOrderType}>
-              <SelectTrigger className="h-6 text-[9px]" data-testid="select-advanced-type">
-                <SelectValue placeholder="Advanced" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">None</SelectItem>
-                <SelectItem value="twap">TWAP</SelectItem>
-                <SelectItem value="limit_chase">Limit Chase</SelectItem>
-                <SelectItem value="scaled">Scaled/Ladder</SelectItem>
-                <SelectItem value="iceberg">Iceberg</SelectItem>
-                <SelectItem value="oco">OCO</SelectItem>
-                <SelectItem value="trailing_tp">Trailing TP</SelectItem>
-                <SelectItem value="grid">Grid</SelectItem>
-                <SelectItem value="conditional">Conditional</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
+      <div className="flex-shrink-0">
+        <Tabs value={orderType} onValueChange={(v) => setOrderType(v as any)}>
+          <TabsList className="w-full grid grid-cols-3 h-6">
+            <TabsTrigger value="market" className="text-[9px] px-1 py-0" data-testid="tab-market">Market</TabsTrigger>
+            <TabsTrigger value="limit" className="text-[9px] px-1 py-0" data-testid="tab-limit">Limit</TabsTrigger>
+            <TabsTrigger value="advanced" className="text-[9px] px-1 py-0" data-testid="tab-advanced">Advanced</TabsTrigger>
+          </TabsList>
+        </Tabs>
       </div>
 
       {/* ALL CONTENT - No scrolling */}
@@ -440,8 +416,30 @@ export default function OrderEntryPanel({ symbol, lastPrice = 0 }: OrderEntryPan
           </div>
         </div>
 
-        {/* Limit Price (for Limit orders) */}
-        {orderType === "limit" && (
+        {/* Advanced Order Type Selector - Only show when Advanced tab is active */}
+        {orderType === "advanced" && (
+          <div className="space-y-0.5">
+            <Label className="text-[9px] font-medium">Order Type</Label>
+            <Select value={advancedOrderType} onValueChange={setAdvancedOrderType}>
+              <SelectTrigger className="h-6 text-[9px]" data-testid="select-advanced-type">
+                <SelectValue placeholder="Select advanced order type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="twap">TWAP</SelectItem>
+                <SelectItem value="limit_chase">Limit Chase</SelectItem>
+                <SelectItem value="scaled">Scaled/Ladder</SelectItem>
+                <SelectItem value="iceberg">Iceberg</SelectItem>
+                <SelectItem value="oco">OCO</SelectItem>
+                <SelectItem value="trailing_tp">Trailing TP</SelectItem>
+                <SelectItem value="grid">Grid</SelectItem>
+                <SelectItem value="conditional">Conditional</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
+        {/* Limit Price (for Limit orders and certain Advanced orders like Iceberg) */}
+        {(orderType === "limit" || (orderType === "advanced" && advancedOrderType === "iceberg")) && (
           <div className="space-y-0.5">
             <Label className="text-[9px] font-medium">Limit Price</Label>
             <div className="flex gap-0.5">
@@ -467,7 +465,7 @@ export default function OrderEntryPanel({ symbol, lastPrice = 0 }: OrderEntryPan
         )}
 
         {/* Advanced Order Type Parameters */}
-        {advancedOrderType === "twap" && (
+        {orderType === "advanced" && advancedOrderType === "twap" && (
           <div className="space-y-1 p-1 border border-border rounded">
             <div className="text-[9px] font-medium text-primary">TWAP Settings</div>
             <div className="grid grid-cols-2 gap-0.5">
@@ -519,7 +517,7 @@ export default function OrderEntryPanel({ symbol, lastPrice = 0 }: OrderEntryPan
           </div>
         )}
 
-        {advancedOrderType === "limit_chase" && (
+        {orderType === "advanced" && advancedOrderType === "limit_chase" && (
           <div className="space-y-1 p-1 border border-border rounded">
             <div className="text-[9px] font-medium text-primary">Limit Chase Settings</div>
             <div className="grid grid-cols-2 gap-0.5">
@@ -584,7 +582,7 @@ export default function OrderEntryPanel({ symbol, lastPrice = 0 }: OrderEntryPan
           </div>
         )}
 
-        {advancedOrderType === "scaled" && (
+        {orderType === "advanced" && advancedOrderType === "scaled" && (
           <div className="space-y-1 p-1 border border-border rounded">
             <div className="text-[9px] font-medium text-primary">Scaled/Ladder Settings</div>
             <div className="space-y-0.5">
@@ -637,7 +635,7 @@ export default function OrderEntryPanel({ symbol, lastPrice = 0 }: OrderEntryPan
           </div>
         )}
 
-        {advancedOrderType === "iceberg" && (
+        {orderType === "advanced" && advancedOrderType === "iceberg" && (
           <div className="space-y-1 p-1 border border-border rounded">
             <div className="text-[9px] font-medium text-primary">Iceberg Settings</div>
             <div className="grid grid-cols-2 gap-0.5">
@@ -692,7 +690,7 @@ export default function OrderEntryPanel({ symbol, lastPrice = 0 }: OrderEntryPan
           </div>
         )}
 
-        {advancedOrderType && advancedOrderType !== "none" && !["twap", "limit_chase", "scaled", "iceberg"].includes(advancedOrderType) && (
+        {orderType === "advanced" && !["twap", "limit_chase", "scaled", "iceberg"].includes(advancedOrderType) && (
           <div className="p-2 border border-border rounded">
             <div className="text-[9px] text-secondary text-center">
               {advancedOrderType.toUpperCase()} order type coming soon
