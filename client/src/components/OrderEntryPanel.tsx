@@ -1,14 +1,12 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ChevronDown } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
@@ -21,21 +19,41 @@ export default function OrderEntryPanel({ symbol, lastPrice = 0 }: OrderEntryPan
   const { toast } = useToast();
   
   // State
-  const [orderType, setOrderType] = useState<"market" | "limit" | "scale">("market");
+  const [orderType, setOrderType] = useState<"market" | "limit">("market");
   const [side, setSide] = useState<"buy" | "sell">("buy");
   const [limitPrice, setLimitPrice] = useState("");
   const [amount, setAmount] = useState("");
   const [sliderValue, setSliderValue] = useState([0]);
   const [reduceOnly, setReduceOnly] = useState(false);
   const [tpslEnabled, setTpslEnabled] = useState(false);
-  const [advancedOpen, setAdvancedOpen] = useState(false);
-  const [advancedOrderType, setAdvancedOrderType] = useState("");
   
-  // Scale order specific
-  const [scaleStart, setScaleStart] = useState("");
-  const [scaleEnd, setScaleEnd] = useState("");
-  const [scaleOrderCount, setScaleOrderCount] = useState("5");
-  const [scaleSizeSkew, setScaleSizeSkew] = useState("1.00");
+  // Advanced order type state
+  const [advancedOrderType, setAdvancedOrderType] = useState<string>("");
+  
+  // TWAP parameters
+  const [twapDuration, setTwapDuration] = useState("60");
+  const [twapSlices, setTwapSlices] = useState("10");
+  const [twapRandomize, setTwapRandomize] = useState(false);
+  const [twapPriceLimit, setTwapPriceLimit] = useState("");
+  
+  // Limit Chase parameters
+  const [chaseOffset, setChaseOffset] = useState("1");
+  const [chaseMaxChases, setChaseMaxChases] = useState("5");
+  const [chaseInterval, setChaseInterval] = useState("30");
+  const [chasePriceLimit, setChasePriceLimit] = useState("");
+  const [chaseGiveBehavior, setChaseGiveBehavior] = useState<"cancel" | "market" | "wait">("wait");
+  
+  // Scaled/Ladder parameters
+  const [scaledLevels, setScaledLevels] = useState("5");
+  const [scaledStart, setScaledStart] = useState("");
+  const [scaledEnd, setScaledEnd] = useState("");
+  const [scaledDistribution, setScaledDistribution] = useState<"linear" | "geometric" | "custom">("linear");
+  
+  // Iceberg parameters
+  const [icebergDisplay, setIcebergDisplay] = useState("");
+  const [icebergTotal, setIcebergTotal] = useState("");
+  const [icebergRefresh, setIcebergRefresh] = useState<"immediate" | "delayed">("immediate");
+  const [icebergRefreshDelay, setIcebergRefreshDelay] = useState("5");
 
   const { data: userData } = useQuery<{ user: any }>({
     queryKey: ["/api/user"],
@@ -53,6 +71,272 @@ export default function OrderEntryPanel({ symbol, lastPrice = 0 }: OrderEntryPan
       return;
     }
 
+    if (!amount || parseFloat(amount) <= 0) {
+      toast({
+        title: "Invalid Amount",
+        description: "Please enter a valid order amount",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Handle advanced orders
+    if (advancedOrderType) {
+      try {
+        let parameters: any = {};
+
+        // Build parameters based on order type with validation
+        switch (advancedOrderType) {
+          case "twap":
+            const duration = parseFloat(twapDuration);
+            const slices = parseInt(twapSlices);
+            if (isNaN(duration) || duration <= 0) {
+              toast({
+                title: "Invalid Duration",
+                description: "Duration must be a positive number",
+                variant: "destructive",
+              });
+              return;
+            }
+            if (isNaN(slices) || slices < 2) {
+              toast({
+                title: "Invalid Slices",
+                description: "Slices must be at least 2",
+                variant: "destructive",
+              });
+              return;
+            }
+            parameters = {
+              durationMinutes: duration,
+              slices,
+              randomizeIntervals: twapRandomize,
+            };
+            if (twapPriceLimit) {
+              const pLimit = parseFloat(twapPriceLimit);
+              if (isNaN(pLimit) || pLimit <= 0) {
+                toast({
+                  title: "Invalid Price Limit",
+                  description: "Price limit must be a positive number",
+                  variant: "destructive",
+                });
+                return;
+              }
+              parameters.priceLimit = pLimit.toString();
+            }
+            break;
+
+          case "limit_chase":
+            const offset = parseFloat(chaseOffset);
+            const maxChases = parseInt(chaseMaxChases);
+            const interval = parseFloat(chaseInterval);
+            if (isNaN(offset)) {
+              toast({
+                title: "Invalid Offset",
+                description: "Offset must be a valid number",
+                variant: "destructive",
+              });
+              return;
+            }
+            if (isNaN(maxChases) || maxChases <= 0) {
+              toast({
+                title: "Invalid Max Chases",
+                description: "Max chases must be a positive number",
+                variant: "destructive",
+              });
+              return;
+            }
+            if (isNaN(interval) || interval <= 0) {
+              toast({
+                title: "Invalid Interval",
+                description: "Interval must be a positive number",
+                variant: "destructive",
+              });
+              return;
+            }
+            parameters = {
+              offset,
+              maxChases,
+              chaseIntervalSeconds: interval,
+              giveBehavior: chaseGiveBehavior,
+            };
+            if (chasePriceLimit) {
+              const pLimit = parseFloat(chasePriceLimit);
+              if (isNaN(pLimit) || pLimit <= 0) {
+                toast({
+                  title: "Invalid Price Limit",
+                  description: "Price limit must be a positive number",
+                  variant: "destructive",
+                });
+                return;
+              }
+              parameters.priceLimit = pLimit.toString();
+            }
+            break;
+
+          case "scaled":
+            if (!scaledStart || !scaledEnd) {
+              toast({
+                title: "Missing Parameters",
+                description: "Please enter start and end prices for scaled order",
+                variant: "destructive",
+              });
+              return;
+            }
+            const levels = parseInt(scaledLevels);
+            const priceStart = parseFloat(scaledStart);
+            const priceEnd = parseFloat(scaledEnd);
+            if (isNaN(levels) || levels < 2) {
+              toast({
+                title: "Invalid Levels",
+                description: "Levels must be at least 2",
+                variant: "destructive",
+              });
+              return;
+            }
+            if (isNaN(priceStart) || priceStart <= 0) {
+              toast({
+                title: "Invalid Start Price",
+                description: "Start price must be a positive number",
+                variant: "destructive",
+              });
+              return;
+            }
+            if (isNaN(priceEnd) || priceEnd <= 0) {
+              toast({
+                title: "Invalid End Price",
+                description: "End price must be a positive number",
+                variant: "destructive",
+              });
+              return;
+            }
+            if (scaledDistribution === "custom") {
+              toast({
+                title: "Custom Distribution Not Supported",
+                description: "Custom distribution is not yet implemented. Please use Linear or Geometric.",
+                variant: "destructive",
+              });
+              return;
+            }
+            parameters = {
+              levels,
+              priceStart: priceStart.toString(),
+              priceEnd: priceEnd.toString(),
+              distribution: scaledDistribution,
+            };
+            break;
+
+          case "iceberg":
+            if (!icebergDisplay || !icebergTotal) {
+              toast({
+                title: "Missing Parameters",
+                description: "Please enter display and total sizes for iceberg order",
+                variant: "destructive",
+              });
+              return;
+            }
+            const displaySize = parseFloat(icebergDisplay);
+            const totalSize = parseFloat(icebergTotal);
+            if (isNaN(displaySize) || displaySize <= 0) {
+              toast({
+                title: "Invalid Display Size",
+                description: "Display size must be a positive number",
+                variant: "destructive",
+              });
+              return;
+            }
+            if (isNaN(totalSize) || totalSize <= 0) {
+              toast({
+                title: "Invalid Total Size",
+                description: "Total size must be a positive number",
+                variant: "destructive",
+              });
+              return;
+            }
+            if (displaySize >= totalSize) {
+              toast({
+                title: "Invalid Iceberg Sizes",
+                description: "Display size must be less than total size",
+                variant: "destructive",
+              });
+              return;
+            }
+            if (!limitPrice) {
+              toast({
+                title: "Missing Limit Price",
+                description: "Iceberg orders require a limit price",
+                variant: "destructive",
+              });
+              return;
+            }
+            parameters = {
+              displaySize: displaySize.toString(),
+              totalSize: totalSize.toString(),
+              priceLimit: limitPrice,
+              refreshBehavior: icebergRefresh,
+            };
+            if (icebergRefresh === "delayed") {
+              const delay = parseFloat(icebergRefreshDelay);
+              if (isNaN(delay) || delay <= 0) {
+                toast({
+                  title: "Invalid Refresh Delay",
+                  description: "Refresh delay must be a positive number",
+                  variant: "destructive",
+                });
+                return;
+              }
+              parameters.refreshDelaySeconds = delay;
+            }
+            break;
+
+          default:
+            toast({
+              title: "Coming Soon",
+              description: `${advancedOrderType.toUpperCase()} order type is not yet available`,
+              variant: "destructive",
+            });
+            return;
+        }
+
+        // Validate and convert totalSize
+        const totalSizeNum = parseFloat(amount);
+        if (isNaN(totalSizeNum) || totalSizeNum <= 0) {
+          toast({
+            title: "Invalid Amount",
+            description: "Amount must be a positive number",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        // Create advanced order
+        const response = await apiRequest("POST", "/api/advanced-orders", {
+          orderType: advancedOrderType,
+          symbol,
+          side,
+          totalSize: totalSizeNum.toString(),
+          limitPrice: limitPrice || undefined,
+          parameters,
+        });
+
+        toast({
+          title: "Advanced Order Created",
+          description: `${advancedOrderType.toUpperCase()} order for ${amount} ${symbol}`,
+        });
+
+        // Reset form
+        setAmount("");
+        setLimitPrice("");
+      } catch (error: any) {
+        toast({
+          title: "Order Failed",
+          description: error.message || "Failed to create advanced order",
+          variant: "destructive",
+        });
+      }
+      return;
+    }
+
+    // Handle regular market/limit orders
     console.log("[OrderEntry] Placing order:", {
       symbol,
       orderType,
@@ -61,10 +345,10 @@ export default function OrderEntryPanel({ symbol, lastPrice = 0 }: OrderEntryPan
       limitPrice: orderType === "limit" ? limitPrice : undefined,
     });
 
-    // TODO: Implement actual order placement
+    // TODO: Implement actual market/limit order placement
     toast({
       title: "Order Placed",
-      description: `${side.toUpperCase()} order for ${amount} ${symbol}`,
+      description: `${side.toUpperCase()} ${orderType} order for ${amount} ${symbol}`,
     });
   };
 
@@ -82,14 +366,37 @@ export default function OrderEntryPanel({ symbol, lastPrice = 0 }: OrderEntryPan
 
   return (
     <div className="flex flex-col p-1 w-full h-[600px] min-h-[600px] max-h-[600px]">
-      {/* Tabs - Fixed Header */}
-      <Tabs value={orderType} onValueChange={(v) => setOrderType(v as any)} className="flex-shrink-0">
-        <TabsList className="w-full grid grid-cols-3 h-6">
-          <TabsTrigger value="market" className="text-[9px] px-1 py-0">Market</TabsTrigger>
-          <TabsTrigger value="limit" className="text-[9px] px-1 py-0">Limit</TabsTrigger>
-          <TabsTrigger value="scale" className="text-[9px] px-1 py-0">Scale</TabsTrigger>
-        </TabsList>
-      </Tabs>
+      {/* Order Type Selection - Fixed Header */}
+      <div className="flex-shrink-0 space-y-0.5">
+        {/* Market/Limit Tabs */}
+        <Tabs value={orderType} onValueChange={(v) => setOrderType(v as any)}>
+          <TabsList className="w-full grid grid-cols-2 h-6">
+            <TabsTrigger value="market" className="text-[9px] px-1 py-0" data-testid="tab-market">Market</TabsTrigger>
+            <TabsTrigger value="limit" className="text-[9px] px-1 py-0" data-testid="tab-limit">Limit</TabsTrigger>
+          </TabsList>
+        </Tabs>
+        
+        {/* Advanced Order Type Dropdown */}
+        <div className="space-y-0.5">
+          <Label className="text-[9px] font-medium">Advanced</Label>
+          <Select value={advancedOrderType} onValueChange={setAdvancedOrderType}>
+            <SelectTrigger className="h-6 text-[9px]" data-testid="select-advanced-type">
+              <SelectValue placeholder="None" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">None</SelectItem>
+              <SelectItem value="twap">TWAP</SelectItem>
+              <SelectItem value="limit_chase">Limit Chase</SelectItem>
+              <SelectItem value="scaled">Scaled/Ladder</SelectItem>
+              <SelectItem value="iceberg">Iceberg</SelectItem>
+              <SelectItem value="oco">OCO</SelectItem>
+              <SelectItem value="trailing_tp">Trailing TP</SelectItem>
+              <SelectItem value="grid">Grid</SelectItem>
+              <SelectItem value="conditional">Conditional</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
 
       {/* ALL CONTENT - Scrollable with Fixed Height */}
       <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden no-scrollbar flex flex-col mt-1">
@@ -156,55 +463,236 @@ export default function OrderEntryPanel({ symbol, lastPrice = 0 }: OrderEntryPan
           </div>
         )}
 
-        {/* Scale Order Fields */}
-        {orderType === "scale" && (
-          <div className="space-y-1">
+        {/* Advanced Order Type Parameters */}
+        {advancedOrderType === "twap" && (
+          <div className="space-y-1 p-1 border border-border rounded">
+            <div className="text-[9px] font-medium text-primary">TWAP Settings</div>
+            <div className="grid grid-cols-2 gap-0.5">
+              <div className="space-y-0.5">
+                <Label className="text-[9px]">Duration (min)</Label>
+                <Input
+                  type="number"
+                  value={twapDuration}
+                  onChange={(e) => setTwapDuration(e.target.value)}
+                  className="h-6 text-[10px] px-1 py-0"
+                  data-testid="input-twap-duration"
+                  placeholder="60"
+                />
+              </div>
+              <div className="space-y-0.5">
+                <Label className="text-[9px]">Slices (min 2)</Label>
+                <Input
+                  type="number"
+                  value={twapSlices}
+                  onChange={(e) => setTwapSlices(e.target.value)}
+                  className="h-6 text-[10px] px-1 py-0"
+                  data-testid="input-twap-slices"
+                  placeholder="10"
+                />
+              </div>
+            </div>
             <div className="space-y-0.5">
-              <Label className="text-[9px] font-medium">Start</Label>
+              <Label className="text-[9px]">Price Limit (optional)</Label>
               <Input
                 type="number"
-                placeholder="0.0"
-                value={scaleStart}
-                onChange={(e) => setScaleStart(e.target.value)}
+                value={twapPriceLimit}
+                onChange={(e) => setTwapPriceLimit(e.target.value)}
                 className="h-6 text-[10px] px-1 py-0"
-                data-testid="input-scale-start"
+                data-testid="input-twap-price-limit"
+                placeholder="Max buy / Min sell price"
+              />
+            </div>
+            <div className="flex items-center gap-1.5">
+              <Checkbox
+                id="twap-randomize"
+                checked={twapRandomize}
+                onCheckedChange={(checked) => setTwapRandomize(checked as boolean)}
+                data-testid="checkbox-twap-randomize"
+              />
+              <label htmlFor="twap-randomize" className="text-[9px] cursor-pointer">
+                Randomize Intervals
+              </label>
+            </div>
+          </div>
+        )}
+
+        {advancedOrderType === "limit_chase" && (
+          <div className="space-y-1 p-1 border border-border rounded">
+            <div className="text-[9px] font-medium text-primary">Limit Chase Settings</div>
+            <div className="grid grid-cols-2 gap-0.5">
+              <div className="space-y-0.5">
+                <Label className="text-[9px]">Offset (ticks)</Label>
+                <Input
+                  type="number"
+                  value={chaseOffset}
+                  onChange={(e) => setChaseOffset(e.target.value)}
+                  className="h-6 text-[10px] px-1 py-0"
+                  data-testid="input-chase-offset"
+                  placeholder="1"
+                />
+              </div>
+              <div className="space-y-0.5">
+                <Label className="text-[9px]">Max Chases</Label>
+                <Input
+                  type="number"
+                  value={chaseMaxChases}
+                  onChange={(e) => setChaseMaxChases(e.target.value)}
+                  className="h-6 text-[10px] px-1 py-0"
+                  data-testid="input-chase-max"
+                  placeholder="5"
+                />
+              </div>
+            </div>
+            <div className="space-y-0.5">
+              <Label className="text-[9px]">Interval (sec)</Label>
+              <Input
+                type="number"
+                value={chaseInterval}
+                onChange={(e) => setChaseInterval(e.target.value)}
+                className="h-6 text-[10px] px-1 py-0"
+                data-testid="input-chase-interval"
+                placeholder="30"
               />
             </div>
             <div className="space-y-0.5">
-              <Label className="text-[9px] font-medium">End</Label>
-              <div className="flex gap-0.5">
-                <Input
-                  type="number"
-                  placeholder="0.0"
-                  value={scaleEnd}
-                  onChange={(e) => setScaleEnd(e.target.value)}
-                  className="h-6 text-[10px] px-1 py-0 flex-1"
-                  data-testid="input-scale-end"
-                />
-                <span className="text-[9px] text-secondary flex items-center px-1">USD</span>
-              </div>
+              <Label className="text-[9px]">Price Limit (optional)</Label>
+              <Input
+                type="number"
+                value={chasePriceLimit}
+                onChange={(e) => setChasePriceLimit(e.target.value)}
+                className="h-6 text-[10px] px-1 py-0"
+                data-testid="input-chase-price-limit"
+                placeholder="Don't chase beyond"
+              />
+            </div>
+            <div className="space-y-0.5">
+              <Label className="text-[9px]">Give Behavior</Label>
+              <Select value={chaseGiveBehavior} onValueChange={(v) => setChaseGiveBehavior(v as any)}>
+                <SelectTrigger className="h-6 text-[9px]" data-testid="select-chase-behavior">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="wait">Wait</SelectItem>
+                  <SelectItem value="cancel">Cancel</SelectItem>
+                  <SelectItem value="market">Market Order</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        )}
+
+        {advancedOrderType === "scaled" && (
+          <div className="space-y-1 p-1 border border-border rounded">
+            <div className="text-[9px] font-medium text-primary">Scaled/Ladder Settings</div>
+            <div className="space-y-0.5">
+              <Label className="text-[9px]">Levels (min 2)</Label>
+              <Input
+                type="number"
+                value={scaledLevels}
+                onChange={(e) => setScaledLevels(e.target.value)}
+                className="h-6 text-[10px] px-1 py-0"
+                data-testid="input-scaled-levels"
+                placeholder="5"
+              />
             </div>
             <div className="grid grid-cols-2 gap-0.5">
               <div className="space-y-0.5">
-                <Label className="text-[9px]">Order Count</Label>
+                <Label className="text-[9px]">Start Price</Label>
                 <Input
                   type="number"
-                  value={scaleOrderCount}
-                  onChange={(e) => setScaleOrderCount(e.target.value)}
+                  value={scaledStart}
+                  onChange={(e) => setScaledStart(e.target.value)}
                   className="h-6 text-[10px] px-1 py-0"
-                  data-testid="input-order-count"
+                  data-testid="input-scaled-start"
+                  placeholder="Lower price"
                 />
               </div>
               <div className="space-y-0.5">
-                <Label className="text-[9px]">Size Skew</Label>
+                <Label className="text-[9px]">End Price</Label>
                 <Input
                   type="number"
-                  value={scaleSizeSkew}
-                  onChange={(e) => setScaleSizeSkew(e.target.value)}
+                  value={scaledEnd}
+                  onChange={(e) => setScaledEnd(e.target.value)}
                   className="h-6 text-[10px] px-1 py-0"
-                  data-testid="input-size-skew"
+                  data-testid="input-scaled-end"
+                  placeholder="Upper price"
                 />
               </div>
+            </div>
+            <div className="space-y-0.5">
+              <Label className="text-[9px]">Distribution</Label>
+              <Select value={scaledDistribution} onValueChange={(v) => setScaledDistribution(v as any)}>
+                <SelectTrigger className="h-6 text-[9px]" data-testid="select-scaled-dist">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="linear">Linear</SelectItem>
+                  <SelectItem value="geometric">Geometric</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        )}
+
+        {advancedOrderType === "iceberg" && (
+          <div className="space-y-1 p-1 border border-border rounded">
+            <div className="text-[9px] font-medium text-primary">Iceberg Settings</div>
+            <div className="grid grid-cols-2 gap-0.5">
+              <div className="space-y-0.5">
+                <Label className="text-[9px]">Display Size</Label>
+                <Input
+                  type="number"
+                  value={icebergDisplay}
+                  onChange={(e) => setIcebergDisplay(e.target.value)}
+                  className="h-6 text-[10px] px-1 py-0"
+                  data-testid="input-iceberg-display"
+                  placeholder="Visible size"
+                />
+              </div>
+              <div className="space-y-0.5">
+                <Label className="text-[9px]">Total Size</Label>
+                <Input
+                  type="number"
+                  value={icebergTotal}
+                  onChange={(e) => setIcebergTotal(e.target.value)}
+                  className="h-6 text-[10px] px-1 py-0"
+                  data-testid="input-iceberg-total"
+                  placeholder="Hidden total"
+                />
+              </div>
+            </div>
+            <div className="space-y-0.5">
+              <Label className="text-[9px]">Refresh</Label>
+              <Select value={icebergRefresh} onValueChange={(v) => setIcebergRefresh(v as any)}>
+                <SelectTrigger className="h-6 text-[9px]" data-testid="select-iceberg-refresh">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="immediate">Immediate</SelectItem>
+                  <SelectItem value="delayed">Delayed</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {icebergRefresh === "delayed" && (
+              <div className="space-y-0.5">
+                <Label className="text-[9px]">Refresh Delay (sec)</Label>
+                <Input
+                  type="number"
+                  value={icebergRefreshDelay}
+                  onChange={(e) => setIcebergRefreshDelay(e.target.value)}
+                  className="h-6 text-[10px] px-1 py-0"
+                  data-testid="input-iceberg-delay"
+                  placeholder="5"
+                />
+              </div>
+            )}
+          </div>
+        )}
+
+        {advancedOrderType && !["twap", "limit_chase", "scaled", "iceberg"].includes(advancedOrderType) && (
+          <div className="p-2 border border-border rounded">
+            <div className="text-[9px] text-secondary text-center">
+              {advancedOrderType.toUpperCase()} order type coming soon
             </div>
           </div>
         )}
@@ -266,31 +754,6 @@ export default function OrderEntryPanel({ symbol, lastPrice = 0 }: OrderEntryPan
             </label>
           </div>
         </div>
-
-        {/* Advanced Dropdown */}
-        <Collapsible open={advancedOpen} onOpenChange={setAdvancedOpen}>
-          <CollapsibleTrigger className="flex items-center gap-1 text-[9px] hover-elevate p-1 rounded w-full" data-testid="button-advanced-toggle">
-            <span>Advanced</span>
-            <ChevronDown className={`h-3 w-3 transition-transform ${advancedOpen ? "rotate-180" : ""}`} />
-          </CollapsibleTrigger>
-          <CollapsibleContent className="space-y-1 mt-1">
-            <div className="space-y-0.5">
-              <Label className="text-[9px]">Order Type</Label>
-              <Select value={advancedOrderType} onValueChange={setAdvancedOrderType}>
-                <SelectTrigger className="h-6 text-[9px]" data-testid="select-advanced-type">
-                  <SelectValue placeholder="Select type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="stop-limit">Stop Limit</SelectItem>
-                  <SelectItem value="stop-market">Stop Market</SelectItem>
-                  <SelectItem value="take-profit-limit">Take Profit Limit</SelectItem>
-                  <SelectItem value="take-profit-market">Take Profit Market</SelectItem>
-                  <SelectItem value="twap">TWAP</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </CollapsibleContent>
-        </Collapsible>
 
         {/* Connect Wallet / Place Order Button */}
         <div className="mt-1 flex-shrink-0">
