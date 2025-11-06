@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import logoUrl from "@assets/1fox-removebg-preview(1)_1761259210534.png";
 
 interface ExecutionResult {
@@ -64,12 +65,32 @@ export default function AIPromptPanel() {
     queryKey: ["/api/trading-modes"],
   });
 
-  const { data: marketData } = useQuery<any>({
+  const { data: marketData, isSuccess: marketSuccess, isError: marketError } = useQuery<{ success: boolean; marketData?: any; error?: string }>({
     queryKey: ["/api/hyperliquid/market-data"],
+    gcTime: 0, // Don't cache on error to prevent stale green lights
   });
 
   const { data: positions } = useQuery<any>({
     queryKey: ["/api/hyperliquid/positions"],
+  });
+
+  // Status indicators - check both success state and response data
+  const { data: userData, isSuccess: userSuccess, isError: userError } = useQuery<any>({
+    queryKey: ["/api/user"],
+    refetchInterval: 5000,
+    gcTime: 0, // Don't cache on error to prevent stale green lights
+  });
+
+  const { data: balancesData, isSuccess: balancesSuccess, isError: balancesError } = useQuery<{ success: boolean; balances?: any }>({
+    queryKey: ["/api/wallets/balances"],
+    refetchInterval: 10000,
+    gcTime: 0, // Don't cache on error to prevent stale green lights
+  });
+
+  const { data: activeModeData, isSuccess: activeModeSuccess, isError: activeModeError } = useQuery<{ success: boolean; mode?: any }>({
+    queryKey: ["/api/trading-modes/active"],
+    refetchInterval: 5000,
+    gcTime: 0, // Don't cache on error to prevent stale green lights
   });
 
   const activateStrategyMutation = useMutation({
@@ -384,6 +405,51 @@ export default function AIPromptPanel() {
                 Processing
               </Badge>
             )}
+            
+            {/* AI Status Lights */}
+            <div className="flex items-center gap-1.5 ml-1" data-testid="ai-status-indicators">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div 
+                    className={`h-2 w-2 rounded-full ${
+                      userSuccess && !userError && userData && marketSuccess && !marketError && marketData?.success && marketData?.marketData ? 'bg-long' : 'bg-muted-foreground/30'
+                    }`}
+                    data-testid="status-ai-live"
+                  />
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="text-xs">
+                  <p>AI {userSuccess && !userError && userData && marketSuccess && !marketError && marketData?.success && marketData?.marketData ? 'Live' : (userError || marketError || marketData?.success === false) ? 'Connection Error' : 'Offline'}</p>
+                </TooltipContent>
+              </Tooltip>
+              
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div 
+                    className={`h-2 w-2 rounded-full ${
+                      balancesSuccess && !balancesError && balancesData?.success && balancesData?.balances && Object.keys(balancesData.balances).length > 0 ? 'bg-long' : 'bg-muted-foreground/30'
+                    }`}
+                    data-testid="status-balance-visible"
+                  />
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="text-xs">
+                  <p>Balance {balancesSuccess && !balancesError && balancesData?.success && balancesData?.balances && Object.keys(balancesData.balances).length > 0 ? 'Visible' : balancesError ? 'Fetch Error' : 'Not Available'}</p>
+                </TooltipContent>
+              </Tooltip>
+              
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div 
+                    className={`h-2 w-2 rounded-full ${
+                      activeModeSuccess && !activeModeError && activeModeData?.success && activeModeData?.mode ? 'bg-long animate-pulse' : 'bg-muted-foreground/30'
+                    }`}
+                    data-testid="status-trading-active"
+                  />
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="text-xs">
+                  <p>{activeModeSuccess && !activeModeError && activeModeData?.success && activeModeData?.mode ? `Trading: ${activeModeData.mode.name}` : activeModeError ? 'Status Error' : 'No Active Trades'}</p>
+                </TooltipContent>
+              </Tooltip>
+            </div>
           </div>
           
           <div className="flex items-center gap-2">
