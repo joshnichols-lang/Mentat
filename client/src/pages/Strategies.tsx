@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MultiStrategyDashboard } from "@/components/MultiStrategyDashboard";
 import { Plus, Info, AlertCircle, TrendingUp } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import Header from "@/components/Header";
 
 export default function Strategies() {
   const { toast } = useToast();
@@ -43,9 +44,11 @@ export default function Strategies() {
   };
 
   return (
-    <div className="h-screen flex flex-col bg-background">
-      {/* Header */}
-      <div className="flex-none border-b border-border bg-card">
+    <>
+      <Header />
+      <div className="flex flex-col bg-background">
+        {/* Page Header */}
+        <div className="flex-none border-b border-border bg-card">
         <div className="flex items-center justify-between p-3">
           <div className="flex items-center gap-3">
             <TrendingUp className="h-5 w-5 text-primary" />
@@ -187,6 +190,7 @@ export default function Strategies() {
           </TabsContent>
         </Tabs>
       </div>
-    </div>
+      </div>
+    </>
   );
 }
