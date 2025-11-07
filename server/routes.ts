@@ -4840,8 +4840,25 @@ Provide a clear, actionable analysis with specific recommendations. Format your 
           });
         } catch (analyzeError) {
           console.error('[Strategy Auto-Config] Failed to analyze strategy:', analyzeError);
-          // Continue without strategyConfig - it's optional
+          // Fallback to basic config from parameters
+          strategyConfig = null;
         }
+      }
+      
+      // CRITICAL FIX: If no strategyConfig from AI analysis, create one from parameters
+      // This ensures monitoring service can always access trigger configuration
+      if (!strategyConfig && parameters) {
+        strategyConfig = {
+          strategyType: 'price_action',
+          monitoringFrequencyMinutes: parameters.monitoringFrequencyMinutes || 15,
+          requiresRealtimeData: false,
+          triggerMode: parameters.triggerMode || 'time_based',
+          reasoning: 'Manual configuration from strategy parameters'
+        };
+        console.log('[Strategy Config] Using fallback config from parameters:', {
+          monitoringFrequency: strategyConfig.monitoringFrequencyMinutes,
+          triggerMode: strategyConfig.triggerMode
+        });
       }
       
       const mode = await storage.createTradingMode(userId, {

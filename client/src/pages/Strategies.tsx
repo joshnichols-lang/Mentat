@@ -99,6 +99,23 @@ export default function Strategies() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Derive monitoring frequency from timeframe
+    const timeframeToMinutes: Record<string, number> = {
+      '1m': 5,
+      '5m': 5,
+      '15m': 15,
+      '1h': 60,
+      '4h': 240,
+      '1d': 1440,
+    };
+
+    const monitoringFrequencyMinutes = timeframeToMinutes[formData.timeframe] || 15;
+
+    // Set trigger mode based on whether custom rules are provided
+    // If custom rules exist, use hybrid mode (event-driven + time-based)
+    // Otherwise use time-based mode
+    const triggerMode = formData.customRules.trim() ? 'hybrid' : 'time_based';
+
     const parameters = {
       timeframe: formData.timeframe,
       riskPercentage: parseFloat(formData.riskPercentage),
@@ -108,6 +125,10 @@ export default function Strategies() {
       preferredAssets: formData.preferredAssets,
       restrictedAssets: formData.restrictedAssets,
       customRules: formData.customRules,
+      // CRITICAL: Add trigger configuration for monitoring service
+      monitoringFrequencyMinutes,
+      triggerMode,
+      triggerSensitivity: 'moderate' as const,
     };
 
     const modeData = {
