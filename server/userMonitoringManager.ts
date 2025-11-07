@@ -47,6 +47,13 @@ export async function startUserMonitoring(userId: string, intervalMinutes: numbe
     return;
   }
   
+  // COST CONTROL: Enforce 5-minute minimum as a defensive measure
+  const MIN_MONITORING_FREQUENCY = 5;
+  if (intervalMinutes < MIN_MONITORING_FREQUENCY) {
+    console.log(`[User Monitoring] ⚠️ Requested ${intervalMinutes} min interval is below minimum, enforcing ${MIN_MONITORING_FREQUENCY} min for cost control`);
+    intervalMinutes = MIN_MONITORING_FREQUENCY;
+  }
+  
   // SAFETY: Double-check no monitoring is active before starting
   if (activeMonitoring.has(userId)) {
     console.error(`[User Monitoring] 🚨 CRITICAL: Monitoring still active for ${userId} after stop attempt! Aborting to prevent duplicate loops.`);

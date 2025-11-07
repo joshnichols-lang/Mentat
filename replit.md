@@ -6,6 +6,7 @@
 ## Recent Changes
 **November 7, 2025:**
 - **Production Bug Fix:** Fixed React error #31 crash in PositionsGrid.tsx - Hyperliquid position leverage object `{type, value}` was being rendered directly instead of extracting `leverage.value` property (line 214-216)
+- **AI Cost Control - 5-Minute Minimum Enforcement:** Implemented multi-layer enforcement to prevent sub-5-minute monitoring frequencies after beta tester's $36.36 cost issue (1,440 cycles/day from 1-min monitoring). Four enforcement layers: (1) strategyAnalyzer.ts handles undefined/NaN/sub-minimum values, (2) userMonitoringManager.ts defensive clamp at entry, (3) routes.ts ensures userId passed to analyzeStrategy(), (4) /api/monitoring/frequency API endpoint validation. Removed 1-minute option from UI dropdowns and added cost warnings for aggressive monitoring frequencies.
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.

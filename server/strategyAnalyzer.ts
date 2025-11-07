@@ -189,9 +189,13 @@ export async function analyzeStrategy(
 
     // COST CONTROL: Enforce 5-minute minimum monitoring frequency
     const MIN_MONITORING_FREQUENCY = 5;
-    if (config.monitoringFrequencyMinutes < MIN_MONITORING_FREQUENCY) {
-      console.log(`[Strategy Analyzer] ⚠️ AI recommended ${config.monitoringFrequencyMinutes} min monitoring, enforcing ${MIN_MONITORING_FREQUENCY} min minimum for cost control`);
+    const frequency = Number(config.monitoringFrequencyMinutes);
+    
+    // Handle undefined, NaN, or values below minimum
+    if (!frequency || isNaN(frequency) || frequency < MIN_MONITORING_FREQUENCY) {
+      const originalValue = config.monitoringFrequencyMinutes;
       config.monitoringFrequencyMinutes = MIN_MONITORING_FREQUENCY;
+      console.log(`[Strategy Analyzer] ⚠️ AI recommended ${originalValue || 'undefined'} min monitoring, enforcing ${MIN_MONITORING_FREQUENCY} min minimum for cost control`);
     }
 
     console.log('[Strategy Analyzer] Analysis complete:', {
