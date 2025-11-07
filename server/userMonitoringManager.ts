@@ -58,8 +58,8 @@ export async function startUserMonitoring(userId: string, intervalMinutes: numbe
     const tradingModes = await storage.getTradingModes(userId);
     const activeMode = tradingModes.find(mode => mode.isActive);
     
-    if (activeMode && activeMode.strategyDescription) {
-      const analysis = analyzeStrategyForMonitoring(activeMode.strategyDescription);
+    if (activeMode && activeMode.description) {
+      const analysis = analyzeStrategyForMonitoring(activeMode.description);
       console.log(`[User Monitoring] Strategy Analysis for user ${userId}:`, {
         timeframe: analysis.detectedTimeframe,
         style: analysis.detectedStyle,
