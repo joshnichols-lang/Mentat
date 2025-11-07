@@ -190,7 +190,7 @@ export default function Strategies() {
             </Alert>
 
             {/* Multi-Strategy Dashboard */}
-            <MultiStrategyDashboard />
+            <MultiStrategyDashboard onCreateClick={handleCreateStrategy} />
 
             {/* Strategy Guidelines */}
             <Card>

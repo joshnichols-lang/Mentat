@@ -15,7 +15,11 @@ import {
   Zap
 } from "lucide-react";
 
-export function MultiStrategyDashboard() {
+interface MultiStrategyDashboardProps {
+  onCreateClick?: () => void;
+}
+
+export function MultiStrategyDashboard({ onCreateClick }: MultiStrategyDashboardProps) {
   const { data: strategiesData } = useQuery<any>({
     queryKey: ['/api/trading-modes'],
     refetchInterval: 30000,
@@ -219,7 +223,7 @@ export function MultiStrategyDashboard() {
         <Card className="bg-card border-border/50">
           <CardContent className="py-8 text-center">
             <p className="text-muted-foreground mb-4">No trading strategies configured yet.</p>
-            <Button data-testid="button-create-first-strategy">
+            <Button onClick={onCreateClick} data-testid="button-create-first-strategy">
               <Plus className="h-4 w-4 mr-1" />
               Create Your First Strategy
             </Button>
