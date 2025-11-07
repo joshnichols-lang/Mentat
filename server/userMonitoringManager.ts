@@ -21,18 +21,35 @@ interface UserMonitoring {
 const activeMonitoring = new Map<string, UserMonitoring>();
 
 /**
+ * Track last restart time per user to prevent rapid-fire restarts
+ * Key: userId, Value: timestamp of last restart
+ */
+const lastRestartTime = new Map<string, number>();
+
+// Minimum time between monitoring restarts (milliseconds)
+const RESTART_COOLDOWN_MS = 5000; // 5 seconds
+
+/**
  * Start autonomous trading monitoring for a specific user
  * Automatically analyzes strategy to optimize monitoring intervals
  */
 export async function startUserMonitoring(userId: string, intervalMinutes: number, runImmediately: boolean = true): Promise<void> {
-  // Stop existing monitoring if running
+  // SAFETY: Stop existing monitoring if running to prevent multiple loops
   if (activeMonitoring.has(userId)) {
-    console.log(`[User Monitoring] User ${userId} already has monitoring active, restarting...`);
+    console.log(`[User Monitoring] ⚠️ User ${userId} already has monitoring active, stopping old loop before starting new one...`);
     await stopUserMonitoring(userId);
+    // Add a small delay to ensure old loop is fully stopped
+    await new Promise(resolve => setTimeout(resolve, 100));
   }
 
   if (intervalMinutes === 0) {
     console.log(`[User Monitoring] Monitoring disabled for user ${userId} (interval: 0)`);
+    return;
+  }
+  
+  // SAFETY: Double-check no monitoring is active before starting
+  if (activeMonitoring.has(userId)) {
+    console.error(`[User Monitoring] 🚨 CRITICAL: Monitoring still active for ${userId} after stop attempt! Aborting to prevent duplicate loops.`);
     return;
   }
 
@@ -133,6 +150,18 @@ export async function stopUserMonitoring(userId: string): Promise<void> {
  */
 export async function restartUserMonitoring(userId: string, intervalMinutes: number, runImmediately: boolean = false): Promise<void> {
   console.log(`[User Monitoring] Restarting monitoring for user ${userId} with interval: ${intervalMinutes} minutes`);
+  
+  // SAFETY: Rate limit restarts to prevent rapid-fire calls from frontend
+  const lastRestart = lastRestartTime.get(userId);
+  const now = Date.now();
+  
+  if (lastRestart && (now - lastRestart) < RESTART_COOLDOWN_MS) {
+    const remainingCooldown = Math.ceil((RESTART_COOLDOWN_MS - (now - lastRestart)) / 1000);
+    console.warn(`[User Monitoring] ⚠️ Ignoring restart request for ${userId} - cooldown active (${remainingCooldown}s remaining)`);
+    return;
+  }
+  
+  lastRestartTime.set(userId, now);
   
   await stopUserMonitoring(userId);
   

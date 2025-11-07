@@ -92,30 +92,9 @@ export function AIUsageTracker() {
     },
   });
 
-  // Sync stored frequency with backend on mount
-  useEffect(() => {
-    const syncFrequency = async () => {
-      try {
-        const res = await apiRequest('POST', '/api/monitoring/frequency', { 
-          minutes: parseInt(monitoringFrequency) 
-        });
-        
-        // Only try to parse JSON if response is OK and has content
-        if (res.ok && res.headers.get('content-type')?.includes('application/json')) {
-          await res.json();
-        }
-        
-        console.log(`[Monitoring] Synced frequency to ${monitoringFrequency} minutes`);
-      } catch (error) {
-        // Silently fail - user can manually adjust if needed
-        console.warn("[Monitoring] Could not sync frequency on mount, using default or manual selection");
-      }
-    };
-    
-    // Delay sync slightly to ensure server is ready
-    const timer = setTimeout(syncFrequency, 100);
-    return () => clearTimeout(timer);
-  }, []); // Run once on mount
+  // REMOVED: Auto-sync on mount was causing monitoring loops to restart on every page load
+  // This caused excessive AI costs when users refreshed or had multiple tabs
+  // Monitoring frequency is now only updated when user explicitly changes it via the dropdown
 
   const handleFrequencyChange = (value: string) => {
     const previousValue = monitoringFrequency;
