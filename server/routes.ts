@@ -876,11 +876,10 @@ Provide a clear, actionable analysis with specific recommendations. Format your 
 
       let { minutes } = schema.parse(req.body);
       
-      // COST CONTROL: Enforce 5-minute minimum (except for disabled monitoring = 0)
-      const MIN_MONITORING_FREQUENCY = 5;
-      if (minutes > 0 && minutes < MIN_MONITORING_FREQUENCY) {
-        console.log(`[Monitoring Frequency] ⚠️ User requested ${minutes} min, enforcing ${MIN_MONITORING_FREQUENCY} min minimum for cost control`);
-        minutes = MIN_MONITORING_FREQUENCY;
+      // PHASE 4: No more frequency enforcement - event-driven triggers control costs
+      // Log info for monitoring
+      if (minutes > 0 && minutes < 5) {
+        console.log(`[Monitoring Frequency] ℹ️ User set ${minutes} min monitoring - PHASE 4 event-driven triggers will control AI costs`);
       }
       
       // Store per-user monitoring frequency in database

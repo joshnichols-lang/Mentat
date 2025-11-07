@@ -3,6 +3,8 @@ import { developAutonomousStrategy } from "./monitoringService";
 import { getUserHyperliquidClient } from "./hyperliquid/client";
 import { createPortfolioSnapshot } from "./portfolioSnapshotService";
 import { analyzeStrategyForMonitoring } from "./strategyParser";
+import { TriggerRegistry } from "./triggerSupervisor";
+import type { TriggerSpec } from "./strategyAnalyzer";
 
 /**
  * Per-user monitoring state
@@ -47,12 +49,7 @@ export async function startUserMonitoring(userId: string, intervalMinutes: numbe
     return;
   }
   
-  // COST CONTROL: Enforce 5-minute minimum as a defensive measure
-  const MIN_MONITORING_FREQUENCY = 5;
-  if (intervalMinutes < MIN_MONITORING_FREQUENCY) {
-    console.log(`[User Monitoring] ⚠️ Requested ${intervalMinutes} min interval is below minimum, enforcing ${MIN_MONITORING_FREQUENCY} min for cost control`);
-    intervalMinutes = MIN_MONITORING_FREQUENCY;
-  }
+  // PHASE 4: No more minimum frequency enforcement - event-driven triggers control costs
   
   // SAFETY: Double-check no monitoring is active before starting
   if (activeMonitoring.has(userId)) {
@@ -102,25 +99,89 @@ export async function startUserMonitoring(userId: string, intervalMinutes: numbe
     throw error; // Fail fast - don't start monitoring without credentials
   }
 
+  // PHASE 4: Check if strategy has event-driven triggers
+  let useEventDrivenMode = false;
+  try {
+    const tradingModes = await storage.getTradingModes(userId);
+    const activeMode = tradingModes.find(mode => mode.isActive);
+    
+    const triggers = (activeMode?.strategyConfig as any)?.triggers as TriggerSpec[] | undefined;
+    
+    if (activeMode && triggers && triggers.length > 0) {
+      
+      // Determine symbol (default to BTC if not specified)
+      // TODO: Extract symbol from strategy parameters
+      const symbol = "BTC";
+      
+      console.log(`[User Monitoring] 🚀 PHASE 4: Event-driven mode activated with ${triggers.length} triggers`);
+      
+      // Create TriggerSupervisor
+      const supervisor = TriggerRegistry.create(
+        userId,
+        activeMode.id.toString(),
+        symbol,
+        triggers,
+        async (trigger: TriggerSpec, currentValue: number) => {
+          console.log(`[User Monitoring] Trigger fired for ${userId}: ${trigger.description} (value: ${currentValue})`);
+          // Call AI to assess the opportunity
+          try {
+            await developAutonomousStrategy(userId);
+          } catch (error) {
+            console.error(`[User Monitoring] Error in trigger-based AI call:`, error);
+          }
+        }
+      );
+      
+      // Start supervisor
+      supervisor.start();
+      useEventDrivenMode = true;
+      
+      console.log(`[User Monitoring] ✓ TriggerSupervisor started for ${userId} - AI will be called only when triggers fire`);
+    }
+  } catch (error) {
+    console.error(`[User Monitoring] Error setting up event-driven mode:`, error);
+    // Fall back to time-based monitoring
+  }
+
   // Run the autonomous strategy immediately (unless skipped for frequency changes)
-  if (runImmediately) {
+  if (runImmediately && !useEventDrivenMode) {
     try {
       await developAutonomousStrategy(userId);
     } catch (error) {
       console.error(`[User Monitoring] Error in initial autonomous strategy for user ${userId}:`, error);
     }
+  } else if (useEventDrivenMode) {
+    console.log(`[User Monitoring] Event-driven mode active - skipping immediate run, waiting for triggers`);
   } else {
     console.log(`[User Monitoring] Skipping immediate run for user ${userId} - waiting for next scheduled interval`);
   }
 
-  // Set up recurring interval
-  const intervalId = setInterval(async () => {
-    try {
-      await developAutonomousStrategy(userId);
-    } catch (error) {
-      console.error(`[User Monitoring] Error in autonomous strategy for user ${userId}:`, error);
-    }
-  }, intervalMinutes * 60 * 1000);
+  // Set up recurring interval (or safety heartbeat for event-driven mode)
+  let intervalId: NodeJS.Timeout;
+  
+  if (useEventDrivenMode) {
+    // PHASE 4: Safety heartbeat - check in every 30 minutes even in event-driven mode
+    const safetyHeartbeatMinutes = 30;
+    console.log(`[User Monitoring] Setting up safety heartbeat (every ${safetyHeartbeatMinutes} min)`);
+    
+    intervalId = setInterval(async () => {
+      console.log(`[User Monitoring] 💓 Safety heartbeat for ${userId} - re-syncing state`);
+      try {
+        await developAutonomousStrategy(userId);
+      } catch (error) {
+        console.error(`[User Monitoring] Error in safety heartbeat for user ${userId}:`, error);
+      }
+    }, safetyHeartbeatMinutes * 60 * 1000);
+  } else {
+    // Traditional time-based monitoring
+    intervalId = setInterval(async () => {
+      try {
+        await developAutonomousStrategy(userId);
+      } catch (error) {
+        console.error(`[User Monitoring] Error in autonomous strategy for user ${userId}:`, error);
+      }
+    }, intervalMinutes * 60 * 1000);
+  }
 
   // Store monitoring state
   activeMonitoring.set(userId, {

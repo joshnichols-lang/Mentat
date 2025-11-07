@@ -7,6 +7,22 @@
 
 import { makeAIRequest } from "./aiRouter";
 
+/**
+ * PHASE 4: Event-Driven AI Trigger System
+ * Structured trigger condition extracted from strategy text
+ */
+export interface TriggerSpec {
+  id: string;
+  type: 'indicator' | 'price' | 'volume' | 'time';
+  indicator?: 'RSI' | 'MACD' | 'SMA' | 'EMA' | 'BB_UPPER' | 'BB_LOWER' | 'STOCH' | 'ATR' | 'VOLUME';
+  operator: '<' | '>' | '<=' | '>=' | '==' | 'crosses_above' | 'crosses_below';
+  value: number;
+  period?: number;
+  hysteresis?: number;
+  cooldownMinutes?: number;
+  description: string;
+}
+
 export interface StrategyConfig {
   strategyType: "technical_indicator" | "order_flow" | "market_profile" | "price_action" | "hybrid";
   detectedIndicators?: string[];
@@ -33,6 +49,7 @@ export interface StrategyConfig {
   requiresRealtimeData: boolean;
   triggerMode: "indicator" | "time_based" | "hybrid";
   reasoning: string;
+  triggers?: TriggerSpec[];
 }
 
 const STRATEGY_ANALYSIS_PROMPT = `You are a trading strategy analyzer. Your job is to parse natural language trading rules and extract structured configuration for automated monitoring.
@@ -88,7 +105,19 @@ Analyze the user's custom trading rules and determine:
    - "time_based": Call AI on regular intervals (no specific triggers)
    - "hybrid": Use both indicator triggers and time-based fallback
 
-Return your analysis as a JSON object matching the StrategyConfig interface.
+9. **PHASE 4 - Specific Triggers**: Extract EXACT trigger conditions that should fire AI calls
+   - For each trigger condition mentioned (e.g., "RSI < 30", "price crosses 200 SMA"), create a TriggerSpec:
+     * id: unique identifier (e.g., "rsi_oversold", "price_above_ma200")
+     * type: "indicator" | "price" | "volume" | "time"
+     * indicator: "RSI" | "MACD" | "SMA" | "EMA" | "BB_UPPER" | "BB_LOWER" | "STOCH" | "ATR" | "VOLUME"
+     * operator: "<" | ">" | "<=" | ">=" | "==" | "crosses_above" | "crosses_below"
+     * value: numeric threshold
+     * period: indicator period (e.g., RSI(14), SMA(200))
+     * hysteresis: optional buffer to prevent thrashing (default 0.02 = 2%)
+     * cooldownMinutes: minimum time between triggers (default 5 minutes)
+     * description: human-readable explanation
+
+Return your analysis as a JSON object matching the StrategyConfig interface. IMPORTANT: Include a "triggers" array with all extractable trigger conditions.
 
 Example 1:
 Input: "Trade BTC when RSI drops below 30 on the 5-minute timeframe. Exit when it crosses back above 50."
@@ -98,10 +127,34 @@ Output: {
   "indicatorConfig": {
     "rsi": { "period": 14, "oversold": 30, "overbought": 70 }
   },
-  "monitoringFrequencyMinutes": 5,
+  "monitoringFrequencyMinutes": 1,
   "requiresRealtimeData": false,
   "triggerMode": "indicator",
-  "reasoning": "RSI-based scalping strategy on 5-min timeframe. Monitoring should match timeframe (5 min). AI should be called when RSI crosses oversold threshold to evaluate entry."
+  "triggers": [
+    {
+      "id": "rsi_entry",
+      "type": "indicator",
+      "indicator": "RSI",
+      "operator": "<",
+      "value": 30,
+      "period": 14,
+      "hysteresis": 0.02,
+      "cooldownMinutes": 5,
+      "description": "RSI drops below 30 - oversold entry signal"
+    },
+    {
+      "id": "rsi_exit",
+      "type": "indicator",
+      "indicator": "RSI",
+      "operator": "crosses_above",
+      "value": 50,
+      "period": 14,
+      "hysteresis": 0.02,
+      "cooldownMinutes": 5,
+      "description": "RSI crosses back above 50 - exit signal"
+    }
+  ],
+  "reasoning": "RSI-based scalping strategy on 5-min timeframe. PHASE 4: Event-driven triggers allow 1-min monitoring without excessive AI costs - AI only called when RSI actually crosses thresholds."
 }
 
 Example 2:
@@ -146,10 +199,34 @@ Output: {
     "rsi": { "period": 14, "oversold": 30, "overbought": 70 },
     "macd": { "fast": 12, "slow": 26, "signal": 9 }
   },
-  "monitoringFrequencyMinutes": 5,
+  "monitoringFrequencyMinutes": 1,
   "requiresRealtimeData": false,
   "triggerMode": "indicator",
-  "reasoning": "Hybrid strategy combining MACD and RSI. Even for 1-min timeframe strategies, 5-min monitoring is minimum to control AI costs while still catching signals. AI called when both conditions met."
+  "triggers": [
+    {
+      "id": "macd_bullish_cross",
+      "type": "indicator",
+      "indicator": "MACD",
+      "operator": "crosses_above",
+      "value": 0,
+      "period": 26,
+      "hysteresis": 0.01,
+      "cooldownMinutes": 5,
+      "description": "MACD line crosses above signal line (bullish)"
+    },
+    {
+      "id": "rsi_oversold",
+      "type": "indicator",
+      "indicator": "RSI",
+      "operator": "<",
+      "value": 30,
+      "period": 14,
+      "hysteresis": 0.02,
+      "cooldownMinutes": 5,
+      "description": "RSI drops below 30 (oversold)"
+    }
+  ],
+  "reasoning": "Hybrid MACD+RSI scalping strategy on 1-min timeframe. PHASE 4: Event-driven triggers monitor indicators continuously but only call AI when both conditions met, reducing costs by 90%+."
 }
 
 Now analyze the following custom trading rules:`;
@@ -187,22 +264,33 @@ export async function analyzeStrategy(
 
     const config = JSON.parse(aiResponse.content) as StrategyConfig;
 
-    // COST CONTROL: Enforce 5-minute minimum monitoring frequency
+    // PHASE 4: Smart frequency enforcement based on trigger availability
     const MIN_MONITORING_FREQUENCY = 5;
     const frequency = Number(config.monitoringFrequencyMinutes);
     
-    // Handle undefined, NaN, or values below minimum
-    if (!frequency || isNaN(frequency) || frequency < MIN_MONITORING_FREQUENCY) {
+    // Handle undefined, NaN values
+    if (!frequency || isNaN(frequency)) {
+      config.monitoringFrequencyMinutes = MIN_MONITORING_FREQUENCY;
+      console.log(`[Strategy Analyzer] ⚠️ AI returned invalid frequency, using ${MIN_MONITORING_FREQUENCY} min default`);
+    }
+    // PHASE 4: If triggers detected, allow fast monitoring (event-driven)
+    else if (config.triggers && config.triggers.length > 0) {
+      // Event-driven mode - monitoring frequency can be aggressive since AI is only called on trigger fires
+      console.log(`[Strategy Analyzer] ✓ Event-driven mode with ${config.triggers.length} triggers - allowing ${frequency} min monitoring`);
+    }
+    // No triggers - enforce minimum to control costs
+    else if (frequency < MIN_MONITORING_FREQUENCY) {
       const originalValue = config.monitoringFrequencyMinutes;
       config.monitoringFrequencyMinutes = MIN_MONITORING_FREQUENCY;
-      console.log(`[Strategy Analyzer] ⚠️ AI recommended ${originalValue || 'undefined'} min monitoring, enforcing ${MIN_MONITORING_FREQUENCY} min minimum for cost control`);
+      console.log(`[Strategy Analyzer] ⚠️ No triggers detected - enforcing ${MIN_MONITORING_FREQUENCY} min minimum (was ${originalValue}) for cost control`);
     }
 
     console.log('[Strategy Analyzer] Analysis complete:', {
       strategyType: config.strategyType,
       detectedIndicators: config.detectedIndicators,
       monitoringFrequency: config.monitoringFrequencyMinutes,
-      triggerMode: config.triggerMode
+      triggerMode: config.triggerMode,
+      triggersDetected: config.triggers?.length || 0
     });
 
     return config;
