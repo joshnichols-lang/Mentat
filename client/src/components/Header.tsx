@@ -232,21 +232,6 @@ export default function Header() {
                 <Button 
                   variant="ghost" 
                   size="icon" 
-                  onClick={() => setLocation("/trading-modes")}
-                  data-testid="button-trading-modes"
-                >
-                  <Target className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Trading Modes</p>
-              </TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
                   onClick={() => setLocation("/strategies")}
                   data-testid="button-strategies"
                 >
@@ -254,7 +239,7 @@ export default function Header() {
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                <p>Strategies</p>
+                <p>Multi-Strategy Manager</p>
               </TooltipContent>
             </Tooltip>
             <Tooltip>

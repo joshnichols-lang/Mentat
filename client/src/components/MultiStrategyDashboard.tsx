@@ -27,7 +27,7 @@ export function MultiStrategyDashboard() {
   });
 
   const strategies = strategiesData?.tradingModes || [];
-  const activeStrategies = strategies.filter((s: any) => s.isActive === 1 && s.status === 'active');
+  const activeStrategies = strategies.filter((s: any) => s.status === 'active');
   const portfolioStatus = portfolioManagerData?.status;
 
   const healthColors = {

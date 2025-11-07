@@ -26,11 +26,11 @@ import Settings from "@/pages/Settings";
 import Wallet from "@/pages/Wallet";
 import TradeHistory from "@/pages/TradeHistory";
 import TradeJournal from "@/pages/TradeJournal";
-import TradingModes from "@/pages/TradingModes";
 import Strategies from "@/pages/Strategies";
 import UIPreview from "@/pages/UIPreview";
 import EnhancedUIPreview from "@/pages/EnhancedUIPreview";
 import NotFound from "@/pages/not-found";
+import { Redirect } from "wouter";
 
 function Router() {
   return (
@@ -51,7 +51,9 @@ function Router() {
       <ProtectedRoute path="/wallet" component={Wallet} />
       <ProtectedRoute path="/trade-history" component={TradeHistory} />
       <ProtectedRoute path="/trade-journal" component={TradeJournal} />
-      <ProtectedRoute path="/trading-modes" component={TradingModes} />
+      <Route path="/trading-modes">
+        <Redirect to="/strategies" />
+      </Route>
       <ProtectedRoute path="/strategies" component={Strategies} />
       <Route component={NotFound} />
     </Switch>
