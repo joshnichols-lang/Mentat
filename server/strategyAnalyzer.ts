@@ -158,6 +158,7 @@ Now analyze the following custom trading rules:`;
  * Analyze custom trading rules using AI and return structured configuration
  */
 export async function analyzeStrategy(
+  userId: string,
   customRules: string,
   strategyDescription?: string
 ): Promise<StrategyConfig> {
@@ -169,22 +170,22 @@ export async function analyzeStrategy(
 
     console.log('[Strategy Analyzer] Analyzing strategy rules...');
 
-    const response = await makeAIRequest([
-      {
-        role: 'system',
-        content: STRATEGY_ANALYSIS_PROMPT
-      },
-      {
-        role: 'user',
-        content: fullContext
-      }
-    ], {
+    const aiResponse = await makeAIRequest(userId, {
+      messages: [
+        {
+          role: 'system',
+          content: STRATEGY_ANALYSIS_PROMPT
+        },
+        {
+          role: 'user',
+          content: fullContext
+        }
+      ],
       model: 'grok',
-      temperature: 0.3, // Lower temperature for more consistent parsing
-      response_format: { type: 'json_object' }
+      temperature: 0.3 // Lower temperature for more consistent parsing
     });
 
-    const config = JSON.parse(response) as StrategyConfig;
+    const config = JSON.parse(aiResponse.content) as StrategyConfig;
 
     // COST CONTROL: Enforce 5-minute minimum monitoring frequency
     const MIN_MONITORING_FREQUENCY = 5;

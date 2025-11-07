@@ -4745,7 +4745,7 @@ Provide a clear, actionable analysis with specific recommendations. Format your 
         try {
           const { analyzeStrategy } = await import('./strategyAnalyzer');
           console.log('[Strategy Auto-Config] Analyzing custom rules for new strategy...');
-          strategyConfig = await analyzeStrategy(parameters.customRules, description || '');
+          strategyConfig = await analyzeStrategy(userId, parameters.customRules, description || '');
           console.log('[Strategy Auto-Config] Analysis complete:', {
             strategyType: strategyConfig.strategyType,
             monitoringFrequency: strategyConfig.monitoringFrequencyMinutes,
@@ -4823,7 +4823,7 @@ Provide a clear, actionable analysis with specific recommendations. Format your 
         try {
           const { analyzeStrategy } = await import('./strategyAnalyzer');
           console.log('[Strategy Auto-Config] Re-analyzing custom rules for updated strategy...');
-          const strategyConfig = await analyzeStrategy(parameters.customRules, description || '');
+          const strategyConfig = await analyzeStrategy(userId, parameters.customRules, description || '');
           updates.strategyConfig = strategyConfig;
           console.log('[Strategy Auto-Config] Re-analysis complete:', {
             strategyType: strategyConfig.strategyType,
