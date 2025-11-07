@@ -323,12 +323,12 @@ export default function Strategies() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="1m">1 Minute (Event-driven)</SelectItem>
-                      <SelectItem value="5m">5 Minutes</SelectItem>
-                      <SelectItem value="15m">15 Minutes</SelectItem>
-                      <SelectItem value="1h">1 Hour</SelectItem>
-                      <SelectItem value="4h">4 Hours</SelectItem>
-                      <SelectItem value="1d">1 Day</SelectItem>
+                      <SelectItem value="1m" data-testid="option-timeframe-1m">1 Minute (Event-driven)</SelectItem>
+                      <SelectItem value="5m" data-testid="option-timeframe-5m">5 Minutes</SelectItem>
+                      <SelectItem value="15m" data-testid="option-timeframe-15m">15 Minutes</SelectItem>
+                      <SelectItem value="1h" data-testid="option-timeframe-1h">1 Hour</SelectItem>
+                      <SelectItem value="4h" data-testid="option-timeframe-4h">4 Hours</SelectItem>
+                      <SelectItem value="1d" data-testid="option-timeframe-1d">1 Day</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
