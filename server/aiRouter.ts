@@ -26,10 +26,13 @@ export interface AICompletionResponse {
     promptTokens: number;
     completionTokens: number;
     totalTokens: number;
+    cachedTokens?: number; // xAI: tokens served from cache (75% discount)
+    reasoningTokens?: number; // xAI: tokens used for reasoning (charged at completion rate)
   };
   model: string;
   provider: string; // Actual provider name (perplexity, openai, xai)
   cost: number; // Cost in USD
+  cacheSavings?: number; // Savings from cached tokens in USD
 }
 
 // Pricing per 1M tokens (input/output)
@@ -53,11 +56,34 @@ const PRICING: Record<string, { input: number; output: number }> = {
   "grok-4-fast-non-reasoning": { input: 0.20, output: 0.50 }, // < 128K tokens
 };
 
-function calculateCost(model: string, promptTokens: number, completionTokens: number): number {
+function calculateCost(
+  model: string, 
+  promptTokens: number, 
+  completionTokens: number,
+  cachedTokens: number = 0,
+  reasoningTokens: number = 0
+): { cost: number; cacheSavings: number } {
   const pricing = PRICING[model] || { input: 0, output: 0 };
-  const inputCost = (promptTokens / 1_000_000) * pricing.input;
-  const outputCost = (completionTokens / 1_000_000) * pricing.output;
-  return inputCost + outputCost;
+  
+  // Regular input tokens (non-cached)
+  const regularInputTokens = promptTokens - cachedTokens;
+  const inputCost = (regularInputTokens / 1_000_000) * pricing.input;
+  
+  // Cached tokens get 75% discount (charged at $0.75/M instead of $3.00/M for Grok 4)
+  const cachedTokenCost = (cachedTokens / 1_000_000) * (pricing.input * 0.25);
+  
+  // Output tokens (including reasoning tokens which are charged at completion rate)
+  const totalOutputTokens = completionTokens + reasoningTokens;
+  const outputCost = (totalOutputTokens / 1_000_000) * pricing.output;
+  
+  // Calculate what we would have paid without caching
+  const fullPriceCost = (cachedTokens / 1_000_000) * pricing.input;
+  const cacheSavings = fullPriceCost - cachedTokenCost;
+  
+  return {
+    cost: inputCost + cachedTokenCost + outputCost,
+    cacheSavings
+  };
 }
 
 /**
@@ -264,9 +290,17 @@ export async function makeAIRequest(
       promptTokens: completion.usage?.prompt_tokens || 0,
       completionTokens: completion.usage?.completion_tokens || 0,
       totalTokens: completion.usage?.total_tokens || 0,
+      cachedTokens: (completion.usage as any)?.cached_tokens || 0, // xAI Grok-specific
+      reasoningTokens: (completion.usage as any)?.reasoning_tokens || 0, // xAI Grok-specific
     };
     
-    const cost = calculateCost(model, usage.promptTokens, usage.completionTokens);
+    const { cost, cacheSavings } = calculateCost(
+      model, 
+      usage.promptTokens, 
+      usage.completionTokens,
+      usage.cachedTokens,
+      usage.reasoningTokens
+    );
     
     // Update last used timestamp for the API key
     await storage.updateApiKeyLastUsed(userId, apiKeyId);
@@ -277,6 +311,7 @@ export async function makeAIRequest(
       model,
       provider: providerName,
       cost,
+      cacheSavings: cacheSavings > 0 ? cacheSavings : undefined,
     };
   } catch (error: any) {
     console.error(`AI request failed for provider ${providerName}:`, error);

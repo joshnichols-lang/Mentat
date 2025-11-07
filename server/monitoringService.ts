@@ -1804,7 +1804,10 @@ PRICE VALIDATION CHECKLIST for every limit order:
       promptTokens: aiResponse.usage.promptTokens,
       completionTokens: aiResponse.usage.completionTokens,
       totalTokens: aiResponse.usage.totalTokens,
+      cachedTokens: aiResponse.usage.cachedTokens || 0,
+      reasoningTokens: aiResponse.usage.reasoningTokens || 0,
       estimatedCost: aiResponse.cost.toFixed(6),
+      cacheSavings: aiResponse.cacheSavings?.toFixed(6) || '0',
       userPrompt: "[AUTONOMOUS TRADING]",
       aiResponse: compressedResponse, // Store compressed version instead of full JSON
       success: 1,
