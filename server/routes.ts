@@ -4691,7 +4691,7 @@ Provide a clear, actionable analysis with specific recommendations. Format your 
       
       res.json({
         success: true,
-        modes
+        tradingModes: modes
       });
     } catch (error: any) {
       console.error("Error fetching trading modes:", error);
