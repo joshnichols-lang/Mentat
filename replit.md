@@ -33,7 +33,12 @@ Preferred communication style: Simple, everyday language.
 - **Strategy-Scoped Context:** Independent conversation history and AI context per trading strategy.
 - **Custom Rules Priority:** User-defined rules guide AI behavior and risk management.
 - **Multi-Instrument Portfolio Analysis:** Unified portfolio aggregator fetches live positions from all integrated exchanges. AI endpoint provides cross-platform hedging recommendations, correlation analysis, and total delta exposure calculations.
-- **AI Cost Control System:** Dual-layer optimization combining strategy-aware monitoring with per-user hourly rate limits. Strategy parser auto-detects timeframes to minimize AI calls. UI displays real-time usage stats with warnings.
+- **AI Cost Control System:** Multi-phase optimization achieving ~60% cost reduction (from $14.40/day worst-case to ~$5.75/day):
+  - **Phase 1 (~50% reduction)**: Strategy cache bug fix, reduced conversation history 5→3, compressed market data 30→15 assets, UnifiedAdvancedOrderOptimizer batching 3 AI calls into 1
+  - **Phase 3A - Response Similarity Caching**: Market fingerprint system with 10-minute TTL, reuses cached AI responses when market conditions change <5%
+  - **Phase 3B - Compressed Conversation History**: Compresses stored AI responses by ~50-70%, extracting only key decision points (regime, thesis summary, action summary) to reduce token usage in future AI calls
+  - **Phase 3C - Pattern-Based Shortcuts**: Rule-based pre-filter detects obvious "hold" scenarios (ranging markets, dead markets) and skips AI calls when no positions exist
+  - Strategy parser auto-detects timeframes to minimize AI calls. UI displays real-time usage stats with warnings.
 - **AI Status Indicators:** Real-time status lights in the AIPromptPanel header show AI system health, balance visibility, and trading activity.
 **Agent Modes:** Passive Mode (discussion) and Active Mode (execution with safety constraints).
 **Multi-Strategy Portfolio Manager:** Allows up to 3 concurrent trading strategies with independent capital allocation, position limits, and risk budgets. Features centralized coordination layer that detects conflicts (opposing positions, over-concentration), tracks aggregate exposure across all strategies, and enforces portfolio-level safety limits. Each strategy operates independently with its own AI context, timeframe, and rules while Portfolio Manager prevents conflicts and manages total risk.
