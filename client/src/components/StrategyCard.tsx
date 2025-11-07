@@ -4,10 +4,31 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Slider } from "@/components/ui/slider";
-import { Play, Pause, Square, TrendingUp, TrendingDown, Settings } from "lucide-react";
+import { Play, Pause, Square, TrendingUp, TrendingDown, Settings, Trash2 } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 interface StrategyCardProps {
   strategy: {
@@ -40,6 +61,10 @@ export function StrategyCard({ strategy, allocation, onEdit }: StrategyCardProps
   const { toast } = useToast();
   const [isAdjustingAllocation, setIsAdjustingAllocation] = useState(false);
   const [newAllocation, setNewAllocation] = useState(parseFloat(strategy.allocatedCapitalPercent || '33.33'));
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [editName, setEditName] = useState(strategy.name);
+  const [editDescription, setEditDescription] = useState(strategy.description || '');
 
   const updateStatusMutation = useMutation({
     mutationFn: async (newStatus: 'active' | 'paused' | 'stopped') => {
@@ -81,8 +106,53 @@ export function StrategyCard({ strategy, allocation, onEdit }: StrategyCardProps
     },
   });
 
+  const deleteStrategyMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest("DELETE", `/api/trading-modes/${strategy.id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/trading-modes'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/portfolio-manager/status'] });
+      toast({ description: "Strategy deleted successfully" });
+      setShowDeleteDialog(false);
+    },
+    onError: (error: any) => {
+      toast({
+        variant: "destructive",
+        description: error.message || "Failed to delete strategy",
+      });
+    },
+  });
+
+  const editStrategyMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("PATCH", `/api/trading-modes/${strategy.id}`, {
+        name: editName,
+        description: editDescription,
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/trading-modes'] });
+      toast({ description: "Strategy updated successfully" });
+      setShowEditDialog(false);
+    },
+    onError: (error: any) => {
+      toast({
+        variant: "destructive",
+        description: error.message || "Failed to update strategy",
+      });
+    },
+  });
+
   const handleStatusChange = (newStatus: 'active' | 'paused' | 'stopped') => {
     updateStatusMutation.mutate(newStatus);
+  };
+
+  const handleOpenEditDialog = () => {
+    setEditName(strategy.name);
+    setEditDescription(strategy.description || '');
+    setShowEditDialog(true);
   };
 
   const handleSaveAllocation = () => {
@@ -122,14 +192,24 @@ export function StrategyCard({ strategy, allocation, onEdit }: StrategyCardProps
               <p className="text-xs text-muted-foreground line-clamp-2">{strategy.description}</p>
             )}
           </div>
-          <Button
-            size="icon"
-            variant="ghost"
-            onClick={onEdit}
-            data-testid="button-edit-strategy"
-          >
-            <Settings className="h-4 w-4" />
-          </Button>
+          <div className="flex items-center gap-1">
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={handleOpenEditDialog}
+              data-testid={`button-edit-strategy-${strategy.id}`}
+            >
+              <Settings className="h-4 w-4" />
+            </Button>
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={() => setShowDeleteDialog(true)}
+              data-testid={`button-delete-strategy-${strategy.id}`}
+            >
+              <Trash2 className="h-4 w-4 text-destructive" />
+            </Button>
+          </div>
         </div>
       </CardHeader>
 
@@ -143,7 +223,7 @@ export function StrategyCard({ strategy, allocation, onEdit }: StrategyCardProps
               className="flex-1"
               onClick={() => handleStatusChange('active')}
               disabled={updateStatusMutation.isPending}
-              data-testid="button-start-strategy"
+              data-testid={`button-start-strategy-${strategy.id}`}
             >
               <Play className="h-3 w-3 mr-1" />
               Start
@@ -156,7 +236,7 @@ export function StrategyCard({ strategy, allocation, onEdit }: StrategyCardProps
               className="flex-1"
               onClick={() => handleStatusChange('paused')}
               disabled={updateStatusMutation.isPending}
-              data-testid="button-pause-strategy"
+              data-testid={`button-pause-strategy-${strategy.id}`}
             >
               <Pause className="h-3 w-3 mr-1" />
               Pause
@@ -168,7 +248,7 @@ export function StrategyCard({ strategy, allocation, onEdit }: StrategyCardProps
             className="flex-1"
             onClick={() => handleStatusChange('stopped')}
             disabled={updateStatusMutation.isPending}
-            data-testid="button-stop-strategy"
+            data-testid={`button-stop-strategy-${strategy.id}`}
           >
             <Square className="h-3 w-3 mr-1" />
             Stop
@@ -185,7 +265,7 @@ export function StrategyCard({ strategy, allocation, onEdit }: StrategyCardProps
                 variant="ghost"
                 className="h-6 text-xs"
                 onClick={() => setIsAdjustingAllocation(true)}
-                data-testid="button-adjust-allocation"
+                data-testid={`button-adjust-allocation-${strategy.id}`}
               >
                 Adjust
               </Button>
@@ -199,6 +279,7 @@ export function StrategyCard({ strategy, allocation, onEdit }: StrategyCardProps
                     setNewAllocation(parseFloat(strategy.allocatedCapitalPercent));
                     setIsAdjustingAllocation(false);
                   }}
+                  data-testid={`button-cancel-allocation-${strategy.id}`}
                 >
                   Cancel
                 </Button>
@@ -207,7 +288,7 @@ export function StrategyCard({ strategy, allocation, onEdit }: StrategyCardProps
                   className="h-6 text-xs"
                   onClick={handleSaveAllocation}
                   disabled={updateAllocationMutation.isPending}
-                  data-testid="button-save-allocation"
+                  data-testid={`button-save-allocation-${strategy.id}`}
                 >
                   Save
                 </Button>
@@ -304,6 +385,85 @@ export function StrategyCard({ strategy, allocation, onEdit }: StrategyCardProps
           </div>
         </div>
       </CardContent>
+
+      {/* Edit Dialog */}
+      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Strategy</DialogTitle>
+            <DialogDescription>
+              Update your strategy name and description.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-name">Strategy Name</Label>
+              <Input
+                id="edit-name"
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                placeholder="Enter strategy name"
+                data-testid={`input-edit-name-${strategy.id}`}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-description">Description (Optional)</Label>
+              <Textarea
+                id="edit-description"
+                value={editDescription}
+                onChange={(e) => setEditDescription(e.target.value)}
+                placeholder="Describe your strategy..."
+                rows={3}
+                data-testid={`input-edit-description-${strategy.id}`}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowEditDialog(false)}
+              data-testid={`button-cancel-edit-${strategy.id}`}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => editStrategyMutation.mutate()}
+              disabled={editStrategyMutation.isPending || !editName.trim()}
+              data-testid={`button-save-edit-${strategy.id}`}
+            >
+              {editStrategyMutation.isPending ? "Saving..." : "Save Changes"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Strategy</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete the strategy "{strategy.name}"? This action cannot be undone.
+              {strategy.status === 'active' && (
+                <span className="block mt-2 text-destructive font-semibold">
+                  Warning: This strategy is currently active and trading!
+                </span>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid={`button-cancel-delete-${strategy.id}`}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deleteStrategyMutation.mutate()}
+              disabled={deleteStrategyMutation.isPending}
+              className="bg-destructive hover:bg-destructive/90"
+              data-testid={`button-confirm-delete-${strategy.id}`}
+            >
+              {deleteStrategyMutation.isPending ? "Deleting..." : "Delete Strategy"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }
