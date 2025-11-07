@@ -84,9 +84,9 @@ export class PortfolioManagerService {
    * Get comprehensive portfolio status across all active strategies
    */
   async getPortfolioStatus(userId: string, totalCapital: number): Promise<PortfolioStatus> {
-    // Get all active strategies
+    // Get all active strategies (status='active' means actively executing trades)
     const allStrategies = await this.storage.getTradingModes(userId);
-    const activeStrategies = allStrategies.filter((s: any) => s.isActive === 1 && s.status === 'active');
+    const activeStrategies = allStrategies.filter((s: any) => s.status === 'active');
 
     // Get all positions across exchanges
     const positions = await this.getAllPositions(userId);
