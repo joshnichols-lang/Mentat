@@ -6,6 +6,7 @@
 ## Recent Changes
 **November 7, 2025:**
 - **Phase 4 Event-Driven Trigger System (COMPLETE):** Implemented revolutionary cost-reduction system achieving 90-95% AI cost savings for aggressive monitoring strategies. Built TriggerSpec schema with AI extraction, IndicatorEngine with 500-sample ring buffers (RSI/MACD/MA/BB/ATR), and TriggerSupervisor state machine (Idle→Watching→Armed→Fired→Cooldown) with hysteresis and near-miss detection. Integration test verified 100% reduction in controlled scenario (1 vs 1,440 AI calls/day). Production expectation: ~10-50 AI calls/day vs 1,440 for 1-minute time-based monitoring. System includes safety heartbeat (30-min), WebSocket integration for real-time candle data, and TriggerMonitor UI dashboard. 5-minute minimum removed - event-driven architecture makes 1-minute scalp strategies cost-effective.
+- **Strategy Creation Form Restored:** Moved complete working strategy creation form from deprecated TradingModes.tsx to active Strategies.tsx page. Form includes full validation, risk parameters, timeframe selection, asset preferences, and custom rules with AI auto-configuration hints. All interactive elements now have proper data-testid attributes for future automated testing. TradingModes.tsx file deleted - route already redirects to /strategies in App.tsx.
 - **Production Bug Fix:** Fixed React error #31 crash in PositionsGrid.tsx - Hyperliquid position leverage object `{type, value}` was being rendered directly instead of extracting `leverage.value` property (line 214-216)
 
 ## User Preferences
