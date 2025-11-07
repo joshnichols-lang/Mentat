@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Plus, Edit, Trash2, CheckCircle2, Circle } from "lucide-react";
+import { Plus, Edit, Trash2, CheckCircle2, Circle, Info } from "lucide-react";
 import { useState } from "react";
 import Header from "@/components/Header";
 
@@ -403,6 +403,10 @@ export default function TradingModes() {
                       />
                       <div className="text-xs text-muted-foreground space-y-1">
                         <p className="font-medium">Tip: The AI will analyze your rules and auto-configure monitoring!</p>
+                        <div className="flex items-start gap-1 p-2 text-[11px] bg-blue-50 dark:bg-blue-900/10 text-blue-700 dark:text-blue-400 rounded border border-blue-200 dark:border-blue-800 mt-2">
+                          <Info className="h-3 w-3 flex-shrink-0 mt-0.5" />
+                          <span>Monitoring is automatically set to 15-minute intervals (recommended). Faster frequencies (5-min) can increase AI costs to ~$5-10/day.</span>
+                        </div>
                         <details className="mt-2">
                           <summary className="cursor-pointer hover:text-foreground">Show Examples</summary>
                           <div className="mt-2 space-y-2 pl-2 border-l-2 border-primary/20">
