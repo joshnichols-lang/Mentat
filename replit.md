@@ -8,6 +8,9 @@
 - **Phase 4 Event-Driven Trigger System (COMPLETE):** Implemented revolutionary cost-reduction system achieving 90-95% AI cost savings for aggressive monitoring strategies. Built TriggerSpec schema with AI extraction, IndicatorEngine with 500-sample ring buffers (RSI/MACD/MA/BB/ATR), and TriggerSupervisor state machine (Idle→Watching→Armed→Fired→Cooldown) with hysteresis and near-miss detection. Integration test verified 100% reduction in controlled scenario (1 vs 1,440 AI calls/day). Production expectation: ~10-50 AI calls/day vs 1,440 for 1-minute time-based monitoring. System includes safety heartbeat (30-min), WebSocket integration for real-time candle data, and TriggerMonitor UI dashboard. 5-minute minimum removed - event-driven architecture makes 1-minute scalp strategies cost-effective.
 - **Strategy Creation Form Restored:** Moved complete working strategy creation form from deprecated TradingModes.tsx to active Strategies.tsx page. Form includes full validation, risk parameters, timeframe selection, asset preferences, and custom rules with AI auto-configuration hints. All interactive elements now have proper data-testid attributes for future automated testing. TradingModes.tsx file deleted - route already redirects to /strategies in App.tsx.
 - **Production Bug Fix:** Fixed React error #31 crash in PositionsGrid.tsx - Hyperliquid position leverage object `{type, value}` was being rendered directly instead of extracting `leverage.value` property (line 214-216)
+- **CRITICAL Trade Execution Bug Fixes:**
+  - **Trigger Configuration Restoration:** Fixed missing trigger fields in strategy creation payload after form migration. Added monitoringFrequencyMinutes (derived from timeframe), triggerMode (hybrid/time_based), and triggerSensitivity to parameters. Backend now creates fallback strategyConfig from parameters when AI analysis fails, ensuring TriggerSupervisor always receives configuration needed for trade execution.
+  - **Phase 3C Removal:** Deleted shouldSkipAIForObviousHold optimization that blocked new strategies from entering first trade. Function was too aggressive - skipping AI calls during "ranging markets" prevented fresh strategies with no positions from ever analyzing entry opportunities. Removal restores full AI evaluation on every monitoring cycle.
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
@@ -39,12 +42,12 @@ Preferred communication style: Simple, everyday language.
 - **Strategy-Scoped Context:** Independent conversation history and AI context per trading strategy.
 - **Custom Rules Priority:** User-defined rules guide AI behavior and risk management.
 - **Multi-Instrument Portfolio Analysis:** Unified portfolio aggregator fetches live positions from all integrated exchanges. AI endpoint provides cross-platform hedging recommendations, correlation analysis, and total delta exposure calculations.
-- **AI Cost Control System:** Multi-phase optimization achieving ~60% cost reduction (from $14.40/day worst-case to ~$5.75/day):
+- **AI Cost Control System:** Multi-phase optimization achieving ~50% cost reduction:
   - **Phase 1 (~50% reduction)**: Strategy cache bug fix, reduced conversation history 5→3, compressed market data 30→15 assets, UnifiedAdvancedOrderOptimizer batching 3 AI calls into 1
   - **Phase 3A - Response Similarity Caching**: Market fingerprint system with 10-minute TTL, reuses cached AI responses when market conditions change <5%
   - **Phase 3B - Compressed Conversation History**: Compresses stored AI responses by ~50-70%, extracting only key decision points (regime, thesis summary, action summary) to reduce token usage in future AI calls
-  - **Phase 3C - Pattern-Based Shortcuts**: Rule-based pre-filter detects obvious "hold" scenarios (ranging markets, dead markets) and skips AI calls when no positions exist
   - Strategy parser auto-detects timeframes to minimize AI calls. UI displays real-time usage stats with warnings.
+  - **Note:** Phase 3C pattern-based shortcuts removed Nov 7, 2025 - was too aggressive and prevented new strategies from entering first trade
 - **AI Status Indicators:** Real-time status lights in the AIPromptPanel header show AI system health, balance visibility, and trading activity.
 **Agent Modes:** Passive Mode (discussion) and Active Mode (execution with safety constraints).
 **Multi-Strategy Portfolio Manager:** Allows up to 3 concurrent trading strategies with independent capital allocation, position limits, and risk budgets. Features centralized coordination layer that detects conflicts (opposing positions, over-concentration), tracks aggregate exposure across all strategies, and enforces portfolio-level safety limits. Each strategy operates independently with its own AI context, timeframe, and rules while Portfolio Manager prevents conflicts and manages total risk.
