@@ -8,6 +8,7 @@ import { executeTradeStrategy } from "./tradeExecutor";
 import { createPortfolioSnapshot } from "./portfolioSnapshotService";
 import { restartMonitoring, getAiUsageStats } from "./monitoringService";
 import { startUserMonitoring, stopUserMonitoring, restartUserMonitoring } from "./userMonitoringManager";
+import { TriggerRegistry } from "./triggerSupervisor";
 import { setupAuth } from "./auth";
 import { storeUserCredentials, getUserPrivateKey, deleteUserCredentials, hasUserCredentials } from "./credentialService";
 import { initializeMarketDataWebSocket } from "./marketDataWebSocket";
@@ -903,6 +904,93 @@ Provide a clear, actionable analysis with specific recommendations. Format your 
     } catch (error) {
       console.error("Error updating monitoring frequency:", error);
       res.status(500).json({ success: false, error: "Failed to update monitoring frequency" });
+    }
+  });
+  
+  // PHASE 4: Get event-driven trigger status and statistics
+  app.get("/api/monitoring/triggers", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      
+      // Get active trading mode to find strategyId
+      const tradingModes = await storage.getTradingModes(userId);
+      const activeMode = tradingModes.find(mode => mode.isActive);
+      
+      if (!activeMode) {
+        return res.json({
+          success: true,
+          hasActiveTriggers: false,
+          triggers: [],
+          stats: null,
+          message: "No active strategy found"
+        });
+      }
+      
+      // Check if this strategy has a trigger supervisor
+      const supervisor = TriggerRegistry.get(userId, activeMode.id.toString());
+      
+      if (!supervisor) {
+        return res.json({
+          success: true,
+          hasActiveTriggers: false,
+          triggers: [],
+          stats: null,
+          message: "Strategy using time-based monitoring (no triggers detected)"
+        });
+      }
+      
+      // Get trigger status and stats
+      const triggerStatuses = supervisor.getStatus();
+      const stats = supervisor.getStats();
+      
+      // Calculate AI call reduction metrics
+      const user = await storage.getUser(userId);
+      const monitoringFreq = user?.monitoringFrequencyMinutes || 15;
+      const potentialCallsPerDay = monitoringFreq > 0 ? (24 * 60) / monitoringFreq : 0;
+      const actualCallsToday = stats.totalFires; // Simplified - in production track last 24h
+      const reductionPercent = potentialCallsPerDay > 0 
+        ? Math.round(((potentialCallsPerDay - actualCallsToday) / potentialCallsPerDay) * 100)
+        : 0;
+      
+      // Estimate cost savings ($0.03 per AI call average)
+      const costPerCall = 0.03;
+      const potentialCost = potentialCallsPerDay * costPerCall;
+      const actualCost = actualCallsToday * costPerCall;
+      const savings = potentialCost - actualCost;
+      
+      res.json({
+        success: true,
+        hasActiveTriggers: true,
+        triggers: triggerStatuses.map(status => ({
+          id: status.trigger.id,
+          type: status.trigger.type,
+          description: status.trigger.description,
+          state: status.state,
+          currentValue: status.currentValue,
+          targetValue: status.targetValue,
+          operator: status.trigger.operator,
+          lastFired: status.lastFired,
+          fireCount: status.fireCount,
+          lastStateChange: status.lastStateChange
+        })),
+        stats: {
+          totalTriggers: stats.totalTriggers,
+          states: stats.states,
+          totalFires: stats.totalFires
+        },
+        costMetrics: {
+          monitoringFrequencyMinutes: monitoringFreq,
+          potentialCallsPerDay: Math.round(potentialCallsPerDay),
+          actualCallsToday: actualCallsToday,
+          reductionPercent,
+          potentialCostPerDay: potentialCost.toFixed(2),
+          actualCostToday: actualCost.toFixed(2),
+          savingsToday: savings.toFixed(2)
+        }
+      });
+    } catch (error) {
+      console.error("Error fetching trigger status:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch trigger status" });
     }
   });
 
