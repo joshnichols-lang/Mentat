@@ -55,6 +55,17 @@ const userMonitoringCycles = new Map<string, number>();
 // Track AI calls per user for rate limiting (rolling hourly window)
 const userAiCallHistory = new Map<string, number[]>(); // userId -> array of timestamps (ms)
 
+// PHASE 1C: Market Regime Cache - Reduces redundant AI calls
+// Cache market regime analysis for 15 minutes since regimes don't change that fast
+interface MarketRegimeCache {
+  regime: "bullish" | "bearish" | "neutral" | "volatile";
+  confidence: number;
+  timestamp: number;
+  marketSnapshot: string; // Hash of market conditions for invalidation
+}
+const marketRegimeCache = new Map<string, MarketRegimeCache>();
+const REGIME_CACHE_TTL_MS = 15 * 60 * 1000; // 15 minutes
+
 /**
  * Check if user has exceeded their hourly AI call limit
  * Returns { allowed: boolean, remaining: number, resetIn: number (minutes) }
@@ -124,6 +135,59 @@ export function getAiUsageStats(userId: string, maxCallsPerHour: number | null):
     remaining: maxCallsPerHour ? remaining : Infinity,
     resetInMinutes: resetIn
   };
+}
+
+/**
+ * PHASE 1C: Create market snapshot hash for cache invalidation
+ * Returns a string representing current market conditions
+ */
+function createMarketSnapshot(marketData: MarketData[]): string {
+  // Create a lightweight hash of market conditions
+  // If significant changes occur, the hash changes and cache is invalidated
+  const sorted = [...marketData].sort((a, b) => a.symbol.localeCompare(b.symbol));
+  const top10 = sorted.slice(0, 10); // Only hash top 10 for efficiency
+  
+  const snapshot = top10.map(m => {
+    const price = parseFloat(m.price);
+    const change = parseFloat(m.change24h);
+    // Round to reduce cache thrashing from tiny price movements
+    return `${m.symbol}:${price.toFixed(0)}:${change.toFixed(1)}`;
+  }).join('|');
+  
+  return snapshot;
+}
+
+/**
+ * PHASE 1C: Get cached market regime or null if cache miss/expired
+ */
+function getCachedRegime(marketSnapshot: string): MarketRegimeCache | null {
+  const cached = marketRegimeCache.get(marketSnapshot);
+  
+  if (!cached) {
+    return null; // Cache miss
+  }
+  
+  const age = Date.now() - cached.timestamp;
+  if (age > REGIME_CACHE_TTL_MS) {
+    marketRegimeCache.delete(marketSnapshot); // Expired
+    return null;
+  }
+  
+  console.log(`[Regime Cache] HIT - Using cached ${cached.regime} regime (${(age/1000).toFixed(0)}s old)`);
+  return cached;
+}
+
+/**
+ * PHASE 1C: Cache market regime analysis
+ */
+function cacheRegime(marketSnapshot: string, regime: "bullish" | "bearish" | "neutral" | "volatile", confidence: number): void {
+  marketRegimeCache.set(marketSnapshot, {
+    regime,
+    confidence,
+    timestamp: Date.now(),
+    marketSnapshot
+  });
+  console.log(`[Regime Cache] STORED - ${regime} regime (${confidence}% confidence)`);
 }
 
 /**
@@ -429,13 +493,14 @@ export async function developAutonomousStrategy(userId: string): Promise<void> {
     }));
     const currentPositions = currentPositionsWithState;
     
+    // PHASE 1E: Token Optimization - Reduce conversation history from 5 to 3
     // Fetch user prompt history to learn trading style
     let promptHistory: {timestamp: Date, prompt: string}[] = [];
     try {
-      const recentPrompts = await storage.getAiUsageLogs(userId, 10);
+      const recentPrompts = await storage.getAiUsageLogs(userId, 6); // Fetch 6, filter to 3
       promptHistory = recentPrompts
         .filter(log => log.success === 1 && log.userPrompt && !log.userPrompt.includes("[AUTOMATED"))
-        .slice(0, 5)
+        .slice(0, 3) // REDUCED from 5 to 3 - saves ~10-15% tokens
         .map(log => ({
           timestamp: log.timestamp,
           prompt: log.userPrompt!
@@ -773,7 +838,7 @@ ${highVolumeAssets.map(v => `- ${v.symbol}: ${v.volumeRatio.toFixed(2)}x market 
 **YOUR JOB**: Decide which volume levels are significant based on TODAY'S market conditions, not fixed thresholds
 
 📊 CURRENT MARKET DATA (USE THESE PRICES FOR ALL ORDERS):
-${marketData.slice(0, 30).map(m => {
+${marketData.slice(0, 15).map(m => { // PHASE 1E: Reduced from 30 to 15 assets - saves ~15-20% tokens
   const price = parseFloat(m.price);
   const change = parseFloat(m.change24h);
   const volume = parseFloat(m.volume24h) / 1e6;

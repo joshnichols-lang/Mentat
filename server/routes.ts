@@ -4801,6 +4801,16 @@ Provide a clear, actionable analysis with specific recommendations. Format your 
       if (maxLeveragePerStrategy !== undefined) updates.maxLeveragePerStrategy = maxLeveragePerStrategy;
       if (dailyLossLimitPercent !== undefined) updates.dailyLossLimitPercent = dailyLossLimitPercent;
       
+      // PHASE 1D: Invalidate strategy cache if description or custom rules changed
+      if (description !== undefined || parameters?.customRules !== undefined) {
+        const { invalidateStrategyCache } = await import('./strategyParser');
+        const existingMode = await storage.getTradingMode(userId, id);
+        if (existingMode?.description) {
+          invalidateStrategyCache(existingMode.description);
+          console.log('[Strategy Cache] Invalidated cache for modified strategy');
+        }
+      }
+      
       // Auto-analyze strategy if custom rules were updated
       if (parameters?.customRules) {
         try {
