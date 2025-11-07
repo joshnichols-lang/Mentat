@@ -66,6 +66,242 @@ interface MarketRegimeCache {
 const marketRegimeCache = new Map<string, MarketRegimeCache>();
 const REGIME_CACHE_TTL_MS = 15 * 60 * 1000; // 15 minutes
 
+// PHASE 3A: Response Similarity Caching - Reuse AI responses when market conditions similar
+interface ResponseCache {
+  response: string; // The AI response content
+  marketFingerprint: MarketFingerprint;
+  timestamp: number;
+  usage: { promptTokens: number; completionTokens: number; totalTokens: number };
+  model: string;
+  provider: string;
+  cost: number;
+}
+
+interface MarketFingerprint {
+  avgPrice: number;
+  avgVolume: number;
+  avgChange: number;
+  volatilityScore: number;
+  topGainerChange: number;
+  topLoserChange: number;
+  hash: string; // Quick lookup key
+}
+
+const responseSimilarityCache = new Map<string, ResponseCache>();
+const RESPONSE_CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes - shorter than regime cache
+const SIMILARITY_THRESHOLD = 0.05; // 5% difference threshold
+
+/**
+ * PHASE 3A: Create market fingerprint for caching
+ * Extracts key metrics from market data that define current conditions
+ */
+function createMarketFingerprint(marketData: MarketData[]): MarketFingerprint {
+  if (!marketData || marketData.length === 0) {
+    return {
+      avgPrice: 0,
+      avgVolume: 0,
+      avgChange: 0,
+      volatilityScore: 0,
+      topGainerChange: 0,
+      topLoserChange: 0,
+      hash: 'empty'
+    };
+  }
+
+  // Calculate aggregate metrics
+  const prices = marketData.map(m => parseFloat(m.price));
+  const volumes = marketData.map(m => parseFloat(m.volume24h));
+  const changes = marketData.map(m => parseFloat(m.change24h));
+
+  const avgPrice = prices.reduce((a, b) => a + b, 0) / prices.length;
+  const avgVolume = volumes.reduce((a, b) => a + b, 0) / volumes.length;
+  const avgChange = changes.reduce((a, b) => a + b, 0) / changes.length;
+  
+  // Volatility score: standard deviation of price changes
+  const variance = changes.reduce((sum, change) => sum + Math.pow(change - avgChange, 2), 0) / changes.length;
+  const volatilityScore = Math.sqrt(variance);
+
+  const topGainerChange = Math.max(...changes);
+  const topLoserChange = Math.min(...changes);
+
+  // Create deterministic hash for quick lookup
+  const hash = `${avgPrice.toFixed(2)}_${avgVolume.toFixed(0)}_${avgChange.toFixed(2)}_${volatilityScore.toFixed(2)}`;
+
+  return {
+    avgPrice,
+    avgVolume,
+    avgChange,
+    volatilityScore,
+    topGainerChange,
+    topLoserChange,
+    hash
+  };
+}
+
+/**
+ * PHASE 3A: Check if two market fingerprints are similar (within 5% threshold)
+ */
+function areFingerprintsSimilar(fp1: MarketFingerprint, fp2: MarketFingerprint): boolean {
+  // Compare each metric - if any differs by >5%, consider them different
+  const priceDiff = Math.abs(fp1.avgPrice - fp2.avgPrice) / Math.max(fp1.avgPrice, fp2.avgPrice);
+  const volumeDiff = Math.abs(fp1.avgVolume - fp2.avgVolume) / Math.max(fp1.avgVolume, fp2.avgVolume);
+  
+  // FIX: Normalize changeDiff like other metrics (divide by max magnitude to get relative difference)
+  // Guard against division by zero when both changes are near zero
+  const maxChangeMagnitude = Math.max(Math.abs(fp1.avgChange), Math.abs(fp2.avgChange), 0.01);
+  const changeDiff = Math.abs(fp1.avgChange - fp2.avgChange) / maxChangeMagnitude;
+  
+  const volatilityDiff = Math.abs(fp1.volatilityScore - fp2.volatilityScore) / Math.max(fp1.volatilityScore, fp2.volatilityScore, 0.01);
+
+  // All metrics must be within threshold
+  return priceDiff < SIMILARITY_THRESHOLD &&
+         volumeDiff < SIMILARITY_THRESHOLD &&
+         changeDiff < SIMILARITY_THRESHOLD &&
+         volatilityDiff < SIMILARITY_THRESHOLD;
+}
+
+/**
+ * PHASE 3A: Get cached AI response if market conditions are similar
+ */
+function getCachedResponse(userId: string, currentFingerprint: MarketFingerprint): ResponseCache | null {
+  const cacheKey = userId;
+  const cached = responseSimilarityCache.get(cacheKey);
+
+  if (!cached) {
+    return null;
+  }
+
+  // Check if cache is expired
+  const now = Date.now();
+  if (now - cached.timestamp > RESPONSE_CACHE_TTL_MS) {
+    responseSimilarityCache.delete(cacheKey);
+    console.log('[Phase 3A] Response cache expired for user', userId);
+    return null;
+  }
+
+  // Check if market conditions are similar
+  if (areFingerprintsSimilar(currentFingerprint, cached.marketFingerprint)) {
+    console.log('[Phase 3A] ✓ Cache HIT - Market conditions similar, reusing AI response');
+    console.log(`[Phase 3A] Price diff: ${Math.abs(currentFingerprint.avgPrice - cached.marketFingerprint.avgPrice).toFixed(2)}, Volume diff: ${Math.abs(currentFingerprint.avgVolume - cached.marketFingerprint.avgVolume).toFixed(0)}`);
+    return cached;
+  }
+
+  console.log('[Phase 3A] Cache MISS - Market conditions changed significantly');
+  return null;
+}
+
+/**
+ * PHASE 3A: Cache AI response for future reuse
+ */
+function cacheResponse(userId: string, response: string, fingerprint: MarketFingerprint, usage: any, model: string, provider: string, cost: number): void {
+  const cacheKey = userId;
+  responseSimilarityCache.set(cacheKey, {
+    response,
+    marketFingerprint: fingerprint,
+    timestamp: Date.now(),
+    usage,
+    model,
+    provider,
+    cost
+  });
+  console.log(`[Phase 3A] ✓ Cached AI response for user ${userId}`);
+}
+
+/**
+ * PHASE 3B: Compress AI response for conversation history
+ * Extract only key decision points to reduce token usage in future AI calls
+ */
+function compressAIResponse(strategy: AutonomousStrategy): string {
+  // Extract only essential information - drop verbose reasoning
+  const actionSummary = strategy.actions.map(a => {
+    const base = `${a.action}:${a.symbol}`;
+    // Include key fields but skip verbose reasoning
+    if (a.action === 'buy' || a.action === 'sell') {
+      return `${base}@${a.expectedEntry}`;
+    } else if (a.action === 'stop_loss' || a.action === 'take_profit') {
+      return `${base}@${a.triggerPrice}`;
+    } else if (a.action === 'cancel_order') {
+      return `${base}#${a.orderId}`;
+    }
+    return base;
+  }).join(';');
+
+  // Truncate thesis to first 150 chars
+  const shortThesis = strategy.tradeThesis.length > 150 
+    ? strategy.tradeThesis.substring(0, 150) + '...'
+    : strategy.tradeThesis;
+
+  // Compressed format - ~50-70% smaller than full JSON
+  const compressed = {
+    regime: strategy.marketRegime,
+    thesis: shortThesis,
+    actions: actionSummary,
+    count: strategy.actions.length
+  };
+
+  console.log(`[Phase 3B] Compressed AI response: ${JSON.stringify(strategy).length} → ${JSON.stringify(compressed).length} chars (${Math.round((1 - JSON.stringify(compressed).length / JSON.stringify(strategy).length) * 100)}% reduction)`);
+  
+  return JSON.stringify(compressed);
+}
+
+/**
+ * PHASE 3C: Pattern-Based Shortcuts - Detect obvious no-action scenarios
+ * Returns true if market conditions clearly indicate "hold" without needing AI analysis
+ */
+function shouldSkipAIForObviousHold(
+  marketData: MarketData[],
+  hasPositions: boolean,
+  hasOpenOrders: boolean
+): { skip: boolean; reason: string } {
+  if (!marketData || marketData.length === 0) {
+    return { skip: false, reason: '' };
+  }
+
+  // Calculate market metrics
+  const changes = marketData.map(m => parseFloat(m.change24h));
+  const volumes = marketData.map(m => parseFloat(m.volume24h));
+  
+  const avgChange = Math.abs(changes.reduce((a, b) => a + b, 0) / changes.length);
+  const maxChange = Math.max(...changes.map(Math.abs));
+  const avgVolume = volumes.reduce((a, b) => a + b, 0) / volumes.length;
+  
+  // Volatility score
+  const variance = changes.reduce((sum, change) => sum + Math.pow(change, 2), 0) / changes.length;
+  const volatility = Math.sqrt(variance);
+
+  // Pattern 1: Ranging market with low volume (clear "hold" signal)
+  // Market moving <0.3% on average, max move <0.8%, and volatility <0.5%
+  if (avgChange < 0.3 && maxChange < 0.8 && volatility < 0.5) {
+    // If we have positions or orders, let AI manage them (protective orders, etc.)
+    if (hasPositions || hasOpenOrders) {
+      return { skip: false, reason: '' };
+    }
+    
+    console.log('[Phase 3C] ✓ Shortcut: Ranging market detected (avg: ' + avgChange.toFixed(2) + '%, max: ' + maxChange.toFixed(2) + '%, vol: ' + volatility.toFixed(2) + '%) - skipping AI');
+    return {
+      skip: true,
+      reason: 'Ranging market: Low volatility (' + volatility.toFixed(2) + '%), small moves (max ' + maxChange.toFixed(2) + '%), no compelling setups'
+    };
+  }
+
+  // Pattern 2: Extremely low volatility across board (dead market)
+  // All assets moving <0.5% with very low volatility
+  if (volatility < 0.3 && maxChange < 0.5) {
+    if (hasPositions || hasOpenOrders) {
+      return { skip: false, reason: '' };
+    }
+    
+    console.log('[Phase 3C] ✓ Shortcut: Dead market detected (vol: ' + volatility.toFixed(2) + '%) - skipping AI');
+    return {
+      skip: true,
+      reason: 'Dead market: Extremely low volatility (' + volatility.toFixed(2) + '%), no price action'
+    };
+  }
+
+  // No obvious hold pattern - proceed with AI analysis
+  return { skip: false, reason: '' };
+}
+
 /**
  * Check if user has exceeded their hourly AI call limit
  * Returns { allowed: boolean, remaining: number, resetIn: number (minutes) }
@@ -1426,11 +1662,61 @@ Example: If you see HYPE-PERP short position and want to add BTC-PERP long:
 16. Focus on high-probability setups with clear technical confluence, strong volume confirmation, and favorable risk/reward (minimum 2:1 R:R)
 17. **DISCIPLINED DECISION-MAKING**: Never cancel orders based on "feels" - only based on concrete threshold violations with cited metrics`;
 
-    const aiResponse = await makeAIRequest(userId, {
-      messages: [
-        { 
-          role: "system", 
-          content: `You are Mr. Fox, an expert autonomous crypto trader focused on maximizing Sharpe ratio through professional risk management and multi-timeframe analysis.
+    // PHASE 3C: Check for obvious hold patterns first (skip AI for clear cases)
+    const obviousHold = shouldSkipAIForObviousHold(
+      marketData,
+      hyperliquidPositions.length > 0,
+      openOrders.length > 0
+    );
+
+    if (obviousHold.skip) {
+      // Skip AI call - obvious "hold" scenario
+      console.log(`[Phase 3C] Skipping AI call - ${obviousHold.reason}`);
+      
+      // Log monitoring decision
+      await storage.createMonitoringLog(userId, {
+        analysis: JSON.stringify({
+          mode: 'hold',
+          reason: obviousHold.reason,
+          marketConditions: {
+            avgChange: marketData.map(m => parseFloat(m.change24h)).reduce((a, b) => a + b, 0) / marketData.length,
+            maxChange: Math.max(...marketData.map(m => Math.abs(parseFloat(m.change24h))))
+          }
+        }),
+        alertLevel: 'info'
+      });
+      
+      return; // Exit early - no trading needed
+    }
+
+    // PHASE 3A: Check for cached AI response if market conditions are similar
+    const currentFingerprint = createMarketFingerprint(marketData);
+    const cachedResponse = getCachedResponse(userId, currentFingerprint);
+
+    let aiResponse: any;
+    let content: string;
+
+    if (cachedResponse) {
+      // Reuse cached response - no AI call needed!
+      console.log('[Phase 3A] Using cached AI response - saving API cost!');
+      content = cachedResponse.response;
+      
+      // Mock aiResponse object for logging consistency
+      aiResponse = {
+        content: cachedResponse.response,
+        usage: cachedResponse.usage,
+        model: cachedResponse.model,
+        provider: cachedResponse.provider,
+        cost: 0 // No cost for cached response
+      };
+    } else {
+      // No cache or conditions changed - make fresh AI call
+      console.log('[Phase 3A] No cache available - making AI call');
+      aiResponse = await makeAIRequest(userId, {
+        messages: [
+          { 
+            role: "system", 
+            content: `You are Mr. Fox, an expert autonomous crypto trader focused on maximizing Sharpe ratio through professional risk management and multi-timeframe analysis.
 
 CRITICAL PRICE ANCHORING RULES (MANDATORY):
 1. ALWAYS anchor limit orders to CURRENT MARKET PRICE - never place orders based on historical prices or outdated levels
@@ -1452,17 +1738,25 @@ PRICE VALIDATION CHECKLIST for every limit order:
 ✓ Order distance from current: [calculate %]
 ✓ Recent volatility: [estimate]
 ✓ Fill probability: High/Medium (never place "Low" probability orders)` 
-        },
-        { role: "user", content: prompt }
-      ],
-      temperature: 0.7,
-    });
+          },
+          { role: "user", content: prompt }
+        ],
+        temperature: 0.7,
+      });
 
-    // Record AI call for rate limiting
-    recordAiCall(userId);
-    console.log(`[AI Rate Limit] Recorded AI call for user ${userId}`);
+      content = aiResponse.content;
+      
+      // Cache the fresh response for future use
+      if (content) {
+        cacheResponse(userId, content, currentFingerprint, aiResponse.usage, aiResponse.model, aiResponse.provider, aiResponse.cost);
+      }
+    }
 
-    const content = aiResponse.content;
+    // Record AI call for rate limiting (only if not cached)
+    if (!cachedResponse) {
+      recordAiCall(userId);
+      console.log(`[AI Rate Limit] Recorded AI call for user ${userId}`);
+    }
     if (!content) {
       throw new Error("No response from AI");
     }
@@ -1500,7 +1794,10 @@ PRICE VALIDATION CHECKLIST for every limit order:
       throw new Error("AI returned invalid JSON");
     }
 
-    // Log AI usage
+    // PHASE 3B: Compress AI response before logging to reduce token usage in future AI calls
+    const compressedResponse = compressAIResponse(strategy);
+
+    // Log AI usage with compressed response
     await storage.logAiUsage(userId, {
       provider: aiResponse.provider,
       model: aiResponse.model,
@@ -1509,7 +1806,7 @@ PRICE VALIDATION CHECKLIST for every limit order:
       totalTokens: aiResponse.usage.totalTokens,
       estimatedCost: aiResponse.cost.toFixed(6),
       userPrompt: "[AUTONOMOUS TRADING]",
-      aiResponse: JSON.stringify(strategy),
+      aiResponse: compressedResponse, // Store compressed version instead of full JSON
       success: 1,
     });
 
