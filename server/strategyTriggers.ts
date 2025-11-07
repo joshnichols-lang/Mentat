@@ -94,8 +94,31 @@ export async function evaluateStrategyTriggers(
     context.note = 'Price action strategy using time-based monitoring';
   }
 
+  // CRITICAL FIX: Default to time-based AI calls when no trigger configs present
+  // This ensures new strategies can execute trades even without indicator/orderflow configs
+  const hasAnyTriggerConfig = !!(
+    strategyConfig.indicatorConfig ||
+    strategyConfig.orderFlowConfig ||
+    strategyConfig.marketProfileConfig
+  );
+
+  // If we have signals, always call AI
+  // If no trigger configs OR price_action type, default to time-based (shouldCallAI=true)
+  // Only skip AI if we have configs but they didn't fire
+  const shouldCallAI = allSignals.length > 0 || 
+                       !hasAnyTriggerConfig || 
+                       strategyConfig.strategyType === 'price_action';
+
+  if (shouldCallAI && allSignals.length === 0) {
+    // Falling back to time-based monitoring
+    triggeredBy.push('time_based_fallback');
+    context.fallbackReason = hasAnyTriggerConfig 
+      ? 'No signals detected, using time-based monitoring'
+      : 'No trigger configs present, using time-based monitoring';
+  }
+
   return {
-    shouldCallAI: allSignals.length > 0,
+    shouldCallAI,
     triggeredBy,
     signals: allSignals,
     context
