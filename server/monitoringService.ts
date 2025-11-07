@@ -245,64 +245,6 @@ function compressAIResponse(strategy: AutonomousStrategy): string {
 }
 
 /**
- * PHASE 3C: Pattern-Based Shortcuts - Detect obvious no-action scenarios
- * Returns true if market conditions clearly indicate "hold" without needing AI analysis
- */
-function shouldSkipAIForObviousHold(
-  marketData: MarketData[],
-  hasPositions: boolean,
-  hasOpenOrders: boolean
-): { skip: boolean; reason: string } {
-  if (!marketData || marketData.length === 0) {
-    return { skip: false, reason: '' };
-  }
-
-  // Calculate market metrics
-  const changes = marketData.map(m => parseFloat(m.change24h));
-  const volumes = marketData.map(m => parseFloat(m.volume24h));
-  
-  const avgChange = Math.abs(changes.reduce((a, b) => a + b, 0) / changes.length);
-  const maxChange = Math.max(...changes.map(Math.abs));
-  const avgVolume = volumes.reduce((a, b) => a + b, 0) / volumes.length;
-  
-  // Volatility score
-  const variance = changes.reduce((sum, change) => sum + Math.pow(change, 2), 0) / changes.length;
-  const volatility = Math.sqrt(variance);
-
-  // Pattern 1: Ranging market with low volume (clear "hold" signal)
-  // Market moving <0.3% on average, max move <0.8%, and volatility <0.5%
-  if (avgChange < 0.3 && maxChange < 0.8 && volatility < 0.5) {
-    // If we have positions or orders, let AI manage them (protective orders, etc.)
-    if (hasPositions || hasOpenOrders) {
-      return { skip: false, reason: '' };
-    }
-    
-    console.log('[Phase 3C] ✓ Shortcut: Ranging market detected (avg: ' + avgChange.toFixed(2) + '%, max: ' + maxChange.toFixed(2) + '%, vol: ' + volatility.toFixed(2) + '%) - skipping AI');
-    return {
-      skip: true,
-      reason: 'Ranging market: Low volatility (' + volatility.toFixed(2) + '%), small moves (max ' + maxChange.toFixed(2) + '%), no compelling setups'
-    };
-  }
-
-  // Pattern 2: Extremely low volatility across board (dead market)
-  // All assets moving <0.5% with very low volatility
-  if (volatility < 0.3 && maxChange < 0.5) {
-    if (hasPositions || hasOpenOrders) {
-      return { skip: false, reason: '' };
-    }
-    
-    console.log('[Phase 3C] ✓ Shortcut: Dead market detected (vol: ' + volatility.toFixed(2) + '%) - skipping AI');
-    return {
-      skip: true,
-      reason: 'Dead market: Extremely low volatility (' + volatility.toFixed(2) + '%), no price action'
-    };
-  }
-
-  // No obvious hold pattern - proceed with AI analysis
-  return { skip: false, reason: '' };
-}
-
-/**
  * Check if user has exceeded their hourly AI call limit
  * Returns { allowed: boolean, remaining: number, resetIn: number (minutes) }
  */
@@ -1661,33 +1603,6 @@ Example: If you see HYPE-PERP short position and want to add BTC-PERP long:
 15. **BE OPPORTUNISTIC**: Scan the entire market universe for setups. If you identify clear support/resistance or key levels with favorable R:R, place limit orders there
 16. Focus on high-probability setups with clear technical confluence, strong volume confirmation, and favorable risk/reward (minimum 2:1 R:R)
 17. **DISCIPLINED DECISION-MAKING**: Never cancel orders based on "feels" - only based on concrete threshold violations with cited metrics`;
-
-    // PHASE 3C: Check for obvious hold patterns first (skip AI for clear cases)
-    const obviousHold = shouldSkipAIForObviousHold(
-      marketData,
-      hyperliquidPositions.length > 0,
-      openOrders.length > 0
-    );
-
-    if (obviousHold.skip) {
-      // Skip AI call - obvious "hold" scenario
-      console.log(`[Phase 3C] Skipping AI call - ${obviousHold.reason}`);
-      
-      // Log monitoring decision
-      await storage.createMonitoringLog(userId, {
-        analysis: JSON.stringify({
-          mode: 'hold',
-          reason: obviousHold.reason,
-          marketConditions: {
-            avgChange: marketData.map(m => parseFloat(m.change24h)).reduce((a, b) => a + b, 0) / marketData.length,
-            maxChange: Math.max(...marketData.map(m => Math.abs(parseFloat(m.change24h))))
-          }
-        }),
-        alertLevel: 'info'
-      });
-      
-      return; // Exit early - no trading needed
-    }
 
     // PHASE 3A: Check for cached AI response if market conditions are similar
     const currentFingerprint = createMarketFingerprint(marketData);
