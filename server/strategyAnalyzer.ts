@@ -73,11 +73,11 @@ Analyze the user's custom trading rules and determine:
    - Price tolerance for POC tests
 
 6. **Monitoring Frequency**: How often should the monitoring loop run?
-   - 1-min scalping: 1 minute
-   - 5-min scalping: 5 minutes
+   - MINIMUM: 5 minutes (cost control - prevents excessive AI calls)
+   - Fast scalping: 5 minutes
    - Swing trading: 15-60 minutes
    - Position trading: 60-240 minutes
-   - Consider: If using indicators that need frequent calculation, match to timeframe
+   - IMPORTANT: Always recommend at least 5 minutes to balance responsiveness with AI cost efficiency
 
 7. **Realtime Data**: Does this strategy need live order book data?
    - true: Order flow strategies, market profile with live TPO
@@ -114,10 +114,10 @@ Output: {
     "deltaThreshold": 30,
     "depthImbalanceRatio": 1.5
   },
-  "monitoringFrequencyMinutes": 1,
+  "monitoringFrequencyMinutes": 5,
   "requiresRealtimeData": true,
   "triggerMode": "indicator",
-  "reasoning": "Order flow imbalance strategy requiring realtime order book monitoring. 1-min frequency for responsive detection. AI called when 3x+ imbalance detected."
+  "reasoning": "Order flow imbalance strategy requiring realtime order book monitoring. 5-min frequency balances responsiveness with cost efficiency. AI called when 3x+ imbalance detected."
 }
 
 Example 3:
@@ -146,10 +146,10 @@ Output: {
     "rsi": { "period": 14, "oversold": 30, "overbought": 70 },
     "macd": { "fast": 12, "slow": 26, "signal": 9 }
   },
-  "monitoringFrequencyMinutes": 1,
+  "monitoringFrequencyMinutes": 5,
   "requiresRealtimeData": false,
   "triggerMode": "indicator",
-  "reasoning": "Hybrid strategy combining MACD and RSI on 1-min timeframe. Both indicators must align for entry. Monitor every minute to catch fast signals. AI called when both conditions met."
+  "reasoning": "Hybrid strategy combining MACD and RSI. Even for 1-min timeframe strategies, 5-min monitoring is minimum to control AI costs while still catching signals. AI called when both conditions met."
 }
 
 Now analyze the following custom trading rules:`;
@@ -186,6 +186,13 @@ export async function analyzeStrategy(
 
     const config = JSON.parse(response) as StrategyConfig;
 
+    // COST CONTROL: Enforce 5-minute minimum monitoring frequency
+    const MIN_MONITORING_FREQUENCY = 5;
+    if (config.monitoringFrequencyMinutes < MIN_MONITORING_FREQUENCY) {
+      console.log(`[Strategy Analyzer] ⚠️ AI recommended ${config.monitoringFrequencyMinutes} min monitoring, enforcing ${MIN_MONITORING_FREQUENCY} min minimum for cost control`);
+      config.monitoringFrequencyMinutes = MIN_MONITORING_FREQUENCY;
+    }
+
     console.log('[Strategy Analyzer] Analysis complete:', {
       strategyType: config.strategyType,
       detectedIndicators: config.detectedIndicators,
@@ -198,7 +205,7 @@ export async function analyzeStrategy(
   } catch (error: any) {
     console.error('[Strategy Analyzer] Error analyzing strategy:', error);
 
-    // Return conservative defaults on error
+    // Return conservative defaults on error (always safe 15-minute frequency)
     return {
       strategyType: 'price_action',
       monitoringFrequencyMinutes: 15,
