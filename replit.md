@@ -3,6 +3,10 @@
 ## Overview
 1fox is an AI-powered cryptocurrency trading platform that serves as a "one-stop shop" for various market types including Perpetuals, Prediction Markets, Onchain Options, and future Spot Discovery. It allows users to interact with an AI trading agent, "Mr. Fox," through natural language to execute automated strategies across perpetual futures (Hyperliquid, Orderly Network), prediction markets (Polymarket), and onchain options (Aevo). The platform features a glassmorphic "Fantastic Mr. Fox" themed interface, real-time market data, portfolio tracking, comprehensive trading controls, and institutional-grade advanced order types. 1fox aims to provide a professional AI trading experience focused on Sharpe ratio maximization and continuous risk management as a multi-tenant SaaS solution.
 
+## Recent Changes
+**November 7, 2025:**
+- **Production Bug Fix:** Fixed React error #31 crash in PositionsGrid.tsx - Hyperliquid position leverage object `{type, value}` was being rendered directly instead of extracting `leverage.value` property (line 214-216)
+
 ## User Preferences
 Preferred communication style: Simple, everyday language.
 
