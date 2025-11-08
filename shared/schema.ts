@@ -35,7 +35,6 @@ export const users = pgTable("users", {
   walletAddress: text("wallet_address"), // DEPRECATED: Kept for backward compatibility, migrating to user_wallets table
   verificationStatus: text("verification_status").notNull().default("approved"), // "pending", "approved", "rejected" - Auto-approved for all users
   verifiedAt: timestamp("verified_at"), // Timestamp when admin verified the wallet
-  maxActiveStrategies: integer("max_active_strategies").notNull().default(3), // Maximum concurrent strategies allowed (1-3)
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
@@ -510,16 +509,7 @@ export const tradingModes = pgTable("trading_modes", {
   //   triggerMode: "indicator" | "time_based" | "hybrid"
   // }
   
-  // Multi-strategy portfolio management
-  isActive: integer("is_active").notNull().default(0), // 1 = active, 0 = paused/stopped (multiple can be active simultaneously)
-  status: text("status").notNull().default("stopped"), // "active", "paused", "stopped"
-  allocatedCapitalPercent: decimal("allocated_capital_percent", { precision: 5, scale: 2 }).notNull().default("33.33"), // % of total capital (default ~33% for 3 strategies)
-  maxPositionsPerStrategy: integer("max_positions_per_strategy").notNull().default(3), // Max concurrent positions for this strategy
-  maxLeveragePerStrategy: integer("max_leverage_per_strategy").notNull().default(10), // Max leverage this strategy can use
-  dailyLossLimitPercent: decimal("daily_loss_limit_percent", { precision: 5, scale: 2 }).notNull().default("5.00"), // Daily loss limit as % of allocated capital
-  currentDailyLoss: decimal("current_daily_loss", { precision: 18, scale: 8 }).notNull().default("0"), // Track current day's losses
-  lastDailyResetAt: timestamp("last_daily_reset_at").notNull().defaultNow(), // When daily loss counter was last reset
-  
+  isActive: integer("is_active").notNull().default(0), // Only one mode can be active at a time per user
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

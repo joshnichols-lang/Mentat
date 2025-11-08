@@ -61,7 +61,7 @@ export default function AIPromptPanel() {
     enabled: portfolioAnalysisOpen,
   });
 
-  const { data: tradingModesData } = useQuery<{ tradingModes: any[] }>({
+  const { data: tradingModesData } = useQuery<{ modes: any[] }>({
     queryKey: ["/api/trading-modes"],
   });
 
@@ -361,7 +361,7 @@ export default function AIPromptPanel() {
       // Deactivate all strategies to enable general conversation mode
       deactivateAllMutation.mutate();
     } else if (value === "custom") {
-      const activeModes = tradingModesData?.tradingModes.filter((m: any) => m.isActive);
+      const activeModes = tradingModesData?.modes.filter((m: any) => m.isActive);
       if (activeModes && activeModes.length > 0) {
         setStrategyToRename(activeModes[0]);
         setNewStrategyName(activeModes[0].name);
@@ -378,7 +378,7 @@ export default function AIPromptPanel() {
     }
   };
 
-  const modes = tradingModesData?.tradingModes || [];
+  const modes = tradingModesData?.modes || [];
   const activeMode = modes.find((m: any) => m.isActive);
 
   return (

@@ -55,253 +55,6 @@ const userMonitoringCycles = new Map<string, number>();
 // Track AI calls per user for rate limiting (rolling hourly window)
 const userAiCallHistory = new Map<string, number[]>(); // userId -> array of timestamps (ms)
 
-// PHASE 1C: Market Regime Cache - Reduces redundant AI calls
-// Cache market regime analysis for 15 minutes since regimes don't change that fast
-interface MarketRegimeCache {
-  regime: "bullish" | "bearish" | "neutral" | "volatile";
-  confidence: number;
-  timestamp: number;
-  marketSnapshot: string; // Hash of market conditions for invalidation
-}
-const marketRegimeCache = new Map<string, MarketRegimeCache>();
-const REGIME_CACHE_TTL_MS = 15 * 60 * 1000; // 15 minutes
-
-// PHASE 3A: Response Similarity Caching - Reuse AI responses when market conditions similar
-interface ResponseCache {
-  response: string; // The AI response content
-  marketFingerprint: MarketFingerprint;
-  timestamp: number;
-  usage: { promptTokens: number; completionTokens: number; totalTokens: number };
-  model: string;
-  provider: string;
-  cost: number;
-}
-
-interface MarketFingerprint {
-  avgPrice: number;
-  avgVolume: number;
-  avgChange: number;
-  volatilityScore: number;
-  topGainerChange: number;
-  topLoserChange: number;
-  hash: string; // Quick lookup key
-}
-
-const responseSimilarityCache = new Map<string, ResponseCache>();
-const RESPONSE_CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes - shorter than regime cache
-const SIMILARITY_THRESHOLD = 0.05; // 5% difference threshold
-
-/**
- * PHASE 3A: Create market fingerprint for caching
- * Extracts key metrics from market data that define current conditions
- */
-function createMarketFingerprint(marketData: MarketData[]): MarketFingerprint {
-  if (!marketData || marketData.length === 0) {
-    return {
-      avgPrice: 0,
-      avgVolume: 0,
-      avgChange: 0,
-      volatilityScore: 0,
-      topGainerChange: 0,
-      topLoserChange: 0,
-      hash: 'empty'
-    };
-  }
-
-  // Calculate aggregate metrics
-  const prices = marketData.map(m => parseFloat(m.price));
-  const volumes = marketData.map(m => parseFloat(m.volume24h));
-  const changes = marketData.map(m => parseFloat(m.change24h));
-
-  const avgPrice = prices.reduce((a, b) => a + b, 0) / prices.length;
-  const avgVolume = volumes.reduce((a, b) => a + b, 0) / volumes.length;
-  const avgChange = changes.reduce((a, b) => a + b, 0) / changes.length;
-  
-  // Volatility score: standard deviation of price changes
-  const variance = changes.reduce((sum, change) => sum + Math.pow(change - avgChange, 2), 0) / changes.length;
-  const volatilityScore = Math.sqrt(variance);
-
-  const topGainerChange = Math.max(...changes);
-  const topLoserChange = Math.min(...changes);
-
-  // Create deterministic hash for quick lookup
-  const hash = `${avgPrice.toFixed(2)}_${avgVolume.toFixed(0)}_${avgChange.toFixed(2)}_${volatilityScore.toFixed(2)}`;
-
-  return {
-    avgPrice,
-    avgVolume,
-    avgChange,
-    volatilityScore,
-    topGainerChange,
-    topLoserChange,
-    hash
-  };
-}
-
-/**
- * PHASE 3A: Check if two market fingerprints are similar (within 5% threshold)
- */
-function areFingerprintsSimilar(fp1: MarketFingerprint, fp2: MarketFingerprint): boolean {
-  // Compare each metric - if any differs by >5%, consider them different
-  const priceDiff = Math.abs(fp1.avgPrice - fp2.avgPrice) / Math.max(fp1.avgPrice, fp2.avgPrice);
-  const volumeDiff = Math.abs(fp1.avgVolume - fp2.avgVolume) / Math.max(fp1.avgVolume, fp2.avgVolume);
-  
-  // FIX: Normalize changeDiff like other metrics (divide by max magnitude to get relative difference)
-  // Guard against division by zero when both changes are near zero
-  const maxChangeMagnitude = Math.max(Math.abs(fp1.avgChange), Math.abs(fp2.avgChange), 0.01);
-  const changeDiff = Math.abs(fp1.avgChange - fp2.avgChange) / maxChangeMagnitude;
-  
-  const volatilityDiff = Math.abs(fp1.volatilityScore - fp2.volatilityScore) / Math.max(fp1.volatilityScore, fp2.volatilityScore, 0.01);
-
-  // All metrics must be within threshold
-  return priceDiff < SIMILARITY_THRESHOLD &&
-         volumeDiff < SIMILARITY_THRESHOLD &&
-         changeDiff < SIMILARITY_THRESHOLD &&
-         volatilityDiff < SIMILARITY_THRESHOLD;
-}
-
-/**
- * PHASE 3A: Get cached AI response if market conditions are similar
- */
-function getCachedResponse(userId: string, currentFingerprint: MarketFingerprint): ResponseCache | null {
-  const cacheKey = userId;
-  const cached = responseSimilarityCache.get(cacheKey);
-
-  if (!cached) {
-    return null;
-  }
-
-  // Check if cache is expired
-  const now = Date.now();
-  if (now - cached.timestamp > RESPONSE_CACHE_TTL_MS) {
-    responseSimilarityCache.delete(cacheKey);
-    console.log('[Phase 3A] Response cache expired for user', userId);
-    return null;
-  }
-
-  // Check if market conditions are similar
-  if (areFingerprintsSimilar(currentFingerprint, cached.marketFingerprint)) {
-    console.log('[Phase 3A] ✓ Cache HIT - Market conditions similar, reusing AI response');
-    console.log(`[Phase 3A] Price diff: ${Math.abs(currentFingerprint.avgPrice - cached.marketFingerprint.avgPrice).toFixed(2)}, Volume diff: ${Math.abs(currentFingerprint.avgVolume - cached.marketFingerprint.avgVolume).toFixed(0)}`);
-    return cached;
-  }
-
-  console.log('[Phase 3A] Cache MISS - Market conditions changed significantly');
-  return null;
-}
-
-/**
- * PHASE 3A: Cache AI response for future reuse
- */
-function cacheResponse(userId: string, response: string, fingerprint: MarketFingerprint, usage: any, model: string, provider: string, cost: number): void {
-  const cacheKey = userId;
-  responseSimilarityCache.set(cacheKey, {
-    response,
-    marketFingerprint: fingerprint,
-    timestamp: Date.now(),
-    usage,
-    model,
-    provider,
-    cost
-  });
-  console.log(`[Phase 3A] ✓ Cached AI response for user ${userId}`);
-}
-
-/**
- * PHASE 3B: Compress AI response for conversation history
- * Extract only key decision points to reduce token usage in future AI calls
- */
-function compressAIResponse(strategy: AutonomousStrategy): string {
-  // Extract only essential information - drop verbose reasoning
-  const actionSummary = strategy.actions.map(a => {
-    const base = `${a.action}:${a.symbol}`;
-    // Include key fields but skip verbose reasoning
-    if (a.action === 'buy' || a.action === 'sell') {
-      return `${base}@${a.expectedEntry}`;
-    } else if (a.action === 'stop_loss' || a.action === 'take_profit') {
-      return `${base}@${a.triggerPrice}`;
-    } else if (a.action === 'cancel_order') {
-      return `${base}#${a.orderId}`;
-    }
-    return base;
-  }).join(';');
-
-  // Truncate thesis to first 150 chars
-  const shortThesis = strategy.tradeThesis.length > 150 
-    ? strategy.tradeThesis.substring(0, 150) + '...'
-    : strategy.tradeThesis;
-
-  // Compressed format - ~50-70% smaller than full JSON
-  const compressed = {
-    regime: strategy.marketRegime,
-    thesis: shortThesis,
-    actions: actionSummary,
-    count: strategy.actions.length
-  };
-
-  console.log(`[Phase 3B] Compressed AI response: ${JSON.stringify(strategy).length} → ${JSON.stringify(compressed).length} chars (${Math.round((1 - JSON.stringify(compressed).length / JSON.stringify(strategy).length) * 100)}% reduction)`);
-  
-  return JSON.stringify(compressed);
-}
-
-/**
- * PHASE 3C: Pattern-Based Shortcuts - Detect obvious no-action scenarios
- * Returns true if market conditions clearly indicate "hold" without needing AI analysis
- */
-function shouldSkipAIForObviousHold(
-  marketData: MarketData[],
-  hasPositions: boolean,
-  hasOpenOrders: boolean
-): { skip: boolean; reason: string } {
-  if (!marketData || marketData.length === 0) {
-    return { skip: false, reason: '' };
-  }
-
-  // Calculate market metrics
-  const changes = marketData.map(m => parseFloat(m.change24h));
-  const volumes = marketData.map(m => parseFloat(m.volume24h));
-  
-  const avgChange = Math.abs(changes.reduce((a, b) => a + b, 0) / changes.length);
-  const maxChange = Math.max(...changes.map(Math.abs));
-  const avgVolume = volumes.reduce((a, b) => a + b, 0) / volumes.length;
-  
-  // Volatility score
-  const variance = changes.reduce((sum, change) => sum + Math.pow(change, 2), 0) / changes.length;
-  const volatility = Math.sqrt(variance);
-
-  // Pattern 1: Ranging market with low volume (clear "hold" signal)
-  // Market moving <0.3% on average, max move <0.8%, and volatility <0.5%
-  if (avgChange < 0.3 && maxChange < 0.8 && volatility < 0.5) {
-    // If we have positions or orders, let AI manage them (protective orders, etc.)
-    if (hasPositions || hasOpenOrders) {
-      return { skip: false, reason: '' };
-    }
-    
-    console.log('[Phase 3C] ✓ Shortcut: Ranging market detected (avg: ' + avgChange.toFixed(2) + '%, max: ' + maxChange.toFixed(2) + '%, vol: ' + volatility.toFixed(2) + '%) - skipping AI');
-    return {
-      skip: true,
-      reason: 'Ranging market: Low volatility (' + volatility.toFixed(2) + '%), small moves (max ' + maxChange.toFixed(2) + '%), no compelling setups'
-    };
-  }
-
-  // Pattern 2: Extremely low volatility across board (dead market)
-  // All assets moving <0.5% with very low volatility
-  if (volatility < 0.3 && maxChange < 0.5) {
-    if (hasPositions || hasOpenOrders) {
-      return { skip: false, reason: '' };
-    }
-    
-    console.log('[Phase 3C] ✓ Shortcut: Dead market detected (vol: ' + volatility.toFixed(2) + '%) - skipping AI');
-    return {
-      skip: true,
-      reason: 'Dead market: Extremely low volatility (' + volatility.toFixed(2) + '%), no price action'
-    };
-  }
-
-  // No obvious hold pattern - proceed with AI analysis
-  return { skip: false, reason: '' };
-}
-
 /**
  * Check if user has exceeded their hourly AI call limit
  * Returns { allowed: boolean, remaining: number, resetIn: number (minutes) }
@@ -371,59 +124,6 @@ export function getAiUsageStats(userId: string, maxCallsPerHour: number | null):
     remaining: maxCallsPerHour ? remaining : Infinity,
     resetInMinutes: resetIn
   };
-}
-
-/**
- * PHASE 1C: Create market snapshot hash for cache invalidation
- * Returns a string representing current market conditions
- */
-function createMarketSnapshot(marketData: MarketData[]): string {
-  // Create a lightweight hash of market conditions
-  // If significant changes occur, the hash changes and cache is invalidated
-  const sorted = [...marketData].sort((a, b) => a.symbol.localeCompare(b.symbol));
-  const top10 = sorted.slice(0, 10); // Only hash top 10 for efficiency
-  
-  const snapshot = top10.map(m => {
-    const price = parseFloat(m.price);
-    const change = parseFloat(m.change24h);
-    // Round to reduce cache thrashing from tiny price movements
-    return `${m.symbol}:${price.toFixed(0)}:${change.toFixed(1)}`;
-  }).join('|');
-  
-  return snapshot;
-}
-
-/**
- * PHASE 1C: Get cached market regime or null if cache miss/expired
- */
-function getCachedRegime(marketSnapshot: string): MarketRegimeCache | null {
-  const cached = marketRegimeCache.get(marketSnapshot);
-  
-  if (!cached) {
-    return null; // Cache miss
-  }
-  
-  const age = Date.now() - cached.timestamp;
-  if (age > REGIME_CACHE_TTL_MS) {
-    marketRegimeCache.delete(marketSnapshot); // Expired
-    return null;
-  }
-  
-  console.log(`[Regime Cache] HIT - Using cached ${cached.regime} regime (${(age/1000).toFixed(0)}s old)`);
-  return cached;
-}
-
-/**
- * PHASE 1C: Cache market regime analysis
- */
-function cacheRegime(marketSnapshot: string, regime: "bullish" | "bearish" | "neutral" | "volatile", confidence: number): void {
-  marketRegimeCache.set(marketSnapshot, {
-    regime,
-    confidence,
-    timestamp: Date.now(),
-    marketSnapshot
-  });
-  console.log(`[Regime Cache] STORED - ${regime} regime (${confidence}% confidence)`);
 }
 
 /**
@@ -729,14 +429,13 @@ export async function developAutonomousStrategy(userId: string): Promise<void> {
     }));
     const currentPositions = currentPositionsWithState;
     
-    // PHASE 1E: Token Optimization - Reduce conversation history from 5 to 3
     // Fetch user prompt history to learn trading style
     let promptHistory: {timestamp: Date, prompt: string}[] = [];
     try {
-      const recentPrompts = await storage.getAiUsageLogs(userId, 6); // Fetch 6, filter to 3
+      const recentPrompts = await storage.getAiUsageLogs(userId, 10);
       promptHistory = recentPrompts
         .filter(log => log.success === 1 && log.userPrompt && !log.userPrompt.includes("[AUTOMATED"))
-        .slice(0, 3) // REDUCED from 5 to 3 - saves ~10-15% tokens
+        .slice(0, 5)
         .map(log => ({
           timestamp: log.timestamp,
           prompt: log.userPrompt!
@@ -767,45 +466,29 @@ export async function developAutonomousStrategy(userId: string): Promise<void> {
     // Fetch recent learnings from past trade evaluations (filtered by current market regime)
     const recentLearnings = await getRecentLearnings(userId, marketRegime.regime, 8);
     
-    // Fetch active trading strategies for EXECUTION (status='active', not isActive for conversation)
-    // NOTE: isActive = which strategy user is currently discussing with Mr. Fox (only 1)
-    // NOTE: status='active' = which strategies Mr. Fox is actively trading on (up to 3)
-    let activeStrategies: any[] = [];
+    // Fetch active trading mode/strategy
     let activeTradingMode: any = null;
     try {
       const tradingModes = await storage.getTradingModes(userId);
-      
-      // MULTI-STRATEGY: Find ALL strategies with status='active' for execution
-      activeStrategies = tradingModes.filter((m: any) => m.status === 'active');
-      
-      // For backwards compatibility, also get the conversation-active strategy
-      const conversationStrategy = tradingModes.find((m: any) => m.isActive === 1);
-      
-      // If we have active strategies for execution, use the first one (or conversation one if it's active)
-      if (activeStrategies.length > 0) {
-        // Prefer conversation strategy if it's also executing
-        activeTradingMode = conversationStrategy && activeStrategies.find(s => s.id === conversationStrategy.id)
-          ? conversationStrategy
-          : activeStrategies[0];
-        
-        console.log(`[Autonomous Trading] Found ${activeStrategies.length} active strategies for execution`);
-        console.log(`[Autonomous Trading] Using strategy: ${activeTradingMode.name} (${activeTradingMode.id})`);
+      activeTradingMode = tradingModes.find((m: any) => m.isActive === 1);
+      if (activeTradingMode) {
+        console.log(`[Autonomous Trading] Using active trading strategy: ${activeTradingMode.name}${activeTradingMode.type ? ` (${activeTradingMode.type})` : ''}`);
       } else {
-        console.log(`[Autonomous Trading] No active trading strategies configured (status='active')`);
+        console.log(`[Autonomous Trading] No active trading strategy configured`);
       }
     } catch (modeError) {
       console.error("Failed to fetch trading modes:", modeError);
     }
     
     // SAFETY CHECK: Block trading if no active strategy configured
-    if (!activeTradingMode || activeStrategies.length === 0) {
-      console.log(`[Autonomous Trading] BLOCKING trade execution - no active trading strategies (status='active')`);
+    if (!activeTradingMode) {
+      console.log(`[Autonomous Trading] BLOCKING trade execution - no active trading strategy configured`);
       
       // Log to monitoring so users understand why AI isn't trading
       await storage.createMonitoringLog(userId, {
         analysis: JSON.stringify({
           mode: "blocked",
-          message: "No active trading strategies configured. Please create a strategy and click 'Start' to enable autonomous trading."
+          message: "No active trading strategy configured. Please create a trading strategy and set it as active to enable autonomous trading."
         }),
         alertLevel: "info"
       });
@@ -1090,7 +773,7 @@ ${highVolumeAssets.map(v => `- ${v.symbol}: ${v.volumeRatio.toFixed(2)}x market 
 **YOUR JOB**: Decide which volume levels are significant based on TODAY'S market conditions, not fixed thresholds
 
 📊 CURRENT MARKET DATA (USE THESE PRICES FOR ALL ORDERS):
-${marketData.slice(0, 15).map(m => { // PHASE 1E: Reduced from 30 to 15 assets - saves ~15-20% tokens
+${marketData.slice(0, 30).map(m => {
   const price = parseFloat(m.price);
   const change = parseFloat(m.change24h);
   const volume = parseFloat(m.volume24h) / 1e6;
@@ -1678,61 +1361,11 @@ Example: If you see HYPE-PERP short position and want to add BTC-PERP long:
 16. Focus on high-probability setups with clear technical confluence, strong volume confirmation, and favorable risk/reward (minimum 2:1 R:R)
 17. **DISCIPLINED DECISION-MAKING**: Never cancel orders based on "feels" - only based on concrete threshold violations with cited metrics`;
 
-    // PHASE 3C: Check for obvious hold patterns first (skip AI for clear cases)
-    const obviousHold = shouldSkipAIForObviousHold(
-      marketData,
-      hyperliquidPositions.length > 0,
-      openOrders.length > 0
-    );
-
-    if (obviousHold.skip) {
-      // Skip AI call - obvious "hold" scenario
-      console.log(`[Phase 3C] Skipping AI call - ${obviousHold.reason}`);
-      
-      // Log monitoring decision
-      await storage.createMonitoringLog(userId, {
-        analysis: JSON.stringify({
-          mode: 'hold',
-          reason: obviousHold.reason,
-          marketConditions: {
-            avgChange: marketData.map(m => parseFloat(m.change24h)).reduce((a, b) => a + b, 0) / marketData.length,
-            maxChange: Math.max(...marketData.map(m => Math.abs(parseFloat(m.change24h))))
-          }
-        }),
-        alertLevel: 'info'
-      });
-      
-      return; // Exit early - no trading needed
-    }
-
-    // PHASE 3A: Check for cached AI response if market conditions are similar
-    const currentFingerprint = createMarketFingerprint(marketData);
-    const cachedResponse = getCachedResponse(userId, currentFingerprint);
-
-    let aiResponse: any;
-    let content: string;
-
-    if (cachedResponse) {
-      // Reuse cached response - no AI call needed!
-      console.log('[Phase 3A] Using cached AI response - saving API cost!');
-      content = cachedResponse.response;
-      
-      // Mock aiResponse object for logging consistency
-      aiResponse = {
-        content: cachedResponse.response,
-        usage: cachedResponse.usage,
-        model: cachedResponse.model,
-        provider: cachedResponse.provider,
-        cost: 0 // No cost for cached response
-      };
-    } else {
-      // No cache or conditions changed - make fresh AI call
-      console.log('[Phase 3A] No cache available - making AI call');
-      aiResponse = await makeAIRequest(userId, {
-        messages: [
-          { 
-            role: "system", 
-            content: `You are Mr. Fox, an expert autonomous crypto trader focused on maximizing Sharpe ratio through professional risk management and multi-timeframe analysis.
+    const aiResponse = await makeAIRequest(userId, {
+      messages: [
+        { 
+          role: "system", 
+          content: `You are Mr. Fox, an expert autonomous crypto trader focused on maximizing Sharpe ratio through professional risk management and multi-timeframe analysis.
 
 CRITICAL PRICE ANCHORING RULES (MANDATORY):
 1. ALWAYS anchor limit orders to CURRENT MARKET PRICE - never place orders based on historical prices or outdated levels
@@ -1754,25 +1387,17 @@ PRICE VALIDATION CHECKLIST for every limit order:
 ✓ Order distance from current: [calculate %]
 ✓ Recent volatility: [estimate]
 ✓ Fill probability: High/Medium (never place "Low" probability orders)` 
-          },
-          { role: "user", content: prompt }
-        ],
-        temperature: 0.7,
-      });
+        },
+        { role: "user", content: prompt }
+      ],
+      temperature: 0.7,
+    });
 
-      content = aiResponse.content;
-      
-      // Cache the fresh response for future use
-      if (content) {
-        cacheResponse(userId, content, currentFingerprint, aiResponse.usage, aiResponse.model, aiResponse.provider, aiResponse.cost);
-      }
-    }
+    // Record AI call for rate limiting
+    recordAiCall(userId);
+    console.log(`[AI Rate Limit] Recorded AI call for user ${userId}`);
 
-    // Record AI call for rate limiting (only if not cached)
-    if (!cachedResponse) {
-      recordAiCall(userId);
-      console.log(`[AI Rate Limit] Recorded AI call for user ${userId}`);
-    }
+    const content = aiResponse.content;
     if (!content) {
       throw new Error("No response from AI");
     }
@@ -1810,10 +1435,7 @@ PRICE VALIDATION CHECKLIST for every limit order:
       throw new Error("AI returned invalid JSON");
     }
 
-    // PHASE 3B: Compress AI response before logging to reduce token usage in future AI calls
-    const compressedResponse = compressAIResponse(strategy);
-
-    // Log AI usage with compressed response
+    // Log AI usage
     await storage.logAiUsage(userId, {
       provider: aiResponse.provider,
       model: aiResponse.model,
@@ -1822,7 +1444,7 @@ PRICE VALIDATION CHECKLIST for every limit order:
       totalTokens: aiResponse.usage.totalTokens,
       estimatedCost: aiResponse.cost.toFixed(6),
       userPrompt: "[AUTONOMOUS TRADING]",
-      aiResponse: compressedResponse, // Store compressed version instead of full JSON
+      aiResponse: JSON.stringify(strategy),
       success: 1,
     });
 

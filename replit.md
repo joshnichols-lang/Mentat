@@ -36,15 +36,6 @@ Preferred communication style: Simple, everyday language.
 - **AI Cost Control System:** Dual-layer optimization combining strategy-aware monitoring with per-user hourly rate limits. Strategy parser auto-detects timeframes to minimize AI calls. UI displays real-time usage stats with warnings.
 - **AI Status Indicators:** Real-time status lights in the AIPromptPanel header show AI system health, balance visibility, and trading activity.
 **Agent Modes:** Passive Mode (discussion) and Active Mode (execution with safety constraints).
-**Multi-Strategy Portfolio Manager:** Allows up to 3 concurrent trading strategies with independent capital allocation, position limits, and risk budgets. Features centralized coordination layer that detects conflicts (opposing positions, over-concentration), tracks aggregate exposure across all strategies, and enforces portfolio-level safety limits. Each strategy operates independently with its own AI context, timeframe, and rules while Portfolio Manager prevents conflicts and manages total risk.
-
-**IMPORTANT - Two Strategy Concepts:**
-- **Conversation Context** (`isActive` field): Which SINGLE strategy Mr. Fox is currently discussing with you in the AI chat. Changed via the Mr. Fox dropdown in the right sidebar. Only ONE can be active for conversation.
-- **Trading Execution** (`status` field): Which strategies are actively EXECUTING TRADES. Up to THREE can have `status='active'` simultaneously. Managed via Start/Pause/Stop buttons on the `/strategies` page.
-
-**Navigation:**
-- `/strategies` - NEW multi-strategy management page with Multi-Strategy Dashboard and StrategyCard components. Use this page to activate multiple concurrent strategies for trading execution.
-- `/trading-modes` (deprecated) - OLD single-strategy page that only allows one active conversation context. Redirects to `/strategies`.
 **Order Management & Strategy Enforcement:** Enforces max positions, entry limits, and utilizes bracket orders for TP/SL protection.
 **Comprehensive Safety System:** Mandatory protective brackets, liquidation protection, manual override, Terminal Safety Guard, and protective order validation.
 **Multi-Exchange Integration:** Full REST API and WebSocket integration for Orderly Network, Hyperliquid, Aevo, and Polymarket.
