@@ -975,15 +975,26 @@ ${activeTradingMode.parameters.customRules ? `- Custom Rules:\n${activeTradingMo
 1. **LEVERAGE REQUIREMENT** (CRITICAL - NON-NEGOTIABLE):
    - **YOU MUST USE ${activeTradingMode ? activeTradingMode.parameters.preferredLeverage || 5 : 5}x LEVERAGE FOR ALL TRADES**
    - This is the user's configured setting - DO NOT choose a different leverage
-   - Higher leverage = tighter stop loss required = less room for price movement
    - Margin mode: ${user.marginMode || 'isolated'} (user can configure isolated or cross margin)
    
-2. **POSITION SIZE CALCULATION**:
-   - Available Balance: $${withdrawable.toFixed(2)}
-   - YOU decide position size based on risk tolerance, market conditions, and strategy goals
-   - Notional value = margin × leverage
-   - Position size = notional / entry_price
-   - Consider portfolio diversification and correlation when sizing multiple positions
+2. 🎯 **POSITION SIZE CALCULATION** (CRITICAL - READ CAREFULLY):
+   Available Balance: $${withdrawable.toFixed(2)}
+   Risk Per Trade: ${activeTradingMode ? activeTradingMode.parameters.riskPercentage || 2 : 2}%
+   
+   ❌ WRONG APPROACH (DO NOT USE):
+   - Using "Available Balance × Leverage" as position size
+   - This risks the ENTIRE account on a single trade!
+   
+   ✅ CORRECT APPROACH (USE THIS):
+   Step 1: Risk Amount = $${withdrawable.toFixed(2)} × ${activeTradingMode ? activeTradingMode.parameters.riskPercentage || 2 : 2}% = $${(withdrawable * (activeTradingMode ? activeTradingMode.parameters.riskPercentage || 2 : 2) / 100).toFixed(2)}
+   Step 2: SL Distance = |Entry Price - Stop Loss Price| / Entry Price
+   Step 3: Position Notional = Risk Amount / SL Distance
+   Step 4: Position Size = Position Notional / Entry Price
+   
+   NOTE: Leverage affects MARGIN requirement (Margin = Notional / Leverage), NOT position size.
+   Position size is determined solely by risk amount and stop distance.
+   
+   This ensures you risk exactly ${activeTradingMode ? activeTradingMode.parameters.riskPercentage || 2 : 2}% per trade regardless of leverage used.
    
 3. **INTELLIGENT STOP LOSS PLACEMENT** (LEVERAGE-ADJUSTED + market structure):
    - **CRITICAL**: With ${activeTradingMode ? activeTradingMode.parameters.preferredLeverage || 5 : 5}x leverage, consider tight stops to protect capital
