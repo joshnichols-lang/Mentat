@@ -62,7 +62,7 @@ export async function startUserMonitoring(userId: string, intervalMinutes: numbe
       // Pass both description AND parameters to prioritize structured timeframe
       const analysis = analyzeStrategyForMonitoring(
         activeMode.description, 
-        activeMode.parameters
+        activeMode.parameters as { timeframe?: string } | null
       );
       console.log(`[User Monitoring] Strategy Analysis for user ${userId}:`, {
         timeframe: analysis.detectedTimeframe,

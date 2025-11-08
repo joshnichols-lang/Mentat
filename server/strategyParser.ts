@@ -26,10 +26,18 @@ const strategyAnalysisCache = new Map<string, StrategyAnalysis>();
 /**
  * PHASE 1D: Clear strategy cache when user modifies their strategy
  * Call this when a strategy is updated to invalidate the cache
+ * Updated: Clears all cache entries matching the description prefix
  */
 export function invalidateStrategyCache(strategyDescription: string): void {
-  strategyAnalysisCache.delete(strategyDescription);
-  console.log('[Strategy Parser] Cache invalidated for modified strategy');
+  // Clear all cache entries that start with this description (handles multiple timeframes)
+  let cleared = 0;
+  for (const key of strategyAnalysisCache.keys()) {
+    if (key.startsWith(strategyDescription + '|')) {
+      strategyAnalysisCache.delete(key);
+      cleared++;
+    }
+  }
+  console.log(`[Strategy Parser] Cache invalidated for modified strategy (cleared ${cleared} entries)`);
 }
 
 /**
