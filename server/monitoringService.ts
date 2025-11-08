@@ -991,6 +991,13 @@ ${activeTradingMode.parameters.customRules ? `- Custom Rules:\n${activeTradingMo
    Step 3: Position Notional = Risk Amount / SL Distance
    Step 4: Position Size = Position Notional / Entry Price
    
+   EXAMPLE (Using your current balance):
+   - Entry: $45,000 | Stop Loss: $43,500 (3.33% away)
+   - SL Distance: |45000 - 43500| / 45000 = 0.0333
+   - Notional: $${(withdrawable * (activeTradingMode ? activeTradingMode.parameters.riskPercentage || 2 : 2) / 100).toFixed(2)} / 0.0333 = $${((withdrawable * (activeTradingMode ? activeTradingMode.parameters.riskPercentage || 2 : 2) / 100) / 0.0333).toFixed(2)}
+   - Size: $${((withdrawable * (activeTradingMode ? activeTradingMode.parameters.riskPercentage || 2 : 2) / 100) / 0.0333).toFixed(2)} / $45,000 = ${(((withdrawable * (activeTradingMode ? activeTradingMode.parameters.riskPercentage || 2 : 2) / 100) / 0.0333) / 45000).toFixed(4)} BTC
+   - Margin used: $${((withdrawable * (activeTradingMode ? activeTradingMode.parameters.riskPercentage || 2 : 2) / 100) / 0.0333).toFixed(2)} / ${activeTradingMode ? activeTradingMode.parameters.preferredLeverage || 5 : 5}x = $${(((withdrawable * (activeTradingMode ? activeTradingMode.parameters.riskPercentage || 2 : 2) / 100) / 0.0333) / (activeTradingMode ? activeTradingMode.parameters.preferredLeverage || 5 : 5)).toFixed(2)}
+   
    NOTE: Leverage affects MARGIN requirement (Margin = Notional / Leverage), NOT position size.
    Position size is determined solely by risk amount and stop distance.
    
