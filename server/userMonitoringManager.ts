@@ -96,6 +96,7 @@ export async function startUserMonitoring(userId: string, intervalMinutes: numbe
   }
 
   // Run the autonomous strategy immediately (unless skipped for frequency changes)
+  // developAutonomousStrategy will internally loop through all strategies with status='active'
   if (runImmediately) {
     try {
       await developAutonomousStrategy(userId);
@@ -107,6 +108,7 @@ export async function startUserMonitoring(userId: string, intervalMinutes: numbe
   }
 
   // Set up recurring interval
+  // developAutonomousStrategy will internally loop through all strategies with status='active'
   const intervalId = setInterval(async () => {
     try {
       await developAutonomousStrategy(userId);

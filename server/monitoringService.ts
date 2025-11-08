@@ -767,29 +767,45 @@ export async function developAutonomousStrategy(userId: string): Promise<void> {
     // Fetch recent learnings from past trade evaluations (filtered by current market regime)
     const recentLearnings = await getRecentLearnings(userId, marketRegime.regime, 8);
     
-    // Fetch active trading mode/strategy
+    // Fetch active trading strategies for EXECUTION (status='active', not isActive for conversation)
+    // NOTE: isActive = which strategy user is currently discussing with Mr. Fox (only 1)
+    // NOTE: status='active' = which strategies Mr. Fox is actively trading on (up to 3)
+    let activeStrategies: any[] = [];
     let activeTradingMode: any = null;
     try {
       const tradingModes = await storage.getTradingModes(userId);
-      activeTradingMode = tradingModes.find((m: any) => m.isActive === 1);
-      if (activeTradingMode) {
-        console.log(`[Autonomous Trading] Using active trading strategy: ${activeTradingMode.name}${activeTradingMode.type ? ` (${activeTradingMode.type})` : ''}`);
+      
+      // MULTI-STRATEGY: Find ALL strategies with status='active' for execution
+      activeStrategies = tradingModes.filter((m: any) => m.status === 'active');
+      
+      // For backwards compatibility, also get the conversation-active strategy
+      const conversationStrategy = tradingModes.find((m: any) => m.isActive === 1);
+      
+      // If we have active strategies for execution, use the first one (or conversation one if it's active)
+      if (activeStrategies.length > 0) {
+        // Prefer conversation strategy if it's also executing
+        activeTradingMode = conversationStrategy && activeStrategies.find(s => s.id === conversationStrategy.id)
+          ? conversationStrategy
+          : activeStrategies[0];
+        
+        console.log(`[Autonomous Trading] Found ${activeStrategies.length} active strategies for execution`);
+        console.log(`[Autonomous Trading] Using strategy: ${activeTradingMode.name} (${activeTradingMode.id})`);
       } else {
-        console.log(`[Autonomous Trading] No active trading strategy configured`);
+        console.log(`[Autonomous Trading] No active trading strategies configured (status='active')`);
       }
     } catch (modeError) {
       console.error("Failed to fetch trading modes:", modeError);
     }
     
     // SAFETY CHECK: Block trading if no active strategy configured
-    if (!activeTradingMode) {
-      console.log(`[Autonomous Trading] BLOCKING trade execution - no active trading strategy configured`);
+    if (!activeTradingMode || activeStrategies.length === 0) {
+      console.log(`[Autonomous Trading] BLOCKING trade execution - no active trading strategies (status='active')`);
       
       // Log to monitoring so users understand why AI isn't trading
       await storage.createMonitoringLog(userId, {
         analysis: JSON.stringify({
           mode: "blocked",
-          message: "No active trading strategy configured. Please create a trading strategy and set it as active to enable autonomous trading."
+          message: "No active trading strategies configured. Please create a strategy and click 'Start' to enable autonomous trading."
         }),
         alertLevel: "info"
       });

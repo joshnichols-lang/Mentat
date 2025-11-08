@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MultiStrategyDashboard } from "@/components/MultiStrategyDashboard";
+import { CreateStrategyDialog } from "@/components/CreateStrategyDialog";
 import { Plus, Info, AlertCircle, TrendingUp } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import Header from "@/components/Header";
@@ -13,6 +14,7 @@ import Header from "@/components/Header";
 export default function Strategies() {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("overview");
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
 
   const { data: user } = useQuery<any>({
     queryKey: ["/api/user"],
@@ -25,27 +27,25 @@ export default function Strategies() {
   const tradingModes = tradingModesData?.tradingModes || [];
   const activeStrategies = tradingModes.filter((m: any) => m.status === "active");
   const maxActiveStrategies = user?.maxActiveStrategies || 3;
+  // Allow creating new strategies as long as not all 3 slots are actively running
   const canAddMore = activeStrategies.length < maxActiveStrategies;
 
   const handleCreateStrategy = () => {
     if (!canAddMore) {
       toast({
-        title: "Maximum Strategies Reached",
-        description: `You can run up to ${maxActiveStrategies} strategies simultaneously. Please pause or stop an existing strategy first.`,
+        title: "Maximum Active Strategies Reached",
+        description: `You can run up to ${maxActiveStrategies} strategies simultaneously. Please pause or stop an active strategy first.`,
         variant: "destructive",
       });
       return;
     }
-    // Navigate to strategy creation (you can implement this)
-    toast({
-      title: "Create Strategy",
-      description: "Strategy creation flow will be implemented here.",
-    });
+    setIsCreateDialogOpen(true);
   };
 
   return (
     <>
       <Header />
+      <CreateStrategyDialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen} />
       <div className="flex flex-col bg-background">
         {/* Page Header */}
         <div className="flex-none border-b border-border bg-card">

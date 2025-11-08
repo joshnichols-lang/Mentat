@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -5,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { StrategyCard } from "@/components/StrategyCard";
+import { CreateStrategyDialog } from "@/components/CreateStrategyDialog";
 import { 
   Plus, 
   TrendingUp, 
@@ -16,6 +18,7 @@ import {
 } from "lucide-react";
 
 export function MultiStrategyDashboard() {
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const { data: strategiesData } = useQuery<any>({
     queryKey: ['/api/trading-modes'],
     refetchInterval: 30000,
@@ -43,7 +46,9 @@ export function MultiStrategyDashboard() {
   };
 
   return (
-    <div className="space-y-4 p-4">
+    <>
+      <CreateStrategyDialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen} />
+      <div className="space-y-4 p-4">
       {/* Portfolio Health Overview */}
       {portfolioStatus && (
         <Card className="bg-card border-border/50">
@@ -206,7 +211,8 @@ export function MultiStrategyDashboard() {
         <h2 className="text-lg font-semibold">Active Strategies ({activeStrategies.length}/3)</h2>
         <Button
           size="sm"
-          disabled={strategies.length >= 3}
+          disabled={activeStrategies.length >= 3}
+          onClick={() => setIsCreateDialogOpen(true)}
           data-testid="button-create-strategy"
         >
           <Plus className="h-4 w-4 mr-1" />
@@ -219,7 +225,7 @@ export function MultiStrategyDashboard() {
         <Card className="bg-card border-border/50">
           <CardContent className="py-8 text-center">
             <p className="text-muted-foreground mb-4">No trading strategies configured yet.</p>
-            <Button data-testid="button-create-first-strategy">
+            <Button onClick={() => setIsCreateDialogOpen(true)} data-testid="button-create-first-strategy">
               <Plus className="h-4 w-4 mr-1" />
               Create Your First Strategy
             </Button>
@@ -246,6 +252,7 @@ export function MultiStrategyDashboard() {
           })}
         </div>
       )}
-    </div>
+      </div>
+    </>
   );
 }
