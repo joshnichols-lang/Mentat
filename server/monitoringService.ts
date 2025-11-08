@@ -245,6 +245,64 @@ function compressAIResponse(strategy: AutonomousStrategy): string {
 }
 
 /**
+ * PHASE 3C: Pattern-Based Shortcuts - Detect obvious no-action scenarios
+ * Returns true if market conditions clearly indicate "hold" without needing AI analysis
+ */
+function shouldSkipAIForObviousHold(
+  marketData: MarketData[],
+  hasPositions: boolean,
+  hasOpenOrders: boolean
+): { skip: boolean; reason: string } {
+  if (!marketData || marketData.length === 0) {
+    return { skip: false, reason: '' };
+  }
+
+  // Calculate market metrics
+  const changes = marketData.map(m => parseFloat(m.change24h));
+  const volumes = marketData.map(m => parseFloat(m.volume24h));
+  
+  const avgChange = Math.abs(changes.reduce((a, b) => a + b, 0) / changes.length);
+  const maxChange = Math.max(...changes.map(Math.abs));
+  const avgVolume = volumes.reduce((a, b) => a + b, 0) / volumes.length;
+  
+  // Volatility score
+  const variance = changes.reduce((sum, change) => sum + Math.pow(change, 2), 0) / changes.length;
+  const volatility = Math.sqrt(variance);
+
+  // Pattern 1: Ranging market with low volume (clear "hold" signal)
+  // Market moving <0.3% on average, max move <0.8%, and volatility <0.5%
+  if (avgChange < 0.3 && maxChange < 0.8 && volatility < 0.5) {
+    // If we have positions or orders, let AI manage them (protective orders, etc.)
+    if (hasPositions || hasOpenOrders) {
+      return { skip: false, reason: '' };
+    }
+    
+    console.log('[Phase 3C] ✓ Shortcut: Ranging market detected (avg: ' + avgChange.toFixed(2) + '%, max: ' + maxChange.toFixed(2) + '%, vol: ' + volatility.toFixed(2) + '%) - skipping AI');
+    return {
+      skip: true,
+      reason: 'Ranging market: Low volatility (' + volatility.toFixed(2) + '%), small moves (max ' + maxChange.toFixed(2) + '%), no compelling setups'
+    };
+  }
+
+  // Pattern 2: Extremely low volatility across board (dead market)
+  // All assets moving <0.5% with very low volatility
+  if (volatility < 0.3 && maxChange < 0.5) {
+    if (hasPositions || hasOpenOrders) {
+      return { skip: false, reason: '' };
+    }
+    
+    console.log('[Phase 3C] ✓ Shortcut: Dead market detected (vol: ' + volatility.toFixed(2) + '%) - skipping AI');
+    return {
+      skip: true,
+      reason: 'Dead market: Extremely low volatility (' + volatility.toFixed(2) + '%), no price action'
+    };
+  }
+
+  // No obvious hold pattern - proceed with AI analysis
+  return { skip: false, reason: '' };
+}
+
+/**
  * Check if user has exceeded their hourly AI call limit
  * Returns { allowed: boolean, remaining: number, resetIn: number (minutes) }
  */
@@ -753,12 +811,9 @@ export async function developAutonomousStrategy(userId: string): Promise<void> {
     let triggerResult: any;
     let triggerContext = '';
     
-    if (strategyConfig) {
-      // STRATEGY-SPECIFIC TRIGGERS (All strategy types including price_action)
-      // The evaluateStrategyTriggers function has built-in fallback logic:
-      // - Strategies WITH configs use event-driven triggers (cost savings)
-      // - Strategies WITHOUT configs default to time-based monitoring (shouldCallAI=true)
-      console.log(`[Trigger Evaluation] Using strategy trigger evaluation for ${strategyConfig.strategyType} strategy (mode: ${strategyConfig.triggerMode || 'time_based'})`);
+    if (strategyConfig && (strategyConfig.triggerMode === 'indicator' || strategyConfig.triggerMode === 'hybrid')) {
+      // STRATEGY-SPECIFIC TRIGGERS (Indicator/Order Flow/TPO)
+      console.log(`[Trigger Evaluation] Using strategy-specific triggers for ${strategyConfig.strategyType} strategy`);
       
       try {
         // Import strategy trigger evaluation
@@ -770,27 +825,31 @@ export async function developAutonomousStrategy(userId: string): Promise<void> {
                       currentPositions[0]?.symbol || 
                       'BTC';
         
-        // Fetch candles for ALL strategy types (needed for price_action fallback and indicators)
+        // Fetch candles for indicator/TPO calculations
         let candles: typeof Candle[] = [];
-        const interval = strategyConfig.monitoringFrequencyMinutes >= 60 ? '1h' : 
-                        strategyConfig.monitoringFrequencyMinutes >= 15 ? '15m' : 
-                        strategyConfig.monitoringFrequencyMinutes >= 5 ? '5m' : '1m';
-        
-        try {
-          const candleData = await hyperliquidClient.getCandles(symbol, interval, 100);
-          if (candleData && Array.isArray(candleData)) {
-            candles = candleData.map((c: any) => ({
-              timestamp: c.t,
-              open: parseFloat(c.o),
-              high: parseFloat(c.h),
-              low: parseFloat(c.l),
-              close: parseFloat(c.c),
-              volume: parseFloat(c.v || '0')
-            }));
-            console.log(`[Strategy Triggers] Fetched ${candles.length} candles for ${symbol} at ${interval} interval`);
+        if (strategyConfig.strategyType === 'technical_indicator' || 
+            strategyConfig.strategyType === 'market_profile' || 
+            strategyConfig.strategyType === 'hybrid') {
+          
+          const interval = strategyConfig.monitoringFrequencyMinutes >= 60 ? '1h' : 
+                          strategyConfig.monitoringFrequencyMinutes >= 15 ? '15m' : 
+                          strategyConfig.monitoringFrequencyMinutes >= 5 ? '5m' : '1m';
+          
+          try {
+            const candleData = await hyperliquidClient.getCandles(symbol, interval, 100);
+            if (candleData && Array.isArray(candleData)) {
+              candles = candleData.map((c: any) => ({
+                timestamp: c.t,
+                open: parseFloat(c.o),
+                high: parseFloat(c.h),
+                low: parseFloat(c.l),
+                close: parseFloat(c.c),
+                volume: parseFloat(c.v || '0')
+              }));
+            }
+          } catch (candleError) {
+            console.error(`[Strategy Triggers] Failed to fetch candles:`, candleError);
           }
-        } catch (candleError) {
-          console.error(`[Strategy Triggers] Failed to fetch candles:`, candleError);
         }
         
         // Fetch orderbook and trades for order flow calculations
@@ -975,33 +1034,15 @@ ${activeTradingMode.parameters.customRules ? `- Custom Rules:\n${activeTradingMo
 1. **LEVERAGE REQUIREMENT** (CRITICAL - NON-NEGOTIABLE):
    - **YOU MUST USE ${activeTradingMode ? activeTradingMode.parameters.preferredLeverage || 5 : 5}x LEVERAGE FOR ALL TRADES**
    - This is the user's configured setting - DO NOT choose a different leverage
+   - Higher leverage = tighter stop loss required = less room for price movement
    - Margin mode: ${user.marginMode || 'isolated'} (user can configure isolated or cross margin)
    
-2. 🎯 **POSITION SIZE CALCULATION** (CRITICAL - READ CAREFULLY):
-   Available Balance: $${withdrawable.toFixed(2)}
-   Risk Per Trade: ${activeTradingMode ? activeTradingMode.parameters.riskPercentage || 2 : 2}%
-   
-   ❌ WRONG APPROACH (DO NOT USE):
-   - Using "Available Balance × Leverage" as position size
-   - This risks the ENTIRE account on a single trade!
-   
-   ✅ CORRECT APPROACH (USE THIS):
-   Step 1: Risk Amount = $${withdrawable.toFixed(2)} × ${activeTradingMode ? activeTradingMode.parameters.riskPercentage || 2 : 2}% = $${(withdrawable * (activeTradingMode ? activeTradingMode.parameters.riskPercentage || 2 : 2) / 100).toFixed(2)}
-   Step 2: SL Distance = |Entry Price - Stop Loss Price| / Entry Price
-   Step 3: Position Notional = Risk Amount / SL Distance
-   Step 4: Position Size = Position Notional / Entry Price
-   
-   EXAMPLE (Using your current balance):
-   - Entry: $45,000 | Stop Loss: $43,500 (3.33% away)
-   - SL Distance: |45000 - 43500| / 45000 = 0.0333
-   - Notional: $${(withdrawable * (activeTradingMode ? activeTradingMode.parameters.riskPercentage || 2 : 2) / 100).toFixed(2)} / 0.0333 = $${((withdrawable * (activeTradingMode ? activeTradingMode.parameters.riskPercentage || 2 : 2) / 100) / 0.0333).toFixed(2)}
-   - Size: $${((withdrawable * (activeTradingMode ? activeTradingMode.parameters.riskPercentage || 2 : 2) / 100) / 0.0333).toFixed(2)} / $45,000 = ${(((withdrawable * (activeTradingMode ? activeTradingMode.parameters.riskPercentage || 2 : 2) / 100) / 0.0333) / 45000).toFixed(4)} BTC
-   - Margin used: $${((withdrawable * (activeTradingMode ? activeTradingMode.parameters.riskPercentage || 2 : 2) / 100) / 0.0333).toFixed(2)} / ${activeTradingMode ? activeTradingMode.parameters.preferredLeverage || 5 : 5}x = $${(((withdrawable * (activeTradingMode ? activeTradingMode.parameters.riskPercentage || 2 : 2) / 100) / 0.0333) / (activeTradingMode ? activeTradingMode.parameters.preferredLeverage || 5 : 5)).toFixed(2)}
-   
-   NOTE: Leverage affects MARGIN requirement (Margin = Notional / Leverage), NOT position size.
-   Position size is determined solely by risk amount and stop distance.
-   
-   This ensures you risk exactly ${activeTradingMode ? activeTradingMode.parameters.riskPercentage || 2 : 2}% per trade regardless of leverage used.
+2. **POSITION SIZE CALCULATION**:
+   - Available Balance: $${withdrawable.toFixed(2)}
+   - YOU decide position size based on risk tolerance, market conditions, and strategy goals
+   - Notional value = margin × leverage
+   - Position size = notional / entry_price
+   - Consider portfolio diversification and correlation when sizing multiple positions
    
 3. **INTELLIGENT STOP LOSS PLACEMENT** (LEVERAGE-ADJUSTED + market structure):
    - **CRITICAL**: With ${activeTradingMode ? activeTradingMode.parameters.preferredLeverage || 5 : 5}x leverage, consider tight stops to protect capital
@@ -1621,6 +1662,33 @@ Example: If you see HYPE-PERP short position and want to add BTC-PERP long:
 16. Focus on high-probability setups with clear technical confluence, strong volume confirmation, and favorable risk/reward (minimum 2:1 R:R)
 17. **DISCIPLINED DECISION-MAKING**: Never cancel orders based on "feels" - only based on concrete threshold violations with cited metrics`;
 
+    // PHASE 3C: Check for obvious hold patterns first (skip AI for clear cases)
+    const obviousHold = shouldSkipAIForObviousHold(
+      marketData,
+      hyperliquidPositions.length > 0,
+      openOrders.length > 0
+    );
+
+    if (obviousHold.skip) {
+      // Skip AI call - obvious "hold" scenario
+      console.log(`[Phase 3C] Skipping AI call - ${obviousHold.reason}`);
+      
+      // Log monitoring decision
+      await storage.createMonitoringLog(userId, {
+        analysis: JSON.stringify({
+          mode: 'hold',
+          reason: obviousHold.reason,
+          marketConditions: {
+            avgChange: marketData.map(m => parseFloat(m.change24h)).reduce((a, b) => a + b, 0) / marketData.length,
+            maxChange: Math.max(...marketData.map(m => Math.abs(parseFloat(m.change24h))))
+          }
+        }),
+        alertLevel: 'info'
+      });
+      
+      return; // Exit early - no trading needed
+    }
+
     // PHASE 3A: Check for cached AI response if market conditions are similar
     const currentFingerprint = createMarketFingerprint(marketData);
     const cachedResponse = getCachedResponse(userId, currentFingerprint);
@@ -1736,10 +1804,7 @@ PRICE VALIDATION CHECKLIST for every limit order:
       promptTokens: aiResponse.usage.promptTokens,
       completionTokens: aiResponse.usage.completionTokens,
       totalTokens: aiResponse.usage.totalTokens,
-      cachedTokens: aiResponse.usage.cachedTokens || 0,
-      reasoningTokens: aiResponse.usage.reasoningTokens || 0,
       estimatedCost: aiResponse.cost.toFixed(6),
-      cacheSavings: aiResponse.cacheSavings?.toFixed(6) || '0',
       userPrompt: "[AUTONOMOUS TRADING]",
       aiResponse: compressedResponse, // Store compressed version instead of full JSON
       success: 1,

@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { DollarSign, Zap, TrendingUp, Clock, AlertTriangle } from "lucide-react";
+import { DollarSign, Zap, TrendingUp, Clock } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
@@ -32,9 +32,8 @@ interface StatsResponse extends ApiResponse<any> {
 
 const MONITORING_FREQUENCIES = [
   { value: "0", label: "Disabled" },
-  { value: "1", label: "1 minute (Event-driven)" },
+  { value: "1", label: "1 minute" },
   { value: "5", label: "5 minutes" },
-  { value: "15", label: "15 minutes (Recommended)" },
   { value: "30", label: "30 minutes" },
   { value: "60", label: "1 hour" },
 ];
@@ -208,12 +207,6 @@ export function AIUsageTracker() {
                   ))}
                 </SelectContent>
               </Select>
-              {monitoringFrequency === "5" && (
-                <div className="flex items-start gap-1 p-2 text-[10px] text-yellow-600 dark:text-yellow-500 bg-yellow-50 dark:bg-yellow-900/10 rounded border border-yellow-200 dark:border-yellow-800" data-testid="warning-high-cost">
-                  <AlertTriangle className="h-3 w-3 flex-shrink-0 mt-0.5" />
-                  <span>5-minute monitoring can cost ~$5-10/day. Consider 15-30 min for lower costs while still catching opportunities.</span>
-                </div>
-              )}
             </div>
           </div>
         </div>

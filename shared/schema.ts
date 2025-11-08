@@ -175,10 +175,7 @@ export const aiUsageLog = pgTable("ai_usage_log", {
   promptTokens: integer("prompt_tokens").notNull(),
   completionTokens: integer("completion_tokens").notNull(),
   totalTokens: integer("total_tokens").notNull(),
-  cachedTokens: integer("cached_tokens").notNull().default(0), // xAI: tokens served from cache (75% discount)
-  reasoningTokens: integer("reasoning_tokens").notNull().default(0), // xAI: tokens used for reasoning
   estimatedCost: decimal("estimated_cost", { precision: 10, scale: 6 }).notNull(),
-  cacheSavings: decimal("cache_savings", { precision: 10, scale: 6 }).notNull().default(sql`0`), // Savings from prompt caching
   userPrompt: text("user_prompt"),
   aiResponse: text("ai_response"),
   success: integer("success").notNull().default(1), // 1 = success, 0 = error

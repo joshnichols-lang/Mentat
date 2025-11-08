@@ -564,70 +564,6 @@ These rules ONLY apply when you decide to include trading actions in your respon
 
 6. For CLOSE actions, the "side" field must match the existing position's side (long position = side: "long").
 
-7. 🎯 POSITION SIZING CALCULATION (CRITICAL - READ CAREFULLY):
-   When determining the "size" field for buy/sell actions, you MUST use risk-based position sizing.
-   
-   ❌ WRONG APPROACH (DO NOT USE):
-   - Using "Available Balance × Leverage" as position size
-   - Example: $10,000 balance × 10x leverage = $100,000 notional ❌
-   - This risks the ENTIRE account on a single trade!
-   
-   ✅ CORRECT APPROACH (USE THIS):
-   Calculate size based on risk percentage and stop loss distance:
-   
-   Step 1: Calculate Risk Amount
-   Risk Amount = Available Balance × (Risk Per Trade % / 100)
-   Example: $10,000 × (1% / 100) = $100 max risk
-   
-   Step 2: Calculate Stop Loss Distance (as percentage)
-   SL Distance = |Entry Price - Stop Loss Price| / Entry Price
-   Example: Entry $45,000, SL $43,500 → |45000 - 43500| / 45000 = 0.0333 (3.33%)
-   
-   Step 3: Calculate Position Notional Value
-   Position Notional = Risk Amount / SL Distance
-   Example: $100 / 0.0333 = $3,000 USD notional
-   
-   Step 4: Calculate Position Size in Coins
-   Position Size = Position Notional / Entry Price
-   Example: $3,000 / $45,000 = 0.0667 BTC
-   
-   NOTE ON LEVERAGE: Leverage affects MARGIN requirement, not position size calculation.
-   - Higher leverage = less margin needed to hold the same position
-   - Position size is determined solely by risk amount and stop distance
-   - Leverage determines how much margin you need: Margin = Notional / Leverage
-   
-   CONCRETE EXAMPLES:
-   
-   Example 1: Conservative Bitcoin Long
-   - Account: $10,000 | Risk: 1% | Leverage: 1x
-   - Entry: $45,000 | Stop Loss: $43,500 (3.33% away)
-   → Risk: $100, SL Distance: 0.0333, Notional: $3,000
-   → Size: $3,000 / $45,000 = 0.0667 BTC
-   → Margin used: $3,000 / 1x = $3,000
-   
-   Example 2: Moderate Ethereum Long  
-   - Account: $10,000 | Risk: 2% | Leverage: 5x
-   - Entry: $2,500 | Stop Loss: $2,450 (2% away)
-   → Risk: $200, SL Distance: 0.02, Notional: $10,000
-   → Size: $10,000 / $2,500 = 4.0 ETH
-   → Margin used: $10,000 / 5x = $2,000
-   
-   Example 3: Aggressive Altcoin Short
-   - Account: $5,000 | Risk: 1.5% | Leverage: 3x
-   - Entry: $100 | Stop Loss: $105 (5% away)
-   → Risk: $75, SL Distance: 0.05, Notional: $1,500
-   → Size: $1,500 / $100 = 15.0 coins
-   → Margin used: $1,500 / 3x = $500
-   
-   VALIDATION CHECKLIST:
-   ✓ Size is based on risk percentage, NOT balance × leverage
-   ✓ Larger stop loss distance = smaller position size (correct!)
-   ✓ Leverage reduces margin requirement but doesn't change risk exposure
-   ✓ All positions risk exactly the specified percentage of account balance
-   ✓ Notional value meets minimum $10 USD requirement
-   
-   This approach ensures consistent risk per trade regardless of volatility or leverage used.
-
 When answering general questions (math, science, portfolio info, market conditions), simply provide your answer in the "interpretation" field and leave "actions" as an empty array: [].
 
 Remember: Respond conversationally in the "interpretation" field. Include trading actions ONLY when the context calls for it.`;
@@ -692,10 +628,7 @@ ${openOrders.length > 0 ? JSON.stringify(openOrders.filter((o: any) => !o.reduce
         promptTokens: response.usage.promptTokens,
         completionTokens: response.usage.completionTokens,
         totalTokens: response.usage.totalTokens,
-        cachedTokens: response.usage.cachedTokens || 0,
-        reasoningTokens: response.usage.reasoningTokens || 0,
         estimatedCost: response.cost.toFixed(6),
-        cacheSavings: response.cacheSavings?.toFixed(6) || '0',
         userPrompt: prompt,
         aiResponse: JSON.stringify(strategy),
         success: 1,

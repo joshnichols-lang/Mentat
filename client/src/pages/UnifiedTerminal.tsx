@@ -15,7 +15,6 @@ import AIPromptPanel from "@/components/AIPromptPanel";
 import ConversationHistory from "@/components/ConversationHistory";
 import PositionsGrid from "@/components/PositionsGrid";
 import { AIUsageTracker } from "@/components/AIUsageTracker";
-import { TriggerMonitor } from "@/components/TriggerMonitor";
 import { PortfolioOverview } from "@/components/PortfolioOverview";
 import { PortfolioAreaChart } from "@/components/PortfolioAreaChart";
 import { MarginUsageBar } from "@/components/MarginUsageBar";
@@ -1131,9 +1130,8 @@ export default function UnifiedTerminal() {
             </div>
 
             {/* AI Usage */}
-            <div className="p-3 border-t border-border/30 shrink-0 space-y-3">
+            <div className="p-3 border-t border-border/30 shrink-0">
               <AIUsageTracker />
-              <TriggerMonitor />
             </div>
           </div>
 

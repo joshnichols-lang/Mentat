@@ -1,6 +1,5 @@
 import { Server } from "http";
 import { WebSocket, WebSocketServer } from "ws";
-import { IndicatorEngine } from "./indicatorEngine";
 
 interface HLTradeData {
   coin: string;
@@ -435,19 +434,6 @@ export class MarketDataWebSocketService {
   }
 
   private broadcastCandle(candle: HLCandleData) {
-    // PHASE 4: Feed candle data to IndicatorEngine for event-driven triggers
-    try {
-      IndicatorEngine.updateCandle(candle.s, {
-        close: parseFloat(candle.c),
-        high: parseFloat(candle.h),
-        low: parseFloat(candle.l),
-        volume: parseFloat(candle.v),
-        timestamp: candle.T
-      });
-    } catch (error) {
-      console.error('[Market Data WS] Failed to update IndicatorEngine:', error);
-    }
-    
     // Hyperliquid sends coin without suffix (e.g., "BTC")
     // Try to match with possible client subscriptions (BTC-USD, BTC-PERP, BTC, etc.)
     const possibleKeys = [

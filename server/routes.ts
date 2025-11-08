@@ -8,7 +8,6 @@ import { executeTradeStrategy } from "./tradeExecutor";
 import { createPortfolioSnapshot } from "./portfolioSnapshotService";
 import { restartMonitoring, getAiUsageStats } from "./monitoringService";
 import { startUserMonitoring, stopUserMonitoring, restartUserMonitoring } from "./userMonitoringManager";
-import { TriggerRegistry } from "./triggerSupervisor";
 import { setupAuth } from "./auth";
 import { storeUserCredentials, getUserPrivateKey, deleteUserCredentials, hasUserCredentials } from "./credentialService";
 import { initializeMarketDataWebSocket } from "./marketDataWebSocket";
@@ -875,13 +874,7 @@ Provide a clear, actionable analysis with specific recommendations. Format your 
         minutes: z.number().int().min(0).max(1440), // 0 to 24 hours
       });
 
-      let { minutes } = schema.parse(req.body);
-      
-      // PHASE 4: No more frequency enforcement - event-driven triggers control costs
-      // Log info for monitoring
-      if (minutes > 0 && minutes < 5) {
-        console.log(`[Monitoring Frequency] ℹ️ User set ${minutes} min monitoring - PHASE 4 event-driven triggers will control AI costs`);
-      }
+      const { minutes } = schema.parse(req.body);
       
       // Store per-user monitoring frequency in database
       await storage.updateUserMonitoringFrequency(userId, minutes);
@@ -904,93 +897,6 @@ Provide a clear, actionable analysis with specific recommendations. Format your 
     } catch (error) {
       console.error("Error updating monitoring frequency:", error);
       res.status(500).json({ success: false, error: "Failed to update monitoring frequency" });
-    }
-  });
-  
-  // PHASE 4: Get event-driven trigger status and statistics
-  app.get("/api/monitoring/triggers", isAuthenticated, async (req, res) => {
-    try {
-      const userId = getUserId(req);
-      
-      // Get active trading mode to find strategyId
-      const tradingModes = await storage.getTradingModes(userId);
-      const activeMode = tradingModes.find(mode => mode.isActive);
-      
-      if (!activeMode) {
-        return res.json({
-          success: true,
-          hasActiveTriggers: false,
-          triggers: [],
-          stats: null,
-          message: "No active strategy found"
-        });
-      }
-      
-      // Check if this strategy has a trigger supervisor
-      const supervisor = TriggerRegistry.get(userId, activeMode.id.toString());
-      
-      if (!supervisor) {
-        return res.json({
-          success: true,
-          hasActiveTriggers: false,
-          triggers: [],
-          stats: null,
-          message: "Strategy using time-based monitoring (no triggers detected)"
-        });
-      }
-      
-      // Get trigger status and stats
-      const triggerStatuses = supervisor.getStatus();
-      const stats = supervisor.getStats();
-      
-      // Calculate AI call reduction metrics
-      const user = await storage.getUser(userId);
-      const monitoringFreq = user?.monitoringFrequencyMinutes || 15;
-      const potentialCallsPerDay = monitoringFreq > 0 ? (24 * 60) / monitoringFreq : 0;
-      const actualCallsToday = stats.totalFires; // Simplified - in production track last 24h
-      const reductionPercent = potentialCallsPerDay > 0 
-        ? Math.round(((potentialCallsPerDay - actualCallsToday) / potentialCallsPerDay) * 100)
-        : 0;
-      
-      // Estimate cost savings ($0.03 per AI call average)
-      const costPerCall = 0.03;
-      const potentialCost = potentialCallsPerDay * costPerCall;
-      const actualCost = actualCallsToday * costPerCall;
-      const savings = potentialCost - actualCost;
-      
-      res.json({
-        success: true,
-        hasActiveTriggers: true,
-        triggers: triggerStatuses.map(status => ({
-          id: status.trigger.id,
-          type: status.trigger.type,
-          description: status.trigger.description,
-          state: status.state,
-          currentValue: status.currentValue,
-          targetValue: status.targetValue,
-          operator: status.trigger.operator,
-          lastFired: status.lastFired,
-          fireCount: status.fireCount,
-          lastStateChange: status.lastStateChange
-        })),
-        stats: {
-          totalTriggers: stats.totalTriggers,
-          states: stats.states,
-          totalFires: stats.totalFires
-        },
-        costMetrics: {
-          monitoringFrequencyMinutes: monitoringFreq,
-          potentialCallsPerDay: Math.round(potentialCallsPerDay),
-          actualCallsToday: actualCallsToday,
-          reductionPercent,
-          potentialCostPerDay: potentialCost.toFixed(2),
-          actualCostToday: actualCost.toFixed(2),
-          savingsToday: savings.toFixed(2)
-        }
-      });
-    } catch (error) {
-      console.error("Error fetching trigger status:", error);
-      res.status(500).json({ success: false, error: "Failed to fetch trigger status" });
     }
   });
 
@@ -4832,7 +4738,7 @@ Provide a clear, actionable analysis with specific recommendations. Format your 
         try {
           const { analyzeStrategy } = await import('./strategyAnalyzer');
           console.log('[Strategy Auto-Config] Analyzing custom rules for new strategy...');
-          strategyConfig = await analyzeStrategy(userId, parameters.customRules, description || '');
+          strategyConfig = await analyzeStrategy(parameters.customRules, description || '');
           console.log('[Strategy Auto-Config] Analysis complete:', {
             strategyType: strategyConfig.strategyType,
             monitoringFrequency: strategyConfig.monitoringFrequencyMinutes,
@@ -4840,25 +4746,8 @@ Provide a clear, actionable analysis with specific recommendations. Format your 
           });
         } catch (analyzeError) {
           console.error('[Strategy Auto-Config] Failed to analyze strategy:', analyzeError);
-          // Fallback to basic config from parameters
-          strategyConfig = null;
+          // Continue without strategyConfig - it's optional
         }
-      }
-      
-      // CRITICAL FIX: If no strategyConfig from AI analysis, create one from parameters
-      // This ensures monitoring service can always access trigger configuration
-      if (!strategyConfig && parameters) {
-        strategyConfig = {
-          strategyType: 'price_action',
-          monitoringFrequencyMinutes: parameters.monitoringFrequencyMinutes || 15,
-          requiresRealtimeData: false,
-          triggerMode: parameters.triggerMode || 'time_based',
-          reasoning: 'Manual configuration from strategy parameters'
-        };
-        console.log('[Strategy Config] Using fallback config from parameters:', {
-          monitoringFrequency: strategyConfig.monitoringFrequencyMinutes,
-          triggerMode: strategyConfig.triggerMode
-        });
       }
       
       const mode = await storage.createTradingMode(userId, {
@@ -4927,7 +4816,7 @@ Provide a clear, actionable analysis with specific recommendations. Format your 
         try {
           const { analyzeStrategy } = await import('./strategyAnalyzer');
           console.log('[Strategy Auto-Config] Re-analyzing custom rules for updated strategy...');
-          const strategyConfig = await analyzeStrategy(userId, parameters.customRules, description || '');
+          const strategyConfig = await analyzeStrategy(parameters.customRules, description || '');
           updates.strategyConfig = strategyConfig;
           console.log('[Strategy Auto-Config] Re-analysis complete:', {
             strategyType: strategyConfig.strategyType,

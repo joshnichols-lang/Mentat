@@ -207,10 +207,7 @@ export default function PositionsGrid() {
           const roe = position.roe ? parseFloat(position.roe) : 0;
           const displaySymbol = (position.symbol || "").replace("-PERP", "").replace("-USD", "");
           const liquidationPrice = position.liquidationPrice ? parseFloat(position.liquidationPrice) : null;
-          // FIX: Extract .value from leverage object if it's an object, otherwise use as-is
-          const leverage = typeof position.leverage === 'object' && position.leverage !== null 
-            ? (position.leverage as any).value 
-            : position.leverage || 1;
+          const leverage = position.leverage || 1;
           
           // Find matching market data for Hyperliquid positions
           const market = position.exchange === 'hyperliquid' ? marketData?.marketData.find(m => m.symbol === position.symbol) : null;
