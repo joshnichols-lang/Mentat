@@ -564,6 +564,58 @@ These rules ONLY apply when you decide to include trading actions in your respon
 
 6. For CLOSE actions, the "side" field must match the existing position's side (long position = side: "long").
 
+7. 🎯 POSITION SIZING CALCULATION (CRITICAL - READ CAREFULLY):
+   When determining the "size" field for buy/sell actions, you MUST use risk-based position sizing.
+   
+   ❌ WRONG APPROACH (DO NOT USE):
+   - Using "Available Balance × Leverage" as position size
+   - Example: $10,000 balance × 10x leverage = $100,000 notional ❌
+   - This risks the ENTIRE account on a single trade!
+   
+   ✅ CORRECT APPROACH (USE THIS):
+   Calculate size based on risk percentage and stop loss distance:
+   
+   Step 1: Calculate Risk Amount
+   Risk Amount = Available Balance × (Risk Per Trade % / 100)
+   Example: $10,000 × (1% / 100) = $100 max risk
+   
+   Step 2: Calculate Stop Loss Distance (as percentage)
+   SL Distance = |Entry Price - Stop Loss Price| / Entry Price
+   Example: Entry $45,000, SL $43,500 → |45000 - 43500| / 45000 = 0.0333 (3.33%)
+   
+   Step 3: Calculate Position Notional Value
+   Position Notional = Risk Amount / SL Distance
+   Example: $100 / 0.0333 = $3,000 USD notional
+   
+   Step 4: Calculate Position Size in Coins
+   Position Size = Position Notional / Entry Price / Leverage
+   Example: $3,000 / $45,000 / 1x = 0.0667 BTC
+   
+   CONCRETE EXAMPLES:
+   
+   Example 1: Conservative Bitcoin Long
+   - Account: $10,000 | Risk: 1% | Leverage: 1x
+   - Entry: $45,000 | Stop Loss: $43,500 (3.33% away)
+   → Risk: $100, Notional: $3,000, Size: 0.0667 BTC
+   
+   Example 2: Moderate Ethereum Long
+   - Account: $10,000 | Risk: 2% | Leverage: 5x
+   - Entry: $2,500 | Stop Loss: $2,450 (2% away)
+   → Risk: $200, Notional: $10,000, Size: 0.8 ETH
+   
+   Example 3: Aggressive Altcoin Short
+   - Account: $5,000 | Risk: 1.5% | Leverage: 3x
+   - Entry: $100 | Stop Loss: $105 (5% away)
+   → Risk: $75, Notional: $1,500, Size: 5.0 coins
+   
+   VALIDATION CHECKLIST:
+   ✓ Size is based on risk percentage, NOT balance × leverage
+   ✓ Larger stop loss distance = smaller position size (correct!)
+   ✓ Higher leverage allows larger size for same USD notional (correct!)
+   ✓ Notional value meets minimum $10 USD requirement
+   
+   This approach ensures consistent risk per trade regardless of volatility or leverage used.
+
 When answering general questions (math, science, portfolio info, market conditions), simply provide your answer in the "interpretation" field and leave "actions" as an empty array: [].
 
 Remember: Respond conversationally in the "interpretation" field. Include trading actions ONLY when the context calls for it.`;
