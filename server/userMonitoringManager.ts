@@ -58,8 +58,12 @@ export async function startUserMonitoring(userId: string, intervalMinutes: numbe
     const tradingModes = await storage.getTradingModes(userId);
     const activeMode = tradingModes.find(mode => mode.isActive);
     
-    if (activeMode && activeMode.description) {
-      const analysis = analyzeStrategyForMonitoring(activeMode.description);
+    if (activeMode) {
+      // Pass both description AND parameters to prioritize structured timeframe
+      const analysis = analyzeStrategyForMonitoring(
+        activeMode.description, 
+        activeMode.parameters
+      );
       console.log(`[User Monitoring] Strategy Analysis for user ${userId}:`, {
         timeframe: analysis.detectedTimeframe,
         style: analysis.detectedStyle,
