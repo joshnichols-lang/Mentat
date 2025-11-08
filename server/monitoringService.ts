@@ -753,9 +753,12 @@ export async function developAutonomousStrategy(userId: string): Promise<void> {
     let triggerResult: any;
     let triggerContext = '';
     
-    if (strategyConfig && (strategyConfig.triggerMode === 'indicator' || strategyConfig.triggerMode === 'hybrid')) {
-      // STRATEGY-SPECIFIC TRIGGERS (Indicator/Order Flow/TPO)
-      console.log(`[Trigger Evaluation] Using strategy-specific triggers for ${strategyConfig.strategyType} strategy`);
+    if (strategyConfig) {
+      // STRATEGY-SPECIFIC TRIGGERS (All strategy types including price_action)
+      // The evaluateStrategyTriggers function has built-in fallback logic:
+      // - Strategies WITH configs use event-driven triggers (cost savings)
+      // - Strategies WITHOUT configs default to time-based monitoring (shouldCallAI=true)
+      console.log(`[Trigger Evaluation] Using strategy trigger evaluation for ${strategyConfig.strategyType} strategy (mode: ${strategyConfig.triggerMode || 'time_based'})`);
       
       try {
         // Import strategy trigger evaluation
@@ -767,31 +770,27 @@ export async function developAutonomousStrategy(userId: string): Promise<void> {
                       currentPositions[0]?.symbol || 
                       'BTC';
         
-        // Fetch candles for indicator/TPO calculations
+        // Fetch candles for ALL strategy types (needed for price_action fallback and indicators)
         let candles: typeof Candle[] = [];
-        if (strategyConfig.strategyType === 'technical_indicator' || 
-            strategyConfig.strategyType === 'market_profile' || 
-            strategyConfig.strategyType === 'hybrid') {
-          
-          const interval = strategyConfig.monitoringFrequencyMinutes >= 60 ? '1h' : 
-                          strategyConfig.monitoringFrequencyMinutes >= 15 ? '15m' : 
-                          strategyConfig.monitoringFrequencyMinutes >= 5 ? '5m' : '1m';
-          
-          try {
-            const candleData = await hyperliquidClient.getCandles(symbol, interval, 100);
-            if (candleData && Array.isArray(candleData)) {
-              candles = candleData.map((c: any) => ({
-                timestamp: c.t,
-                open: parseFloat(c.o),
-                high: parseFloat(c.h),
-                low: parseFloat(c.l),
-                close: parseFloat(c.c),
-                volume: parseFloat(c.v || '0')
-              }));
-            }
-          } catch (candleError) {
-            console.error(`[Strategy Triggers] Failed to fetch candles:`, candleError);
+        const interval = strategyConfig.monitoringFrequencyMinutes >= 60 ? '1h' : 
+                        strategyConfig.monitoringFrequencyMinutes >= 15 ? '15m' : 
+                        strategyConfig.monitoringFrequencyMinutes >= 5 ? '5m' : '1m';
+        
+        try {
+          const candleData = await hyperliquidClient.getCandles(symbol, interval, 100);
+          if (candleData && Array.isArray(candleData)) {
+            candles = candleData.map((c: any) => ({
+              timestamp: c.t,
+              open: parseFloat(c.o),
+              high: parseFloat(c.h),
+              low: parseFloat(c.l),
+              close: parseFloat(c.c),
+              volume: parseFloat(c.v || '0')
+            }));
+            console.log(`[Strategy Triggers] Fetched ${candles.length} candles for ${symbol} at ${interval} interval`);
           }
+        } catch (candleError) {
+          console.error(`[Strategy Triggers] Failed to fetch candles:`, candleError);
         }
         
         // Fetch orderbook and trades for order flow calculations
