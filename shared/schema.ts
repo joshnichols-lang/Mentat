@@ -464,6 +464,8 @@ export const tradingModes = pgTable("trading_modes", {
   name: text("name").notNull(), // User-defined name (e.g., "Aggressive Scalper", "Conservative Swing")
   type: text("type").default("custom"), // Optional: "scalp", "swing", "discretionary", "custom"
   description: text("description"), // Optional user description
+  avatarUrl: text("avatar_url"), // Strategy character avatar image path (stored in attached_assets/strategy_avatars)
+  tagline: text("tagline"), // Short tagline/slogan (max 80 chars, e.g., "The Night Scalper")
   
   // Strategy parameters (flexible JSON structure)
   parameters: jsonb("parameters").notNull(), // {
@@ -654,7 +656,10 @@ export const insertUserTradeHistoryImportSchema = createInsertSchema(userTradeHi
 export const insertUserTradeHistoryTradeSchema = createInsertSchema(userTradeHistoryTrades).omit({ id: true, userId: true, createdAt: true });
 export const insertTradeStyleProfileSchema = createInsertSchema(tradeStyleProfiles).omit({ id: true, userId: true, createdAt: true, updatedAt: true });
 export const insertTradeJournalEntrySchema = createInsertSchema(tradeJournalEntries).omit({ id: true, userId: true, createdAt: true });
-export const insertTradingModeSchema = createInsertSchema(tradingModes).omit({ id: true, userId: true, createdAt: true, updatedAt: true });
+export const insertTradingModeSchema = createInsertSchema(tradingModes).omit({ id: true, userId: true, createdAt: true, updatedAt: true }).extend({
+  tagline: z.string().max(80, "Tagline must be 80 characters or less").optional(),
+  avatarUrl: z.string().optional(),
+});
 export const insertBudgetAlertSchema = createInsertSchema(budgetAlerts).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertPolymarketEventSchema = createInsertSchema(polymarketEvents).omit({ createdAt: true, updatedAt: true });
 export const insertPolymarketPositionSchema = createInsertSchema(polymarketPositions).omit({ id: true, userId: true, openedAt: true, updatedAt: true });
