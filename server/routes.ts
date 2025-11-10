@@ -17,6 +17,10 @@ import { z } from "zod";
 import { hashPassword, comparePasswords } from "./auth";
 import multer from "multer";
 import Papa from "papaparse";
+import path from "path";
+import fs from "fs";
+import crypto from "crypto";
+import sharp from "sharp";
 
 // Middleware to check if user is authenticated
 function isAuthenticated(req: any, res: any, next: any) {
@@ -4646,6 +4650,152 @@ Provide a clear, actionable analysis with specific recommendations. Format your 
       res.status(500).json({
         success: false,
         error: "Failed to fetch learnings"
+      });
+    }
+  });
+
+  // Strategy Avatar Upload Configuration (secure disk storage with strict validation)
+  const AVATAR_STORAGE_DIR = path.join(process.cwd(), "attached_assets", "strategy_avatars");
+  
+  // Ensure storage directory exists
+  if (!fs.existsSync(AVATAR_STORAGE_DIR)) {
+    fs.mkdirSync(AVATAR_STORAGE_DIR, { recursive: true });
+  }
+
+  const avatarStorage = multer.diskStorage({
+    destination: (req, file, cb) => {
+      cb(null, AVATAR_STORAGE_DIR);
+    },
+    filename: (req, file, cb) => {
+      // Generate UUID filename to prevent path traversal and filename collisions
+      const uuid = crypto.randomUUID();
+      const ext = path.extname(file.originalname).toLowerCase();
+      cb(null, `${uuid}${ext}`);
+    }
+  });
+
+  const avatarUpload = multer({
+    storage: avatarStorage,
+    limits: {
+      fileSize: 5 * 1024 * 1024, // 5MB max
+      files: 1
+    },
+    fileFilter: (req, file, cb) => {
+      // Whitelist MIME types
+      const allowedMimeTypes = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
+      
+      if (!allowedMimeTypes.includes(file.mimetype)) {
+        return cb(new Error("Only PNG, JPEG, and WebP images are allowed"));
+      }
+      
+      // Validate file extension matches MIME type
+      const ext = path.extname(file.originalname).toLowerCase();
+      const allowedExtensions = [".png", ".jpg", ".jpeg", ".webp"];
+      
+      if (!allowedExtensions.includes(ext)) {
+        return cb(new Error("Invalid file extension"));
+      }
+      
+      cb(null, true);
+    }
+  });
+
+  // Upload strategy avatar with comprehensive security and validation
+  app.post("/api/strategy-avatars/upload", requireVerifiedUser, avatarUpload.single("avatar"), async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      
+      if (!req.file) {
+        return res.status(400).json({
+          success: false,
+          error: "No file uploaded"
+        });
+      }
+
+      // Validate image dimensions and verify it's a real image file
+      try {
+        const metadata = await sharp(req.file.path).metadata();
+        
+        if (!metadata.width || !metadata.height) {
+          // Clean up uploaded file
+          fs.unlinkSync(req.file.path);
+          return res.status(400).json({
+            success: false,
+            error: "Invalid image file"
+          });
+        }
+        
+        if (metadata.width < 256 || metadata.height < 256) {
+          // Clean up uploaded file
+          fs.unlinkSync(req.file.path);
+          return res.status(400).json({
+            success: false,
+            error: "Image must be at least 256×256 pixels"
+          });
+        }
+      } catch (sharpError) {
+        // Sharp validation failed - file is not a valid image
+        fs.unlinkSync(req.file.path);
+        console.error("Image validation failed:", sharpError);
+        return res.status(400).json({
+          success: false,
+          error: "Invalid or corrupted image file"
+        });
+      }
+
+      // Return relative path for storage in database
+      const relativePath = `/strategy_avatars/${req.file.filename}`;
+      
+      res.json({
+        success: true,
+        avatarUrl: relativePath,
+        filename: req.file.filename
+      });
+    } catch (error: any) {
+      // Clean up file if it was uploaded
+      if (req.file?.path && fs.existsSync(req.file.path)) {
+        fs.unlinkSync(req.file.path);
+      }
+      
+      console.error("Error uploading strategy avatar:", error);
+      res.status(500).json({
+        success: false,
+        error: error.message || "Failed to upload avatar"
+      });
+    }
+  });
+
+  // Delete strategy avatar (with authorization check)
+  app.delete("/api/strategy-avatars/:filename", requireVerifiedUser, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const { filename } = req.params;
+      
+      // Sanitize filename to prevent path traversal
+      const sanitizedFilename = path.basename(filename);
+      const filePath = path.join(AVATAR_STORAGE_DIR, sanitizedFilename);
+      
+      // Verify file exists and is within allowed directory
+      if (!filePath.startsWith(AVATAR_STORAGE_DIR)) {
+        return res.status(400).json({
+          success: false,
+          error: "Invalid filename"
+        });
+      }
+      
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+      
+      res.json({
+        success: true,
+        message: "Avatar deleted successfully"
+      });
+    } catch (error: any) {
+      console.error("Error deleting strategy avatar:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to delete avatar"
       });
     }
   });
