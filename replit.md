@@ -41,6 +41,7 @@ Preferred communication style: Simple, everyday language.
 **Multi-Exchange Integration:** Full REST API and WebSocket integration for Orderly Network, Hyperliquid, Aevo, and Polymarket.
 **Advanced Order System:** Institutional-grade execution engine supporting TWAP, Limit Chase, Scaled/Ladder Orders, Iceberg Orders, OCO, and Trailing Take-Profit, enhanced with AI-powered Smart Order Router, AI Execution Optimizer, and Predictive Execution Timing.
 **WebSocket Infrastructure:** Market Data and Aevo WebSocket services operational with path-specific routing and manual upgrade handlers, coexisting with Vite HMR.
+**Performance Optimizations:** Tiered data-refresh strategy implemented to ensure buttery-smooth UI. Critical queries poll every 10-15s (orderbooks), status queries every 15-30s (balances, trading mode), and metadata queries every 60s+ (portfolio, analytics). Polymarket markets paginated to 100 per request. Expensive computations memoized using React.useMemo/useCallback. High-frequency components wrapped with React.memo. Production console.logs removed to reduce overhead.
 
 ## External Dependencies
 
