@@ -232,11 +232,11 @@ function PolymarketTradingModal({ event, onClose }: { event: any; onClose: () =>
   const { data: orderBookData } = useQuery<{ success: boolean; orderBook: any }>({
     queryKey: ['/api/polymarket/orderbook', selectedTokenId],
     enabled: !!selectedTokenId,
-    refetchInterval: 5000, // Refresh every 5 seconds
+    refetchInterval: 10000, // Refresh every 10 seconds (optimized from 5s)
   });
 
-  // Calculate liquidity and price impact
-  const calculatePriceImpact = () => {
+  // Calculate liquidity and price impact (memoized for performance)
+  const { availableLiquidity, priceImpact, avgFillPrice } = useMemo(() => {
     if (!orderBookData?.orderBook || !size || parseFloat(size) <= 0) {
       return { availableLiquidity: 0, priceImpact: 0, avgFillPrice: currentPrice };
     }
@@ -268,9 +268,7 @@ function PolymarketTradingModal({ event, onClose }: { event: any; onClose: () =>
     const availableLiquidity = sortedAsks.reduce((sum: number, ask: any) => sum + parseFloat(ask.size), 0);
     
     return { availableLiquidity, priceImpact, avgFillPrice };
-  };
-
-  const { availableLiquidity, priceImpact, avgFillPrice } = calculatePriceImpact();
+  }, [orderBookData, size, currentPrice]);
 
   // Order placement mutation
   const placeMutation = useMutation({
@@ -586,36 +584,13 @@ function PredictionMarketsInterface() {
   const [selectedTag, setSelectedTag] = useState<string>("All");
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
 
-  // Fetch Polymarket markets (increased limit to capture LIVE crypto markets)
+  // Fetch Polymarket markets (optimized pagination for performance)
   const { data: marketsData, isLoading } = useQuery<{ success: boolean; markets: any[] }>({
-    queryKey: ['/api/polymarket/markets?limit=2000&active=true'],
+    queryKey: ['/api/polymarket/markets?limit=100&active=true'],
+    refetchInterval: 60000, // Refetch every minute instead of on every interaction
   });
 
-  const markets = marketsData?.markets || [];
-
-  // DEBUG: Log first few markets to see what we're getting
-  useEffect(() => {
-    if (markets.length > 0) {
-      console.log("[PredictionMarkets] Total markets:", markets.length);
-      console.log("[PredictionMarkets] First 5 markets:", markets.slice(0, 5).map((m: any) => ({
-        question: m.question,
-        eventTags: m.eventTags?.map((t: any) => t.label),
-        active: m.active,
-        closed: m.closed
-      })));
-      // Look for Bitcoin/Ethereum markets
-      const cryptoMarkets = markets.filter((m: any) => 
-        m.question?.toLowerCase().includes('bitcoin') || 
-        m.question?.toLowerCase().includes('ethereum') ||
-        m.question?.toLowerCase().includes('btc') ||
-        m.question?.toLowerCase().includes('eth')
-      );
-      console.log("[PredictionMarkets] Found", cryptoMarkets.length, "crypto markets");
-      if (cryptoMarkets.length > 0) {
-        console.log("[PredictionMarkets] First 3 crypto markets:", cryptoMarkets.slice(0, 3).map((m: any) => m.question));
-      }
-    }
-  }, [markets]);
+  const markets = useMemo(() => marketsData?.markets || [], [marketsData]);
 
   // Extract all unique tags from markets (Polymarket's actual tag structure)
   const allTags = useMemo(() => {
@@ -640,8 +615,9 @@ function PredictionMarketsInterface() {
     return ["All", ...sortedTags.slice(0, 30)]; // Top 30 tags + "All"
   }, [markets]);
 
-  // Apply search and tag filters
+  // Apply search and tag filters (memoized for performance)
   const filteredMarkets = useMemo(() => {
+    if (!markets.length) return [];
     let filtered = markets;
     
     // Apply search filter with crypto abbreviation expansion
@@ -904,20 +880,20 @@ function SpotDiscoveryInterface() {
 function AnalyticsInterface() {
   const [timeframe, setTimeframe] = useState<'1D' | '1W' | '1M' | '3M' | 'ALL'>('1W');
 
-  // Fetch comprehensive portfolio data
+  // Fetch comprehensive portfolio data - optimized intervals
   const { data: comprehensivePortfolio } = useQuery<any>({
     queryKey: ['/api/portfolio/comprehensive'],
-    refetchInterval: 30000,
+    refetchInterval: 60000, // Reduced from 30s to 60s (portfolio metrics change slowly)
   });
 
   const { data: snapshots } = useQuery<any>({
     queryKey: ['/api/portfolio/snapshots'],
-    refetchInterval: 30000,
+    refetchInterval: 60000, // Reduced from 30s to 60s
   });
 
   const { data: multiExchangePositions } = useQuery<any>({
     queryKey: ["/api/multi-exchange/positions"],
-    refetchInterval: 30000,
+    refetchInterval: 30000, // Keep at 30s (positions update more frequently)
   });
 
   // Extract data

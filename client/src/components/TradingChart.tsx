@@ -213,7 +213,7 @@ export default function TradingChart({ symbol, onSymbolChange }: TradingChartPro
     // Fetch historical data first
     const fetchHistoricalData = async () => {
       try {
-        console.log(`[TradingChart] Fetching historical data for ${symbol} ${timeframe}`);
+        // console.log(`[TradingChart] Fetching historical data for ${symbol} ${timeframe}`);
         const response = await fetch(
           `/api/hyperliquid/candles?symbol=${symbol}&interval=${timeframe}&limit=1000`
         );
@@ -229,7 +229,7 @@ export default function TradingChart({ symbol, onSymbolChange }: TradingChartPro
         }
 
         const candles = data.candles || [];
-        console.log(`[TradingChart] Loaded ${candles.length} historical candles`);
+        // console.log(`[TradingChart] Loaded ${candles.length} historical candles`);
 
         // Process and display historical candles
         const candleMap = new Map<number, { candle: CandlestickData, volume: number }>();
@@ -298,12 +298,12 @@ export default function TradingChart({ symbol, onSymbolChange }: TradingChartPro
     const host = window.location.host;
     const wsUrl = `${protocol}//${host}/market-data`;
 
-    console.log(`[TradingChart] Connecting to ${wsUrl}`);
+    // console.log(`[TradingChart] Connecting to ${wsUrl}`);
     const ws = new WebSocket(wsUrl);
     wsRef.current = ws;
 
     ws.onopen = () => {
-      console.log(`[TradingChart] Connected, subscribing to ${symbol} ${timeframe}`);
+      // console.log(`[TradingChart] Connected, subscribing to ${symbol} ${timeframe}`);
       // Subscribe to candle data for live updates
       ws.send(JSON.stringify({
         action: "subscribe",
@@ -326,7 +326,7 @@ export default function TradingChart({ symbol, onSymbolChange }: TradingChartPro
             return;
           }
 
-          console.log("[TradingChart] Received candle:", candle);
+          // console.log("[TradingChart] Received candle:", candle);
           
           // Convert Hyperliquid candle to lightweight-charts format
           const timestamp = Math.floor(candle.t / 1000) as Time; // Convert ms to seconds
@@ -376,7 +376,7 @@ export default function TradingChart({ symbol, onSymbolChange }: TradingChartPro
     };
 
     ws.onclose = () => {
-      console.log("[TradingChart] WebSocket closed");
+      // console.log("[TradingChart] WebSocket closed");
     };
 
     return () => {
@@ -533,14 +533,14 @@ export default function TradingChart({ symbol, onSymbolChange }: TradingChartPro
     setDrawingMode(mode);
     if (mode) {
       // In a real implementation, you would enable drawing mode on the chart
-      console.log(`Drawing mode activated: ${mode}`);
+      // console.log(`Drawing mode activated: ${mode}`);
     }
   };
 
   // Clear all drawings
   const clearDrawings = () => {
     // In a real implementation, you would clear all drawing objects
-    console.log('All drawings cleared');
+    // console.log('All drawings cleared');
     setDrawingMode(null);
   };
 

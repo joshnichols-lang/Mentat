@@ -74,23 +74,23 @@ export default function AIPromptPanel() {
     queryKey: ["/api/hyperliquid/positions"],
   });
 
-  // Status indicators - check both success state and response data
+  // Status indicators - optimized polling intervals for better performance
   const { data: userData, isSuccess: userSuccess, isError: userError } = useQuery<any>({
     queryKey: ["/api/user"],
-    refetchInterval: 5000,
-    gcTime: 0, // Don't cache on error to prevent stale green lights
+    refetchInterval: 30000, // Reduced from 5s to 30s (user data rarely changes)
+    gcTime: 0,
   });
 
   const { data: balancesData, isSuccess: balancesSuccess, isError: balancesError } = useQuery<{ success: boolean; balances?: any }>({
     queryKey: ["/api/wallets/balances"],
-    refetchInterval: 10000,
-    gcTime: 0, // Don't cache on error to prevent stale green lights
+    refetchInterval: 15000, // Reduced from 10s to 15s (balances update moderately)
+    gcTime: 0,
   });
 
   const { data: activeModeData, isSuccess: activeModeSuccess, isError: activeModeError } = useQuery<{ success: boolean; mode?: any }>({
     queryKey: ["/api/trading-modes/active"],
-    refetchInterval: 5000,
-    gcTime: 0, // Don't cache on error to prevent stale green lights
+    refetchInterval: 15000, // Reduced from 5s to 15s (trading mode changes infrequently)
+    gcTime: 0,
   });
 
   const activateStrategyMutation = useMutation({
@@ -158,7 +158,7 @@ export default function AIPromptPanel() {
       return await res.json();
     },
     onSuccess: (data: any) => {
-      console.log("Portfolio analysis response:", data);
+      // console.log("Portfolio analysis response:", data);
       setPortfolioAnalysis(data.analysis);
       setSelectedAnalysisId(data.analysisId);
       setPortfolioAnalysisOpen(true);
@@ -194,10 +194,10 @@ export default function AIPromptPanel() {
   const executeTradeMutation = useMutation({
     mutationFn: async ({ promptText, images }: { promptText: string; images: string[] }) => {
       const strategyId = activeMode?.id || null;
-      console.log("=== TRADING PROMPT REQUEST ===");
-      console.log("Active Mode:", activeMode ? { id: activeMode.id, name: activeMode.name, isActive: activeMode.isActive } : null);
-      console.log("Sending strategyId:", strategyId);
-      console.log("=============================");
+      // console.log("=== TRADING PROMPT REQUEST ===");
+      // console.log("Active Mode:", activeMode ? { id: activeMode.id, name: activeMode.name, isActive: activeMode.isActive } : null);
+      // console.log("Sending strategyId:", strategyId);
+      // console.log("=============================");
       
       const res = await apiRequest("POST", "/api/trading/prompt", {
         prompt: promptText,
@@ -211,7 +211,7 @@ export default function AIPromptPanel() {
       return await res.json();
     },
     onSuccess: (data: any) => {
-      console.log("Trade execution response:", data);
+      // console.log("Trade execution response:", data);
       
       // Check if execution was skipped due to passive mode
       if (data.executionSkipped) {

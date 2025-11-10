@@ -17,23 +17,21 @@ export default function ConversationHistory() {
   const [followUpMessages, setFollowUpMessages] = useState<Record<string, string>>({});
   const { toast } = useToast();
   
-  // Fetch active trading strategy to filter conversations by strategy
+  // Fetch active trading strategy - optimized polling
   const { data: activeStrategyData } = useQuery<{ success: boolean; mode: TradingMode | null }>({
     queryKey: ["/api/trading-modes/active"],
-    refetchInterval: 5000,
+    refetchInterval: 30000, // Reduced from 5s to 30s
   });
   
   const activeStrategy = activeStrategyData?.mode;
   const strategyId = activeStrategy?.id;
   
-  // Fetch conversation history filtered by current strategy
-  // If strategyId exists, only show conversations for that strategy
-  // If no strategy is active, show general conversations (strategyId=null)
+  // Fetch conversation history - optimized polling
   const { data: usageLogs, isLoading } = useQuery<{ success: boolean; logs: AiUsageLog[] }>({
     queryKey: strategyId 
       ? ["/api/ai/usage", `?strategyId=${strategyId}`]
       : ["/api/ai/usage", "?strategyId=null"],
-    refetchInterval: 5000,
+    refetchInterval: 30000, // Reduced from 5s to 30s (conversations don't change frequently)
   });
 
   const allConversations = usageLogs?.logs?.filter(log => log.success === 1 && log.userPrompt) || [];

@@ -34,12 +34,12 @@ export default function OrderBook({ symbol }: OrderBookProps) {
     const host = window.location.host;
     const wsUrl = `${protocol}//${host}/market-data`;
 
-    console.log(`[OrderBook] Connecting to ${wsUrl} for ${symbol}`);
+    // console.log(`[OrderBook] Connecting to ${wsUrl} for ${symbol}`);
     const ws = new WebSocket(wsUrl);
     wsRef.current = ws;
 
     ws.onopen = () => {
-      console.log(`[OrderBook] Connected, subscribing to L2 book for ${symbol}`);
+      // console.log(`[OrderBook] Connected, subscribing to L2 book for ${symbol}`);
       ws.send(JSON.stringify({
         action: "subscribe",
         type: "l2Book",
@@ -60,7 +60,7 @@ export default function OrderBook({ symbol }: OrderBookProps) {
             return;
           }
 
-          console.log(`[OrderBook] Received order book for ${data.coin}:`, data);
+          // console.log(`[OrderBook] Received order book for ${data.coin}:`, data);
 
           // data.levels is [bids, asks]
           const [rawBids, rawAsks] = data.levels;
@@ -138,7 +138,7 @@ export default function OrderBook({ symbol }: OrderBookProps) {
     };
 
     ws.onclose = () => {
-      console.log("[OrderBook] WebSocket closed");
+      // console.log("[OrderBook] WebSocket closed");
     };
 
     return () => {
