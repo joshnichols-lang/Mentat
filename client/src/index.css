@@ -2,71 +2,79 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ========== NUMORA-INSPIRED DARK MODE (Primary) ========== */
+/* ========== ULTRA-MINIMAL DARK MODE (Pure Black) ========== */
 .dark {
-  /* Dark sophisticated backgrounds - not pure black */
-  --background: 240 4% 6%;         /* #0B0B0F - Deep dark grey */
-  --foreground: 0 0% 100%;         /* #FFFFFF - Pure white */
+  /* Pure black background - absolute minimal design */
+  --background: 0 0% 0%;           /* #000000 - Pure black */
+  --foreground: 0 0% 98%;          /* #FAFAFA - Soft white */
   
-  /* Surface levels - Numora panel backgrounds */
-  --card: 240 4% 8%;               /* #141418 - Panel background */
-  --card-foreground: 0 0% 100%;
-  --popover: 240 4% 8%;
-  --popover-foreground: 0 0% 100%;
+  /* Surface levels - barely visible elevation */
+  --card: 0 0% 4%;                 /* #0A0A0A - Subtle panel */
+  --card-foreground: 0 0% 98%;
+  --popover: 0 0% 4%;
+  --popover-foreground: 0 0% 98%;
   
-  /* Borders - subtle grey */
-  --border: 240 3% 12%;            /* #1F1F23 - Subtle border */
-  --input: 240 4% 8%;              /* #141418 - Input background */
+  /* Borders - extremely subtle */
+  --border: 0 0% 8%;               /* #141414 - Barely visible */
+  --input: 0 0% 4%;                /* #0A0A0A - Input background */
   
-  /* Interactive states - minimal color, mostly grey */
-  --primary: 0 0% 70%;             /* #B3B3B3 - Light grey (was bright green) */
-  --primary-foreground: 240 4% 6%; /* Dark text on grey */
+  /* Interactive states - lime accent */
+  --primary: 123 100% 50%;         /* #00FF41 - Electric lime */
+  --primary-foreground: 0 0% 0%;   /* Black text on lime */
   
-  --secondary: 240 4% 10%;         /* #18181C - Elevated surface */
-  --secondary-foreground: 0 0% 100%;
+  --secondary: 0 0% 8%;            /* #141414 - Dark grey surface */
+  --secondary-foreground: 0 0% 98%;
   
-  --muted: 240 4% 10%;
-  --muted-foreground: 0 0% 55%;    /* #8B8B8D - Mid grey text */
+  --muted: 0 0% 8%;
+  --muted-foreground: 0 0% 45%;    /* #737373 - Mid grey text */
   
-  --accent: 0 0% 15%;              /* #262626 - Dark grey accent (was bright green) */
-  --accent-foreground: 0 0% 100%;
+  --accent: 0 0% 12%;              /* #1F1F1F - Subtle accent surface */
+  --accent-foreground: 0 0% 98%;
   
-  /* Text hierarchy - grey scales (Numora style) */
-  --text-primary: 0 0% 100%;       /* #FFFFFF - Most important */
-  --text-secondary: 0 0% 55%;      /* #8B8B8D - Supporting 55% */
-  --text-tertiary: 0 0% 39%;       /* #646466 - Metadata 39% */
+  /* Text hierarchy - 3 levels only */
+  --text-primary: 0 0% 98%;        /* #FAFAFA - Most important */
+  --text-secondary: 0 0% 65%;      /* #A6A6A6 - Supporting */
+  --text-tertiary: 0 0% 45%;       /* #737373 - Metadata */
   
-  /* Trading status colors - Numora bright accent colors */
-  --success: 150 100% 50%;         /* #00FF87 - Bright lime green */
-  --success-foreground: 240 4% 6%;
+  /* Trading status colors - lime and crimson */
+  --success: 123 100% 50%;         /* #00FF41 - Electric lime */
+  --success-foreground: 0 0% 0%;
   
-  --destructive: 343 100% 62%;     /* #FF3B69 - Bright red/pink */
+  --destructive: 348 83% 47%;      /* #DC143C - Crimson */
   --destructive-foreground: 0 0% 100%;
   
   --warning: 45 100% 51%;          /* #FFC107 - Amber */
-  --warning-foreground: 240 4% 6%;
+  --warning-foreground: 0 0% 0%;
   
-  /* Chart colors - Numora palette */
-  --chart-1: 150 100% 50%;         /* #00FF87 - Lime green */
-  --chart-2: 343 100% 62%;         /* #FF3B69 - Red/pink */
-  --chart-3: 217 91% 60%;          /* #3B82F6 - Blue */
-  --chart-4: 0 0% 55%;             /* #8B8B8D - Grey */
-  --chart-5: 0 0% 39%;             /* #646466 - Dark grey */
+  /* Chart colors - minimal palette */
+  --chart-1: 123 100% 50%;         /* #00FF41 - Lime */
+  --chart-2: 348 83% 47%;          /* #DC143C - Crimson */
+  --chart-3: 0 0% 65%;             /* #A6A6A6 - Grey */
+  --chart-4: 0 0% 45%;             /* #737373 - Dark grey */
+  --chart-5: 0 0% 25%;             /* #404040 - Darker grey */
   
-  /* Elevation - subtle white overlays for hover states */
-  --elevate-1: rgba(255, 255, 255, 0.05);
-  --elevate-2: rgba(255, 255, 255, 0.10);
+  /* Elevation - lime glow on hover */
+  --elevate-1: rgba(0, 255, 65, 0.05);
+  --elevate-2: rgba(0, 255, 65, 0.10);
   
-  /* Typography - IBM Plex Mono everywhere */
-  --font-sans: 'IBM Plex Mono', monospace;
-  --font-serif: 'IBM Plex Mono', monospace;
-  --font-mono: 'IBM Plex Mono', monospace;
+  /* Typography - Inter for UI, IBM Plex Mono for numbers */
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-serif: 'Inter', sans-serif;
+  --font-mono: 'IBM Plex Mono', 'Consolas', 'Monaco', monospace;
   
-  /* Border radius - minimal */
-  --radius: 0.5rem;               /* 8px */
+  /* Spacing - 8px grid system */
+  --spacing-1: 0.5rem;            /* 8px */
+  --spacing-2: 1rem;              /* 16px */
+  --spacing-3: 1.5rem;            /* 24px */
+  --spacing-4: 2rem;              /* 32px */
+  --spacing-6: 3rem;              /* 48px */
+  --spacing-8: 4rem;              /* 64px */
   
-  /* Shadows - subtle */
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.5);
+  /* Border radius - ultra-minimal */
+  --radius: 0.25rem;              /* 4px - very subtle */
+  
+  /* Shadows - ultra-subtle, almost invisible */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.8);
   --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.7), 0 1px 2px -1px rgba(0, 0, 0, 0.6);
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.7), 0 2px 4px -2px rgba(0, 0, 0, 0.6);
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.8), 0 4px 6px -4px rgba(0, 0, 0, 0.7);
