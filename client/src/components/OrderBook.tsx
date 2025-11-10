@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, memo } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 
@@ -19,7 +19,7 @@ interface OrderBookData {
   spreadPercent: number;
 }
 
-export default function OrderBook({ symbol }: OrderBookProps) {
+const OrderBook = memo(({ symbol }: OrderBookProps) => {
   const wsRef = useRef<WebSocket | null>(null);
   const [orderBook, setOrderBook] = useState<OrderBookData>({
     bids: [],
@@ -260,4 +260,7 @@ export default function OrderBook({ symbol }: OrderBookProps) {
       )}
     </div>
   );
-}
+});
+
+OrderBook.displayName = 'OrderBook';
+export default OrderBook;
