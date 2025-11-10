@@ -11,6 +11,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Plus, Edit, Trash2, CheckCircle2, Circle } from "lucide-react";
 import { useState } from "react";
 import Header from "@/components/Header";
+import { ImageUpload } from "@/components/ImageUpload";
 
 type TradingMode = {
   id: string;
@@ -18,6 +19,8 @@ type TradingMode = {
   name: string;
   type: string;
   description: string | null;
+  tagline: string | null;
+  avatarUrl: string | null;
   parameters: Record<string, any>;
   strategyConfig?: {
     strategyType: string;
@@ -35,6 +38,8 @@ type TradingMode = {
 type ModeFormData = {
   name: string;
   description: string;
+  tagline: string;
+  avatarUrl: string;
   timeframe: string;
   riskPercentage: string;
   maxPositions: string;
@@ -74,6 +79,8 @@ export default function TradingModes() {
   const [formData, setFormData] = useState<ModeFormData>({
     name: "",
     description: "",
+    tagline: "",
+    avatarUrl: "",
     timeframe: "5m",
     riskPercentage: "2",
     maxPositions: "3",
@@ -180,6 +187,8 @@ export default function TradingModes() {
     setFormData({
       name: "",
       description: "",
+      tagline: "",
+      avatarUrl: "",
       timeframe: "5m",
       riskPercentage: "2",
       maxPositions: "3",
@@ -195,6 +204,8 @@ export default function TradingModes() {
     setFormData({
       name: mode.name,
       description: mode.description || "",
+      tagline: mode.tagline || "",
+      avatarUrl: mode.avatarUrl || "",
       timeframe: mode.parameters?.timeframe || "5m",
       riskPercentage: mode.parameters?.riskPercentage?.toString() || "2",
       maxPositions: mode.parameters?.maxPositions?.toString() || "3",
@@ -224,6 +235,8 @@ export default function TradingModes() {
     const modeData = {
       name: formData.name,
       description: formData.description || null,
+      tagline: formData.tagline || null,
+      avatarUrl: formData.avatarUrl || null,
       parameters,
     };
 
@@ -281,6 +294,30 @@ export default function TradingModes() {
                     placeholder="e.g., Scalp BTC 5m"
                     required
                     data-testid="input-name"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="tagline">Tagline (Optional)</Label>
+                  <Input
+                    id="tagline"
+                    value={formData.tagline}
+                    onChange={(e) => setFormData({ ...formData, tagline: e.target.value.slice(0, 80) })}
+                    placeholder="e.g., The Night Scalper"
+                    maxLength={80}
+                    data-testid="input-tagline"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {formData.tagline.length}/80 characters
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Strategy Avatar (Optional)</Label>
+                  <ImageUpload
+                    onUploadComplete={(avatarUrl) => setFormData({ ...formData, avatarUrl })}
+                    onRemove={() => setFormData({ ...formData, avatarUrl: "" })}
+                    currentAvatarUrl={formData.avatarUrl}
                   />
                 </div>
 

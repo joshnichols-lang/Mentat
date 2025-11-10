@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Upload, X, Image as ImageIcon, Loader2, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -6,11 +6,12 @@ import { cn } from "@/lib/utils";
 
 interface ImageUploadProps {
   onUploadComplete: (avatarUrl: string) => void;
+  onRemove?: () => void;
   currentAvatarUrl?: string;
   className?: string;
 }
 
-export function ImageUpload({ onUploadComplete, currentAvatarUrl, className }: ImageUploadProps) {
+export function ImageUpload({ onUploadComplete, onRemove, currentAvatarUrl, className }: ImageUploadProps) {
   const { toast } = useToast();
   const [isDragging, setIsDragging] = useState(false);
   const [preview, setPreview] = useState<string | null>(currentAvatarUrl || null);
@@ -18,6 +19,20 @@ export function ImageUpload({ onUploadComplete, currentAvatarUrl, className }: I
   const [file, setFile] = useState<File | null>(null);
   const [uploadSuccess, setUploadSuccess] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Sync preview with currentAvatarUrl prop changes (for edit mode)
+  useEffect(() => {
+    if (currentAvatarUrl && currentAvatarUrl !== preview) {
+      setPreview(currentAvatarUrl);
+      setFile(null);
+      setUploadSuccess(true);
+    } else if (!currentAvatarUrl && preview) {
+      // Parent cleared the avatar
+      setPreview(null);
+      setFile(null);
+      setUploadSuccess(false);
+    }
+  }, [currentAvatarUrl]);
 
   const validateFile = (file: File): string | null => {
     // Validate file type
@@ -149,6 +164,8 @@ export function ImageUpload({ onUploadComplete, currentAvatarUrl, className }: I
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
+    // Notify parent to clear avatarUrl
+    onRemove?.();
   };
 
   const handleBrowse = () => {
