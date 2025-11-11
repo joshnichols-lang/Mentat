@@ -6,6 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { motion } from "framer-motion";
 import {
   HoverCard,
   HoverCardContent,
@@ -197,7 +198,18 @@ export default function PositionsGrid() {
           {closeAllMutation.isPending ? "Closing..." : "Close All"}
         </Button>
       </div>
-      <div className="space-y-2">
+      <motion.div 
+        className="space-y-2"
+        initial="hidden"
+        animate="visible"
+        variants={{
+          visible: {
+            transition: {
+              staggerChildren: 0.05
+            }
+          }
+        }}
+      >
         {positions.map((position, idx) => {
           const side = position.side?.toLowerCase() || "";
           const absSize = parseFloat(position.size);
@@ -235,7 +247,18 @@ export default function PositionsGrid() {
                                  position.marketType === 'prediction' ? 'PRED' : 'SPOT';
           
           return (
-            <Card key={`${position.exchange}-${position.symbol}-${idx}`} className="group p-3 hover-elevate transition-all duration-300 border-l-4" 
+            <motion.div
+              key={`${position.exchange}-${position.symbol}-${idx}`}
+              variants={{
+                hidden: { opacity: 0, y: 10 },
+                visible: { 
+                  opacity: 1, 
+                  y: 0,
+                  transition: { type: "spring", stiffness: 300, damping: 25 }
+                }
+              }}
+            >
+              <Card className="group p-3 hover-elevate transition-all duration-300 border-l-4" 
                   style={{ borderLeftColor: side === "long" ? "hsl(var(--primary))" : "hsl(var(--destructive))" }}
                   data-testid={`card-position-${idx}`}>
               <div className="flex items-start justify-between gap-3">
@@ -365,9 +388,10 @@ export default function PositionsGrid() {
                 )}
               </div>
             </Card>
+            </motion.div>
           );
         })}
-      </div>
+      </motion.div>
     </div>
   );
 }

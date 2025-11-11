@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { motion, AnimatePresence } from "framer-motion";
 import { openPolygonBridge, checkPolygonBalance, getBalanceMessage } from "@/lib/polygonBridge";
 import { SymbolProvider } from "@/contexts/SymbolContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -1070,25 +1071,75 @@ export default function UnifiedTerminal() {
                 </TabsList>
               </div>
 
-              {/* Tab Content */}
+              {/* Tab Content with Spring Animations */}
               <TabsContent value="perpetuals" className="m-0 flex-1">
-                <PerpetualsInterface />
+                {activeTab === "perpetuals" && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                    className="h-full"
+                  >
+                    <PerpetualsInterface />
+                  </motion.div>
+                )}
               </TabsContent>
 
               <TabsContent value="prediction" className="m-0 flex-1">
-                <PredictionMarketsInterface />
+                {activeTab === "prediction" && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                    className="h-full"
+                  >
+                    <PredictionMarketsInterface />
+                  </motion.div>
+                )}
               </TabsContent>
 
               <TabsContent value="options" className="m-0 flex-1">
-                <OptionsInterface />
+                {activeTab === "options" && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                    className="h-full"
+                  >
+                    <OptionsInterface />
+                  </motion.div>
+                )}
               </TabsContent>
 
               <TabsContent value="spot" className="m-0 flex-1">
-                <SpotDiscoveryInterface />
+                {activeTab === "spot" && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                    className="h-full"
+                  >
+                    <SpotDiscoveryInterface />
+                  </motion.div>
+                )}
               </TabsContent>
 
               <TabsContent value="analytics" className="m-0 flex-1">
-                <AnalyticsInterface />
+                {activeTab === "analytics" && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                    className="h-full"
+                  >
+                    <AnalyticsInterface />
+                  </motion.div>
+                )}
               </TabsContent>
             </Tabs>
           </div>
