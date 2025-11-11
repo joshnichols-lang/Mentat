@@ -9,8 +9,9 @@ Preferred communication style: Simple, everyday language.
 ## System Architecture
 
 ### Frontend
-**Technology Stack:** React with TypeScript, Vite, Wouter, TanStack Query, Tailwind CSS, shadcn/ui, and lightweight-charts.
+**Technology Stack:** React with TypeScript, Vite, Wouter, TanStack Query, Tailwind CSS, shadcn/ui, lightweight-charts, and framer-motion.
 **Design System:** Dark-themed dashboard inspired by Numora, using deep grey backgrounds, lime green for success, and red/pink for danger. Features a grid-based panel layout with subtle borders. Incorporates unique data visualizations like transaction heatmaps, donut/circular charts for portfolio allocation, patterned bar charts, and gradient area charts. Uses Inter for UI typography and JetBrains Mono for numbers. Panel styling follows a `bg-card border border-border rounded-lg p-4` pattern. Includes time range pills, a token allocation heatmap, metro metric labels, and large display numbers. Supports light/dark modes and features a clean search bar and profile section.
+**Spring Animation System:** Physics-based motion powered by framer-motion with consistent spring parameters across the platform (stiffness: 300, damping: 25-30). Implements smooth tab page transitions (fade + slide), list item stagger animations (50ms delay between cards), and modal spring animations (fade + scale + slide). All animations use spring physics for natural, fluid motion that enhances the ultra-minimal aesthetic without distracting from content.
 **Unified Terminal Architecture:** Single-page interface with five main tabs (Perpetuals, Prediction Markets, Options [Coming Soon], Spot Discovery [Coming Soon], Analytics) and a persistent right sidebar for AI chat, conversation history, positions, and AI usage tracking. Layouts are fixed and optimized for a professional trading experience, with minimal padding and compact widgets.
 **Order Entry System:** Restructured into a 3-tab design (Market | Limit | Advanced) for improved UX. Supports market and limit orders via API calls, and advanced orders (TWAP, Limit Chase, Scaled, Iceberg, OCO, Trailing TP) with dynamic input fields.
 **Key Layouts:**
@@ -55,6 +56,7 @@ Preferred communication style: Simple, everyday language.
 **UI Component Libraries:**
 - **Radix UI**
 - **RainbowKit + wagmi + viem:** Wallet connection for EVM.
+- **framer-motion:** Spring-based physics animations for tabs, modals, and list items.
 - **lightweight-charts:** Trading charts.
 - **Recharts, Victory, D3, react-sparklines:** Data visualization.
 - **react-countup:** Number animations.
