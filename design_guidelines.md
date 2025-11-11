@@ -1,237 +1,251 @@
-# Design Guidelines: 1fox - Numora-Inspired Crypto Trading Dashboard
+# Design Guidelines: 1fox - Ultra-Minimal Trading Terminal
 
-## Design Reference
-**Numora Cryptocurrency Trading Dashboard** - Grid-based panel layout with unique data visualizations (transaction heatmaps, circular charts, patterned bars, gradients). Dark sophisticated theme with bright green/red accents. Professional fintech aesthetic combining data density with visual clarity.
+## Design Philosophy
+**Pure Black Minimalism** - Absolute zero background (#000000) with massive typography hierarchy, floating panels that glow lime on hover, and spring-physics animations. Professional trading terminal that oozes sophistication through restraint.
 
 ## Core Design Elements
 
 ### A. Color Palette
 
-**Dark Mode (Primary - Numora Style)**
-- Background Primary: 11 11 15 (#0B0B0F - Deep dark grey, not pure black)
-- Background Secondary: 20 20 24 (#141418 - Panel backgrounds)
-- Background Tertiary: 24 24 28 (#18181C - Elevated panels/cards)
-- Border Subtle: 31 31 35 (#1F1F23 - Minimal borders)
-- Border Default: 45 45 49 (#2D2D31 - Standard dividers)
-- Text Primary: 255 255 255 (#FFFFFF - Pure white)
-- Text Secondary: 139 139 141 (#8B8B8D - Grey text 55%)
-- Text Tertiary: 100 100 102 (#646466 - Muted text 39%)
-- Accent: 0 255 135 (#00FF87 - Bright lime green highlight)
+**Dark Mode (Primary - Ultra-Minimal)**
+- Background: 0 0 0 (#000000 - Pure black, not dark grey)
+- Surface Panel: 10 10 10 (#0A0A0A - Barely elevated)
+- Border Subtle: 20 20 20 (#141414 - Almost invisible)
+- Text Primary: 250 250 250 (#FAFAFA - Soft white)
+- Text Secondary: 166 166 166 (#A6A6A6 - Mid grey 65%)
+- Text Tertiary: 115 115 115 (#737373 - Muted grey 45%)
+- Accent Primary: 0 255 65 (#00FF41 - Electric lime)
+- Danger: 220 20 60 (#DC143C - Crimson)
+- Warning: 255 193 7 (#FFC107 - Amber)
 
 **Light Mode**
-- Background Primary: 255 255 255 (#FFFFFF - Pure white)
-- Background Secondary: 250 250 250 (#FAFAFA - Elevated surfaces)
-- Background Tertiary: 245 245 245 (#F5F5F5 - Cards, panels)
-- Border Subtle: 235 235 235 (#EBEBEB - Minimal borders)
-- Border Default: 220 220 220 (#DCDCDC - Standard dividers)
-- Text Primary: 11 11 15 (#0B0B0F - Deep black)
-- Text Secondary: 100 100 102 (#646466 - Grey text)
-- Text Tertiary: 139 139 141 (#8B8B8D - Muted text)
-- Accent: 0 200 100 (#00C864 - Green highlight)
+- Background: 255 255 255 (#FFFFFF - Pure white)
+- Surface Panel: 250 250 250 (#FAFAFA - Subtle elevation)
+- Border Subtle: 235 235 235 (#EBEBEB)
+- Text Primary: 11 11 15 (#0B0B0F)
+- Text Secondary: 100 100 102 (#646466)
+- Text Tertiary: 139 139 141 (#8B8B8D)
+- Accent Primary: 0 200 100 (#00C864 - Forest green)
+- Danger: 255 59 105 (#FF3B69)
 
-**Trading Status Colors** (Same both modes)
-- Success/Long: 0 255 135 (#00FF87 - Bright lime green)
-- Danger/Short: 255 59 105 (#FF3B69 - Bright red/pink)
-- Warning: 255 193 7 (#FFC107 - Amber)
-- Info: 59 130 246 (#3B82F6 - Blue)
-- Neutral: 139 139 141 (#8B8B8D - Grey)
+**Glow Effects**
+- Lime Glow (Hover): rgba(0, 255, 65, 0.1)
+- Lime Glow (Active): rgba(0, 255, 65, 0.15)
+- Panel Float Shadow: 0 4px 20px rgba(0, 255, 65, 0.05)
 
-### B. Typography
+### B. Typography - Massive Hierarchy
 
 **Font Stack**
-- Primary: 'Inter', -apple-system, sans-serif
-- Monospace: 'JetBrains Mono', 'SF Mono', monospace (for numbers/data)
+- UI: 'Inter', -apple-system, sans-serif
+- Numbers: 'IBM Plex Mono', 'SF Mono', monospace
 
-**Type Scale & Weights**
-- Hero Numbers: text-5xl font-semibold font-mono tracking-tight (Portfolio value: 125,000$)
-- Large Metrics: text-3xl font-semibold font-mono (34%, 75%)
-- Section Headers: text-xl font-semibold tracking-tight
-- Data Labels: text-sm font-medium tracking-wide opacity-70 (USDT, ETH, SUI)
-- Body/UI: text-sm font-normal (14px base, compact dashboard)
-- Trading Data: text-base font-mono font-medium (Prices, quantities)
-- Metadata: text-xs opacity-60 (Timestamps, secondary info)
+**Type Scale (Dramatic Hierarchy)**
+- Mega: text-6xl (60px) font-bold font-mono - Portfolio value
+- Hero: text-5xl (48px) font-bold font-mono - Main metrics
+- Large: text-4xl (36px) font-semibold font-mono - Section values
+- Display: text-3xl (30px) font-semibold - Headers
+- Body Large: text-xl (20px) font-medium - Important labels
+- Body: text-base (16px) font-normal - Standard text
+- Small: text-sm (14px) font-normal - Supporting info
+- Tiny: text-xs (12px) font-normal - Metadata
 
 **Grey Scale Hierarchy**
-- Critical data: text-white font-semibold
-- Standard text: text-white/90 font-normal
-- Supporting info: text-white/55 font-medium
-- Metadata: text-white/39 font-normal
+- Critical: text-[#FAFAFA] font-bold
+- Standard: text-[#FAFAFA] font-normal
+- Supporting: text-[#A6A6A6] font-medium
+- Metadata: text-[#737373] font-normal
 
 ### C. Layout System
 
-**Grid-Based Dashboard**
-- Container: max-w-[1920px] mx-auto px-6
-- Main grid: grid gap-4 (16px gaps between panels)
-- Panel structure: Individual cards/panels for each widget
-- Responsive: 1-column mobile, 2-column tablet, 3-4 column desktop
+**Floating Panel Architecture**
+- Background: Pure black #000000
+- Panels: Minimal borders, float above background
+- Spacing: Generous whitespace (32px+ between sections)
+- Hover: Lime glow shadow appears
+- Active: Lime glow intensifies
 
-**Spacing Primitives**
-- Tiny: 2px (0.5)
-- Small: 8px (2)
-- Medium: 16px (4)
-- Large: 24px (6)
-- XLarge: 32px (8)
-- Component padding: p-4 or p-6
-- Panel gaps: gap-4
-
-**Border Radius**
-- sm: 6px (Small elements)
-- default: 8px (Standard panels)
-- lg: 12px (Large panels)
-- xl: 16px (Modals)
+**Spacing Scale (8px Grid)**
+- 1: 0.5rem (8px)
+- 2: 1rem (16px)
+- 3: 1.5rem (24px)
+- 4: 2rem (32px)
+- 6: 3rem (48px)
+- 8: 4rem (64px)
+- 12: 6rem (96px)
 
 **Panel Design Pattern**
-- Background: bg-[#141418]
-- Border: border border-[#1F1F23]
-- Padding: p-4 or p-6
-- Rounded: rounded-lg
-- Example: `className="bg-[#141418] border border-[#1F1F23] rounded-lg p-4"`
+```tsx
+// Floating panel with hover glow
+className="bg-[#0A0A0A] border border-[#141414] rounded p-6 
+           hover:shadow-[0_4px_20px_rgba(0,255,65,0.1)] 
+           transition-all duration-300"
 
-### D. Unique Data Visualizations (Numora Style)
+// Ultra-minimal card (no border)
+className="bg-transparent p-6"
+```
 
-**Transaction Heatmap** (Calendar Grid)
-- 12-month calendar grid showing trading activity
-- Cells: Small squares (12x12px) with opacity based on volume
-- Colors: Grey (no activity) → Bright green (high activity)
-- Layout: Months labeled, 7x52 grid for weeks
-- Hover: Tooltip with exact date and volume
+**Border Radius**
+- Minimal: 4px (subtle curves)
+- Default: 8px (standard)
+- Large: 12px (panels)
 
-**Circular/Donut Charts** (Portfolio Allocation)
-- Large center percentage (34%)
-- Thick stroke (12-16px) with segments
-- Colors: Green for main metric, grey for remainder
-- Labels: Outside with connecting lines
-- Animation: Arc drawing from 0 to value
+### D. Component Patterns
 
-**Patterned Bar Charts** (Holders Distribution)
-- Horizontal bars with diagonal stripe pattern
-- Height: 80-120px bars
-- Pattern: Repeating diagonal lines (striped effect)
-- Labels: Percentages on bars (75%, 20%)
-- Colors: Green for whales, grey/white pattern for retail
+**Massive Portfolio Display**
+```tsx
+<div className="text-6xl font-bold font-mono text-[#FAFAFA] tracking-tight">
+  $125,420.50
+</div>
+<div className="text-xl font-medium text-[#00FF41] mt-2">
+  +$12,340 (10.9%)
+</div>
+```
 
-**Area Charts with Gradients** (Long/Short Ratio)
-- Smooth area curves with gradient fill
-- Two overlapping areas: Long (green) and Short (grey)
-- Gradient: Top bright → Bottom transparent
-- Grid: Subtle horizontal lines
-- Points: Small dots on data points
-
-**Horizontal Depth Bars** (Order Book)
-- Bars growing from center
-- Left side: Bids (green)
-- Right side: Asks (red)
-- Height: 24px per row
-- Opacity: Based on depth volume
+**Floating Panel with Glow**
+```tsx
+<div className="bg-[#0A0A0A] border border-[#141414] rounded-lg p-6 
+                hover:shadow-[0_4px_20px_rgba(0,255,65,0.1)] 
+                hover:border-[#00FF41]/20 
+                transition-all duration-300">
+  {content}
+</div>
+```
 
 **Inline Sparklines**
-- Tiny charts (60x20px) next to symbols
-- Single line, no axes
-- Color: Green (up trend) or Red (down trend)
-- Fill: Subtle gradient below line
+- Height: 40-60px
+- Color: #00FF41 (up) or #DC143C (down)
+- Stroke: 2px
+- Fill: Subtle gradient
+- Position: Next to metrics
 
-**Holders Visualization**
-- Vertical bars with segment labels
-- Pattern fills for visual interest
-- Percentages in large font-mono
-- Categories: Whales, Others with distribution
+**Time Range Pills**
+```tsx
+<button className="px-4 py-2 rounded bg-[#141414] text-[#A6A6A6] 
+                   hover:bg-[#00FF41]/10 hover:text-[#00FF41] 
+                   transition-all duration-200">
+  24H
+</button>
+```
 
-### E. Component Library
+**Data Tables (Ultra-Minimal)**
+- No borders between cells
+- Row hover: bg-[#0A0A0A]
+- Numbers: font-mono font-medium
+- Headers: text-xs uppercase text-[#737373]
 
-**Navigation**
-- Top bar: Dark bg (#0B0B0F), search input left, indicators right
-- Search: Dark input with subtle border, placeholder grey
-- Tabs: Active has bright green underline (3px), inactive grey text
-- Icons: 16-20px, grey with opacity 70%
+### E. Animations & Interactions
 
-**Cards & Panels**
-- Standard panel: bg-[#141418] border border-[#1F1F23] rounded-lg p-4
-- Compact panel: bg-[#141418] border border-[#1F1F23] rounded-lg p-3
-- Elevated panel: bg-[#18181C] border border-[#2D2D31] rounded-lg p-6
-- Hover state: border-white/10 transition-colors
+**Spring Physics (Framer Motion)**
+```tsx
+// Panel entrance
+initial={{ opacity: 0, y: 20 }}
+animate={{ opacity: 1, y: 0 }}
+transition={{ type: "spring", stiffness: 300, damping: 30 }}
 
-**Buttons & Controls**
-- Time range pills: bg-[#2D2D31] text-white/70 px-3 py-1.5 rounded-md text-sm
-- Active pill: bg-white/10 text-white
-- Icon buttons: p-2 hover:bg-white/5 rounded-md
-- Download/Export: Icon-only, subtle hover
+// Number count-up
+<CountUp 
+  end={125420.50} 
+  decimals={2} 
+  duration={1.5} 
+  separator="," 
+  prefix="$"
+/>
 
-**Data Display**
-- Large metrics: font-mono text-3xl font-semibold
-- Percentage changes: Green/red text with + or - prefix
-- Time period labels: Uppercase text-xs opacity-60 (TODAY, MONTH, YEAR)
-- Token badges: bg-white/10 px-2 py-1 rounded text-xs (USDT 35%)
+// Price flash on update
+animate={{ 
+  scale: [1, 1.05, 1],
+  color: ["#FAFAFA", "#00FF41", "#FAFAFA"]
+}}
+transition={{ duration: 0.4 }}
+```
 
-**Tables (Minimal)**
-- No borders on cells
-- Row separator: border-b border-white/5
-- Hover row: bg-white/3
-- Headers: text-xs uppercase opacity-60
-- Data: font-mono for numbers
+**Micro-Interactions**
+- Button press: scale(0.98)
+- Panel hover: Lime glow appears
+- Tab switch: Underline slides with spring
+- Price update: Flash lime then fade
+- Order submit: Button morphs to loading
+- Success: Scale pulse with lime glow
 
-### F. Animations (Subtle & Professional)
+**Loading States**
+- Skeleton screens with shimmer
+- Morphing buttons (submit → loading → success)
+- Progressive data reveal
+- Maintain layout (no jump)
 
-**Hover States**
-- Panels: border color shift to white/10
-- Buttons: background opacity +5%
-- Interactive rows: bg-white/3 fade-in 150ms
+### F. Visual Hierarchy
 
-**Data Updates**
-- Price changes: 200ms highlight pulse
-- Chart drawing: Animated path stroke
-- Number transitions: Count-up with easing
-- Loading: Subtle skeleton shimmer
+**Information Priority**
+1. **Mega**: Portfolio value (60px, center, bold)
+2. **Hero**: P&L, ROI (48px, mono, colored)
+3. **Large**: Position sizes, balances (36px)
+4. **Display**: Section headers (30px)
+5. **Body**: Labels, descriptions (16px)
+6. **Small**: Supporting data (14px)
+7. **Tiny**: Timestamps, metadata (12px)
 
-**Transitions**
-- All: transition-all duration-200 ease-out
-- Chart animations: 400ms ease-out
-- Modal entry: 250ms scale + fade
+**Color Usage**
+- Lime (#00FF41): Success, profit, long positions, active states
+- Crimson (#DC143C): Danger, loss, short positions, errors
+- White (#FAFAFA): Primary text, important data
+- Mid Grey (#A6A6A6): Secondary text
+- Dark Grey (#737373): Metadata, disabled states
+- Pure Black (#000000): Background canvas
 
-## Dashboard Layout Reference (Numora)
+### G. Dashboard Layout Philosophy
 
-**Main Trading View**
-1. **Top Navigation**: Search bar left, AI Signals/Stake/Portfolio tabs, profile right
-2. **Chart Panel**: Large candlestick chart with timeframe controls (1D/7D/3M/1Y/All)
-3. **Transaction Heatmap**: Calendar grid (Sep-Jul) showing activity
-4. **Holders Panel**: Large percentage bars with patterns (Whales 75%, Others 20%)
-5. **Portfolio Metrics**: TODAY/MONTH/YEAR with values and % changes, token allocation grid
-6. **Unlocks Donut Chart**: Circular chart with percentages (34% unlocked)
-7. **Buys/Sells Volume**: Patterned bar chart with monospace values
-8. **Long/Short Ratio**: Area chart with gradient fills
-9. **AI Assistant**: Chat interface bottom right with message bubbles
+**UnifiedTerminal Structure**
+- Full screen: No wasted space
+- Black canvas: Pure #000000 background
+- Floating sections: Minimal borders
+- Generous spacing: 32-48px between major sections
+- Massive numbers: 48-60px for key metrics
+- Subtle elevation: Panels barely lift from background
+- Hover reveals: Lime glow on interactive elements
 
 **Grid Structure**
 ```
-┌─────────────────────────────────────────────────────────────┐
-│  Top Nav: Logo | Search | Tabs | Profile                    │
-├───────────────────────────────┬─────────────────────────────┤
-│  Chart (Large)                │  Portfolio Metrics          │
-│                               │  (Grid: TODAY/MONTH/YEAR)   │
-│                               ├─────────────────────────────┤
-│                               │  Unlocks (Donut Chart)      │
-├───────────────────────────────┼─────────────────────────────┤
-│  Transaction Heatmap          │  AI Assistant Chat          │
-├───────────────────────────────┤                             │
-│  Holders (Patterned Bars)     │                             │
-├───────────────────┬───────────┴─────────────────────────────┤
-│  Buys/Sells Vol   │  Long/Short Ratio                       │
-└───────────────────┴─────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│  Pure Black Background (#000000)                                 │
+│                                                                  │
+│  ┌──────────────────────────────┐  ┌──────────────────────────┐│
+│  │  Portfolio Value             │  │  Active Strategy         ││
+│  │  $125,420 (60px mono bold)   │  │  Avatar + Name + Perf    ││
+│  │  +$12,340 (10.9%) lime       │  │  Sparkline + Quick Stats ││
+│  └──────────────────────────────┘  └──────────────────────────┘│
+│                                                                  │
+│  ┌──────────────────────────────────────────────────────────────┐│
+│  │  Chart Panel (Floating)                                      ││
+│  │  Candlestick + Volume + Indicators                           ││
+│  │  Time range pills: 1H 4H 1D 1W 1M                            ││
+│  └──────────────────────────────────────────────────────────────┘│
+│                                                                  │
+│  ┌────────────────┐  ┌────────────────┐  ┌────────────────────┐│
+│  │  Positions     │  │  Open Orders   │  │  Performance       ││
+│  │  w/ Sparklines │  │  Live updates  │  │  w/ Donut chart    ││
+│  └────────────────┘  └────────────────┘  └────────────────────┘│
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
 ```
-
-## Visual Hierarchy Principles
-
-1. **Dark Sophistication**: Deep grey (#0B0B0F) background, not pure black
-2. **Bright Accents**: Lime green (#00FF87) for success, bright red for danger
-3. **Panel Separation**: Subtle borders (#1F1F23) with gaps (gap-4)
-4. **Data Clarity**: Large monospace numbers for critical metrics
-5. **Creative Visualization**: Heatmaps, patterns, donuts, gradients
-6. **Compact Density**: Efficient use of space, 14px base font
-7. **Professional Polish**: Subtle animations, clean geometry
 
 ## Brand Identity
 
 **1fox**
-- Logo: Fox icon in white
-- Theme: Sophisticated dark trading terminal
-- Aesthetic: Numora-inspired with creative data viz
-- Differentiator: Grid panels + unique visualizations + AI
+- Essence: Ultra-minimal professional trading terminal
+- Aesthetic: Pure black canvas, massive typography, lime accents
+- Differentiator: Character-driven strategies, AI-powered execution
+- Vibe: Sophisticated, confident, precise, powerful
+- Tagline: "Trade with character"
+
+## Key Design Principles
+
+1. **Absolute Zero**: Pure black (#000000), no greys for background
+2. **Massive Numbers**: 48-60px for critical metrics, IBM Plex Mono
+3. **Floating Panels**: Minimal borders, lime glow on hover
+4. **Spring Physics**: Smooth, natural animations via Framer Motion
+5. **Generous Whitespace**: 32-48px spacing, room to breathe
+6. **Sparklines Everywhere**: Tiny trend indicators next to all metrics
+7. **Three Text Levels**: White (primary), Mid grey (secondary), Dark grey (tertiary)
+8. **Lime Accent Only**: No rainbow colors, just lime for success
+9. **Count-Up Numbers**: Animated transitions for all numeric displays
+10. **Skeleton Loading**: Maintain layout, shimmer effect, no spinners
