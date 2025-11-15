@@ -4,8 +4,11 @@ import { eq, sql, desc } from 'drizzle-orm';
 
 // x402 Configuration
 export const X402_CONFIG = {
-  // AI call pricing (in USDC)
-  aiCallPrice: 0.18, // $0.18 per AI call
+  // Dynamic pricing: charge 2x actual AI cost (100% markup)
+  markupMultiplier: 2.0, // 100% markup on actual AI cost
+  
+  // Estimated typical AI call cost (for pre-payment estimates)
+  estimatedAiCost: 0.01, // ~$0.01 for Grok 4 Fast typical call
   
   // Platform wallet for receiving deposits (Base network)
   platformWallet: process.env.X402_PLATFORM_WALLET || '0x0000000000000000000000000000000000000000',
@@ -19,6 +22,14 @@ export const X402_CONFIG = {
 } as const;
 
 export type X402Network = typeof X402_CONFIG.networks[number];
+
+/**
+ * Calculate x402 charge based on actual AI cost
+ * Applies 100% markup (2x actual cost)
+ */
+export function calculateX402Price(actualAiCost: number): number {
+  return actualAiCost * X402_CONFIG.markupMultiplier;
+}
 
 /**
  * Get user's x402 balance
@@ -38,15 +49,17 @@ export async function getUserX402Balance(userId: string): Promise<number> {
 
 /**
  * Check if user has sufficient x402 balance for AI call
+ * Uses estimated cost if actual cost not yet known
  */
-export async function canPayForAICall(userId: string): Promise<{
+export async function canPayForAICall(userId: string, estimatedAiCost?: number): Promise<{
   canPay: boolean;
   balance: number;
   required: number;
   shortfall: number;
 }> {
   const balance = await getUserX402Balance(userId);
-  const required = X402_CONFIG.aiCallPrice;
+  const aiCost = estimatedAiCost || X402_CONFIG.estimatedAiCost;
+  const required = calculateX402Price(aiCost);
   const shortfall = Math.max(0, required - balance);
   
   return {
@@ -121,6 +134,7 @@ export async function recordDeposit(params: {
  */
 export async function processAICallPayment(params: {
   userId: string;
+  actualAiCost: number;
   strategyId?: string;
   provider: string;
   model: string;
@@ -128,29 +142,36 @@ export async function processAICallPayment(params: {
   success: boolean;
   transactionId: string;
   balanceAfter: number;
+  costBreakdown: {
+    aiCost: number;
+    markup: number;
+    totalCharge: number;
+  };
 }> {
-  const { userId, strategyId, provider, model } = params;
-  const amount = X402_CONFIG.aiCallPrice;
+  const { userId, actualAiCost, strategyId, provider, model } = params;
+  const totalCharge = calculateX402Price(actualAiCost);
+  const markup = totalCharge - actualAiCost;
   
   // Start transaction with row-level locking to prevent concurrent balance overdraft
   const result = await db.transaction(async (tx) => {
     // Lock the user row for update (prevents concurrent modifications)
-    const [user] = await tx.execute(
+    const userResult = await tx.execute<{ x402_balance: string }>(
       sql`SELECT x402_balance FROM users WHERE id = ${userId} FOR UPDATE`
     );
     
-    if (!user) {
+    if (!userResult.rows || userResult.rows.length === 0) {
       throw new Error('User not found');
     }
     
+    const user = userResult.rows[0];
     const currentBalance = parseFloat(user.x402_balance || '0');
     
     // Check balance while holding the lock
-    if (currentBalance < amount) {
-      throw new Error(`Insufficient x402 balance. Required: $${amount}, Available: $${currentBalance.toFixed(2)}`);
+    if (currentBalance < totalCharge) {
+      throw new Error(`Insufficient x402 balance. Required: $${totalCharge.toFixed(4)}, Available: $${currentBalance.toFixed(4)}`);
     }
     
-    const newBalance = currentBalance - amount;
+    const newBalance = currentBalance - totalCharge;
     
     // Update user balance
     await tx.update(users)
@@ -165,7 +186,7 @@ export async function processAICallPayment(params: {
       .values({
         userId,
         type: 'payment',
-        amount: amount.toString(),
+        amount: totalCharge.toString(),
         status: 'completed',
         network: 'base',
         balanceBefore: currentBalance.toString(),
@@ -174,22 +195,31 @@ export async function processAICallPayment(params: {
           strategyId,
           provider,
           model,
-          purpose: 'ai_call'
+          purpose: 'ai_call',
+          actualAiCost,
+          markup,
+          totalCharge,
+          markupPercentage: 100
         },
-        description: `AI call payment - ${provider} ${model}`,
+        description: `AI call payment - ${provider} ${model} (cost: $${actualAiCost.toFixed(4)}, charge: $${totalCharge.toFixed(4)})`,
         completedAt: new Date()
       })
       .returning({ id: x402Transactions.id });
     
-    return { id: transaction.id, balanceAfter: newBalance };
+    return { id: transaction.id, balanceAfter: newBalance, aiCost: actualAiCost, markup, totalCharge };
   });
   
-  console.log(`[x402] AI call payment processed: $${amount} for user ${userId}, new balance: $${result.balanceAfter.toFixed(2)}`);
+  console.log(`[x402] AI call payment processed: AI cost $${actualAiCost.toFixed(4)}, charged $${totalCharge.toFixed(4)} (100% markup), user ${userId}, new balance: $${result.balanceAfter.toFixed(4)}`);
   
   return {
     success: true,
     transactionId: result.id,
-    balanceAfter: result.balanceAfter
+    balanceAfter: result.balanceAfter,
+    costBreakdown: {
+      aiCost: result.aiCost,
+      markup: result.markup,
+      totalCharge: result.totalCharge
+    }
   };
 }
 

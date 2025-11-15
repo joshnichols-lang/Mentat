@@ -98,7 +98,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const depositAmount = x402Check.shortfall;
           const paymentRequest = generatePaymentRequest({
             amount: depositAmount,
-            description: `AI call payment - ${depositAmount.toFixed(2)} USDC needed`,
+            description: `AI call payment - ${depositAmount.toFixed(4)} USDC needed`,
             resource: '/api/trading/prompt'
           });
           
@@ -114,7 +114,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             },
             x402Balance: x402Check.balance,
             payment: paymentRequest,
-            message: `Tier quota exhausted (${quotaCheck.callsUsed}/${quotaCheck.callsLimit}) and insufficient x402 balance ($${x402Check.balance.toFixed(2)}). Deposit $${depositAmount.toFixed(2)} USDC to continue.`
+            pricing: {
+              model: "Dynamic (2x actual AI cost)",
+              estimatedCost: "~$0.002-0.02 for typical calls"
+            },
+            message: `Tier quota exhausted (${quotaCheck.callsUsed}/${quotaCheck.callsLimit}) and insufficient x402 balance ($${x402Check.balance.toFixed(4)}). Deposit $${depositAmount.toFixed(4)} USDC to continue. Pricing is dynamic: you pay 2x the actual AI cost (~$0.002-0.02 per call).`
           });
         }
       }
@@ -185,7 +189,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log("[Trading Prompt] No Hyperliquid credentials found - AI will work in conversation-only mode");
       }
 
-      const strategy = await processTradingPrompt(userId, prompt, marketData, currentPositions, userState, openOrders, model, preferredProvider, screenshots, strategyId);
+      const { strategy, aiCost } = await processTradingPrompt(userId, prompt, marketData, currentPositions, userState, openOrders, model, preferredProvider, screenshots, strategyId);
       
       let executionSummary = null;
       
@@ -222,17 +226,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // CRITICAL: Process payment BEFORE returning response (atomic operation)
       // This ensures we charge user only for successful AI calls
+      let costBreakdown = null;
       try {
         if (useX402Payment) {
-          // Charge x402 balance
+          // Charge x402 balance based on actual AI cost
           const { processAICallPayment } = await import("./x402");
-          await processAICallPayment({
+          const paymentResult = await processAICallPayment({
             userId,
+            actualAiCost: aiCost,
             strategyId: strategyId || undefined,
             provider: preferredProvider || "xai",
             model: model || "grok-2"
           });
-          console.log(`[AI] x402 payment processed for user ${userId}`);
+          costBreakdown = paymentResult.costBreakdown;
+          console.log(`[AI] x402 payment processed: $${aiCost.toFixed(4)} AI cost → $${costBreakdown.totalCharge.toFixed(4)} charged (100% markup)`);
         } else {
           // Increment tier quota (was using free quota)
           await incrementAICall(userId);
@@ -254,7 +261,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         execution: executionSummary,
         agentMode: user?.agentMode || "passive",
         executionSkipped: !isActiveMode && autoExecute && strategy.actions && strategy.actions.length > 0,
-        paymentMethod: useX402Payment ? "x402" : "tier_quota"
+        paymentMethod: useX402Payment ? "x402" : "tier_quota",
+        ...(costBreakdown && { costBreakdown })
       });
     } catch (error: any) {
       console.error("Error processing trading prompt:", error);
@@ -338,7 +346,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const depositAmount = x402Check.shortfall;
           const paymentRequest = generatePaymentRequest({
             amount: depositAmount,
-            description: `AI portfolio analysis - ${depositAmount.toFixed(2)} USDC needed`,
+            description: `AI portfolio analysis - ${depositAmount.toFixed(4)} USDC needed`,
             resource: '/api/ai/analyze-portfolio'
           });
           
@@ -354,7 +362,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             },
             x402Balance: x402Check.balance,
             payment: paymentRequest,
-            message: `Tier quota exhausted (${quotaCheck.callsUsed}/${quotaCheck.callsLimit}) and insufficient x402 balance ($${x402Check.balance.toFixed(2)}). Deposit $${depositAmount.toFixed(2)} USDC to continue.`
+            pricing: {
+              model: "Dynamic (2x actual AI cost)",
+              estimatedCost: "~$0.002-0.02 for typical calls"
+            },
+            message: `Tier quota exhausted (${quotaCheck.callsUsed}/${quotaCheck.callsLimit}) and insufficient x402 balance ($${x402Check.balance.toFixed(4)}). Deposit $${depositAmount.toFixed(4)} USDC to continue. Pricing is dynamic: you pay 2x the actual AI cost (~$0.002-0.02 per call).`
           });
         }
       }
@@ -432,17 +444,20 @@ Provide a clear, actionable analysis with specific recommendations. Format your 
       
       // CRITICAL: Process payment BEFORE returning response (atomic operation)
       // This ensures we charge user only for successful AI calls
+      let costBreakdown = null;
       try {
         if (useX402Payment) {
-          // Charge x402 balance
+          // Charge x402 balance based on actual AI cost
           const { processAICallPayment } = await import("./x402");
-          await processAICallPayment({
+          const paymentResult = await processAICallPayment({
             userId,
+            actualAiCost: aiResponse.cost,
             strategyId: undefined,
             provider: preferredProvider || "xai",
             model: model || "grok-2"
           });
-          console.log(`[AI] x402 payment processed for user ${userId}`);
+          costBreakdown = paymentResult.costBreakdown;
+          console.log(`[AI] x402 payment processed: $${aiResponse.cost.toFixed(4)} AI cost → $${costBreakdown.totalCharge.toFixed(4)} charged (100% markup)`);
         } else {
           // Increment tier quota (was using free quota)
           await incrementAICall(userId);
@@ -479,7 +494,8 @@ Provide a clear, actionable analysis with specific recommendations. Format your 
           provider: aiResponse.provider,
           model: aiResponse.model,
         },
-        paymentMethod: useX402Payment ? "x402" : "tier_quota"
+        paymentMethod: useX402Payment ? "x402" : "tier_quota",
+        ...(costBreakdown && { costBreakdown })
       });
     } catch (error: any) {
       console.error("Error analyzing portfolio:", error);

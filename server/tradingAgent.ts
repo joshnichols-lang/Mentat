@@ -103,7 +103,7 @@ export async function processTradingPrompt(
   preferredProvider?: string,
   screenshots?: string[],
   strategyId?: string | null
-): Promise<TradingStrategy> {
+): Promise<{ strategy: TradingStrategy; aiCost: number }> {
   
   try {
     console.log(`[Trading Prompt] Processing prompt for user ${userId}${strategyId ? ` with strategy ${strategyId}` : ''}`);
@@ -639,7 +639,7 @@ ${openOrders.length > 0 ? JSON.stringify(openOrders.filter((o: any) => !o.reduce
     }
 
     console.log(`[Trading Prompt] AI response: ${strategy.actions.length} actions generated`);
-    return strategy;
+    return { strategy, aiCost: response.cost };
 
   } catch (error) {
     console.error("[Trading Prompt] Error processing prompt:", error);
@@ -664,10 +664,13 @@ ${openOrders.length > 0 ? JSON.stringify(openOrders.filter((o: any) => !o.reduce
 
     // Return error response
     return {
-      interpretation: `I encountered an error processing your request: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`,
-      actions: [],
-      riskManagement: "Error occurred",
-      expectedOutcome: "Error occurred"
+      strategy: {
+        interpretation: `I encountered an error processing your request: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`,
+        actions: [],
+        riskManagement: "Error occurred",
+        expectedOutcome: "Error occurred"
+      },
+      aiCost: 0
     };
   }
 }
