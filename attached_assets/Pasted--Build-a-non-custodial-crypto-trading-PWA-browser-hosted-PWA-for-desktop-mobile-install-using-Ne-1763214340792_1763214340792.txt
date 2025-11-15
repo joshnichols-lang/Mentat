@@ -1,0 +1,18 @@
+**Build a non-custodial crypto trading PWA (browser-hosted, PWA for desktop/mobile install) using Next.js 14/React, Tailwind CSS for minimalist Robinhood/Glider.fi UI (dark mode, Framer Motion for smooth animations like slide-in charts/modals, Recharts for real-time candlesticks/order books), Node.js/Express backend, wagmi/viem for Web3 wallet connects (MetaMask default, user-signed txs only), and better-sqlite3 for dev DB (track deposits, notional volume, tiers, trade history). No simulations—use real APIs: Hyperliquid testnet (https://api.hyperliquid-testnet.xyz) for perp trading, Blofin API (REST/WebSocket via axios, auth with HMAC-SHA256 using env BLOFIN_API_KEY/BLOFIN_SECRET) as toggleable exchange in dashboard.User Tiers (DB-driven): On wallet connect, query deposit size (e.g., via Hyperliquid/Blofin balances) + 30-day notional volume. Auto-assign tiers:Bronze (<$1k deposit or <$10k vol): 10 AI calls/mo (basic analysis).
+Silver ($1k-10k deposit + $10k-100k vol): 50 calls/mo (5-min strategies).
+Gold (>$10k deposit + >$100k vol): Unlimited (1-min scalping ok).
+Enforce via DB quotas; prompt tier upgrades in UI (e.g., "Deposit more for Gold perks").
+
+Core Features:Landing/Dashboard: Wallet connect → Fetch testnet balances. Hyperliquid tab: Live WebSocket feeds (prices, order book), buy/sell forms (perps like BTC-USD-PERP), P&L calc with 0.1% platform fee routing. Blofin tab: Toggle for spot/perp trades (e.g., /api/blofin endpoint for orders, instruments). Responsive grid, volume-based tier badge.
+AI Strategies (/strategies): Grok integration (env GROK_API_KEY) for analysis/automation. Buttons: "Portfolio Scan" (Grok prompt: "Analyze holdings on Hyperliquid testnet/Blofin: [balances]. Suggest rebalance."); "Build Strategy" modal (user input e.g., "1-min BTC scalp on testnet") → Grok generates/backtests → Signed tx execution. Gate by tier: Low tiers block high-freq (e.g., 1-min) prompts with "Upgrade for scalping." Every call: Real X402 middleware (use x402-express lib)—intercept HTTP to Grok, return 402 if unpaid, charge base cost (~$0.01-0.05 via x402 payload, e.g., Solana micropay) +20% markup. Bundle tier-based free calls (deduct from quota first). UI: Tooltip "X402 Fee: $0.015 | Quota: 8/10 left."
+Trades History (/trades): Unified log from Hyperliquid/Blofin, filters by exchange/tier, CSV export.
+Settings: Tier status, API key inputs for Blofin, Hyperspace AI placeholder (toggle for agentic mode).
+
+Backend:/api/hyperliquid: Testnet orders/feeds (WebSocket via ws lib).
+/api/blofin: Auth-signed requests (e.g., POST /trade for orders; GET /instruments).
+/api/grok: X402-protected proxy—check tier quota, then forward to xAI API if paid/credited.
+/api/tiers: Calc/assign based on deposit/vol queries.
+Auth: Wallet sig → JWT. Rate-limits, error toasts (react-hot-toast).
+
+PWA: Manifest for installable app feel. Env vars: GROK_API_KEY, BLOFIN_API_KEY, BLOFIN_SECRET. Seed DB with demo testnet wallet + tiers. Output full code, deps (add x402-express, axios, ws, crypto for HMAC), run/deploy instructions—focus on real testnet flows for safe prototyping.
+
