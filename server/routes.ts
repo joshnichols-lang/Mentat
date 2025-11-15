@@ -77,22 +77,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const userId = getUserId(req);
       
-      // Check tier quota before processing AI request
-      const { canMakeAICall } = await import("./tiers");
+      // Check tier quota first
+      const { canMakeAICall, incrementAICall } = await import("./tiers");
       const quotaCheck = await canMakeAICall(userId);
       
+      // If tier quota available, continue (will increment after successful AI call)
+      let useX402Payment = false;
+      
       if (!quotaCheck.allowed) {
-        return res.status(429).json({
-          success: false,
-          error: "AI quota exceeded",
-          quota: {
-            used: quotaCheck.callsUsed,
-            limit: quotaCheck.callsLimit,
-            resetAt: quotaCheck.resetAt,
-            tier: quotaCheck.tier
-          },
-          message: `You've used ${quotaCheck.callsUsed}/${quotaCheck.callsLimit} AI calls today. Upgrade your tier or wait until ${quotaCheck.resetAt.toLocaleString()} for more calls.`
-        });
+        // Tier quota exceeded - check x402 balance as fallback
+        const { canPayForAICall, generatePaymentRequest } = await import("./x402");
+        const x402Check = await canPayForAICall(userId);
+        
+        if (x402Check.canPay) {
+          // User has sufficient x402 balance - will charge after successful AI call
+          useX402Payment = true;
+          console.log(`[AI] User ${userId} will pay via x402 ($${x402Check.required})`);
+        } else {
+          // Neither tier quota nor x402 balance - return 402 Payment Required
+          const depositAmount = x402Check.shortfall;
+          const paymentRequest = generatePaymentRequest({
+            amount: depositAmount,
+            description: `AI call payment - ${depositAmount.toFixed(2)} USDC needed`,
+            resource: '/api/trading/prompt'
+          });
+          
+          return res.status(402).json({
+            success: false,
+            error: "Payment Required",
+            code: "payment_required",
+            quota: {
+              used: quotaCheck.callsUsed,
+              limit: quotaCheck.callsLimit,
+              resetAt: quotaCheck.resetAt,
+              tier: quotaCheck.tier
+            },
+            x402Balance: x402Check.balance,
+            payment: paymentRequest,
+            message: `Tier quota exhausted (${quotaCheck.callsUsed}/${quotaCheck.callsLimit}) and insufficient x402 balance ($${x402Check.balance.toFixed(2)}). Deposit $${depositAmount.toFixed(2)} USDC to continue.`
+          });
+        }
       }
       
       const schema = z.object({
@@ -196,12 +220,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
+      // CRITICAL: Process payment BEFORE returning response (atomic operation)
+      // This ensures we charge user only for successful AI calls
+      try {
+        if (useX402Payment) {
+          // Charge x402 balance
+          const { processAICallPayment } = await import("./x402");
+          await processAICallPayment({
+            userId,
+            strategyId: strategyId || undefined,
+            provider: preferredProvider || "xai",
+            model: model || "grok-2"
+          });
+          console.log(`[AI] x402 payment processed for user ${userId}`);
+        } else {
+          // Increment tier quota (was using free quota)
+          await incrementAICall(userId);
+        }
+      } catch (paymentError: any) {
+        // Payment failed - return error without giving AI response
+        console.error("[AI] Payment processing failed:", paymentError);
+        return res.status(500).json({
+          success: false,
+          error: "Payment processing failed. Please try again.",
+          code: "payment_failed",
+          details: paymentError.message
+        });
+      }
+      
       res.json({ 
         success: true, 
         strategy,
         execution: executionSummary,
         agentMode: user?.agentMode || "passive",
-        executionSkipped: !isActiveMode && autoExecute && strategy.actions && strategy.actions.length > 0
+        executionSkipped: !isActiveMode && autoExecute && strategy.actions && strategy.actions.length > 0,
+        paymentMethod: useX402Payment ? "x402" : "tier_quota"
       });
     } catch (error: any) {
       console.error("Error processing trading prompt:", error);
@@ -264,22 +317,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = getUserId(req);
       
-      // Check tier quota before processing AI request
-      const { canMakeAICall } = await import("./tiers");
+      // Check tier quota first
+      const { canMakeAICall, incrementAICall } = await import("./tiers");
       const quotaCheck = await canMakeAICall(userId);
       
+      // If tier quota available, continue (will increment after successful AI call)
+      let useX402Payment = false;
+      
       if (!quotaCheck.allowed) {
-        return res.status(429).json({
-          success: false,
-          error: "AI quota exceeded",
-          quota: {
-            used: quotaCheck.callsUsed,
-            limit: quotaCheck.callsLimit,
-            resetAt: quotaCheck.resetAt,
-            tier: quotaCheck.tier
-          },
-          message: `You've used ${quotaCheck.callsUsed}/${quotaCheck.callsLimit} AI calls today. Upgrade your tier or wait until ${quotaCheck.resetAt.toLocaleString()} for more calls.`
-        });
+        // Tier quota exceeded - check x402 balance as fallback
+        const { canPayForAICall, generatePaymentRequest } = await import("./x402");
+        const x402Check = await canPayForAICall(userId);
+        
+        if (x402Check.canPay) {
+          // User has sufficient x402 balance - will charge after successful AI call
+          useX402Payment = true;
+          console.log(`[AI] User ${userId} will pay via x402 ($${x402Check.required})`);
+        } else {
+          // Neither tier quota nor x402 balance - return 402 Payment Required
+          const depositAmount = x402Check.shortfall;
+          const paymentRequest = generatePaymentRequest({
+            amount: depositAmount,
+            description: `AI portfolio analysis - ${depositAmount.toFixed(2)} USDC needed`,
+            resource: '/api/ai/analyze-portfolio'
+          });
+          
+          return res.status(402).json({
+            success: false,
+            error: "Payment Required",
+            code: "payment_required",
+            quota: {
+              used: quotaCheck.callsUsed,
+              limit: quotaCheck.callsLimit,
+              resetAt: quotaCheck.resetAt,
+              tier: quotaCheck.tier
+            },
+            x402Balance: x402Check.balance,
+            payment: paymentRequest,
+            message: `Tier quota exhausted (${quotaCheck.callsUsed}/${quotaCheck.callsLimit}) and insufficient x402 balance ($${x402Check.balance.toFixed(2)}). Deposit $${depositAmount.toFixed(2)} USDC to continue.`
+          });
+        }
       }
       
       const schema = z.object({
@@ -353,6 +430,34 @@ Provide a clear, actionable analysis with specific recommendations. Format your 
         userId,
       });
       
+      // CRITICAL: Process payment BEFORE returning response (atomic operation)
+      // This ensures we charge user only for successful AI calls
+      try {
+        if (useX402Payment) {
+          // Charge x402 balance
+          const { processAICallPayment } = await import("./x402");
+          await processAICallPayment({
+            userId,
+            strategyId: undefined,
+            provider: preferredProvider || "xai",
+            model: model || "grok-2"
+          });
+          console.log(`[AI] x402 payment processed for user ${userId}`);
+        } else {
+          // Increment tier quota (was using free quota)
+          await incrementAICall(userId);
+        }
+      } catch (paymentError: any) {
+        // Payment failed - return error without giving AI response
+        console.error("[AI] Payment processing failed:", paymentError);
+        return res.status(500).json({
+          success: false,
+          error: "Payment processing failed. Please try again.",
+          code: "payment_failed",
+          details: paymentError.message
+        });
+      }
+      
       res.json({
         success: true,
         analysis: aiResponse.content,
@@ -374,6 +479,7 @@ Provide a clear, actionable analysis with specific recommendations. Format your 
           provider: aiResponse.provider,
           model: aiResponse.model,
         },
+        paymentMethod: useX402Payment ? "x402" : "tier_quota"
       });
     } catch (error: any) {
       console.error("Error analyzing portfolio:", error);
@@ -5252,6 +5358,11 @@ Provide a clear, actionable analysis with specific recommendations. Format your 
   const tierRouter = await import("./routes/tiers");
   app.use("/api/tiers", tierRouter.default);
   console.log("[Server] Tier system initialized");
+
+  // x402 Micropayment Routes
+  const x402Router = await import("./routes/x402");
+  app.use("/api/x402", x402Router.default);
+  console.log("[Server] x402 micropayment system initialized");
 
   const httpServer = createServer(app);
 

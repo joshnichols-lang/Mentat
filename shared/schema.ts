@@ -46,6 +46,28 @@ export const users = pgTable("users", {
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
+// x402 Micropayment Transactions - Track USDC payments for AI usage
+export const x402Transactions = pgTable("x402_transactions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  type: text("type").notNull(), // "deposit", "payment", "refund"
+  amount: decimal("amount", { precision: 18, scale: 6 }).notNull(), // USDC amount (6 decimals for USDC)
+  status: text("status").notNull().default("pending"), // "pending", "completed", "failed"
+  network: text("network").notNull().default("base"), // "base", "ethereum", "polygon"
+  transactionHash: text("transaction_hash"), // Blockchain transaction hash for verification
+  fromAddress: text("from_address"), // Sender wallet address
+  toAddress: text("to_address"), // Recipient address (platform wallet for deposits)
+  balanceBefore: decimal("balance_before", { precision: 18, scale: 6 }).notNull(), // User's x402 balance before transaction
+  balanceAfter: decimal("balance_after", { precision: 18, scale: 6 }).notNull(), // User's x402 balance after transaction
+  metadata: jsonb("metadata"), // Additional data: { aiCallId, strategyId, model, provider, etc }
+  description: text("description"), // Human-readable description
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  completedAt: timestamp("completed_at"),
+}, (table) => [
+  index("idx_user_transactions").on(table.userId, table.createdAt),
+  index("idx_transaction_hash").on(table.transactionHash),
+]);
+
 // Multi-wallet support for cross-chain trading and authentication
 export const userWallets = pgTable("user_wallets", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -1017,6 +1039,7 @@ export const insertOptionsOrderSchema = createInsertSchema(optionsOrders).omit({
 export const insertPanelLayoutSchema = createInsertSchema(panelLayouts).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertPortfolioAnalysisSchema = createInsertSchema(portfolioAnalyses).omit({ id: true, createdAt: true });
 export const insertWithdrawalSchema = createInsertSchema(withdrawals).omit({ id: true, userId: true, createdAt: true });
+export const insertX402TransactionSchema = createInsertSchema(x402Transactions).omit({ id: true, userId: true, createdAt: true });
 
 export type InsertAdvancedOrder = z.infer<typeof insertAdvancedOrderSchema>;
 export type AdvancedOrder = typeof advancedOrders.$inferSelect;
@@ -1034,3 +1057,5 @@ export type InsertPortfolioAnalysis = z.infer<typeof insertPortfolioAnalysisSche
 export type PortfolioAnalysis = typeof portfolioAnalyses.$inferSelect;
 export type InsertWithdrawal = z.infer<typeof insertWithdrawalSchema>;
 export type Withdrawal = typeof withdrawals.$inferSelect;
+export type InsertX402Transaction = z.infer<typeof insertX402TransactionSchema>;
+export type X402Transaction = typeof x402Transactions.$inferSelect;
