@@ -35,6 +35,13 @@ export const users = pgTable("users", {
   walletAddress: text("wallet_address"), // DEPRECATED: Kept for backward compatibility, migrating to user_wallets table
   verificationStatus: text("verification_status").notNull().default("approved"), // "pending", "approved", "rejected" - Auto-approved for all users
   verifiedAt: timestamp("verified_at"), // Timestamp when admin verified the wallet
+  // Tier system for AI access control and monetization
+  tier: text("tier").notNull().default("free"), // "free", "bronze", "silver", "gold", "platinum"
+  aiCallsToday: integer("ai_calls_today").notNull().default(0), // Track daily AI calls for quota enforcement
+  aiCallsResetAt: timestamp("ai_calls_reset_at").notNull().defaultNow(), // When to reset daily counter
+  totalDepositUsd: decimal("total_deposit_usd", { precision: 18, scale: 2 }).notNull().default("0"), // Total deposits for tier calculation
+  totalVolumeUsd: decimal("total_volume_usd", { precision: 18, scale: 2 }).notNull().default("0"), // Total trading volume for tier calculation
+  x402Balance: decimal("x402_balance", { precision: 18, scale: 6 }).notNull().default("0"), // USDC balance for x402 micropayments
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

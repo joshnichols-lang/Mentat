@@ -77,6 +77,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const userId = getUserId(req);
       
+      // Check tier quota before processing AI request
+      const { canMakeAICall } = await import("./tiers");
+      const quotaCheck = await canMakeAICall(userId);
+      
+      if (!quotaCheck.allowed) {
+        return res.status(429).json({
+          success: false,
+          error: "AI quota exceeded",
+          quota: {
+            used: quotaCheck.callsUsed,
+            limit: quotaCheck.callsLimit,
+            resetAt: quotaCheck.resetAt,
+            tier: quotaCheck.tier
+          },
+          message: `You've used ${quotaCheck.callsUsed}/${quotaCheck.callsLimit} AI calls today. Upgrade your tier or wait until ${quotaCheck.resetAt.toLocaleString()} for more calls.`
+        });
+      }
+      
       const schema = z.object({
         prompt: z.string().min(1),
         marketData: z.array(z.object({
@@ -245,6 +263,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/ai/analyze-portfolio", requireVerifiedUser, async (req, res) => {
     try {
       const userId = getUserId(req);
+      
+      // Check tier quota before processing AI request
+      const { canMakeAICall } = await import("./tiers");
+      const quotaCheck = await canMakeAICall(userId);
+      
+      if (!quotaCheck.allowed) {
+        return res.status(429).json({
+          success: false,
+          error: "AI quota exceeded",
+          quota: {
+            used: quotaCheck.callsUsed,
+            limit: quotaCheck.callsLimit,
+            resetAt: quotaCheck.resetAt,
+            tier: quotaCheck.tier
+          },
+          message: `You've used ${quotaCheck.callsUsed}/${quotaCheck.callsLimit} AI calls today. Upgrade your tier or wait until ${quotaCheck.resetAt.toLocaleString()} for more calls.`
+        });
+      }
       
       const schema = z.object({
         model: z.string().optional(),
@@ -5211,6 +5247,11 @@ Provide a clear, actionable analysis with specific recommendations. Format your 
   await advancedOrderManager.initialize();
   console.log("[Server] Advanced Orders Manager initialized");
   console.log("[Server] AI-Enhanced Order Routing enabled");
+
+  // Tier System Routes
+  const tierRouter = await import("./routes/tiers");
+  app.use("/api/tiers", tierRouter.default);
+  console.log("[Server] Tier system initialized");
 
   const httpServer = createServer(app);
 
