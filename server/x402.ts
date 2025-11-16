@@ -1,6 +1,8 @@
 import { db } from './db';
-import { users, x402Transactions, type InsertX402Transaction } from '../shared/schema';
-import { eq, sql, desc } from 'drizzle-orm';
+import { users, x402Transactions, userWallets, type InsertX402Transaction } from '../shared/schema';
+import { eq, sql, desc, and } from 'drizzle-orm';
+import { createPublicClient, http, type Address, formatUnits, parseUnits } from 'viem';
+import { arbitrum, arbitrumSepolia } from 'viem/chains';
 
 // x402 Configuration
 // USDC contract addresses on Arbitrum
@@ -70,6 +72,21 @@ export const X402_CONFIG = {
 
 export type X402Network = typeof X402_CONFIG.networks[number];
 
+// Viem public clients for reading blockchain data
+const arbitrumClient = createPublicClient({
+  chain: arbitrum,
+  transport: http()
+});
+
+const arbitrumSepoliaClient = createPublicClient({
+  chain: arbitrumSepolia,
+  transport: http()
+});
+
+function getClient(network: X402Network) {
+  return network === 'arbitrum' ? arbitrumClient : arbitrumSepoliaClient;
+}
+
 /**
  * Calculate x402 charge based on actual AI cost
  * Applies 100% markup (2x actual cost)
@@ -95,25 +112,142 @@ export async function getUserX402Balance(userId: string): Promise<number> {
 }
 
 /**
- * Check if user has sufficient x402 balance for AI call
- * Uses estimated cost if actual cost not yet known
+ * Get user's Arbitrum wallet address
+ */
+export async function getUserArbitrumWallet(userId: string): Promise<{
+  address: Address;
+  network: X402Network;
+} | null> {
+  // First try to get user's connected Arbitrum wallet from userWallets table
+  const wallet = await db.query.userWallets.findFirst({
+    where: and(
+      eq(userWallets.userId, userId),
+      eq(userWallets.chain, 'arbitrum')
+    ),
+    columns: {
+      normalizedAddress: true,
+      chainId: true
+    }
+  });
+
+  if (wallet) {
+    const network: X402Network = wallet.chainId === '42161' ? 'arbitrum' : 'arbitrum-sepolia';
+    return {
+      address: wallet.normalizedAddress as Address,
+      network
+    };
+  }
+
+  return null;
+}
+
+/**
+ * Check user's Arbitrum USDC balance on-chain
+ */
+export async function checkArbitrumUsdcBalance(params: {
+  walletAddress: Address;
+  network: X402Network;
+}): Promise<number> {
+  const { walletAddress, network } = params;
+  const client = getClient(network);
+  const usdcContract = X402_CONFIG.usdcContracts[network];
+
+  try {
+    const balance = await client.readContract({
+      address: usdcContract as Address,
+      abi: X402_CONFIG.usdcAbi,
+      functionName: 'balanceOf',
+      args: [walletAddress],
+    }) as bigint;
+
+    // USDC has 6 decimals
+    return parseFloat(formatUnits(balance, 6));
+  } catch (error) {
+    console.error(`[x402] Error checking USDC balance for ${walletAddress} on ${network}:`, error);
+    return 0;
+  }
+}
+
+/**
+ * Check how much USDC the platform is approved to spend from user's wallet
+ */
+export async function checkUsdcAllowance(params: {
+  walletAddress: Address;
+  network: X402Network;
+}): Promise<number> {
+  const { walletAddress, network } = params;
+  const client = getClient(network);
+  const usdcContract = X402_CONFIG.usdcContracts[network];
+
+  try {
+    const allowance = await client.readContract({
+      address: usdcContract as Address,
+      abi: X402_CONFIG.usdcAbi,
+      functionName: 'allowance',
+      args: [walletAddress, X402_CONFIG.platformWallet as Address],
+    }) as bigint;
+
+    // USDC has 6 decimals
+    return parseFloat(formatUnits(allowance, 6));
+  } catch (error) {
+    console.error(`[x402] Error checking USDC allowance for ${walletAddress} on ${network}:`, error);
+    return 0;
+  }
+}
+
+/**
+ * Check if user can pay for AI call using their Arbitrum USDC
+ * Checks both wallet balance and approval status
  */
 export async function canPayForAICall(userId: string, estimatedAiCost?: number): Promise<{
   canPay: boolean;
   balance: number;
   required: number;
   shortfall: number;
+  hasApproval: boolean;
+  walletAddress?: string;
+  network?: X402Network;
 }> {
-  const balance = await getUserX402Balance(userId);
   const aiCost = estimatedAiCost || X402_CONFIG.estimatedAiCost;
   const required = calculateX402Price(aiCost);
-  const shortfall = Math.max(0, required - balance);
+
+  // Get user's Arbitrum wallet
+  const wallet = await getUserArbitrumWallet(userId);
   
+  if (!wallet) {
+    return {
+      canPay: false,
+      balance: 0,
+      required,
+      shortfall: required,
+      hasApproval: false,
+    };
+  }
+
+  // Check on-chain USDC balance
+  const balance = await checkArbitrumUsdcBalance({
+    walletAddress: wallet.address,
+    network: wallet.network
+  });
+
+  // Check if platform has approval to spend USDC
+  const allowance = await checkUsdcAllowance({
+    walletAddress: wallet.address,
+    network: wallet.network
+  });
+
+  const hasApproval = allowance >= required;
+  const shortfall = Math.max(0, required - balance);
+  const canPay = balance >= required && hasApproval;
+
   return {
-    canPay: balance >= required,
+    canPay,
     balance,
     required,
-    shortfall
+    shortfall,
+    hasApproval,
+    walletAddress: wallet.address,
+    network: wallet.network
   };
 }
 
