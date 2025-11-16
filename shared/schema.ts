@@ -42,6 +42,9 @@ export const users = pgTable("users", {
   totalDepositUsd: decimal("total_deposit_usd", { precision: 18, scale: 2 }).notNull().default("0"), // Total deposits for tier calculation
   totalVolumeUsd: decimal("total_volume_usd", { precision: 18, scale: 2 }).notNull().default("0"), // Total trading volume for tier calculation
   x402Balance: decimal("x402_balance", { precision: 18, scale: 6 }).notNull().default("0"), // USDC balance for x402 micropayments
+  x402Agreement: integer("x402_agreement").notNull().default(0), // 1 = user agreed to x402 micropayments from Arbitrum wallet
+  x402AgreementAt: timestamp("x402_agreement_at"), // When user agreed to x402 micropayments
+  x402UsdcApprovalTxHash: text("x402_usdc_approval_tx_hash"), // Transaction hash of USDC approval for platform spending
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
@@ -53,7 +56,7 @@ export const x402Transactions = pgTable("x402_transactions", {
   type: text("type").notNull(), // "deposit", "payment", "refund"
   amount: decimal("amount", { precision: 18, scale: 6 }).notNull(), // USDC amount (6 decimals for USDC)
   status: text("status").notNull().default("pending"), // "pending", "completed", "failed"
-  network: text("network").notNull().default("base"), // "base", "ethereum", "polygon"
+  network: text("network").notNull().default("arbitrum"), // "arbitrum", "arbitrum-sepolia" - x402 payments use user's Arbitrum wallet
   transactionHash: text("transaction_hash"), // Blockchain transaction hash for verification
   fromAddress: text("from_address"), // Sender wallet address
   toAddress: text("to_address"), // Recipient address (platform wallet for deposits)

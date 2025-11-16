@@ -3,6 +3,12 @@ import { users, x402Transactions, type InsertX402Transaction } from '../shared/s
 import { eq, sql, desc } from 'drizzle-orm';
 
 // x402 Configuration
+// USDC contract addresses on Arbitrum
+export const USDC_CONTRACTS = {
+  arbitrum: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831' as const, // USDC on Arbitrum One
+  'arbitrum-sepolia': '0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d' as const, // USDC on Arbitrum Sepolia
+} as const;
+
 export const X402_CONFIG = {
   // Dynamic pricing: charge 2x actual AI cost (100% markup)
   markupMultiplier: 2.0, // 100% markup on actual AI cost
@@ -10,15 +16,56 @@ export const X402_CONFIG = {
   // Estimated typical AI call cost (for pre-payment estimates)
   estimatedAiCost: 0.01, // ~$0.01 for Grok 4 Fast typical call
   
-  // Platform wallet for receiving deposits (Base network)
+  // Platform wallet for receiving payments (Arbitrum network)
   platformWallet: process.env.X402_PLATFORM_WALLET || '0x0000000000000000000000000000000000000000',
   
-  // Supported networks
-  networks: ['base', 'base-sepolia'] as const,
+  // Supported networks (switched from Base to Arbitrum)
+  networks: ['arbitrum', 'arbitrum-sepolia'] as const,
   
-  // Minimum deposit/payment amounts
-  minDeposit: 1.0, // $1 minimum deposit
-  minPayment: 0.01, // $0.01 minimum payment
+  // USDC contract addresses
+  usdcContracts: USDC_CONTRACTS,
+  
+  // Minimum payment amounts
+  minPayment: 0.001, // $0.001 minimum payment (very low for AI calls)
+  
+  // ERC-20 ABI fragments for USDC interaction
+  usdcAbi: [
+    {
+      name: 'balanceOf',
+      type: 'function',
+      stateMutability: 'view',
+      inputs: [{ name: 'account', type: 'address' }],
+      outputs: [{ name: 'balance', type: 'uint256' }],
+    },
+    {
+      name: 'allowance',
+      type: 'function',
+      stateMutability: 'view',
+      inputs: [{ name: 'owner', type: 'address' }, { name: 'spender', type: 'address' }],
+      outputs: [{ name: 'remaining', type: 'uint256' }],
+    },
+    {
+      name: 'transferFrom',
+      type: 'function',
+      stateMutability: 'nonpayable',
+      inputs: [
+        { name: 'from', type: 'address' },
+        { name: 'to', type: 'address' },
+        { name: 'value', type: 'uint256' },
+      ],
+      outputs: [{ name: 'success', type: 'bool' }],
+    },
+    {
+      name: 'approve',
+      type: 'function',
+      stateMutability: 'nonpayable',
+      inputs: [
+        { name: 'spender', type: 'address' },
+        { name: 'value', type: 'uint256' },
+      ],
+      outputs: [{ name: 'success', type: 'bool' }],
+    },
+  ] as const,
 } as const;
 
 export type X402Network = typeof X402_CONFIG.networks[number];
@@ -83,10 +130,7 @@ export async function recordDeposit(params: {
 }): Promise<string> {
   const { userId, amount, network, transactionHash, fromAddress } = params;
   
-  if (amount < X402_CONFIG.minDeposit) {
-    throw new Error(`Minimum deposit is $${X402_CONFIG.minDeposit} USDC`);
-  }
-  
+  // No minimum deposit check - allow any amount
   // Get current balance
   const currentBalance = await getUserX402Balance(userId);
   const newBalance = currentBalance + amount;
