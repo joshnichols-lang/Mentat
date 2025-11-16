@@ -21,16 +21,18 @@ export const USDC_CONTRACTS = {
 } as const;
 
 // Validate platform wallet configuration at startup
-function validatePlatformWallet(): Address {
+// Returns null if not configured (x402 will be disabled)
+function validatePlatformWallet(): Address | null {
   const wallet = process.env.X402_PLATFORM_WALLET;
   
   if (!wallet) {
-    throw new Error('CRITICAL: X402_PLATFORM_WALLET not set. User funds would be burned. Set this environment variable before starting.');
+    console.warn('[x402] X402_PLATFORM_WALLET not configured. x402 micropayments disabled. Set this environment variable to enable fallback payments.');
+    return null;
   }
   
   // Check if it's the zero address
   if (wallet.toLowerCase() === '0x0000000000000000000000000000000000000000' || wallet === '0x0') {
-    throw new Error('CRITICAL: X402_PLATFORM_WALLET is set to zero address. This would burn user funds. Configure a valid wallet address.');
+    throw new Error('CRITICAL: X402_PLATFORM_WALLET is set to zero address. This would burn user funds. Configure a valid wallet address or remove the variable.');
   }
   
   // Basic validation that it looks like an Ethereum address
@@ -38,8 +40,11 @@ function validatePlatformWallet(): Address {
     throw new Error(`CRITICAL: X402_PLATFORM_WALLET is invalid. Expected 0x-prefixed 40-character hex address, got: ${wallet}`);
   }
   
+  console.log(`[x402] Platform wallet configured: ${wallet}`);
   return wallet as Address;
 }
+
+const platformWallet = validatePlatformWallet();
 
 export const X402_CONFIG = {
   // Dynamic pricing: charge 2x actual AI cost (100% markup)
@@ -49,8 +54,11 @@ export const X402_CONFIG = {
   estimatedAiCost: 0.01, // ~$0.01 for Grok 4 Fast typical call
   
   // Platform wallet for receiving payments (Arbitrum network)
-  // Validates at startup to prevent fund loss
-  platformWallet: validatePlatformWallet(),
+  // null if not configured (x402 disabled)
+  platformWallet: platformWallet,
+  
+  // Whether x402 is enabled (requires platform wallet)
+  enabled: platformWallet !== null,
   
   // Supported networks (switched from Base to Arbitrum)
   networks: ['arbitrum', 'arbitrum-sepolia'] as const,
@@ -388,6 +396,11 @@ export async function recordDeposit(params: {
 }): Promise<string> {
   const { userId, amount, network, transactionHash, fromAddress } = params;
   
+  // Check if x402 is enabled
+  if (!X402_CONFIG.enabled || !X402_CONFIG.platformWallet) {
+    throw new Error('x402 micropayments not configured. Deposits cannot be processed.');
+  }
+  
   // No minimum deposit check - allow any amount
   // Get current balance
   const currentBalance = await getUserX402Balance(userId);
@@ -456,6 +469,11 @@ export async function processAICallPayment(params: {
   
   console.log(`[x402] Processing AI call payment: user ${userId}, AI cost $${actualAiCost.toFixed(4)}, total charge $${totalCharge.toFixed(4)}`);
   
+  // Check if x402 is enabled
+  if (!X402_CONFIG.enabled || !X402_CONFIG.platformWallet) {
+    throw new Error('x402 micropayments not configured. Cannot process payment.');
+  }
+  
   // Get user's Arbitrum wallet
   const wallet = await getUserArbitrumWallet(userId);
   if (!wallet) {
@@ -497,7 +515,7 @@ export async function processAICallPayment(params: {
       network: wallet.network,
       transactionHash: transferResult.transactionHash,
       fromAddress: wallet.address,
-      toAddress: X402_CONFIG.platformWallet,
+      toAddress: X402_CONFIG.platformWallet!,
       balanceBefore: balanceBefore.toString(),
       balanceAfter: balanceAfter.toString(),
       metadata: {
@@ -672,12 +690,17 @@ export function generatePaymentRequest(params: {
 } {
   const { amount, description, resource = '/api/ai/chat' } = params;
   
+  // Check if x402 is enabled
+  if (!X402_CONFIG.enabled || !X402_CONFIG.platformWallet) {
+    throw new Error('x402 micropayments not configured. Please contact support or upgrade your tier.');
+  }
+  
   return {
     maxAmountRequired: amount.toFixed(2),
     resource,
     description,
     payTo: X402_CONFIG.platformWallet,
-    network: 'base'
+    network: 'arbitrum' // Changed from 'base' to 'arbitrum'
   };
 }
 
