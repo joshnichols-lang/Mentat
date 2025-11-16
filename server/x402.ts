@@ -20,6 +20,27 @@ export const USDC_CONTRACTS = {
   'arbitrum-sepolia': '0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d' as const, // USDC on Arbitrum Sepolia
 } as const;
 
+// Validate platform wallet configuration at startup
+function validatePlatformWallet(): Address {
+  const wallet = process.env.X402_PLATFORM_WALLET;
+  
+  if (!wallet) {
+    throw new Error('CRITICAL: X402_PLATFORM_WALLET not set. User funds would be burned. Set this environment variable before starting.');
+  }
+  
+  // Check if it's the zero address
+  if (wallet.toLowerCase() === '0x0000000000000000000000000000000000000000' || wallet === '0x0') {
+    throw new Error('CRITICAL: X402_PLATFORM_WALLET is set to zero address. This would burn user funds. Configure a valid wallet address.');
+  }
+  
+  // Basic validation that it looks like an Ethereum address
+  if (!wallet.match(/^0x[a-fA-F0-9]{40}$/)) {
+    throw new Error(`CRITICAL: X402_PLATFORM_WALLET is invalid. Expected 0x-prefixed 40-character hex address, got: ${wallet}`);
+  }
+  
+  return wallet as Address;
+}
+
 export const X402_CONFIG = {
   // Dynamic pricing: charge 2x actual AI cost (100% markup)
   markupMultiplier: 2.0, // 100% markup on actual AI cost
@@ -28,7 +49,8 @@ export const X402_CONFIG = {
   estimatedAiCost: 0.01, // ~$0.01 for Grok 4 Fast typical call
   
   // Platform wallet for receiving payments (Arbitrum network)
-  platformWallet: process.env.X402_PLATFORM_WALLET || '0x0000000000000000000000000000000000000000',
+  // Validates at startup to prevent fund loss
+  platformWallet: validatePlatformWallet(),
   
   // Supported networks (switched from Base to Arbitrum)
   networks: ['arbitrum', 'arbitrum-sepolia'] as const,
@@ -408,9 +430,9 @@ export async function recordDeposit(params: {
 }
 
 /**
- * Process AI call payment
- * Deducts from user's x402 balance and records transaction
- * Uses row-level locking to prevent race conditions in concurrent requests
+ * Process AI call payment using Arbitrum USDC transfer
+ * Executes transferFrom to pull USDC from user's wallet
+ * Waits for blockchain confirmation before returning (2-5 seconds on Arbitrum)
  */
 export async function processAICallPayment(params: {
   userId: string;
@@ -432,73 +454,77 @@ export async function processAICallPayment(params: {
   const totalCharge = calculateX402Price(actualAiCost);
   const markup = totalCharge - actualAiCost;
   
-  // Start transaction with row-level locking to prevent concurrent balance overdraft
-  const result = await db.transaction(async (tx) => {
-    // Lock the user row for update (prevents concurrent modifications)
-    const userResult = await tx.execute<{ x402_balance: string }>(
-      sql`SELECT x402_balance FROM users WHERE id = ${userId} FOR UPDATE`
-    );
-    
-    if (!userResult.rows || userResult.rows.length === 0) {
-      throw new Error('User not found');
-    }
-    
-    const user = userResult.rows[0];
-    const currentBalance = parseFloat(user.x402_balance || '0');
-    
-    // Check balance while holding the lock
-    if (currentBalance < totalCharge) {
-      throw new Error(`Insufficient x402 balance. Required: $${totalCharge.toFixed(4)}, Available: $${currentBalance.toFixed(4)}`);
-    }
-    
-    const newBalance = currentBalance - totalCharge;
-    
-    // Update user balance
-    await tx.update(users)
-      .set({
-        x402Balance: newBalance.toString(),
-        updatedAt: new Date()
-      })
-      .where(eq(users.id, userId));
-    
-    // Record transaction
-    const [transaction] = await tx.insert(x402Transactions)
-      .values({
-        userId,
-        type: 'payment',
-        amount: totalCharge.toString(),
-        status: 'completed',
-        network: 'base',
-        balanceBefore: currentBalance.toString(),
-        balanceAfter: newBalance.toString(),
-        metadata: {
-          strategyId,
-          provider,
-          model,
-          purpose: 'ai_call',
-          actualAiCost,
-          markup,
-          totalCharge,
-          markupPercentage: 100
-        },
-        description: `AI call payment - ${provider} ${model} (cost: $${actualAiCost.toFixed(4)}, charge: $${totalCharge.toFixed(4)})`,
-        completedAt: new Date()
-      })
-      .returning({ id: x402Transactions.id });
-    
-    return { id: transaction.id, balanceAfter: newBalance, aiCost: actualAiCost, markup, totalCharge };
+  console.log(`[x402] Processing AI call payment: user ${userId}, AI cost $${actualAiCost.toFixed(4)}, total charge $${totalCharge.toFixed(4)}`);
+  
+  // Get user's Arbitrum wallet
+  const wallet = await getUserArbitrumWallet(userId);
+  if (!wallet) {
+    throw new Error('No Arbitrum wallet found for user. Please connect your wallet.');
+  }
+  
+  // Get current on-chain balance before transfer
+  const balanceBefore = await checkArbitrumUsdcBalance({
+    walletAddress: wallet.address,
+    network: wallet.network
   });
   
-  console.log(`[x402] AI call payment processed: AI cost $${actualAiCost.toFixed(4)}, charged $${totalCharge.toFixed(4)} (100% markup), user ${userId}, new balance: $${result.balanceAfter.toFixed(4)}`);
+  // Execute USDC transfer from user's wallet to platform wallet
+  // This will wait for blockchain confirmation (2-5 seconds on Arbitrum L2)
+  const transferResult = await executeUsdcTransfer({
+    userId,
+    fromAddress: wallet.address,
+    amount: totalCharge,
+    network: wallet.network
+  });
+  
+  if (!transferResult.success) {
+    throw new Error('USDC transfer failed');
+  }
+  
+  // Get balance after transfer for accurate record-keeping
+  const balanceAfter = await checkArbitrumUsdcBalance({
+    walletAddress: wallet.address,
+    network: wallet.network
+  });
+  
+  // Record the transaction in database with actual on-chain balances
+  const [transaction] = await db.insert(x402Transactions)
+    .values({
+      userId,
+      type: 'payment',
+      amount: totalCharge.toString(),
+      status: 'completed',
+      network: wallet.network,
+      transactionHash: transferResult.transactionHash,
+      fromAddress: wallet.address,
+      toAddress: X402_CONFIG.platformWallet,
+      balanceBefore: balanceBefore.toString(),
+      balanceAfter: balanceAfter.toString(),
+      metadata: {
+        strategyId,
+        provider,
+        model,
+        purpose: 'ai_call',
+        actualAiCost,
+        markup,
+        totalCharge,
+        markupPercentage: 100
+      },
+      description: `AI call payment - ${provider} ${model} (cost: $${actualAiCost.toFixed(4)}, charge: $${totalCharge.toFixed(4)})`,
+      completedAt: new Date()
+    })
+    .returning({ id: x402Transactions.id });
+  
+  console.log(`[x402] AI call payment completed: tx ${transferResult.transactionHash}, charged $${totalCharge.toFixed(4)}`);
   
   return {
     success: true,
-    transactionId: result.id,
-    balanceAfter: result.balanceAfter,
+    transactionId: transaction.id,
+    balanceAfter: balanceAfter,
     costBreakdown: {
-      aiCost: result.aiCost,
-      markup: result.markup,
-      totalCharge: result.totalCharge
+      aiCost: actualAiCost,
+      markup,
+      totalCharge
     }
   };
 }
