@@ -1,7 +1,16 @@
 import { db } from './db';
 import { users, x402Transactions, userWallets, type InsertX402Transaction } from '../shared/schema';
 import { eq, sql, desc, and } from 'drizzle-orm';
-import { createPublicClient, http, type Address, formatUnits, parseUnits } from 'viem';
+import { 
+  createPublicClient, 
+  createWalletClient,
+  http, 
+  type Address, 
+  type Hash,
+  formatUnits, 
+  parseUnits
+} from 'viem';
+import { privateKeyToAccount } from 'viem/accounts';
 import { arbitrum, arbitrumSepolia } from 'viem/chains';
 
 // x402 Configuration
@@ -85,6 +94,27 @@ const arbitrumSepoliaClient = createPublicClient({
 
 function getClient(network: X402Network) {
   return network === 'arbitrum' ? arbitrumClient : arbitrumSepoliaClient;
+}
+
+// Create wallet client for executing transactions (requires private key)
+function getWalletClient(network: X402Network) {
+  const privateKey = process.env.X402_PLATFORM_PRIVATE_KEY;
+  
+  if (!privateKey) {
+    throw new Error('X402_PLATFORM_PRIVATE_KEY not set in environment');
+  }
+  
+  // Ensure private key starts with 0x
+  const formattedKey = privateKey.startsWith('0x') ? privateKey : `0x${privateKey}`;
+  
+  const account = privateKeyToAccount(formattedKey as `0x${string}`);
+  const chain = network === 'arbitrum' ? arbitrum : arbitrumSepolia;
+  
+  return createWalletClient({
+    account,
+    chain,
+    transport: http()
+  });
 }
 
 /**
@@ -249,6 +279,78 @@ export async function canPayForAICall(userId: string, estimatedAiCost?: number):
     walletAddress: wallet.address,
     network: wallet.network
   };
+}
+
+/**
+ * Execute USDC transfer from user's Arbitrum wallet to platform wallet
+ * Uses ERC-20 transferFrom (requires prior approval from user)
+ * Waits for transaction confirmation before returning
+ */
+export async function executeUsdcTransfer(params: {
+  userId: string;
+  fromAddress: Address;
+  amount: number;
+  network: X402Network;
+}): Promise<{
+  success: boolean;
+  transactionHash: Hash;
+  actualAmount: number;
+}> {
+  const { userId, fromAddress, amount, network } = params;
+  
+  console.log(`[x402] Executing USDC transfer: ${amount} from ${fromAddress} on ${network}`);
+  
+  // Convert amount to USDC units (6 decimals)
+  const amountInUnits = parseUnits(amount.toString(), 6);
+  const usdcContract = X402_CONFIG.usdcContracts[network];
+  const platformWallet = X402_CONFIG.platformWallet as Address;
+  
+  try {
+    // Get wallet client (uses platform wallet's private key)
+    const walletClient = getWalletClient(network);
+    const publicClient = getClient(network);
+    
+    // Execute transferFrom transaction
+    // This pulls USDC from user's wallet (they must have approved platform wallet)
+    const hash = await walletClient.writeContract({
+      address: usdcContract as Address,
+      abi: X402_CONFIG.usdcAbi,
+      functionName: 'transferFrom',
+      args: [fromAddress, platformWallet, amountInUnits],
+      account: walletClient.account,
+    });
+    
+    console.log(`[x402] Transfer transaction submitted: ${hash}`);
+    
+    // Wait for transaction confirmation
+    const receipt = await publicClient.waitForTransactionReceipt({
+      hash,
+      confirmations: 1, // Wait for 1 confirmation on Arbitrum (fast L2)
+    });
+    
+    if (receipt.status === 'success') {
+      console.log(`[x402] Transfer confirmed: ${hash}, gas used: ${receipt.gasUsed}`);
+      return {
+        success: true,
+        transactionHash: hash,
+        actualAmount: amount
+      };
+    } else {
+      console.error(`[x402] Transfer failed: ${hash}`);
+      throw new Error('Transaction reverted');
+    }
+  } catch (error: any) {
+    console.error(`[x402] Transfer error:`, error);
+    
+    // Provide more specific error messages
+    if (error.message?.includes('insufficient allowance')) {
+      throw new Error('Insufficient USDC approval. Please approve the platform to spend your USDC.');
+    } else if (error.message?.includes('insufficient balance')) {
+      throw new Error('Insufficient USDC balance in your Arbitrum wallet.');
+    } else {
+      throw new Error(`Transfer failed: ${error.message || 'Unknown error'}`);
+    }
+  }
 }
 
 /**
