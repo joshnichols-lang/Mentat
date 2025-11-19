@@ -304,7 +304,7 @@ export default function EnhancedUIPreview() {
                 <CardHeader className="pb-3">
                   <div className="flex items-center gap-2">
                     <Bot className="h-4 w-4 text-primary" />
-                    <CardTitle className="text-sm">Ask Mr. Fox</CardTitle>
+                    <CardTitle className="text-sm">Ask m.teg</CardTitle>
                   </div>
                 </CardHeader>
                 <CardContent>

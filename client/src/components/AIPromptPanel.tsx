@@ -217,7 +217,7 @@ export default function AIPromptPanel() {
       if (data.executionSkipped) {
         toast({
           title: "Passive Mode - Strategy Generated",
-          description: "Mr. Fox generated a trading strategy but did not execute trades. Switch to Active Mode to enable autonomous trading.",
+          description: "m.teg generated a trading strategy but did not execute trades. Switch to Active Mode to enable autonomous trading.",
         });
       } else if (data.execution) {
         setLastExecution(data.execution);
@@ -244,7 +244,7 @@ export default function AIPromptPanel() {
       } else {
         toast({
           title: "Strategy Generated",
-          description: data.strategy?.interpretation || "Mr. Fox generated a trading strategy",
+          description: data.strategy?.interpretation || "m.teg generated a trading strategy",
         });
       }
     },
@@ -397,8 +397,8 @@ export default function AIPromptPanel() {
       <Card className="p-4">
         <div className="mb-3 flex items-center gap-2 justify-between">
           <div className="flex items-center gap-2">
-            <img src={logoUrl} alt="Mr. Fox" className="h-5 w-5" />
-            <h2 className="text-sm font-semibold">Mr. Fox</h2>
+            <img src={logoUrl} alt="m.teg" className="h-5 w-5" />
+            <h2 className="text-sm font-semibold">m.teg</h2>
             {executeTradeMutation.isPending && (
               <Badge variant="secondary" className="gap-1.5 text-xs">
                 <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />

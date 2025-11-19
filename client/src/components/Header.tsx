@@ -97,8 +97,8 @@ export default function Header() {
             onClick={() => setLocation("/")}
             data-testid="link-logo-home"
           >
-            <img src={logoUrl} alt="1fox logo" className="h-6 w-6" />
-            <h1 className="text-lg font-bold">1fox</h1>
+            <img src={logoUrl} alt="Mentat logo" className="h-6 w-6" />
+            <h1 className="text-lg font-bold">MENTAT</h1>
           </div>
           <Badge variant="outline" className="gap-1.5 text-xs" data-testid="status-connection">
             <div className="h-1.5 w-1.5 rounded-full bg-chart-2 animate-pulse" />

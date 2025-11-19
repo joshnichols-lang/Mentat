@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useMemo } from "react";
+import { useEffect, useRef, useState } from "react";
 import { 
   createChart, 
   IChartApi, 
@@ -28,6 +28,31 @@ interface TradingChartProps {
 
 type Timeframe = "1m" | "5m" | "15m" | "1h" | "4h" | "1D";
 
+// Helper function to compute chart colors from CSS variables
+// Reads from element (which inherits .mentat-terminal overrides if present)
+function getChartColors(element: HTMLElement) {
+  const styles = getComputedStyle(element);
+  const primary = styles.getPropertyValue('--primary').trim();
+  const destructive = styles.getPropertyValue('--destructive').trim();
+  const border = styles.getPropertyValue('--border').trim();
+  const foreground = styles.getPropertyValue('--foreground').trim();
+  
+  return {
+    grid: `hsl(${border} / 0.15)`,
+    crosshair: `hsl(${primary} / 0.8)`,
+    border: `hsl(${border} / 0.3)`,
+    text: `hsl(${foreground})`,
+    upColor: `hsl(${primary} / 0.2)`,
+    downColor: `hsl(${destructive} / 0.2)`,
+    borderUpColor: `hsl(${primary})`,
+    borderDownColor: `hsl(${destructive})`,
+    wickUpColor: `hsl(${primary})`,
+    wickDownColor: `hsl(${destructive})`,
+    volumeUp: `hsl(${primary} / 0.3)`,
+    volumeDown: `hsl(${destructive} / 0.3)`,
+  };
+}
+
 export default function TradingChart({ symbol, onSymbolChange }: TradingChartProps) {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
@@ -46,25 +71,12 @@ export default function TradingChart({ symbol, onSymbolChange }: TradingChartPro
   const [magnetEnabled, setMagnetEnabled] = useState(true);
   const indicatorSeriesRef = useRef<Map<string, ISeriesApi<any>>>(new Map());
 
-  // Minimalist monochrome colors - grey/white/black only
-  // Memoize colors to prevent unnecessary chart re-initialization
-  const colors = useMemo(() => ({
-    grid: mode === "dark" ? "rgba(255, 255, 255, 0.03)" : "rgba(0, 0, 0, 0.05)",
-    crosshair: mode === "dark" ? "rgba(255, 255, 255, 0.2)" : "rgba(0, 0, 0, 0.2)",
-    border: mode === "dark" ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.1)",
-    text: mode === "dark" ? "#a1a1aa" : "#52525b",
-    // Candle fill colors: Light mode = up transparent/down black, Dark mode = up white/down transparent
-    upColor: mode === "dark" ? "#ffffff" : "transparent",     // Dark: white, Light: transparent
-    downColor: mode === "dark" ? "transparent" : "#000000",   // Dark: transparent, Light: black
-    borderColor: mode === "dark" ? "#525252" : "#737373",     // Grey outline
-    wickColor: mode === "dark" ? "#737373" : "#525252",       // Grey wicks
-    volumeUp: mode === "dark" ? "rgba(115, 115, 115, 0.3)" : "rgba(82, 82, 82, 0.3)",   // Grey volume
-    volumeDown: mode === "dark" ? "rgba(82, 82, 82, 0.3)" : "rgba(115, 115, 115, 0.3)", // Grey volume
-  }), [mode]);
-
   // Initialize chart
   useEffect(() => {
     if (!chartContainerRef.current) return;
+
+    // Get colors from container element (inherits .mentat-terminal overrides if present)
+    const colors = getChartColors(chartContainerRef.current);
 
     const chart = createChart(chartContainerRef.current, {
       layout: {
@@ -108,14 +120,14 @@ export default function TradingChart({ symbol, onSymbolChange }: TradingChartPro
       },
     });
 
-    // Create candlestick series with white/black fills
+    // Create candlestick series with terminal colors (cyan/red)
     const candleSeries = chart.addSeries(CandlestickSeries, {
-      upColor: colors.upColor,                 // White fill for up candles
-      downColor: colors.downColor,             // Black fill for down candles
-      borderUpColor: colors.borderColor,       // Grey outline
-      borderDownColor: colors.borderColor,     // Grey outline
-      wickUpColor: colors.wickColor,           // Grey wicks
-      wickDownColor: colors.wickColor,         // Grey wicks
+      upColor: colors.upColor,                 // Cyan fill for up candles
+      downColor: colors.downColor,             // Red fill for down candles
+      borderUpColor: colors.borderUpColor,     // Bright cyan border
+      borderDownColor: colors.borderDownColor, // Bright red border
+      wickUpColor: colors.wickUpColor,         // Cyan wicks
+      wickDownColor: colors.wickDownColor,     // Red wicks
     });
 
     // Create volume series
@@ -194,7 +206,7 @@ export default function TradingChart({ symbol, onSymbolChange }: TradingChartPro
       indicatorSeriesRef.current.clear();
       chart.remove();
     };
-  }, [colors, mode]);
+  }, [mode]);
 
   // Fetch historical candle data and set up WebSocket
   useEffect(() => {
@@ -264,7 +276,8 @@ export default function TradingChart({ symbol, onSymbolChange }: TradingChartPro
           candleSeriesRef.current.setData(sortedCandles);
         }
 
-        if (volumeSeriesRef.current) {
+        if (volumeSeriesRef.current && chartContainerRef.current) {
+          const colors = getChartColors(chartContainerRef.current);
           const sortedVolumes = sorted.map(([_, data]) => {
             const volumeColor = data.candle.close >= data.candle.open ? 
               colors.volumeUp : colors.volumeDown;
@@ -351,7 +364,8 @@ export default function TradingChart({ symbol, onSymbolChange }: TradingChartPro
             }
 
             // Update volume histogram - use update() to preserve zoom
-            if (volumeSeriesRef.current) {
+            if (volumeSeriesRef.current && chartContainerRef.current) {
+              const colors = getChartColors(chartContainerRef.current);
               const volumeColor = candlePoint.close >= candlePoint.open ? 
                 colors.volumeUp : colors.volumeDown;
               
@@ -396,9 +410,10 @@ export default function TradingChart({ symbol, onSymbolChange }: TradingChartPro
 
   // Separate effect to update volume colors when theme changes (without clearing data)
   useEffect(() => {
-    if (candleData.size === 0 || !volumeSeriesRef.current) return;
+    if (candleData.size === 0 || !volumeSeriesRef.current || !chartContainerRef.current) return;
     
     // Recompute volume colors with new theme palette
+    const colors = getChartColors(chartContainerRef.current);
     const sorted = Array.from(candleData.entries()).sort((a, b) => a[0] - b[0]);
     const sortedVolumes = sorted.map(([_, data]) => {
       const volumeColor = data.candle.close >= data.candle.open ? 
@@ -412,7 +427,7 @@ export default function TradingChart({ symbol, onSymbolChange }: TradingChartPro
     });
     
     volumeSeriesRef.current.setData(sortedVolumes);
-  }, [colors, candleData]);
+  }, [mode, candleData]);
 
   // Update indicators when candle data or mode changes
   useEffect(() => {

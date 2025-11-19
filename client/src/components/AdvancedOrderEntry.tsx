@@ -215,7 +215,7 @@ export function AdvancedOrderEntry({ symbol, currentPrice }: AdvancedOrderEntryP
             <LiquidToggle
               checked={aiOptimizationEnabled}
               onCheckedChange={setAiOptimizationEnabled}
-              label="Mr. Fox AI"
+              label="m.teg AI"
               data-testid="switch-ai-optimization"
             />
           </div>
@@ -454,7 +454,7 @@ export function AdvancedOrderEntry({ symbol, currentPrice }: AdvancedOrderEntryP
             <CardContent className="p-4 space-y-2">
               <div className="flex items-center gap-2 mb-2">
                 <Sparkles className="w-4 h-4 text-primary" />
-                <span className="text-sm font-semibold">Mr. Fox's Analysis</span>
+                <span className="text-sm font-semibold">m.teg's Analysis</span>
                 <Badge variant="outline" className="ml-auto">
                   {(aiSuggestions.confidenceScore * 100).toFixed(0)}% Confidence
                 </Badge>

@@ -1,7 +1,7 @@
-# 1fox
+# Mentat
 
 ## Overview
-1fox is an AI-powered cryptocurrency trading platform that serves as a "one-stop shop" for various market types including Perpetuals, Prediction Markets, Onchain Options, and future Spot Discovery. It allows users to interact with an AI trading agent, "Mr. Fox," through natural language to execute automated strategies across perpetual futures (Hyperliquid, Orderly Network), prediction markets (Polymarket), and onchain options (Aevo). The platform features a glassmorphic "Fantastic Mr. Fox" themed interface, real-time market data, portfolio tracking, comprehensive trading controls, and institutional-grade advanced order types. 1fox aims to provide a professional AI trading experience focused on Sharpe ratio maximization and continuous risk management as a multi-tenant SaaS solution.
+Mentat is an AI-powered non-custodial cryptocurrency trading terminal offering a professional Numora-inspired dark dashboard and a retro blessed.js-inspired Text User Interface (TUI). It unifies trading across Perpetuals, Prediction Markets, Onchain Options, and future Spot Discovery. Users interact with an AI trading agent, "m.teg," via natural language to execute automated strategies, focusing on Sharpe ratio maximization and continuous risk management. The project aims to deliver a powerful AI trading experience through both professional and retro terminal interfaces.
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
@@ -10,72 +10,66 @@ Preferred communication style: Simple, everyday language.
 
 ### Frontend
 **Technology Stack:** React with TypeScript, Vite, Wouter, TanStack Query, Tailwind CSS, shadcn/ui, lightweight-charts, and framer-motion.
-**Design System - Mentat Terminal (NEW):** Retro Text User Interface (TUI) with hardcore hacker-style terminal aesthetics. Features CRT scanline overlay, dot grid background, zero rounded corners, IBM Plex Mono monospace typography everywhere, box-drawing characters (┌┐└┘├─└─) for borders and tree navigation. Dark mode uses #0a0a0a background with #00ffff cyan primary, #ffff00 yellow secondary, #ff0055 red destructive. Light mode uses #e8e8e8 grey with #0055ff blue. Fixed 100vh/100vw layout with no scrolling - rigid grid system enforces terminal authenticity. Custom SVG charts with glowing strokes and pulsing live price indicators. TUI components include TuiPanel (bordered boxes with corner accents), SidebarTree (ASCII tree connectors), TerminalInput (CLI-style with command history), OrderBook (dense tabular data), and SplineChart (Catmull-Rom splines with glow filters).
-**Design System - Numora (LEGACY):** Dark-themed dashboard inspired by Numora, using deep grey backgrounds, lime green for success, and red/pink for danger. Features a grid-based panel layout with subtle borders. Incorporates unique data visualizations like transaction heatmaps, donut/circular charts for portfolio allocation, patterned bar charts, and gradient area charts. Uses Inter for UI typography and JetBrains Mono for numbers. Panel styling follows a `bg-card border border-border rounded-lg p-4` pattern. Includes time range pills, a token allocation heatmap, metro metric labels, and large display numbers. Supports light/dark modes and features a clean search bar and profile section.
-**Spring Animation System:** Physics-based motion powered by framer-motion with consistent spring parameters across the platform (stiffness: 300, damping: 25-30). Implements smooth tab page transitions (fade + slide), list item stagger animations (50ms delay between cards), and modal spring animations (fade + scale + slide). All animations use spring physics for natural, fluid motion that enhances the ultra-minimal aesthetic without distracting from content.
-**Unified Terminal Architecture:** Single-page interface with five main tabs (Perpetuals, Prediction Markets, Options [Coming Soon], Spot Discovery [Coming Soon], Analytics) and a persistent right sidebar for AI chat, conversation history, positions, and AI usage tracking. Layouts are fixed and optimized for a professional trading experience, with minimal padding and compact widgets.
-**Mentat Terminal Architecture (NEW):** Accessed at /mentat route. Single-screen TUI with top status bar, left sidebar (navigation tree + system metrics), center chart panel (SVG spline chart + price ticker), right sidebar (order book), and bottom terminal (AI input with command history). Demonstrates retro hacker aesthetic with CRT effects and box-drawing UI elements.
-**Order Entry System:** Restructured into a 3-tab design (Market | Limit | Advanced) for improved UX. Supports market and limit orders via API calls, and advanced orders (TWAP, Limit Chase, Scaled, Iceberg, OCO, Trailing TP) with dynamic input fields.
-**Key Layouts:**
-- **Perpetuals Tab:** Hyperliquid-style layout with a large chart, order book, and trading panel at the top, and tabbed panels for positions, open orders, order history, and trade history at the bottom.
-- **Prediction Markets Tab:** Tag-based market browser using Polymarket's eventTags, including popular tags and search functionality. Features an auto-bridging system for Polygon balance.
-- **Options Tab:** Coming Soon placeholder - Will include onchain options trading with AI-powered strategy building, live Greeks, options chain, and multi-leg execution.
-- **Spot Discovery Tab:** Coming Soon placeholder - Will include multi-exchange spot market discovery and AI-powered trend analysis.
-- **Analytics Tab:** Comprehensive performance dashboard with portfolio overview, cumulative returns, drawdown, and Sharpe ratio charts.
-- **Mentat Terminal (/mentat):** Retro TUI demonstration showing hardcore terminal aesthetic with CRT scanlines, box-drawing borders, ASCII tree navigation, custom SVG charts, and CLI-style command input.
+**Design Systems:**
+-   **Mentat Terminal (Active):** Retro TUI at `/mentat` route with CRT scanlines, dot grid background, zero rounded corners, IBM Plex Mono typography, and box-drawing characters. Uses a dark mode with cyan/yellow/red and a light mode with blue. The theme is scoped to `.mentat-terminal` for controlled overrides.
+-   **Numora (Legacy):** Dark-themed dashboard with deep grey backgrounds, lime green for success, and red/pink for danger. Features a grid-based panel layout, unique data visualizations, Inter and JetBrains Mono typography.
+**Animation System:** Physics-based motion powered by `framer-motion` for smooth transitions and animations (stiffness: 300, damping: 25-30).
+**Unified Terminal Architecture:** Single-page interface with five main tabs (Perpetuals, Prediction Markets, Options, Spot Discovery, Analytics) and a persistent right sidebar for AI chat and trading data.
+**Mentat Terminal Architecture:** A single-screen TUI with a top status bar, left sidebar (navigation + metrics), center chart panel, right order book, and bottom AI input/command history.
+**Order Entry System:** A 3-tab design (Market | Limit | Advanced) supporting market, limit, and advanced orders (TWAP, Limit Chase, Scaled, Iceberg, OCO, Trailing TP).
+**Key Layouts:** Dedicated layouts for Perpetuals (Hyperliquid-style), Prediction Markets (tag-based browser with auto-bridging), Options (AI-powered strategy building), Spot Discovery (multi-exchange market discovery), and Analytics (performance dashboard). The Mentat Terminal layout is a fixed grid with specific panels for navigation, chart, order book, and command input.
 
 ### Backend
 **Server:** Express.js with TypeScript.
 **Database:** PostgreSQL with Drizzle ORM.
 **API:** RESTful endpoints for trading, data, and exchange interactions.
-**Authentication & Security:** Passport.js with PostgreSQL session persistence, wallet-based authentication via RainbowKit with enhanced visual feedback and error handling. Features a phased authentication flow and AES-256-GCM encryption for API keys.
-**Multi-Chain Wallet System:** Non-custodial, BIP39-derived multi-chain wallet generation. Includes a Hyperliquid dual-wallet architecture with a main wallet for funds and an API wallet for trading operations, both encrypted. Supports Arbitrum One and Arbitrum Sepolia. Features a browser-compatible wallet re-derivation from seed phrase.
-**Withdrawal Fee Disclosure System:** Displays clear, platform-specific fee breakdowns in the SendModal, differentiating network gas fees and platform fees. Supports Hyperliquid gasless USDC withdrawals.
+**Authentication & Security:** Passport.js with PostgreSQL session persistence, wallet-based authentication via RainbowKit, and AES-256-GCM encryption for API keys.
+**Multi-Chain Wallet System:** Non-custodial, BIP39-derived multi-chain wallet generation, including a Hyperliquid dual-wallet architecture. Supports Arbitrum One and Arbitrum Sepolia.
+**Withdrawal Fee Disclosure System:** Transparent display of network and platform fees, supporting Hyperliquid gasless USDC withdrawals.
 **AI Integration:**
-- **Tiered AI Provider System:** Supports Platform AI and Personal AI Keys (Perplexity, OpenAI, xAI), defaulting to xAI Grok 4.
-- **Unified Conversational AI:** AI responds naturally, answers questions, and generates structured JSON trading actions based on conversational context.
-- **Strategy-Scoped Context:** Independent conversation history and AI context per trading strategy.
-- **Custom Rules Priority:** User-defined rules guide AI behavior and risk management.
-- **Multi-Instrument Portfolio Analysis:** Unified portfolio aggregator fetches live positions from all integrated exchanges. AI endpoint provides cross-platform hedging recommendations, correlation analysis, and total delta exposure calculations.
-- **AI Cost Control System:** Dual-layer optimization combining strategy-aware monitoring with per-user hourly rate limits. Strategy parser auto-detects timeframes to minimize AI calls. UI displays real-time usage stats with warnings.
-- **AI Status Indicators:** Real-time status lights in the AIPromptPanel header show AI system health, balance visibility, and trading activity.
-- **Tiered Access System:** Five-tier structure (Free/Bronze/Silver/Gold/Platinum) with balance OR volume qualification. Free tier provides 25 AI calls/day with 15-min strategies. Higher tiers unlock more AI calls (100/300/1000/unlimited) and faster strategy frequencies (5-min/1-min/unlimited). Tier calculation uses Hyperliquid balance aggregation and trade volume tracking. System prevents cache invalidation on API failures by preserving existing totals. Database fields include tier, aiCallsToday, aiCallsResetAt (midnight UTC), totalDepositUsd, totalVolumeUsd. API endpoints at /api/tiers/* provide current tier status, quota tracking, and manual tier refresh.
-- **x402 Micropayment Infrastructure:** Direct USDC payment system using user's connected Arbitrum wallet for AI usage. Provides fallback monetization when tier quotas are exhausted without requiring tier upgrades. **Payment Flow**: (1) User connects Arbitrum wallet during account creation and approves platform to spend USDC (one-time ERC-20 approval), (2) AI endpoints check tier quota first; if exhausted, check Arbitrum USDC balance + approval status, (3) If sufficient, platform wallet executes transferFrom to pull USDC from user → platform wallet, (4) Transaction waits for 1 confirmation on Arbitrum L2 (~2-5 seconds), (5) AI call processes after payment confirmed. **Dynamic Pricing Model**: Users pay exactly 2x the actual AI API cost (100% markup). Typical costs range from $0.002-0.02 per call depending on model used (Grok 4 Fast ~$0.002, GPT-4o ~$0.05). Fair, transparent, and ensures profitability while remaining competitive. **Architecture**: Platform wallet (X402_PLATFORM_WALLET + X402_PLATFORM_PRIVATE_KEY env vars) signs transferFrom transactions using viem. Startup validation prevents server from starting if wallet not configured (prevents fund loss). Database schema includes x402Agreement, x402AgreementAt, x402UsdcApprovalTxHash in users table, and x402Transactions table tracking on-chain payments with transaction hashes, from/to addresses, actual on-chain balances before/after, and cost breakdown metadata. USDC contracts: Arbitrum One (0xaf88d065e77c8cC2239327C5EDb3A432268e5831), Arbitrum Sepolia (0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d). **Security**: Payment-first flow ensures "no freebies", atomic transfers with confirmation wait, comprehensive error handling for insufficient balance/allowance, accurate on-chain balance tracking for reconciliation. Status: Backend complete, requires X402_PLATFORM_WALLET and X402_PLATFORM_PRIVATE_KEY configuration. Frontend and admin panel pending.
+-   **Tiered AI Provider System:** Supports Platform AI and Personal AI Keys (Perplexity, OpenAI, xAI), defaulting to xAI Grok 4.
+-   **Unified Conversational AI:** AI responds naturally, answers questions, and generates structured JSON trading actions.
+-   **Strategy-Scoped Context:** Independent conversation history and AI context per trading strategy.
+-   **Custom Rules Priority:** User-defined rules guide AI behavior and risk management.
+-   **Multi-Instrument Portfolio Analysis:** Aggregates live positions across exchanges for cross-platform hedging and correlation analysis.
+-   **AI Cost Control System:** Strategy-aware monitoring with per-user hourly rate limits and real-time usage stats.
+-   **Tiered Access System:** Five-tier structure (Free to Platinum) based on balance or volume, determining AI call limits and strategy frequency.
+-   **x402 Micropayment Infrastructure:** Direct USDC payment system via connected Arbitrum wallet for AI usage when tier quotas are exhausted. Users pay 2x the actual AI API cost.
 **Agent Modes:** Passive Mode (discussion) and Active Mode (execution with safety constraints).
-**Order Management & Strategy Enforcement:** Enforces max positions, entry limits, and utilizes bracket orders for TP/SL protection.
-**Comprehensive Safety System:** Mandatory protective brackets, liquidation protection, manual override, Terminal Safety Guard, and protective order validation.
+**Order Management & Strategy Enforcement:** Enforces max positions, entry limits, and utilizes bracket orders.
+**Comprehensive Safety System:** Mandatory protective brackets, liquidation protection, manual override, and protective order validation.
 **Multi-Exchange Integration:** Full REST API and WebSocket integration for Orderly Network, Hyperliquid, Aevo, and Polymarket.
-**Advanced Order System:** Institutional-grade execution engine supporting TWAP, Limit Chase, Scaled/Ladder Orders, Iceberg Orders, OCO, and Trailing Take-Profit, enhanced with AI-powered Smart Order Router, AI Execution Optimizer, and Predictive Execution Timing.
-**WebSocket Infrastructure:** Market Data and Aevo WebSocket services operational with path-specific routing and manual upgrade handlers, coexisting with Vite HMR.
-**Performance Optimizations:** Tiered data-refresh strategy implemented to ensure buttery-smooth UI. Critical queries poll every 10-15s (orderbooks), status queries every 15-30s (balances, trading mode), and metadata queries every 60s+ (portfolio, analytics). Polymarket markets paginated to 100 per request. Expensive computations memoized using React.useMemo/useCallback. High-frequency components wrapped with React.memo. Production console.logs removed to reduce overhead.
-**Strategy Character System:** Trading strategies can have custom avatars, taglines, and descriptions (character identities). Avatar upload endpoint (`/api/upload-avatar`) validates images using sharp (MIME type, 5MB max, minimum 256×256px) and stores in `attached_assets/strategy_avatars` with UUID filenames. Database schema includes `avatar_url`, `tagline` (max 80 chars), and `description` fields. ImageUpload component provides drag-drop interface with preview, progress tracking, and removal. StrategyCard component displays avatar, name, tagline, description, and live performance metrics. TradingModeModal integrates avatar upload and tagline input with proper state management for create/edit/remove flows.
+**Advanced Order System:** Institutional-grade execution engine with AI-powered Smart Order Router, Execution Optimizer, and Predictive Execution Timing.
+**WebSocket Infrastructure:** Market Data and Aevo WebSocket services with path-specific routing.
+**Performance Optimizations:** Tiered data-refresh strategy, memoization using React.useMemo/useCallback, and React.memo for high-frequency components.
+**Strategy Character System:** Allows custom avatars, taglines, and descriptions for trading strategies, stored with UUID filenames after validation.
 
 ## External Dependencies
 
 **Trading Infrastructure:**
-- **Hyperliquid Exchange:** `hyperliquid` npm package.
-- **Orderly Network:** Custom REST API client and WebSocket service.
-- **Polymarket:** `@polymarket/clob-client`.
-- **Aevo:** Custom REST API client and WebSocket service.
+-   Hyperliquid Exchange (`hyperliquid` npm package)
+-   Orderly Network (Custom REST API client and WebSocket)
+-   Polymarket (`@polymarket/clob-client`)
+-   Aevo (Custom REST API client and WebSocket)
 
 **UI Component Libraries:**
-- **Radix UI**
-- **RainbowKit + wagmi + viem:** Wallet connection for EVM.
-- **framer-motion:** Spring-based physics animations for tabs, modals, and list items.
-- **lightweight-charts:** Trading charts.
-- **Recharts, Victory, D3, react-sparklines:** Data visualization.
-- **react-countup:** Number animations.
-- **Lucide React:** Iconography.
-- **Embla Carousel:** Carousels.
+-   Radix UI
+-   RainbowKit, wagmi, viem (EVM wallet connection)
+-   framer-motion (Animations)
+-   lightweight-charts (Trading charts)
+-   Recharts, Victory, D3, react-sparklines (Data visualization)
+-   react-countup (Number animations)
+-   Lucide React (Iconography)
+-   Embla Carousel (Carousels)
 
 **Database & ORM:**
-- `pg` (node-postgres)
-- **Drizzle ORM**
+-   `pg` (node-postgres)
+-   Drizzle ORM
 
 **AI/LLM:**
-- **OpenAI SDK:** Used for Perplexity API integration.
+-   OpenAI SDK (for Perplexity API integration)
 
 **Development Tools:**
-- **Vite:** Frontend build.
-- **ESBuild:** Server bundling.
-- **TypeScript**
+-   Vite (Frontend build)
+-   ESBuild (Server bundling)
+-   TypeScript

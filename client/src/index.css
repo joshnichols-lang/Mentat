@@ -10,154 +10,193 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ========== MENTAT TERMINAL - RETRO TUI DARK MODE ========== */
+/* ========== NUMORA/1FOX - ULTRA-MINIMAL DARK MODE ========== */
 .dark {
-  /* Deep black background - hacker terminal aesthetic */
-  --background: 210 20% 4%;        /* #0a0a0a - Deep black */
-  --foreground: 180 100% 50%;      /* #00ffff - Cyan text */
+  /* Pure black background - ultra-minimal aesthetic */
+  --background: 0 0% 0%;           /* #000000 - Pure black */
+  --foreground: 0 0% 98%;          /* #FAFAFA - Soft white */
   
-  /* Surface levels - minimal distinction */
-  --card: 210 20% 4%;              /* #0a0a0a - Same as background */
-  --card-foreground: 180 100% 50%;  /* #00ffff - Cyan */
-  --popover: 210 20% 4%;
-  --popover-foreground: 180 100% 50%;
+  /* Surface levels - barely elevated */
+  --card: 0 0% 4%;                 /* #0A0A0A - Barely elevated */
+  --card-foreground: 0 0% 98%;
+  --popover: 0 0% 4%;
+  --popover-foreground: 0 0% 98%;
   
-  /* Borders - bright cyan, single pixel */
-  --border: 180 100% 50%;          /* #00ffff - Cyan borders */
-  --input: 210 20% 4%;             /* #0a0a0a - Input background */
+  /* Borders - subtle grey */
+  --border: 0 0% 8%;               /* #141414 - Almost invisible */
+  --input: 0 0% 4%;
   
-  /* Primary - Cyan accent (main interaction color) */
-  --primary: 180 100% 50%;         /* #00ffff - Cyan */
-  --primary-foreground: 210 20% 4%; /* Black text on cyan */
+  /* Primary - Electric lime green */
+  --primary: 135 100% 50%;         /* #00FF41 - Electric lime */
+  --primary-foreground: 0 0% 0%;
   
-  /* Secondary - Yellow accent */
-  --secondary: 60 100% 50%;        /* #ffff00 - Yellow */
-  --secondary-foreground: 210 20% 4%;
+  /* Secondary - Mid grey */
+  --secondary: 0 0% 14%;           /* #242424 */
+  --secondary-foreground: 0 0% 98%;
   
-  --muted: 180 100% 20%;
-  --muted-foreground: 180 100% 35%; /* Dimmed cyan text */
+  --muted: 0 0% 14%;
+  --muted-foreground: 0 0% 65%;    /* #A6A6A6 */
   
-  --accent: 60 100% 50%;           /* #ffff00 - Yellow accent */
-  --accent-foreground: 210 20% 4%;
+  --accent: 135 100% 50%;          /* #00FF41 - Lime accent */
+  --accent-foreground: 0 0% 0%;
   
-  /* Text hierarchy - cyan tones */
-  --text-primary: 180 100% 50%;    /* #00ffff - Bright cyan */
-  --text-secondary: 180 100% 35%;  /* Dimmed cyan */
-  --text-tertiary: 180 100% 20%;   /* Very dim cyan */
+  /* Text hierarchy - grey scale */
+  --text-primary: 0 0% 98%;        /* #FAFAFA */
+  --text-secondary: 0 0% 65%;      /* #A6A6A6 */
+  --text-tertiary: 0 0% 45%;       /* #737373 */
   
-  /* Trading status colors - retro palette */
-  --success: 180 100% 50%;         /* #00ffff - Cyan (buy) */
-  --success-foreground: 210 20% 4%;
+  /* Trading status colors - lime/crimson */
+  --success: 135 100% 50%;         /* #00FF41 - Lime */
+  --success-foreground: 0 0% 0%;
   
-  --destructive: 338 100% 50%;     /* #ff0055 - Retro red */
+  --destructive: 348 83% 47%;      /* #DC143C - Crimson */
   --destructive-foreground: 0 0% 100%;
   
-  --warning: 60 100% 50%;          /* #ffff00 - Yellow */
-  --warning-foreground: 210 20% 4%;
+  --warning: 45 100% 51%;          /* #FFC107 - Amber */
+  --warning-foreground: 0 0% 0%;
   
-  /* Chart colors - terminal palette */
-  --chart-1: 180 100% 50%;         /* #00ffff - Cyan */
-  --chart-2: 338 100% 50%;         /* #ff0055 - Red */
-  --chart-3: 60 100% 50%;          /* #ffff00 - Yellow */
-  --chart-4: 120 100% 50%;         /* #00ff00 - Green */
-  --chart-5: 270 100% 50%;         /* #8800ff - Purple */
+  /* Chart colors - for Numora dashboard */
+  --chart-1: 135 100% 50%;         /* Lime */
+  --chart-2: 348 83% 47%;          /* Crimson */
+  --chart-3: 45 100% 51%;          /* Amber */
+  --chart-4: 200 100% 50%;         /* Cyan */
+  --chart-5: 270 100% 50%;         /* Purple */
   
-  /* Elevation - cyan glow effects */
-  --elevate-1: rgba(0, 255, 255, 0.1);
-  --elevate-2: rgba(0, 255, 255, 0.2);
+  /* Elevation - lime glow effects */
+  --elevate-1: rgba(0, 255, 65, 0.1);
+  --elevate-2: rgba(0, 255, 65, 0.15);
   
-  /* Typography - IBM Plex Mono ONLY */
-  --font-sans: 'IBM Plex Mono', 'Consolas', 'Monaco', monospace;
-  --font-serif: 'IBM Plex Mono', monospace;
-  --font-mono: 'IBM Plex Mono', monospace;
+  /* Typography */
+  --font-sans: 'Inter', -apple-system, sans-serif;
+  --font-serif: 'Inter', sans-serif;
+  --font-mono: 'IBM Plex Mono', 'SF Mono', monospace;
   
-  /* Border radius - ZERO (no rounded corners in TUI) */
-  --radius: 0;
+  /* Border radius - minimal curves */
+  --radius: 0.5rem;
   
-  /* Shadows - none (flat TUI aesthetic) */
-  --shadow-sm: none;
-  --shadow: none;
-  --shadow-md: none;
-  --shadow-lg: none;
-  --shadow-xl: none;
-  
-  /* Ring for focus states - cyan */
-  --ring: 180 100% 50%;
-}
-
-/* ========== MENTAT TERMINAL - LIGHT MODE (Industrial) ========== */
-.light {
-  /* Industrial grey background */
-  --background: 0 0% 91%;          /* #e8e8e8 - Industrial grey */
-  --foreground: 217 100% 35%;      /* #0055ff - Deep blue text */
-  
-  /* Surface levels */
-  --card: 0 0% 91%;
-  --card-foreground: 217 100% 35%;
-  --popover: 0 0% 91%;
-  --popover-foreground: 217 100% 35%;
-  
-  /* Borders - deep blue */
-  --border: 217 100% 35%;          /* #0055ff - Deep blue borders */
-  --input: 0 0% 91%;
-  
-  /* Primary - Deep blue */
-  --primary: 217 100% 35%;         /* #0055ff - Deep blue */
-  --primary-foreground: 0 0% 91%;
-  
-  /* Secondary - Dark grey */
-  --secondary: 0 0% 10%;           /* #1a1a1a - Almost black */
-  --secondary-foreground: 0 0% 91%;
-  
-  --muted: 217 100% 20%;
-  --muted-foreground: 217 100% 50%;
-  
-  --accent: 0 0% 10%;              /* #1a1a1a - Dark accent */
-  --accent-foreground: 0 0% 91%;
-  
-  /* Text hierarchy - blue tones */
-  --text-primary: 217 100% 35%;    /* #0055ff - Deep blue */
-  --text-secondary: 217 100% 50%;  /* Lighter blue */
-  --text-tertiary: 217 100% 70%;   /* Very light blue */
-  
-  /* Trading status colors */
-  --success: 217 100% 35%;         /* Blue */
-  --success-foreground: 0 0% 91%;
-  
-  --destructive: 338 100% 50%;     /* Red */
-  --destructive-foreground: 0 0% 100%;
-  
-  --warning: 45 100% 51%;          /* Yellow */
-  --warning-foreground: 0 0% 10%;
-  
-  /* Chart colors */
-  --chart-1: 217 100% 35%;
-  --chart-2: 338 100% 50%;
-  --chart-3: 60 100% 50%;
-  --chart-4: 120 100% 35%;
-  --chart-5: 270 100% 35%;
-  
-  /* Elevation */
-  --elevate-1: rgba(0, 85, 255, 0.1);
-  --elevate-2: rgba(0, 85, 255, 0.2);
-  
-  /* Typography - IBM Plex Mono everywhere */
-  --font-sans: 'IBM Plex Mono', monospace;
-  --font-serif: 'IBM Plex Mono', monospace;
-  --font-mono: 'IBM Plex Mono', monospace;
-  
-  /* Border radius - ZERO */
-  --radius: 0;
-  
-  /* Shadows - none */
-  --shadow-sm: none;
-  --shadow: none;
-  --shadow-md: none;
-  --shadow-lg: none;
-  --shadow-xl: none;
+  /* Shadows - subtle */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+  --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.1);
   
   /* Ring for focus states */
+  --ring: 135 100% 50%;
+}
+
+/* ========== NUMORA/1FOX - LIGHT MODE ========== */
+.light {
+  /* Pure white background */
+  --background: 0 0% 100%;         /* #FFFFFF - Pure white */
+  --foreground: 0 0% 4%;           /* #0B0B0F - Almost black */
+  
+  /* Surface levels */
+  --card: 0 0% 98%;                /* #FAFAFA */
+  --card-foreground: 0 0% 4%;
+  --popover: 0 0% 98%;
+  --popover-foreground: 0 0% 4%;
+  
+  /* Borders */
+  --border: 0 0% 92%;              /* #EBEBEB */
+  --input: 0 0% 98%;
+  
+  /* Primary - Forest green */
+  --primary: 150 100% 39%;         /* #00C864 - Forest green */
+  --primary-foreground: 0 0% 100%;
+  
+  /* Secondary */
+  --secondary: 0 0% 92%;
+  --secondary-foreground: 0 0% 4%;
+  
+  --muted: 0 0% 92%;
+  --muted-foreground: 0 0% 39%;    /* #646466 */
+  
+  --accent: 150 100% 39%;          /* Forest green accent */
+  --accent-foreground: 0 0% 100%;
+  
+  /* Text hierarchy */
+  --text-primary: 0 0% 4%;
+  --text-secondary: 0 0% 39%;
+  --text-tertiary: 0 0% 55%;       /* #8B8B8D */
+  
+  /* Trading status colors */
+  --success: 150 100% 39%;         /* Forest green */
+  --success-foreground: 0 0% 100%;
+  
+  --destructive: 350 100% 62%;     /* #FF3B69 */
+  --destructive-foreground: 0 0% 100%;
+  
+  --warning: 45 100% 51%;          /* Amber */
+  --warning-foreground: 0 0% 4%;
+  
+  /* Chart colors */
+  --chart-1: 150 100% 39%;
+  --chart-2: 350 100% 62%;
+  --chart-3: 45 100% 51%;
+  --chart-4: 200 100% 50%;
+  --chart-5: 270 100% 50%;
+  
+  /* Elevation */
+  --elevate-1: rgba(0, 200, 100, 0.1);
+  --elevate-2: rgba(0, 200, 100, 0.15);
+  
+  /* Typography */
+  --font-sans: 'Inter', -apple-system, sans-serif;
+  --font-serif: 'Inter', sans-serif;
+  --font-mono: 'IBM Plex Mono', 'SF Mono', monospace;
+  
+  /* Border radius */
+  --radius: 0.5rem;
+  
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+  --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.1);
+  
+  /* Ring for focus states */
+  --ring: 150 100% 39%;
+}
+
+/* ========== SCOPED: MENTAT TERMINAL THEME (for /mentat route only) ========== */
+.mentat-terminal.dark {
+  /* Terminal colors override - apply only within .mentat-terminal wrapper */
+  --background: 210 20% 4%;        /* #0a0a0a - Deep black */
+  --foreground: 180 100% 50%;      /* #00ffff - Cyan text */
+  --card: 210 20% 4%;
+  --card-foreground: 180 100% 50%;
+  --border: 180 100% 50%;          /* Cyan borders */
+  --primary: 180 100% 50%;         /* Cyan */
+  --primary-foreground: 210 20% 4%;
+  --secondary: 60 100% 50%;        /* Yellow */
+  --destructive: 338 100% 50%;     /* Red */
+  --success: 180 100% 50%;         /* Cyan */
+  --ring: 180 100% 50%;
+  --elevate-1: rgba(0, 255, 255, 0.1);
+  --elevate-2: rgba(0, 255, 255, 0.2);
+  --font-sans: 'IBM Plex Mono', monospace;
+  --font-mono: 'IBM Plex Mono', monospace;
+  --radius: 0; /* No rounded corners in terminal */
+}
+
+.mentat-terminal.light {
+  /* Terminal colors for light mode */
+  --background: 0 0% 91%;          /* Industrial grey */
+  --foreground: 217 100% 35%;      /* Deep blue */
+  --card: 0 0% 91%;
+  --card-foreground: 217 100% 35%;
+  --border: 217 100% 35%;
+  --primary: 217 100% 35%;
+  --destructive: 338 100% 50%;
+  --success: 217 100% 35%;
   --ring: 217 100% 35%;
+  --elevate-1: rgba(0, 85, 255, 0.1);
+  --elevate-2: rgba(0, 85, 255, 0.2);
+  --font-sans: 'IBM Plex Mono', monospace;
+  --font-mono: 'IBM Plex Mono', monospace;
+  --radius: 0;
 }
 
 @layer base {
@@ -170,57 +209,6 @@
     font-family: var(--font-sans);
     font-feature-settings: "rlig" 1, "calt" 1, "zero" 1;
     position: relative;
-    overflow: hidden; /* No scrolling - TUI fills viewport */
-  }
-  
-  /* CRT Scanline overlay effect */
-  body::before {
-    content: "";
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: repeating-linear-gradient(
-      0deg,
-      rgba(0, 0, 0, 0.15) 0px,
-      transparent 1px,
-      transparent 2px,
-      rgba(0, 0, 0, 0.15) 3px
-    );
-    pointer-events: none;
-    z-index: 9999;
-    animation: scanline 8s linear infinite;
-  }
-  
-  /* Dot grid background pattern */
-  body::after {
-    content: "";
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-image: 
-      radial-gradient(circle, rgba(0, 255, 255, 0.05) 1px, transparent 1px);
-    background-size: 20px 20px;
-    pointer-events: none;
-    z-index: 0;
-  }
-  
-  @keyframes scanline {
-    0% {
-      background-position: 0 0;
-    }
-    100% {
-      background-position: 0 100%;
-    }
-  }
-  
-  /* All content above background effects */
-  #root {
-    position: relative;
-    z-index: 1;
   }
   
   /* Typography presets */
@@ -228,16 +216,72 @@
     @apply font-semibold tracking-tight;
   }
   
-  /* Everything is monospace */
+  /* Monospace numbers */
   .font-mono {
     font-family: var(--font-mono);
     font-feature-settings: "zero" 1, "ss01" 1;
   }
-  
-  /* Remove all rounded corners globally */
-  * {
-    border-radius: 0 !important;
+}
+
+/* ========== SCOPED: MENTAT TERMINAL VISUAL EFFECTS ========== */
+/* Apply these effects only when .mentat-terminal wrapper is present */
+.mentat-terminal {
+  overflow: hidden; /* No scrolling - TUI fills viewport */
+}
+
+/* CRT Scanline overlay effect - only for terminal */
+.mentat-terminal::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(0, 0, 0, 0.15) 0px,
+    transparent 1px,
+    transparent 2px,
+    rgba(0, 0, 0, 0.15) 3px
+  );
+  pointer-events: none;
+  z-index: 9999;
+  animation: scanline 8s linear infinite;
+}
+
+/* Dot grid background pattern - only for terminal */
+.mentat-terminal::after {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: 
+    radial-gradient(circle, rgba(0, 255, 255, 0.05) 1px, transparent 1px);
+  background-size: 20px 20px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+@keyframes scanline {
+  0% {
+    background-position: 0 0;
   }
+  100% {
+    background-position: 0 100%;
+  }
+}
+
+/* All content above background effects in terminal */
+.mentat-terminal > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* Remove all rounded corners in terminal only */
+.mentat-terminal * {
+  border-radius: 0 !important;
 }
 
 @layer utilities {

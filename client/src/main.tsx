@@ -19,9 +19,9 @@ if (!(window as any).__errorHandlersRegistered) {
       event.preventDefault();
       event.stopPropagation();
       if (isReplitAnalyticsInitError) {
-        console.debug('[1fox] Suppressed Replit Analytics SDK initialization warning');
+        console.debug('[Mentat] Suppressed Replit Analytics SDK initialization warning');
       } else {
-        console.debug('[1fox] Suppressed non-Error exception (already handled in component)');
+        console.debug('[Mentat] Suppressed non-Error exception (already handled in component)');
       }
       return false;
     }
@@ -38,9 +38,9 @@ if (!(window as any).__errorHandlersRegistered) {
       event.preventDefault();
       event.stopPropagation();
       if (isReplitAnalyticsInitError) {
-        console.debug('[1fox] Suppressed Replit Analytics SDK promise rejection');
+        console.debug('[Mentat] Suppressed Replit Analytics SDK promise rejection');
       } else {
-        console.debug('[1fox] Suppressed non-Error promise rejection (already handled in component)');
+        console.debug('[Mentat] Suppressed non-Error promise rejection (already handled in component)');
       }
     }
   });

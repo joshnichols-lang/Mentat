@@ -121,7 +121,7 @@ Follow-up question: ${message}`;
       queryClient.invalidateQueries({ queryKey: ["/api/ai/usage"] });
       toast({
         title: "Follow-up sent",
-        description: "Mr. Fox is analyzing your question...",
+        description: "m.teg is analyzing your question...",
       });
     },
     onError: (error: any) => {
@@ -164,7 +164,7 @@ Follow-up question: ${message}`;
     return (
       <Card className="p-4">
         <h2 className="text-sm font-semibold mb-3">CONVERSATION HISTORY</h2>
-        <div className="text-xs text-muted-foreground">No conversations yet. Start by asking Mr. Fox a question.</div>
+        <div className="text-xs text-muted-foreground">No conversations yet. Start by asking m.teg a question.</div>
       </Card>
     );
   }
@@ -289,7 +289,7 @@ Follow-up question: ${message}`;
                       <Bot className="h-3.5 w-3.5 mt-0.5 text-primary shrink-0" />
                       <div className="flex-1 space-y-2">
                         <div className="flex items-center gap-2">
-                          <span className="text-xs font-semibold select-text">Mr. Fox</span>
+                          <span className="text-xs font-semibold select-text">m.teg</span>
                           <Badge variant="secondary" className="text-xs h-4 px-1.5">
                             {log.model}
                           </Badge>
@@ -334,7 +334,7 @@ Follow-up question: ${message}`;
                       <Bot className="h-3.5 w-3.5 mt-0.5 text-primary shrink-0" />
                       <div className="flex-1 space-y-2">
                         <div className="flex items-center gap-2">
-                          <span className="text-xs font-semibold select-text">Mr. Fox</span>
+                          <span className="text-xs font-semibold select-text">m.teg</span>
                           <Badge variant="secondary" className="text-xs h-4 px-1.5">
                             {log.model}
                           </Badge>
@@ -383,7 +383,7 @@ Follow-up question: ${message}`;
                       <Bot className="h-3.5 w-3.5 mt-0.5 text-primary shrink-0" />
                       <div className="flex-1 space-y-2">
                         <div className="flex items-center gap-2">
-                          <span className="text-xs font-semibold select-text">Mr. Fox</span>
+                          <span className="text-xs font-semibold select-text">m.teg</span>
                           <Badge variant="secondary" className="text-xs h-4 px-1.5">
                             {log.model}
                           </Badge>
@@ -463,7 +463,7 @@ Follow-up question: ${message}`;
                       <Bot className="h-3.5 w-3.5 mt-0.5 text-primary shrink-0" />
                       <div className="flex-1 space-y-2">
                         <div className="flex items-center gap-2">
-                          <span className="text-xs font-semibold select-text">Mr. Fox</span>
+                          <span className="text-xs font-semibold select-text">m.teg</span>
                           <Badge variant="secondary" className="text-xs h-4 px-1.5">
                             {log.model}
                           </Badge>

@@ -58,7 +58,7 @@ export default function LandingPage() {
       queryClient.setQueryData(['/api/user'], user);
       toast({
         title: 'Connected successfully!',
-        description: `Welcome to 1fox`,
+        description: `Welcome to Mentat`,
       });
       setAuthCompleted(true);
       setAuthStep('complete');
@@ -91,7 +91,7 @@ export default function LandingPage() {
           const { nonce } = await nonceRes.json();
 
           // Create message with nonce
-          const message = `Sign this message to authenticate with 1fox.\n\nWallet: ${address}\nNonce: ${nonce}\nTimestamp: ${Date.now()}`;
+          const message = `Sign this message to authenticate with Mentat.\n\nWallet: ${address}\nNonce: ${nonce}\nTimestamp: ${Date.now()}`;
           
           // Request signature
           const signature = await signMessageAsync({
@@ -112,7 +112,7 @@ export default function LandingPage() {
           if (error.message?.includes('User rejected') || error.message?.includes('denied')) {
             toast({
               title: 'Signature Rejected',
-              description: 'You must sign the message to authenticate with 1fox',
+              description: 'You must sign the message to authenticate with Mentat',
               variant: 'destructive',
             });
           } else if (error.message?.includes('nonce')) {
@@ -228,8 +228,8 @@ export default function LandingPage() {
         <header className="bg-background border-b border-border/50">
           <div className="mx-auto max-w-7xl px-4 py-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <img src={logoUrl} alt="1fox" className="h-10 w-10" />
-              <span className="text-2xl font-bold font-mono glow-orange">1fox</span>
+              <img src={logoUrl} alt="Mentat" className="h-10 w-10" />
+              <span className="text-2xl font-bold font-mono glow-orange">MENTAT</span>
             </div>
             <ConnectButton
               showBalance={false}
@@ -251,7 +251,7 @@ export default function LandingPage() {
               </h1>
               <p className="text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto">
                 Your one-stop shop for perpetuals, prediction markets, and spot trading. 
-                Let Mr. Fox handle the complexity.
+                Let m.teg handle the complexity.
               </p>
             </div>
 
@@ -360,7 +360,7 @@ export default function LandingPage() {
                   </div>
                   <h3 className="text-xl font-bold font-mono">AI Trading Agent</h3>
                   <p className="text-muted-foreground">
-                    Mr. Fox analyzes markets 24/7, executes strategies, and maximizes your Sharpe ratio automatically.
+                    m.teg analyzes markets 24/7, executes strategies, and maximizes your Sharpe ratio automatically.
                   </p>
                 </div>
               </Card>

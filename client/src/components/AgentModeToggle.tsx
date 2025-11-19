@@ -39,8 +39,8 @@ export default function AgentModeToggle() {
       toast({
         title: data.agentMode === "active" ? "Active Mode Enabled" : "Passive Mode Enabled",
         description: data.agentMode === "active" 
-          ? "Mr. Fox will now autonomously trade based on market conditions."
-          : "Mr. Fox will now learn from your prompts without executing trades.",
+          ? "m.teg will now autonomously trade based on market conditions."
+          : "m.teg will now learn from your prompts without executing trades.",
       });
     },
     onError: (error: any) => {
@@ -100,8 +100,8 @@ export default function AgentModeToggle() {
             <AlertDialogTitle>Enable Active Trading Mode?</AlertDialogTitle>
             <AlertDialogDescription className="space-y-2">
               <p>
-                In Active Mode, Mr. Fox will autonomously analyze markets and execute trades
-                based on his analysis without requiring your approval for each trade.
+                In Active Mode, m.teg will autonomously analyze markets and execute trades
+                based on its analysis without requiring your approval for each trade.
               </p>
               <p className="font-semibold">
                 This means real money will be used to place trades automatically.
