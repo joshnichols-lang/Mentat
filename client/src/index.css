@@ -1,161 +1,157 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* ========== ULTRA-MINIMAL DARK MODE (Pure Black) ========== */
+/* ========== MENTAT TERMINAL - RETRO TUI DARK MODE ========== */
 .dark {
-  /* Pure black background - absolute minimal design */
-  --background: 0 0% 0%;           /* #000000 - Pure black */
-  --foreground: 0 0% 98%;          /* #FAFAFA - Soft white */
+  /* Deep black background - hacker terminal aesthetic */
+  --background: 210 20% 4%;        /* #0a0a0a - Deep black */
+  --foreground: 180 100% 50%;      /* #00ffff - Cyan text */
   
-  /* Surface levels - barely visible elevation */
-  --card: 0 0% 4%;                 /* #0A0A0A - Subtle panel */
-  --card-foreground: 0 0% 98%;
-  --popover: 0 0% 4%;
-  --popover-foreground: 0 0% 98%;
+  /* Surface levels - minimal distinction */
+  --card: 210 20% 4%;              /* #0a0a0a - Same as background */
+  --card-foreground: 180 100% 50%;  /* #00ffff - Cyan */
+  --popover: 210 20% 4%;
+  --popover-foreground: 180 100% 50%;
   
-  /* Borders - extremely subtle */
-  --border: 0 0% 8%;               /* #141414 - Barely visible */
-  --input: 0 0% 4%;                /* #0A0A0A - Input background */
+  /* Borders - bright cyan, single pixel */
+  --border: 180 100% 50%;          /* #00ffff - Cyan borders */
+  --input: 210 20% 4%;             /* #0a0a0a - Input background */
   
-  /* Interactive states - lime accent */
-  --primary: 123 100% 50%;         /* #00FF41 - Electric lime */
-  --primary-foreground: 0 0% 0%;   /* Black text on lime */
+  /* Primary - Cyan accent (main interaction color) */
+  --primary: 180 100% 50%;         /* #00ffff - Cyan */
+  --primary-foreground: 210 20% 4%; /* Black text on cyan */
   
-  --secondary: 0 0% 8%;            /* #141414 - Dark grey surface */
-  --secondary-foreground: 0 0% 98%;
+  /* Secondary - Yellow accent */
+  --secondary: 60 100% 50%;        /* #ffff00 - Yellow */
+  --secondary-foreground: 210 20% 4%;
   
-  --muted: 0 0% 8%;
-  --muted-foreground: 0 0% 45%;    /* #737373 - Mid grey text */
+  --muted: 180 100% 20%;
+  --muted-foreground: 180 100% 35%; /* Dimmed cyan text */
   
-  --accent: 0 0% 12%;              /* #1F1F1F - Subtle accent surface */
-  --accent-foreground: 0 0% 98%;
+  --accent: 60 100% 50%;           /* #ffff00 - Yellow accent */
+  --accent-foreground: 210 20% 4%;
   
-  /* Text hierarchy - 3 levels only */
-  --text-primary: 0 0% 98%;        /* #FAFAFA - Most important */
-  --text-secondary: 0 0% 65%;      /* #A6A6A6 - Supporting */
-  --text-tertiary: 0 0% 45%;       /* #737373 - Metadata */
+  /* Text hierarchy - cyan tones */
+  --text-primary: 180 100% 50%;    /* #00ffff - Bright cyan */
+  --text-secondary: 180 100% 35%;  /* Dimmed cyan */
+  --text-tertiary: 180 100% 20%;   /* Very dim cyan */
   
-  /* Trading status colors - lime and crimson */
-  --success: 123 100% 50%;         /* #00FF41 - Electric lime */
-  --success-foreground: 0 0% 0%;
+  /* Trading status colors - retro palette */
+  --success: 180 100% 50%;         /* #00ffff - Cyan (buy) */
+  --success-foreground: 210 20% 4%;
   
-  --destructive: 348 83% 47%;      /* #DC143C - Crimson */
+  --destructive: 338 100% 50%;     /* #ff0055 - Retro red */
   --destructive-foreground: 0 0% 100%;
   
-  --warning: 45 100% 51%;          /* #FFC107 - Amber */
-  --warning-foreground: 0 0% 0%;
+  --warning: 60 100% 50%;          /* #ffff00 - Yellow */
+  --warning-foreground: 210 20% 4%;
   
-  /* Chart colors - minimal palette */
-  --chart-1: 123 100% 50%;         /* #00FF41 - Lime */
-  --chart-2: 348 83% 47%;          /* #DC143C - Crimson */
-  --chart-3: 0 0% 65%;             /* #A6A6A6 - Grey */
-  --chart-4: 0 0% 45%;             /* #737373 - Dark grey */
-  --chart-5: 0 0% 25%;             /* #404040 - Darker grey */
+  /* Chart colors - terminal palette */
+  --chart-1: 180 100% 50%;         /* #00ffff - Cyan */
+  --chart-2: 338 100% 50%;         /* #ff0055 - Red */
+  --chart-3: 60 100% 50%;          /* #ffff00 - Yellow */
+  --chart-4: 120 100% 50%;         /* #00ff00 - Green */
+  --chart-5: 270 100% 50%;         /* #8800ff - Purple */
   
-  /* Elevation - lime glow on hover */
-  --elevate-1: rgba(0, 255, 65, 0.05);
-  --elevate-2: rgba(0, 255, 65, 0.10);
+  /* Elevation - cyan glow effects */
+  --elevate-1: rgba(0, 255, 255, 0.1);
+  --elevate-2: rgba(0, 255, 255, 0.2);
   
-  /* Typography - Inter for UI, IBM Plex Mono for numbers */
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --font-serif: 'Inter', sans-serif;
-  --font-mono: 'IBM Plex Mono', 'Consolas', 'Monaco', monospace;
+  /* Typography - IBM Plex Mono ONLY */
+  --font-sans: 'IBM Plex Mono', 'Consolas', 'Monaco', monospace;
+  --font-serif: 'IBM Plex Mono', monospace;
+  --font-mono: 'IBM Plex Mono', monospace;
   
-  /* Spacing - 8px grid system */
-  --spacing-1: 0.5rem;            /* 8px */
-  --spacing-2: 1rem;              /* 16px */
-  --spacing-3: 1.5rem;            /* 24px */
-  --spacing-4: 2rem;              /* 32px */
-  --spacing-6: 3rem;              /* 48px */
-  --spacing-8: 4rem;              /* 64px */
+  /* Border radius - ZERO (no rounded corners in TUI) */
+  --radius: 0;
   
-  /* Border radius - ultra-minimal */
-  --radius: 0.25rem;              /* 4px - very subtle */
+  /* Shadows - none (flat TUI aesthetic) */
+  --shadow-sm: none;
+  --shadow: none;
+  --shadow-md: none;
+  --shadow-lg: none;
+  --shadow-xl: none;
   
-  /* Shadows - ultra-subtle, almost invisible */
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.8);
-  --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.7), 0 1px 2px -1px rgba(0, 0, 0, 0.6);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.7), 0 2px 4px -2px rgba(0, 0, 0, 0.6);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.8), 0 4px 6px -4px rgba(0, 0, 0, 0.7);
-  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.9), 0 8px 10px -6px rgba(0, 0, 0, 0.8);
-  
-  /* Ring for focus states */
-  --ring: 0 0% 100%;
+  /* Ring for focus states - cyan */
+  --ring: 180 100% 50%;
 }
 
-/* ========== LIGHT MODE ========== */
+/* ========== MENTAT TERMINAL - LIGHT MODE (Industrial) ========== */
 .light {
-  /* Clean white backgrounds */
-  --background: 0 0% 100%;         /* #FFFFFF - Pure white */
-  --foreground: 240 4% 6%;         /* #0B0B0F - Deep dark text */
+  /* Industrial grey background */
+  --background: 0 0% 91%;          /* #e8e8e8 - Industrial grey */
+  --foreground: 217 100% 35%;      /* #0055ff - Deep blue text */
   
   /* Surface levels */
-  --card: 0 0% 98%;                /* #FAFAFA - Slightly recessed */
-  --card-foreground: 240 4% 6%;
-  --popover: 0 0% 98%;
-  --popover-foreground: 240 4% 6%;
+  --card: 0 0% 91%;
+  --card-foreground: 217 100% 35%;
+  --popover: 0 0% 91%;
+  --popover-foreground: 217 100% 35%;
   
-  /* Borders - minimal and subtle */
-  --border: 0 0% 92%;              /* #EBEBEB - Subtle divider */
-  --input: 0 0% 96%;               /* #F5F5F5 - Input background */
+  /* Borders - deep blue */
+  --border: 217 100% 35%;          /* #0055ff - Deep blue borders */
+  --input: 0 0% 91%;
   
-  /* Interactive states - minimal color, mostly grey */
-  --primary: 0 0% 30%;             /* #4D4D4D - Dark grey (was green) */
-  --primary-foreground: 0 0% 100%; /* White text on dark grey */
+  /* Primary - Deep blue */
+  --primary: 217 100% 35%;         /* #0055ff - Deep blue */
+  --primary-foreground: 0 0% 91%;
   
-  --secondary: 0 0% 96%;           /* #F5F5F5 - Light grey */
-  --secondary-foreground: 240 4% 6%;
+  /* Secondary - Dark grey */
+  --secondary: 0 0% 10%;           /* #1a1a1a - Almost black */
+  --secondary-foreground: 0 0% 91%;
   
-  --muted: 0 0% 96%;
-  --muted-foreground: 0 0% 39%;    /* #646466 - Mid grey text */
+  --muted: 217 100% 20%;
+  --muted-foreground: 217 100% 50%;
   
-  --accent: 0 0% 90%;              /* #E6E6E6 - Light grey accent (was green) */
-  --accent-foreground: 240 4% 6%;
+  --accent: 0 0% 10%;              /* #1a1a1a - Dark accent */
+  --accent-foreground: 0 0% 91%;
   
-  /* Text hierarchy - grey scales */
-  --text-primary: 240 4% 6%;       /* #0B0B0F - Most important */
-  --text-secondary: 0 0% 39%;      /* #646466 - Supporting */
-  --text-tertiary: 0 0% 55%;       /* #8B8B8D - Metadata */
+  /* Text hierarchy - blue tones */
+  --text-primary: 217 100% 35%;    /* #0055ff - Deep blue */
+  --text-secondary: 217 100% 50%;  /* Lighter blue */
+  --text-tertiary: 217 100% 70%;   /* Very light blue */
   
-  /* Trading status colors - bright accents */
-  --success: 150 100% 39%;         /* #00C864 - Green */
-  --success-foreground: 0 0% 100%;
+  /* Trading status colors */
+  --success: 217 100% 35%;         /* Blue */
+  --success-foreground: 0 0% 91%;
   
-  --destructive: 343 100% 62%;     /* #FF3B69 - Bright red/pink */
+  --destructive: 338 100% 50%;     /* Red */
   --destructive-foreground: 0 0% 100%;
   
-  --warning: 45 100% 51%;          /* #FFC107 - Amber */
-  --warning-foreground: 240 4% 6%;
+  --warning: 45 100% 51%;          /* Yellow */
+  --warning-foreground: 0 0% 10%;
   
   /* Chart colors */
-  --chart-1: 150 100% 39%;         /* #00C864 - Green */
-  --chart-2: 343 100% 62%;         /* #FF3B69 - Red/pink */
-  --chart-3: 217 91% 60%;          /* #3B82F6 - Blue */
-  --chart-4: 0 0% 55%;             /* #8B8B8D - Grey */
-  --chart-5: 0 0% 39%;             /* #646466 - Dark grey */
+  --chart-1: 217 100% 35%;
+  --chart-2: 338 100% 50%;
+  --chart-3: 60 100% 50%;
+  --chart-4: 120 100% 35%;
+  --chart-5: 270 100% 35%;
   
-  /* Elevation - subtle black overlays for hover states */
-  --elevate-1: rgba(0, 0, 0, 0.03);
-  --elevate-2: rgba(0, 0, 0, 0.06);
+  /* Elevation */
+  --elevate-1: rgba(0, 85, 255, 0.1);
+  --elevate-2: rgba(0, 85, 255, 0.2);
   
   /* Typography - IBM Plex Mono everywhere */
   --font-sans: 'IBM Plex Mono', monospace;
   --font-serif: 'IBM Plex Mono', monospace;
   --font-mono: 'IBM Plex Mono', monospace;
   
-  /* Border radius - minimal */
-  --radius: 0.5rem;               /* 8px */
+  /* Border radius - ZERO */
+  --radius: 0;
   
-  /* Shadows - subtle */
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
-  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+  /* Shadows - none */
+  --shadow-sm: none;
+  --shadow: none;
+  --shadow-md: none;
+  --shadow-lg: none;
+  --shadow-xl: none;
   
   /* Ring for focus states */
-  --ring: 0 0% 0%;
+  --ring: 217 100% 35%;
 }
 
 @layer base {
@@ -166,7 +162,59 @@
   body {
     @apply bg-background text-foreground;
     font-family: var(--font-sans);
-    font-feature-settings: "rlig" 1, "calt" 1;
+    font-feature-settings: "rlig" 1, "calt" 1, "zero" 1;
+    position: relative;
+    overflow: hidden; /* No scrolling - TUI fills viewport */
+  }
+  
+  /* CRT Scanline overlay effect */
+  body::before {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: repeating-linear-gradient(
+      0deg,
+      rgba(0, 0, 0, 0.15) 0px,
+      transparent 1px,
+      transparent 2px,
+      rgba(0, 0, 0, 0.15) 3px
+    );
+    pointer-events: none;
+    z-index: 9999;
+    animation: scanline 8s linear infinite;
+  }
+  
+  /* Dot grid background pattern */
+  body::after {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: 
+      radial-gradient(circle, rgba(0, 255, 255, 0.05) 1px, transparent 1px);
+    background-size: 20px 20px;
+    pointer-events: none;
+    z-index: 0;
+  }
+  
+  @keyframes scanline {
+    0% {
+      background-position: 0 0;
+    }
+    100% {
+      background-position: 0 100%;
+    }
+  }
+  
+  /* All content above background effects */
+  #root {
+    position: relative;
+    z-index: 1;
   }
   
   /* Typography presets */
@@ -174,10 +222,15 @@
     @apply font-semibold tracking-tight;
   }
   
-  /* Monospace for numbers */
+  /* Everything is monospace */
   .font-mono {
     font-family: var(--font-mono);
     font-feature-settings: "zero" 1, "ss01" 1;
+  }
+  
+  /* Remove all rounded corners globally */
+  * {
+    border-radius: 0 !important;
   }
 }
 
